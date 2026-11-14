@@ -1,0 +1,17 @@
+{
+  "name": "@stopwatch/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The site: UI shell, display modes, themes, settings and storage adapters.",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:e2e": "playwright test --trace off"
+  },
+  "dependencies": {
+    "@stopwatch/core": "0.0.0"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "stopwatch",
+  "private": true,
+  "description": "A website that opens directly on a stopwatch for tracking focused work.",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "npm run dev -w @stopwatch/web",
+    "build": "npm run build -w @stopwatch/web",
+    "preview": "npm run preview -w @stopwatch/web",
+    "typecheck": "tsc -p tsconfig.json && tsc -p packages/core && tsc -p packages/web && tsc -p packages/web/tsconfig.node.json",
+    "lint": "eslint --max-warnings 0 .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "npm run test:e2e -w @stopwatch/web",
+    "check:contrast": "node packages/web/scripts/check-contrast.ts",
+    "check:size": "node packages/web/scripts/check-size.ts",
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:contrast && npm run build && npm run check:size"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.65.0",
+    "@types/node": "24.19.2",
+    "eslint": "10.14.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.6",
+    "vitest": "5.1.0"
+  },
+  "overrides": {
+    "minimatch": "11.0.5"
+  }
+}

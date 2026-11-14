@@ -1,0 +1,3 @@
+# Developer tool for build_font.py only; not part of the site or CI.
+fonttools==4.68.0
+brotli==1.2.1

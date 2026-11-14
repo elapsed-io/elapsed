@@ -1,0 +1,15 @@
+/*
+ * The default font: Archivo by Omnibus-Type, instanced at width 92 and
+ * weights 300 to 500, cut down to Latin, and renamed "Timer Sans" as a
+ * modified version (see ../assets/fonts/README.md). It is preloaded from
+ * index.html, and font-display: block keeps the time from jumping when the
+ * font arrives.
+ */
+@font-face {
+  font-family: "Timer Sans";
+  src: url("../assets/fonts/timer-sans.woff2") format("woff2");
+  font-weight: 300 500;
+  font-stretch: 92%;
+  font-style: normal;
+  font-display: block;
+}

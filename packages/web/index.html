@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ brand.name }}</title>
+    <meta name="description" content="{{ copy.meta.description }}" />
+    <!-- No icon is designed yet; an empty data URL stops the default /favicon.ico request. -->
+    <link rel="icon" href="data:," />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <main class="screen">
+      <div class="corner">
+        <button type="button" class="icon-button" aria-label="{{ copy.icons.settings }}">{{ icon.settings }}</button>
+        <button type="button" class="icon-button" aria-label="{{ copy.icons.account }}">{{ icon.account }}</button>
+      </div>
+      <div class="time">00<span class="time__colon">:</span>00<span class="time__colon">:</span>00</div>
+      <div class="controls">
+        <button type="button" class="button button--start">{{ copy.timer.start }}</button>
+      </div>
+    </main>
+  </body>
+</html>

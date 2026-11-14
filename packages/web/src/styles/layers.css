@@ -1,0 +1,11 @@
+/*
+ * Cascade layer order (plan, Architecture invariant 8). Later layers win:
+ * base < theme < mode < user. This file is imported first so the order is
+ * fixed before any layer receives rules.
+ *
+ *   base  design tokens, reset, the screen shell, buttons and icons
+ *   theme the three theme colours and everything derived from them
+ *   mode  the active display mode (digits in Release 1)
+ *   user  the user's custom CSS (round 7)
+ */
+@layer base, theme, mode, user;

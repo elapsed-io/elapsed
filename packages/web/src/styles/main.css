@@ -1,0 +1,126 @@
+/*
+ * The timer screen, matching the design canvas's idle frame (720 × 450).
+ * Every value comes from a custom property generated from the config module.
+ *
+ * Scaling (owner decision, 2026-11-14): only the time and the gap below it
+ * scale, by one reference pixel = min(window width ÷ 720, window height ÷ 450),
+ * times the time size setting. Buttons, button text, the corner icons and
+ * their inset stay at the frame's pixel sizes. The gap never shrinks below
+ * the frame's 26 px, so controls keep their spacing on phones.
+ */
+
+@layer base {
+  :root {
+    --u: min(calc(100vw / var(--reference-width)), calc(100dvh / var(--reference-height)));
+    color-scheme: var(--color-scheme);
+  }
+
+  html,
+  body {
+    margin: 0;
+    height: 100%;
+  }
+
+  body {
+    overflow: hidden;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-family);
+    font-stretch: var(--font-stretch);
+  }
+
+  .screen {
+    position: relative;
+    box-sizing: border-box;
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: max(
+      calc(var(--time-gap) * 1px),
+      calc(var(--time-gap) * var(--u) * var(--time-scale))
+    );
+  }
+
+  .corner {
+    position: absolute;
+    top: var(--icon-inset);
+    right: var(--icon-inset);
+    display: flex;
+    gap: var(--icon-gap);
+  }
+
+  .icon-button {
+    width: var(--icon-box);
+    height: var(--icon-box);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .icon {
+    width: var(--icon-size);
+    height: var(--icon-size);
+    stroke-width: var(--icon-stroke);
+  }
+
+  .controls {
+    display: flex;
+    gap: var(--button-gap);
+  }
+
+  .button {
+    position: relative;
+    height: var(--button-height);
+    padding: 0 var(--button-padding-x);
+    border: 0;
+    border-radius: var(--button-radius);
+    font-family: var(--font-family);
+    font-stretch: var(--font-stretch);
+    font-size: var(--button-font-size);
+    font-weight: var(--font-weight-button);
+    color: var(--color-foreground);
+  }
+
+  /* An invisible tap area of at least 44 × 44 px around each small button. */
+  .button::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, var(--tap-target));
+    height: max(100%, var(--tap-target));
+    transform: translate(-50%, -50%);
+  }
+
+  .button--start {
+    background: var(--color-accent);
+  }
+}
+
+/* The digits display mode. Round 3 moves this into the digits mode package. */
+@layer mode {
+  .time {
+    font-family: var(--font-family);
+    font-weight: var(--font-weight-time);
+    font-stretch: var(--font-stretch);
+    font-variant-numeric: tabular-nums;
+    font-size: calc(var(--time-size) * var(--u) * var(--time-scale));
+    line-height: 1;
+    letter-spacing: var(--time-letter-spacing);
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .time__colon {
+    position: relative;
+    top: calc(-1 * var(--colon-raise));
+    margin: 0 calc(-1 * var(--colon-tighten));
+  }
+}
