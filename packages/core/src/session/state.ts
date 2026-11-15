@@ -68,20 +68,28 @@ export function isOpen(session: Session): boolean {
  * another tab's change).
  */
 export function serializeActiveState(state: ActiveState): string {
-  const { session } = state;
   return JSON.stringify({
     schema: state.schema,
-    session: {
-      schema: session.schema,
-      id: session.id,
-      segments: session.segments.map(({ start, end }) => ({ start, end })),
-      gaps: session.gaps.map(({ start, end }) => ({ start, end })),
-      modes: session.modes.map(({ mode, start }) => ({ mode, start })),
-      endReason: session.endReason,
-      localDay: session.localDay,
-    },
+    session: sessionFields(state.session),
     presenceAt: state.presenceAt,
     missedCheckInAt: state.missedCheckInAt,
     pauseLimitMs: state.pauseLimitMs,
   });
+}
+
+/** A session as JSON with its fields in one fixed order. */
+export function serializeSession(session: Session): string {
+  return JSON.stringify(sessionFields(session));
+}
+
+function sessionFields(session: Session): Readonly<Record<string, unknown>> {
+  return {
+    schema: session.schema,
+    id: session.id,
+    segments: session.segments.map(({ start, end }) => ({ start, end })),
+    gaps: session.gaps.map(({ start, end }) => ({ start, end })),
+    modes: session.modes.map(({ mode, start }) => ({ mode, start })),
+    endReason: session.endReason,
+    localDay: session.localDay,
+  };
 }

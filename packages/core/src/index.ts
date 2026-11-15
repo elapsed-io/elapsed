@@ -33,8 +33,10 @@ export {
 } from './session/derive.ts';
 export { createSession, endSession, pauseSession, resumeSession, shiftSession, switchMode } from './session/commands.ts';
 export type { NewSession, TimeOptions } from './session/commands.ts';
+export { summarise } from './session/summary.ts';
+export type { SessionSummary } from './session/summary.ts';
 export { SessionValidationError, migrateActiveState, migrateSession, parseActiveState, parseSession } from './session/validate.ts';
-export { ACTIVE_STATE_SCHEMA, recordGap, serializeActiveState, shiftState, startState } from './session/state.ts';
+export { ACTIVE_STATE_SCHEMA, recordGap, serializeActiveState, serializeSession, shiftState, startState } from './session/state.ts';
 export type { ActiveState } from './session/state.ts';
 export { advance, applyTrigger, checkInDueAt, defaultRules, nextTrigger, normaliseRules, pendingCheckIn } from './session/rules.ts';
 export type { RuleKind, RuleOutcome, RuleSettings, RuleTrigger } from './session/rules.ts';

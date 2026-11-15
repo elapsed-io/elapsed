@@ -13,10 +13,11 @@
 import 'virtual:tokens/ring.css';
 import './ring.css';
 import { CONFIG } from '@stopwatch/core';
-import type { TimerView } from '@stopwatch/core';
+import type { Session, TimerView } from '@stopwatch/core';
 import { html, svg, syncAnimations } from '../../dom.ts';
 import type { DisplayContext, DisplayMode } from '../contract.ts';
 import { TimeDisplay } from '../shared/time-display.ts';
+import { drawRings } from './ring-replay.ts';
 
 const RING = CONFIG.modes.ring;
 const CENTER = RING.boxPx / 2;
@@ -92,8 +93,8 @@ export function createRingMode(): DisplayMode {
       else tail.removeAttribute('mask');
       syncAnimations(ringSvg, view.focusedMs, view.status === 'running');
     },
-    replay() {
-      // Round 5: one ring per hour, outermost first.
+    replay(target: HTMLElement, session: Session) {
+      drawRings(target, session);
     },
     unmount() {
       root?.replaceChildren();

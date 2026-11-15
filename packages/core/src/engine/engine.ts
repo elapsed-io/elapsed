@@ -24,7 +24,7 @@
 import { CONFIG } from '../config.ts';
 import type { Emitter } from '../events/bus.ts';
 import { createSession, endSession, pauseSession, resumeSession, switchMode } from '../session/commands.ts';
-import { currentMode, focusedMs, latestStamp, sessionStatus, timeWhenFocusReached } from '../session/derive.ts';
+import { currentMode, focusedMs, lastSegment, latestStamp, sessionStatus, timeWhenFocusReached } from '../session/derive.ts';
 import { advance, checkInDueAt, defaultRules, nextTrigger, normaliseRules, pendingCheckIn } from '../session/rules.ts';
 import type { RuleSettings } from '../session/rules.ts';
 import { isEndReason } from '../session/session.ts';
@@ -190,18 +190,37 @@ export class TimerEngine {
     return true;
   }
 
-  /** Ends the open session. Returns false if there is none. */
-  end(reason: EndReason = 'user'): boolean {
+  /**
+   * Ends the open session. Returns false if there is none.
+   *
+   * `options.at` dates the end earlier than now: the site ends a session at
+   * the moment end was pressed, after the 5-second countdown (owner decision,
+   * 2026-11-15). It is never earlier than the session's last pause or resume,
+   * so time a later pause recorded is kept as it was.
+   */
+  end(reason: EndReason = 'user', options: { readonly at?: number } = {}): boolean {
     if (this.#disposed) return false;
     if (!isEndReason(reason)) throw new TypeError(`not an end reason: ${JSON.stringify(reason)}`);
     const now = this.#observe();
     const state = this.#state;
     if (state === null) return false;
-    this.#emitMilestones(now);
-    const at = this.#stamp(state.session, now);
-    this.#finish(endSession(state.session, reason, at), reason, at);
+    if (options.at === undefined) {
+      this.#emitMilestones(now);
+      const at = this.#stamp(state.session, now);
+      this.#finish(endSession(state.session, reason, at), reason, at);
+    } else {
+      const last = lastSegment(state.session);
+      const at = Math.min(now, Math.max(Math.round(options.at), last.end ?? last.start));
+      this.#emitMilestones(at);
+      this.#finish(endSession(state.session, reason, at, { backdate: true }), reason, at);
+    }
     this.#afterChange(now);
     return true;
+  }
+
+  /** The engine's current time: the device clock, corrected for any jump it has detected. */
+  now(): number {
+    return this.#observe();
   }
 
   /** Answers the check-in waiting for any key, click or tap. Returns false if none is waiting. */

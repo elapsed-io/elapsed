@@ -12,7 +12,7 @@
 import 'virtual:tokens/timeline.css';
 import './timeline.css';
 import { CONFIG } from '@stopwatch/core';
-import type { TimerView } from '@stopwatch/core';
+import type { Session, TimerView } from '@stopwatch/core';
 import { html, svg, syncAnimations } from '../../dom.ts';
 import { timelineStripMinutes } from './strip.ts';
 import type { DisplayContext, DisplayMode } from '../contract.ts';
@@ -86,8 +86,10 @@ export function createTimelineMode(): DisplayMode {
       display?.render(view);
       if (lineSvg !== null) syncAnimations(lineSvg, view.focusedMs, view.status === 'running');
     },
-    replay() {
-      // Round 5: the focus-strip replay.
+    async replay(target: HTMLElement, session: Session) {
+      // The focus strip loads with the results, not with the timer.
+      const { drawStrip } = await import('../shared/strip-replay.ts');
+      drawStrip(target, session);
     },
     unmount() {
       root?.replaceChildren();

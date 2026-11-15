@@ -10,30 +10,44 @@
  * arrive before the other tab's write is visible here, and because a tab
  * frozen in the background must catch up before it applies any rule.
  *
- * Messages carry no session data: "changed", or "ended" with the session id
- * and end reason, so a tab that was showing the same session can explain a
- * session maximum reached in another tab.
+ * Messages: "changed" carries nothing; "ended" carries the finished session
+ * (round 5), so a tab that was showing it can show the same notice or
+ * results when the session ended on its own in another tab. The receiver
+ * validates it like stored data.
  */
 
-import { isEndReason } from '@stopwatch/core';
-import type { ActiveState, EndReason, TimerEngine } from '@stopwatch/core';
+import { CONFIG, isEndReason, migrateSession, serializeSession, sessionStatus } from '@stopwatch/core';
+import type { ActiveState, EndReason, Session, TimerEngine } from '@stopwatch/core';
 import type { SessionStore, StoredState } from '../storage/session-store.ts';
 
 export const TAB_CHANNEL_NAME = 'timer';
 
-export type TabMessage = { readonly type: 'changed' } | { readonly type: 'ended'; readonly id: string; readonly reason: EndReason };
+export type TabMessage =
+  | { readonly type: 'changed' }
+  | { readonly type: 'ended'; readonly id: string; readonly reason: EndReason; readonly session: string };
+
+/** A message after validation: an ended session is parsed and checked against the id and reason. */
+export type TabNotice = { readonly type: 'changed' } | { readonly type: 'ended'; readonly reason: EndReason; readonly session: Session };
 
 const ID = /^[0-9a-f-]{36}$/;
 
 /** Validates a message from another tab; anything unexpected is ignored. */
-export function parseTabMessage(data: unknown): TabMessage | null {
+export function parseTabMessage(data: unknown): TabNotice | null {
   if (data === null || typeof data !== 'object' || Array.isArray(data)) return null;
   const fields = data as Readonly<Record<string, unknown>>;
   const keys = Object.keys(fields).sort().join(',');
   if (fields['type'] === 'changed' && keys === 'type') return { type: 'changed' };
-  if (fields['type'] === 'ended' && keys === 'id,reason,type') {
-    const { id, reason } = fields;
-    if (typeof id === 'string' && ID.test(id) && isEndReason(reason)) return { type: 'ended', id, reason };
+  if (fields['type'] === 'ended' && keys === 'id,reason,session,type') {
+    const { id, reason, session: text } = fields;
+    if (typeof id !== 'string' || !ID.test(id) || !isEndReason(reason)) return null;
+    if (typeof text !== 'string' || text.length > CONFIG.storage.maxActiveStateChars) return null;
+    try {
+      const session = migrateSession(JSON.parse(text));
+      if (session.id !== id || session.endReason !== reason || sessionStatus(session) !== 'ended') return null;
+      return { type: 'ended', reason, session };
+    } catch {
+      return null;
+    }
   }
   return null;
 }
@@ -52,13 +66,13 @@ export interface TabSyncOptions {
   readonly store: SessionStore;
   readonly channel: TabChannel | null;
   /** Another tab ended the session this tab was showing. */
-  readonly onEndedElsewhere: (reason: EndReason) => void;
+  readonly onEndedElsewhere: (reason: EndReason, session: Session) => void;
 }
 
 export class TabSync {
   readonly #store: SessionStore;
   readonly #channel: TabChannel | null;
-  readonly #onEndedElsewhere: (reason: EndReason) => void;
+  readonly #onEndedElsewhere: (reason: EndReason, session: Session) => void;
   #engine: TimerEngine | null = null;
   /** The last open session this tab showed. */
   #shownId: string | null = null;
@@ -106,15 +120,16 @@ export class TabSync {
   }
 
   /** This tab's engine ended a session. */
-  ended(id: string, reason: EndReason): void {
-    this.#channel?.postMessage({ type: 'ended', id, reason });
+  ended(session: Session): void {
+    if (session.endReason === null) return;
+    this.#channel?.postMessage({ type: 'ended', id: session.id, reason: session.endReason, session: serializeSession(session) });
   }
 
   #receive(data: unknown): void {
     const message = parseTabMessage(data);
     if (message === null) return;
-    const endedHere = message.type === 'ended' && message.id === this.#shownId;
+    const endedHere = message.type === 'ended' && message.session.id === this.#shownId;
     this.pull();
-    if (endedHere) this.#onEndedElsewhere(message.reason);
+    if (endedHere) this.#onEndedElsewhere(message.reason, message.session);
   }
 }

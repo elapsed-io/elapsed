@@ -14,7 +14,7 @@ export interface IconElement {
   readonly attributes: Readonly<Record<string, string>>;
 }
 
-export type IconName = 'settings' | 'account' | 'maximum';
+export type IconName = 'settings' | 'account' | 'maximum' | 'retry' | 'share' | 'check';
 
 export const ICONS: Readonly<Record<IconName, readonly IconElement[]>> = {
   settings: [
@@ -30,6 +30,17 @@ export const ICONS: Readonly<Record<IconName, readonly IconElement[]>> = {
     { tag: 'circle', attributes: { cx: '12', cy: '7', r: '4' } },
     { tag: 'path', attributes: { d: 'M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2' } },
   ],
+  /** Results: Tabler "refresh", "upload" and "check", as drawn in the results frames. */
+  retry: [
+    { tag: 'path', attributes: { d: 'M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4' } },
+    { tag: 'path', attributes: { d: 'M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4' } },
+  ],
+  share: [
+    { tag: 'path', attributes: { d: 'M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2' } },
+    { tag: 'path', attributes: { d: 'M7 9l5 -5l5 5' } },
+    { tag: 'path', attributes: { d: 'M12 4l0 12' } },
+  ],
+  check: [{ tag: 'path', attributes: { d: 'M5 12l5 5l10 -10' } }],
   /** The session maximum notice: a clock face with a button on top, as drawn in the canvas's session maximum frame (not a Tabler icon). */
   maximum: [
     { tag: 'circle', attributes: { cx: '12', cy: '13', r: '8' } },

@@ -1,0 +1,82 @@
+/* One ring per hour: the ring's results replay (the "results: analog and ring" frame). */
+@layer mode {
+  /* One ring per hour (ring, and analog from Release 2). */
+  .rings {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--results-ring-column-gap);
+    max-width: 100%;
+  }
+
+  .rings__svg {
+    width: var(--results-ring-size);
+    max-width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .rings__track {
+    fill: none;
+    stroke: var(--color-track);
+  }
+
+  .rings__focus {
+    fill: none;
+    stroke: var(--color-accent);
+  }
+
+  .rings__reveal {
+    fill: none;
+    stroke: white;
+  }
+
+  .rings__ticks {
+    fill: none;
+    stroke: var(--color-muted);
+  }
+
+  .rings__label {
+    font-family: var(--font-family);
+    font-stretch: var(--font-stretch);
+    fill: var(--color-muted);
+  }
+
+  .rings__hand {
+    stroke: var(--color-foreground);
+    stroke-linecap: round;
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+  }
+
+  .rings__centre {
+    fill: var(--color-foreground);
+  }
+
+  .legend {
+    display: flex;
+    gap: var(--legend-gap);
+    font-size: var(--stats-label-size);
+    color: var(--color-muted);
+  }
+
+  .legend__item {
+    display: flex;
+    align-items: center;
+    gap: var(--legend-item-gap);
+  }
+
+  .legend__focus {
+    width: var(--legend-focus-size);
+    height: var(--legend-focus-size);
+    border-radius: var(--legend-radius);
+    background: var(--color-accent);
+  }
+
+  .legend__pause {
+    width: var(--legend-pause-size);
+    height: var(--legend-pause-size);
+    border-radius: var(--legend-radius);
+    border: 1px solid var(--color-faint);
+  }
+}

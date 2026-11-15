@@ -1,0 +1,186 @@
+/*
+ * The results screen (the results frames, 720 × 520). Loaded with the
+ * results chunk the first time a session ends.
+ *
+ * Sizes (owner decision, 2026-11-15): the focused headline scales like the
+ * timer's time; text, stats, icons and buttons keep frame sizes; the replay
+ * graphic shrinks to fit narrower windows and never grows past frame size;
+ * below 720 px wide the stats wrap into rows of three.
+ */
+
+/* The headline counts up through this integer during the replay (owner decision, 2026-11-15). */
+@property --results-focused {
+  syntax: "<integer>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@layer base {
+  .results {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    overflow-y: auto;
+    padding: var(--results-padding-y) var(--results-padding-x);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--results-gap);
+  }
+
+  .results[hidden] {
+    display: none;
+  }
+
+  .results--ring {
+    gap: var(--results-ring-gap);
+  }
+
+  .results__focused {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--results-label-gap);
+  }
+
+  .results__label {
+    margin: 0;
+    font-size: var(--results-label-size);
+    color: var(--color-muted);
+    letter-spacing: var(--results-label-tracking);
+  }
+
+  .results__time {
+    font-family: var(--font-family);
+    font-weight: var(--font-weight-time);
+    font-stretch: var(--font-stretch);
+    font-variant-numeric: tabular-nums;
+    font-size: calc(var(--results-headline-size) * var(--u) * var(--time-scale));
+    line-height: 1;
+    letter-spacing: var(--time-letter-spacing);
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .results__time--counting .count__text {
+    display: none;
+  }
+
+  .results__time--counting .count--h {
+    counter-reset: results-h calc(round(down, var(--results-focused) / 3600, 1));
+  }
+
+  .results__time--counting .count--m {
+    counter-reset: results-m calc(mod(round(down, var(--results-focused) / 60, 1), 60));
+  }
+
+  .results__time--counting .count--s {
+    counter-reset: results-s calc(mod(var(--results-focused), 60));
+  }
+
+  .results__time--counting .count--h::before {
+    content: counter(results-h, decimal-leading-zero);
+  }
+
+  .results__time--counting .count--m::before {
+    content: counter(results-m, decimal-leading-zero);
+  }
+
+  .results__time--counting .count--s::before {
+    content: counter(results-s, decimal-leading-zero);
+  }
+
+  .results__graphic {
+    display: flex;
+    justify-content: center;
+    width: var(--strip-width);
+    max-width: 100%;
+  }
+
+  .results__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--results-ring-row-gap);
+    max-width: 100%;
+  }
+
+  .results--ring .results__graphic {
+    width: auto;
+  }
+
+  .stats {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(var(--stats-columns), minmax(0, 1fr));
+    gap: var(--stats-gap);
+  }
+
+  .results--strip .stats {
+    max-width: var(--strip-width);
+  }
+
+  .results--ring .stats {
+    width: var(--stats-ring-width);
+    max-width: 100%;
+    grid-template-columns: repeat(var(--stats-ring-columns), minmax(0, 1fr));
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--stats-inner-gap);
+  }
+
+  .stat__label {
+    font-size: var(--stats-label-size);
+    color: var(--color-muted);
+  }
+
+  .stat__value {
+    margin: 0;
+    font-size: var(--stats-value-size);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .results__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--results-actions-block-gap);
+  }
+
+  .results__buttons {
+    display: flex;
+    gap: var(--results-actions-gap);
+  }
+
+  .action {
+    position: relative;
+    width: var(--results-icon-box);
+    height: var(--results-icon-box);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-foreground);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .action .icon {
+    width: var(--results-icon-size);
+    height: var(--results-icon-size);
+  }
+
+  /* After copying, a check takes the share icon's place for 2 s (owner decision, 2026-11-15). */
+  .action__check {
+    position: absolute;
+    opacity: 0;
+  }
+}

@@ -1,4 +1,4 @@
-import { EventBus, TimerEngine } from '@stopwatch/core';
+import { EventBus, TimerEngine, createSession, endSession, serializeSession } from '@stopwatch/core';
 import type { ActiveState, EndReason, TimerEvents } from '@stopwatch/core';
 import { FakeClock } from '@stopwatch/core/testing';
 import { describe, expect, it } from 'vitest';
@@ -11,15 +11,19 @@ const ID = '3f2c8a4e-9b1d-4c7a-8e5f-1a2b3c4d5e6f';
 describe('tab messages', () => {
   it('accept only the two known shapes', () => {
     expect(parseTabMessage({ type: 'changed' })).toEqual({ type: 'changed' });
-    expect(parseTabMessage({ type: 'ended', id: ID, reason: 'max_duration' })).toEqual({ type: 'ended', id: ID, reason: 'max_duration' });
+    const finished = serializeSession(endSession(createSession({ id: ID, mode: 'digits', at: 0, timeZone: 'UTC' }), 'max_duration', 60_000));
+    expect(parseTabMessage({ type: 'ended', id: ID, reason: 'max_duration', session: finished })).toMatchObject({ type: 'ended', reason: 'max_duration', session: { id: ID } });
     for (const data of [
       null,
       'changed',
       [],
       { type: 'changed', state: {} },
-      { type: 'ended', id: ID },
-      { type: 'ended', id: 'x', reason: 'user' },
-      { type: 'ended', id: ID, reason: 'bored' },
+      { type: 'ended', id: ID, reason: 'max_duration' },
+      { type: 'ended', id: 'x', reason: 'max_duration', session: finished },
+      { type: 'ended', id: ID, reason: 'bored', session: finished },
+      { type: 'ended', id: ID, reason: 'user', session: finished },
+      { type: 'ended', id: ID, reason: 'max_duration', session: '{"schema":1}' },
+      { type: 'ended', id: ID, reason: 'max_duration', session: finished.replace('"endReason":"max_duration"', '"endReason":null') },
       { type: 'other' },
     ]) {
       expect(parseTabMessage(data), JSON.stringify(data)).toBeNull();
@@ -90,8 +94,8 @@ function world() {
     bus.on('heartbeat', ({ at }) => {
       sync.heartbeat(at);
     });
-    bus.on('session.ended', ({ session, reason }) => {
-      sync.ended(session.id, reason);
+    bus.on('session.ended', ({ session }) => {
+      sync.ended(session);
     });
     sync.attach(engine, store.load());
     return { name, engine, sync, endings };

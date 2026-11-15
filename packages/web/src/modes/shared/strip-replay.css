@@ -1,0 +1,64 @@
+/* The focus strip, the results replay of digits and timeline (the results frame). */
+@layer mode {
+  /* The focus strip (digits and timeline). */
+  .strip {
+    display: flex;
+    flex-direction: column;
+    gap: var(--strip-gap);
+    width: 100%;
+  }
+
+  .strip__bars {
+    position: relative;
+    height: var(--strip-bar-height);
+  }
+
+  .strip__track {
+    position: absolute;
+    top: var(--strip-track-top);
+    left: 0;
+    right: 0;
+    height: var(--strip-track-height);
+    background: var(--color-track);
+  }
+
+  .strip__reveal,
+  .strip__reveal-inner {
+    position: absolute;
+    inset: 0;
+  }
+
+  .strip__reveal {
+    overflow: hidden;
+  }
+
+  .strip__bar {
+    position: absolute;
+    top: 0;
+    height: var(--strip-bar-height);
+    border-radius: var(--strip-bar-radius);
+    background: var(--color-accent);
+  }
+
+  .strip__labels {
+    position: relative;
+    height: var(--strip-label-row);
+    font-size: var(--stats-label-size);
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .strip__label {
+    position: absolute;
+    top: 0;
+    white-space: nowrap;
+  }
+
+  .strip__label--end {
+    right: 0;
+  }
+
+  .strip__label[hidden] {
+    display: none;
+  }
+}

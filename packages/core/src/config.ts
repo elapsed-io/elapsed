@@ -127,9 +127,13 @@ export const CONFIG = {
     resultsFadeInDelay: 1000,
     resultsFadeIn: 1000,
     resultsRisePx: 10,
-    /** The replay starts at 2.0 s and runs 4.5 s. */
+    /** The replay starts at 2.0 s and runs 4.5 s, eased in and out (cubic). */
     replayDelay: 2000,
     replayDuration: 4500,
+    /** Samples of the cubic ease-in-out drawn as a CSS linear() easing. */
+    replayEasingSamples: 32,
+    /** After copying the share text, the share icon shows a check for this long (owner decision, 2026-11-15). */
+    copiedConfirmation: 2000,
     /** Easing for interface motion (start morph, fades): cubic-bezier control points. */
     standardEasing: [0.2, 0, 0, 1],
   },
@@ -185,6 +189,79 @@ export const CONFIG = {
     /** The check-in frame: "press any key if you're still here" in 15 px foreground text over the held time. */
     checkIn: {
       textPx: 15,
+    },
+    /** The ending countdown frame: "tabulating results" 13 px muted, tracked 0.06 em; the 380 × 3 px bar; 14 px apart. */
+    ending: {
+      textPx: 13,
+      textTrackingEm: 0.06,
+      gapPx: 14,
+      barRadiusPx: 2,
+      /** Between the bar and the buttons. */
+      spacerPx: 14,
+    },
+    /** The results frames (720 × 520). */
+    results: {
+      paddingYPx: 24,
+      paddingXPx: 60,
+      /** Below this window width the content keeps a 16 px side margin and the six stats wrap into two rows of three. */
+      narrowPaddingXPx: 16,
+      narrowBelowPx: 720,
+      gapPx: 22,
+      ringGapPx: 16,
+      labelPx: 11,
+      labelTrackingEm: 0.16,
+      labelGapPx: 6,
+      strip: {
+        widthPx: 600,
+        barHeightPx: 12,
+        barRadiusPx: 3,
+        /** Each bar starts 1 px after its start and ends 1 px before its end. */
+        barInsetPx: 1,
+        trackHeightPx: 2,
+        trackTopPx: 5,
+        labelRowPx: 14,
+        gapPx: 6,
+        /** An hour label starts this far before its hour, as in the frame. */
+        hourLabelOffsetPx: 16,
+        /** Hour labels keep at least this much space from each other and from the start and end labels. */
+        labelSpacingPx: 8,
+      },
+      stats: {
+        columns: 6,
+        narrowColumns: 3,
+        gapPx: 10,
+        labelPx: 11,
+        valuePx: 14,
+        innerGapPx: 3,
+        ringColumns: 2,
+        ringWidthPx: 250,
+      },
+      actions: {
+        gapPx: 14,
+        blockGapPx: 6,
+      },
+      ring: {
+        /** Drawn 230 px wide from a 250-unit view box. */
+        sizePx: 230,
+        viewBox: 250,
+        outerRadius: 92,
+        spacing: 13,
+        strokeWidth: 8,
+        /** Up to this many hours draw as the frame; more rings get closer and thinner to fit (owner decision, 2026-11-15). */
+        exactHours: 6,
+        tickRadius: 104.5,
+        tickWidth: 5,
+        tickLength: 1.5,
+        tickRotateDegrees: -90.4,
+        labelRadius: 115,
+        labelPx: 11,
+        hourHand: { length: 41, width: 4 },
+        minuteHand: { length: 99, tail: 11, width: 2 },
+        centreRadius: 4,
+        rowGapPx: 44,
+        columnGapPx: 8,
+        legend: { gapPx: 14, itemGapPx: 6, focusPx: 10, pausePx: 8, radiusPx: 2 },
+      },
     },
     /** The session maximum frame: icon, heading, time, explanation and button, 16 px apart. */
     notice: {

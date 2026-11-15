@@ -22,8 +22,13 @@ export interface DisplayMode {
   /** Called only when the visible value changes. */
   render(view: TimerView): void;
   onEvent?(event: ModeEvent): void;
-  /** The results animation for this mode. Built in round 5. */
-  replay(root: HTMLElement, session: Session): void;
+  /**
+   * The results animation for this mode (round 5): draws the finished
+   * session into `root` and creates its animations with the replay timing
+   * (shared/replay-timing.ts) and no delay. The results screen sets when they
+   * start, or finishes them at once. May load its drawing code first.
+   */
+  replay(root: HTMLElement, session: Session): void | Promise<void>;
   unmount(): void;
 }
 

@@ -62,12 +62,30 @@ describe('plan audit: performance', () => {
     }
   });
 
-  it('animates from script only with transform and opacity', () => {
+  it('animates from script only with transform and opacity, apart from the replays’ two exceptions', () => {
+    // Plan, Performance requirements: "results animations move stroke offsets and transforms".
+    // Owner decision 125: the results headline counts up through one registered integer property.
+    const EXCEPTIONS: Readonly<Record<string, RegExp>> = {
+      strokeDashoffset: /packages\/web\/src\/modes\/[a-z]+\/[a-z-]*replay\.ts$/,
+      '--results-focused': /packages\/web\/src\/results\/results\.ts$/,
+    };
+    // Keyframes built away from the call are checked in these files as a whole.
+    const BUILT_ELSEWHERE = ['packages/web/src/modes/ring/ring-replay.ts', 'packages/web/src/results/results.ts'];
+    const allowed = (property: string, path: string): boolean =>
+      property === 'transform' || property === 'opacity' || property === 'offset' || (EXCEPTIONS[property]?.test(path) ?? false);
     for (const path of SITE_SOURCE) {
-      const text = readFileSync(path, 'utf8');
+      const text = withoutComments(readFileSync(path, 'utf8'));
+      for (const [, first = ''] of text.matchAll(/\.animate\(\s*(\S)/g)) {
+        if (first !== '[') expect(BUILT_ELSEWHERE, `keyframes built away from .animate() in ${rel(path)}`).toContain(rel(path));
+      }
       for (const [, keyframes = ''] of text.matchAll(/\.animate\(\s*\[([\s\S]*?)\]\s*,/g)) {
-        for (const [, property = ''] of keyframes.matchAll(/\{\s*([a-zA-Z]+)\s*:/g)) {
-          expect(['transform', 'opacity'], `${property} in ${rel(path)}`).toContain(property);
+        for (const [, property = ''] of keyframes.matchAll(/[{,]\s*'?(--[a-z-]+|[a-zA-Z]+)'?\s*:/g)) {
+          expect(allowed(property, path), `${property} in ${rel(path)}`).toBe(true);
+        }
+      }
+      if (BUILT_ELSEWHERE.includes(rel(path))) {
+        for (const [, property = ''] of text.matchAll(/\{\s*'?(--[a-z-]+|strokeDash\w+|transform|opacity|filter|clipPath)'?\s*:/g)) {
+          expect(allowed(property, path), `${property} in ${rel(path)}`).toBe(true);
         }
       }
     }

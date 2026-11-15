@@ -38,8 +38,37 @@ export const BRAND = {
     /** The session maximum frame; {hours} is the maximum in hours. */
     maximum: {
       heading: '{hours}-hour session max reached',
-      body: 'a single session can hold up to {hours} hours of focus. this one has ended and been saved; start a new one whenever you’re ready.',
+      /** For guests (owner decision, 2026-11-15); accounts (Release 3) get "has ended and been saved". */
+      body: 'a single session can hold up to {hours} hours of focus. this one has ended; start a new one whenever you’re ready.',
       action: 'view results',
+    },
+    /** The ending countdown and results frames. */
+    ending: {
+      tabulating: 'tabulating results',
+      cancel: 'cancel',
+      endNow: 'end now',
+    },
+    results: {
+      focused: 'focused',
+      elapsed: 'elapsed',
+      paused: 'paused',
+      pauses: 'pauses',
+      longestStretch: 'longest stretch',
+      started: 'started',
+      ended: 'ended',
+      retry: 'retry',
+      share: 'share',
+      copied: 'copied',
+      legendFocus: 'focus',
+      legendPause: 'pause',
+      ringLabel: 'clock replay: each ring is one hour, outside in, filled where you focused',
+      stripLabel: 'focus strip: filled where you focused, blank where you paused',
+      /** Hidden until accounts exist in Release 3 (owner decision, 2026-11-15). */
+      invite: 'this session isn’t saved.',
+      inviteLink: 'create an account',
+      inviteAfter: 'to keep it.',
+      /** The shared line (plan, Decisions > Results); {duration} reads like "2h 47m". */
+      shareText: 'i studied for {duration} on {name}',
     },
     /** Tab titles. {time} is hh:mm; {name} is the product name (owner decision, 2026-11-15). */
     title: {

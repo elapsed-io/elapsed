@@ -172,6 +172,48 @@ describe('heartbeat and gaps', () => {
   });
 });
 
+describe('ending at the moment end was pressed', () => {
+  it('leaves out the countdown’s seconds', () => {
+    const h = harness({ rules });
+    h.engine.start('digits');
+    h.clock.advance(20 * MINUTE);
+    const pressed = h.clock.now();
+    h.clock.advance(5 * SECOND);
+    expect(h.engine.end('user', { at: pressed })).toBe(true);
+    expect(h.engine.session?.segments).toEqual([{ start: T0, end: pressed }]);
+    expect(focusedMs(h.engine.session ?? fail(), T0 + HOUR)).toBe(20 * MINUTE);
+  });
+
+  it('never ends before a pause or resume recorded since', () => {
+    const h = harness({ rules });
+    h.engine.start('digits');
+    h.clock.advance(10 * MINUTE);
+    const pressed = h.clock.now();
+    h.clock.advance(2 * SECOND);
+    h.engine.pause();
+    h.clock.advance(SECOND);
+    h.engine.resume();
+    h.clock.advance(2 * SECOND);
+    h.engine.end('user', { at: pressed });
+    const segments = h.engine.session?.segments ?? [];
+    expect(segments.at(-1)).toEqual({ start: pressed + 3 * SECOND, end: pressed + 3 * SECOND });
+  });
+
+  it('counts no time the device slept through the countdown', () => {
+    const h = harness({ rules, heartbeat: true });
+    h.engine.start('digits');
+    h.clock.advance(30 * MINUTE);
+    const pressed = h.clock.now();
+    h.clock.sleep(HOUR, { monotonic: 'advances' });
+    h.engine.end('user', { at: pressed });
+    expect(focusedMs(h.engine.session ?? fail(), T0 + 3 * HOUR)).toBe(30 * MINUTE);
+  });
+});
+
+function fail(): never {
+  throw new Error('expected a session');
+}
+
 describe('restore and adopt', () => {
   it('resumes a saved session after a refresh with no time lost', () => {
     const first = harness({ rules, heartbeat: true });

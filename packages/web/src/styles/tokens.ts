@@ -29,7 +29,7 @@ const ms = (value: number): string => `${String(value)}ms`;
 const percent = (fraction: number): string => `${String(Math.round(fraction * 10_000) / 100)}%`;
 
 export function designCustomProperties(): CustomProperties {
-  const { reference, type, controls, icons, paused, checkIn, notice } = CONFIG.design;
+  const { reference, type, controls, icons, paused, checkIn, notice, ending, results } = CONFIG.design;
   const { motion } = CONFIG;
   return {
     '--font-family': `"${DEFAULT_FONT_FAMILY}", system-ui, sans-serif`,
@@ -81,6 +81,58 @@ export function designCustomProperties(): CustomProperties {
     '--icon-box': px(icons.cornerBoxPx),
     '--icon-inset': px(icons.cornerInsetPx),
     '--icon-gap': px(icons.cornerGapPx),
+
+    '--ending-text-size': px(ending.textPx),
+    '--ending-text-tracking': em(ending.textTrackingEm),
+    '--ending-gap': px(ending.gapPx),
+    '--ending-bar-width': px(controls.endingBar.width),
+    '--ending-bar-height': px(controls.endingBar.height),
+    '--ending-bar-radius': px(ending.barRadiusPx),
+    '--ending-spacer': px(ending.spacerPx),
+    '--ending-countdown': ms(CONFIG.session.endingCountdown),
+
+    '--results-padding-y': px(results.paddingYPx),
+    '--results-padding-x': px(results.paddingXPx),
+    '--results-gap': px(results.gapPx),
+    '--results-ring-gap': px(results.ringGapPx),
+    '--results-label-size': px(results.labelPx),
+    '--results-label-tracking': em(results.labelTrackingEm),
+    '--results-label-gap': px(results.labelGapPx),
+    '--results-headline-size': String(type.resultsHeadlinePx),
+    '--strip-width': px(results.strip.widthPx),
+    '--strip-bar-height': px(results.strip.barHeightPx),
+    '--strip-bar-radius': px(results.strip.barRadiusPx),
+    '--strip-bar-inset': px(results.strip.barInsetPx),
+    '--strip-track-height': px(results.strip.trackHeightPx),
+    '--strip-track-top': px(results.strip.trackTopPx),
+    '--strip-label-row': px(results.strip.labelRowPx),
+    '--strip-gap': px(results.strip.gapPx),
+    '--stats-columns': String(results.stats.columns),
+    '--stats-gap': px(results.stats.gapPx),
+    '--stats-label-size': px(results.stats.labelPx),
+    '--stats-value-size': px(results.stats.valuePx),
+    '--stats-inner-gap': px(results.stats.innerGapPx),
+    '--stats-ring-columns': String(results.stats.ringColumns),
+    '--stats-ring-width': px(results.stats.ringWidthPx),
+    '--results-icon-size': px(icons.resultsIconPx),
+    '--results-icon-box': px(icons.resultsBoxPx),
+    '--results-actions-gap': px(results.actions.gapPx),
+    '--results-actions-block-gap': px(results.actions.blockGapPx),
+    '--results-ring-size': px(results.ring.sizePx),
+    '--results-ring-row-gap': px(results.ring.rowGapPx),
+    '--results-ring-column-gap': px(results.ring.columnGapPx),
+    '--legend-gap': px(results.ring.legend.gapPx),
+    '--legend-item-gap': px(results.ring.legend.itemGapPx),
+    '--legend-focus-size': px(results.ring.legend.focusPx),
+    '--legend-pause-size': px(results.ring.legend.pausePx),
+    '--legend-radius': px(results.ring.legend.radiusPx),
+
+    '--tabulating-hold': ms(motion.tabulatingHold),
+    '--tabulating-fade': ms(motion.tabulatingFadeOut),
+    '--results-fade-delay': ms(motion.resultsFadeInDelay),
+    '--results-fade': ms(motion.resultsFadeIn),
+    '--results-rise': px(motion.resultsRisePx),
+    '--copied-confirmation': ms(motion.copiedConfirmation),
 
     '--motion-morph': ms(motion.startMorph),
     '--ease-standard': `cubic-bezier(${motion.standardEasing.join(', ')})`,
@@ -134,12 +186,28 @@ function blurAwayKeyframes(): string {
   ].join('\n');
 }
 
+/** The plan's replay easing, the cubic ease-in-out, as a CSS linear() function sampled evenly. */
+export function replayEasing(samples: number = CONFIG.motion.replayEasingSamples): string {
+  const cubic = (q: number): number => (q < 0.5 ? 4 * q * q * q : 1 - (-2 * q + 2) ** 3 / 2);
+  const points = Array.from({ length: samples + 1 }, (_, i) => String(Math.round(cubic(i / samples) * 10_000) / 10_000));
+  return `linear(${points.join(', ')})`;
+}
+
+/** Below the results frame's width, a side margin and three stat columns (owner decision, 2026-11-15). */
+function narrowBlock(): string {
+  const { results } = CONFIG.design;
+  return `  @media (max-width: ${String(results.narrowBelowPx - 0.02)}px) {\n${block(':root', {
+    '--results-padding-x': px(results.narrowPaddingXPx),
+    '--stats-columns': String(results.stats.narrowColumns),
+  }).replace(/^/gm, '  ')}\n  }`;
+}
+
 /** The generated stylesheet: design tokens and keyframes in `base`, the default theme in `theme`. */
 export function renderTokensCss(): string {
   const theme = deriveTheme(getPreset(DEFAULT_PRESET_ID));
   return [
     '/* Generated from packages/core/src/config.ts and packages/web/src/theme at build time. */',
-    `@layer base {\n${block(':root', designCustomProperties())}\n${blurAwayKeyframes()}\n}`,
+    `@layer base {\n${block(':root', { ...designCustomProperties(), '--ease-replay': replayEasing() })}\n${narrowBlock()}\n${blurAwayKeyframes()}\n}`,
     `@layer theme {\n${block(':root', themeCustomProperties(theme))}\n}`,
     '',
   ].join('\n');

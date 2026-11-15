@@ -164,11 +164,63 @@
     animation: notice-in var(--motion-morph) var(--ease-standard);
   }
 
-  /* Hidden while the notice takes their place. */
+  /* Hidden while the notice, the countdown or the results take their place. */
   .notice[hidden],
+  .ending[hidden],
   .mode-root[hidden],
   .controls[hidden] {
     display: none;
+  }
+
+  .button--secondary {
+    background: var(--color-pause);
+  }
+
+  /* The countdown and the tabulating screen show no corner icons (owner decision, 2026-11-15). */
+  .screen--bare .corner {
+    visibility: hidden;
+  }
+
+  /* The ending countdown frame. */
+  .ending {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--ending-gap);
+  }
+
+  .ending__text {
+    margin: 0;
+    font-size: var(--ending-text-size);
+    color: var(--color-muted);
+    letter-spacing: var(--ending-text-tracking);
+  }
+
+  .ending__bar {
+    display: flex;
+    width: var(--ending-bar-width);
+    max-width: 100%;
+    height: var(--ending-bar-height);
+    overflow: hidden;
+    border-radius: var(--ending-bar-radius);
+    background: var(--color-faint);
+  }
+
+  /* Full by default; the countdown slides it in from the left. */
+  .ending__fill {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--ending-bar-radius);
+    background: var(--color-foreground);
+  }
+
+  .ending__spacer {
+    height: var(--ending-spacer);
+  }
+
+  /* Complete: the tabulating screen keeps the buttons' place without them. */
+  .ending--done .ending__controls {
+    visibility: hidden;
   }
 
   .notice__icon {
