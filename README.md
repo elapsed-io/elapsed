@@ -41,6 +41,9 @@ npm run check
 npm run test:e2e
 ```
 
+Until round 6 adds a display mode setting, add `?mode=ring` or `?mode=timeline` to the address to see the
+other Release 1 modes.
+
 The end-to-end tests build the site and serve it with `vite preview`, which sends the same security
 headers as production. To use an already installed Chromium instead of Playwright's download, set
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to its path. The Vite dev server does not send the CSP.

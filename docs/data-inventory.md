@@ -5,12 +5,12 @@ updates it in the same change (plan, Privacy > Living inventory).
 
 ## What the site does today
 
-As of Release 1, round 2 (Timer engine), the site stores nothing and sends nothing. The engine built in
-round 2 holds a session in memory only, and is not yet connected to the page; storage arrives in round 4.
+As of Release 1, round 3 (Default screen), the site stores nothing and sends nothing. The running session
+lives in the page's memory only and is lost on refresh until round 4 adds storage.
 
 | | Current state |
 | --- | --- |
-| Requests on a visit | Three, all to the site's own origin: the page, its stylesheet and the default font. No third-party requests. Verified by `packages/web/e2e/idle.spec.ts`. |
+| Requests on a visit | Four, all to the site's own origin: the page, its script, its stylesheet and the default font; choosing ring or timeline adds that mode's script and stylesheet. No third-party requests. Verified by `packages/web/e2e/idle.spec.ts` and `modes.spec.ts`. |
 | Browser storage | None. No `localStorage`, `sessionStorage`, IndexedDB or Cache Storage keys. Lint restricts storage access to the future storage adapters. |
 | Cookies | None. Lint bans `document.cookie`. |
 | Server endpoints | None. The anonymous counting endpoint arrives in round 4. |

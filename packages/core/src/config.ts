@@ -108,6 +108,8 @@ export const CONFIG = {
     /** The replay starts at 2.0 s and runs 4.5 s. */
     replayDelay: 2000,
     replayDuration: 4500,
+    /** Easing for interface motion (start morph, fades): cubic-bezier control points. */
+    standardEasing: [0.2, 0, 0, 1],
   },
 
   /** Sizes at the design canvas's reference frames (Design system > Type, Controls and icons, Screens). */
@@ -149,6 +151,12 @@ export const CONFIG = {
       timeToButtonsPx: 26,
       endingBar: { width: 380, height: 3 },
     },
+    /** The paused frame: "paused for" sits 10 px above the pause length, in 12 px muted text tracked 0.14 em. */
+    paused: {
+      labelPx: 12,
+      labelGapPx: 10,
+      labelTrackingEm: 0.14,
+    },
     icons: {
       strokeWidth: 1.6,
       /** Settings and account: 16 px icons in 28 px boxes, 14 px from the top-right corner, 4 px apart. */
@@ -183,9 +191,39 @@ export const CONFIG = {
 
   /** Display modes (Design system > Display modes; Decisions already made). */
   modes: {
-    ring: { revolution: 1 * HOUR, trackPx: 8, tailDegrees: 55, tailSteps: 22, tailFadeExponent: 1.8 },
+    ring: {
+      revolution: 1 * HOUR,
+      trackPx: 8,
+      tailDegrees: 55,
+      tailSteps: 22,
+      tailFadeExponent: 1.8,
+      /** Geometry at reference, from the ring frame: a 280 px box, a 112 px radius, a 4 px head dot. */
+      boxPx: 280,
+      radiusPx: 112,
+      headRadiusPx: 4,
+      /** Each tail step is drawn this long along the ring, slightly longer than a step, so steps overlap without gaps. */
+      tailSegmentArcPx: 5.49,
+      /** The ring sits 20 px above the buttons. */
+      gapPx: 20,
+    },
     analog: { revolution: 1 * HOUR, labelEveryMinutes: 5 },
-    timeline: { minutesPer100Px: 10, tickEveryMinutes: 5, labelEveryMinutes: 10 },
+    timeline: {
+      minutesPer100Px: 10,
+      tickEveryMinutes: 5,
+      labelEveryMinutes: 10,
+      /** Geometry at reference, from the timeline frame. */
+      widthPx: 640,
+      heightPx: 110,
+      baselineYPx: 60,
+      lineWidthPx: 2,
+      tickWidthPx: 1.5,
+      minorTickPx: 6,
+      majorTickPx: 12,
+      labelYPx: 90,
+      labelPx: 11,
+      /** Time, timeline and buttons are 18 px apart. */
+      gapPx: 18,
+    },
     ocean: {
       metresPerFocusedMinute: 15,
       maxDepthMetres: 10_935,

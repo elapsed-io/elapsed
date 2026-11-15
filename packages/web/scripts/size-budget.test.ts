@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { compressedSize, coreFiles, verdict } from './size-budget.ts';
+import { compressedSize, coreFiles, packageSize, verdict } from './size-budget.ts';
 
 describe('verdict', () => {
   it('passes at or under the budget', () => {
@@ -49,5 +49,30 @@ describe('coreFiles', () => {
     );
     const paths = coreFiles(dist).map((f) => f.path);
     expect(paths).toEqual(['assets/a.css', 'assets/f.woff2', 'assets/main.js', 'assets/shared.js', 'index.html']);
+  });
+});
+
+describe('packageSize', () => {
+  it('counts a lazy package and what it adds beyond the core', () => {
+    const dist = mkdtempSync(join(tmpdir(), 'size-'));
+    mkdirSync(join(dist, '.vite'));
+    mkdirSync(join(dist, 'assets'));
+    writeFileSync(join(dist, 'index.html'), '<script type="module" src="/assets/main.js"></script>');
+    writeFileSync(join(dist, 'assets', 'main.js'), 'export {}');
+    writeFileSync(join(dist, 'assets', 'ring.js'), 'x'.repeat(2000));
+    writeFileSync(join(dist, 'assets', 'ring.css'), '.ring{}');
+    writeFileSync(join(dist, 'assets', 'fish.svg'), '<svg/>');
+    writeFileSync(
+      join(dist, '.vite', 'manifest.json'),
+      JSON.stringify({
+        'index.html': { file: 'assets/main.js', src: 'index.html', dynamicImports: ['src/modes/ring/ring.ts'] },
+        'src/modes/ring/ring.ts': { file: 'assets/ring.js', src: 'src/modes/ring/ring.ts', imports: ['index.html'], css: ['assets/ring.css'], assets: ['assets/fish.svg'] },
+      }),
+    );
+    const size = packageSize(dist, 'src/modes/ring/ring.ts');
+    expect(size.files).toEqual(['assets/fish.svg', 'assets/ring.css', 'assets/ring.js']);
+    expect(size.artBytes).toBeGreaterThan(0);
+    expect(size.codeBytes).toBeGreaterThan(0);
+    expect(() => packageSize(dist, 'src/modes/ocean/ocean.ts')).toThrow();
   });
 });

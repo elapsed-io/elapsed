@@ -39,8 +39,8 @@
     align-items: center;
     justify-content: center;
     gap: max(
-      calc(var(--time-gap) * 1px),
-      calc(var(--time-gap) * var(--u) * var(--time-scale))
+      calc(var(--mode-gap) * 1px),
+      calc(var(--mode-gap) * var(--u) * var(--time-scale))
     );
   }
 
@@ -71,6 +71,7 @@
   }
 
   .controls {
+    position: relative;
     display: flex;
     gap: var(--button-gap);
   }
@@ -99,28 +100,50 @@
     transform: translate(-50%, -50%);
   }
 
-  .button--start {
+  /* The primary button draws one face per label; the active face sets its size and the rest crossfade over it. */
+  .button--primary {
+    padding: 0;
+    background: transparent;
+  }
+
+  .button__face {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    translate: -50% 0;
+    display: flex;
+    align-items: center;
+    height: var(--button-height);
+    padding: 0 var(--button-padding-x);
+    border-radius: var(--button-radius);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--motion-morph) var(--ease-standard);
+  }
+
+  .button__face--active {
+    position: relative;
+    left: auto;
+    translate: none;
+    opacity: 1;
+  }
+
+  .button__face--start,
+  .button__face--resume {
     background: var(--color-accent);
   }
-}
 
-/* The digits display mode. Round 3 moves this into the digits mode package. */
-@layer mode {
-  .time {
-    font-family: var(--font-family);
-    font-weight: var(--font-weight-time);
-    font-stretch: var(--font-stretch);
-    font-variant-numeric: tabular-nums;
-    font-size: calc(var(--time-size) * var(--u) * var(--time-scale));
-    line-height: 1;
-    letter-spacing: var(--time-letter-spacing);
-    white-space: nowrap;
-    text-align: center;
+  .button__face--pause {
+    background: var(--color-pause);
   }
 
-  .time__colon {
-    position: relative;
-    top: calc(-1 * var(--colon-raise));
-    margin: 0 calc(-1 * var(--colon-tighten));
+  .button--end {
+    background: var(--color-end);
+  }
+
+  /* While fading out, the end button keeps its place without holding space in the row. */
+  .button--leaving {
+    position: absolute;
   }
 }

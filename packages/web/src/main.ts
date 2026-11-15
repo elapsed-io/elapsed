@@ -1,9 +1,13 @@
 /*
- * Entry point. Round 1 renders a static idle screen from index.html; this
- * module only brings in the stylesheets in cascade-layer order. The timer
- * engine arrives in round 2 and the display modes in round 3.
+ * Entry point: the stylesheets in cascade-layer order, then the app. The page
+ * paints its idle screen from static HTML before this runs.
  */
 import './styles/layers.css';
 import 'virtual:tokens.css';
 import './styles/fonts.css';
 import './styles/main.css';
+import { startApp } from './app.ts';
+
+startApp(document, window).catch((error: unknown) => {
+  reportError(error);
+});

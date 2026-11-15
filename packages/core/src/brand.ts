@@ -26,6 +26,21 @@ export const BRAND = {
     },
     timer: {
       start: 'start',
+      pause: 'pause',
+      resume: 'resume',
+      end: 'end',
+      pausedFor: 'paused for',
+    },
+    /** Tab titles. {time} is hh:mm; {name} is the product name (owner decision, 2026-11-15). */
+    title: {
+      idle: '{name}',
+      running: '{time} · {name}',
+      paused: 'paused for {time} · {name}',
+    },
+    modes: {
+      digits: 'digits',
+      ring: 'ring',
+      timeline: 'timeline',
     },
     icons: {
       settings: 'settings',

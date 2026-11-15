@@ -1,0 +1,133 @@
+/*
+ * The time, shared by every Release 1 mode. Sizes come from the active mode
+ * (--mode-time-size, in reference pixels) and scale with the window.
+ */
+@layer mode {
+  .time-stack {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .time {
+    font-family: var(--font-family);
+    font-weight: var(--font-weight-time);
+    font-stretch: var(--font-stretch);
+    font-variant-numeric: tabular-nums;
+    font-size: calc(var(--mode-time-size) * var(--u) * var(--time-scale));
+    line-height: 1;
+    letter-spacing: var(--time-letter-spacing);
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .time__colon {
+    position: relative;
+    top: calc(-1 * var(--colon-raise));
+    margin: 0 calc(-1 * var(--colon-tighten));
+  }
+
+  .time__shift {
+    display: inline-block;
+  }
+
+  .time--short .time__tens,
+  .time--short .time__ones {
+    display: none;
+  }
+
+  /* Seconds blurring away, pinned to focused time by script. */
+  .time--blur-away .time__ones {
+    animation:
+      time-blur-away-blur var(--blur-ones-window) linear var(--blur-ones-start) both,
+      time-blur-away-fade var(--blur-ones-window) linear var(--blur-ones-start) both;
+  }
+
+  .time--blur-away .time__tens {
+    animation:
+      time-blur-away-blur var(--blur-tens-window) linear var(--blur-tens-start) both,
+      time-blur-away-fade var(--blur-tens-window) linear var(--blur-tens-start) both;
+  }
+
+  .time--blur-away .time__shift--ones {
+    animation: time-blur-away-shift-ones var(--blur-ones-window) linear var(--blur-ones-start) both;
+  }
+
+  .time--blur-away .time__shift--tens {
+    animation: time-blur-away-shift-tens var(--blur-tens-window) linear var(--blur-tens-start) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .time--blur-away .time__ones {
+      animation: time-cut-ones var(--blur-ones-window) linear var(--blur-ones-start) both;
+    }
+
+    .time--blur-away .time__tens {
+      animation: time-cut-tens var(--blur-tens-window) linear var(--blur-tens-start) both;
+    }
+
+    .time--blur-away .time__shift--ones {
+      animation: time-jump-ones var(--blur-ones-window) linear var(--blur-ones-start) both;
+    }
+
+    .time--blur-away .time__shift--tens {
+      animation: time-jump-tens var(--blur-tens-window) linear var(--blur-tens-start) both;
+    }
+  }
+
+  /* Paused: the time is held behind a blur and the pause length is shown over it. */
+  .time--main {
+    transition:
+      filter var(--motion-morph) var(--ease-standard),
+      opacity var(--motion-morph) var(--ease-standard);
+  }
+
+  .time--held {
+    filter: blur(var(--held-blur));
+    opacity: var(--held-opacity);
+  }
+
+  .paused {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--motion-morph) var(--ease-standard),
+      visibility 0s linear var(--motion-morph);
+  }
+
+  .paused--shown {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--motion-morph) var(--ease-standard);
+  }
+
+  .time--paused-for {
+    position: relative;
+    font-size: calc(var(--paused-for-size) * var(--u) * var(--time-scale));
+  }
+
+  .paused__label {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: var(--paused-label-gap);
+    font-size: var(--paused-label-size);
+    font-weight: var(--font-weight-label);
+    color: var(--color-muted);
+    letter-spacing: var(--paused-label-tracking);
+  }
+
+  /* Reduced motion: no blur animates; the pause still crossfades. */
+  @media (prefers-reduced-motion: reduce) {
+    .time--main {
+      transition: opacity var(--motion-morph) var(--ease-standard);
+    }
+  }
+}

@@ -38,6 +38,10 @@ const safetySyntax = [
       selector: "CallExpression[callee.property.name='setAttribute'][arguments.0.value=/^(on|srcdoc$)/i]",
       message: 'Event-handler and srcdoc attributes are banned; use addEventListener.',
     },
+    {
+      selector: "CallExpression[callee.property.name='setAttribute'][arguments.0.value=/^style$/i]",
+      message: "The CSP blocks style attributes; use a class, or element.style.setProperty for measured values.",
+    },
 ];
 
 /**

@@ -53,8 +53,10 @@ test('loads under the CSP with no violations, errors or third-party requests', a
   expect(errors).toEqual([]);
   const origin = new URL(baseURL ?? '').origin;
   expect(requests.filter((url) => !url.startsWith('data:') && new URL(url).origin !== origin)).toEqual([]);
-  // The page, its stylesheet and the preloaded font; no other request.
-  expect(requests.filter((url) => !url.startsWith('data:'))).toHaveLength(3);
+  // The page, its script, its stylesheet and the preloaded font. No display mode chunk loads for digits.
+  const paths = requests.filter((url) => !url.startsWith('data:')).map((url) => new URL(url).pathname);
+  expect(paths).toHaveLength(4);
+  expect(paths.filter((path) => /\/assets\/(ring|timeline)-/.test(path))).toEqual([]);
 });
 
 test('the browser enforces Trusted Types and blocks inline styles', async ({ page }) => {
@@ -90,10 +92,10 @@ test('uses the self-hosted trimmed font for the time and the buttons', async ({ 
     [...document.fonts].map((face) => ({ family: face.family, status: face.status, weight: face.weight, stretch: face.stretch })),
   );
   expect(fonts).toEqual([{ family: 'Timer Sans', status: 'loaded', weight: '300 500', stretch: '92%' }]);
-  await expect(page.locator('.time')).toHaveCSS('font-family', '"Timer Sans", system-ui, sans-serif');
-  await expect(page.locator('.time')).toHaveCSS('font-weight', '300');
-  await expect(page.locator('.button--start')).toHaveCSS('font-weight', '500');
-  await expect(page.locator('.button--start')).toHaveCSS('font-stretch', '92%');
+  await expect(page.locator('.time--main')).toHaveCSS('font-family', '"Timer Sans", system-ui, sans-serif');
+  await expect(page.locator('.time--main')).toHaveCSS('font-weight', '300');
+  await expect(page.locator('.button--primary')).toHaveCSS('font-weight', '500');
+  await expect(page.locator('.button--primary')).toHaveCSS('font-stretch', '92%');
 });
 
 test('matches the idle frame pixel for pixel at 720 × 450', async ({ page, browser }) => {
@@ -115,7 +117,28 @@ test('matches the idle frame pixel for pixel at 720 × 450', async ({ page, brow
 
   const diff = await diffPngs(reference, site, frame);
   await reference.close();
-  expect(diff).toEqual({ total: 720 * 450, differing: 0, maxChannelDelta: 0 });
+  expect(diff).toEqual({ total: 720 * 450, differing: 0, visible: 0, maxChannelDelta: 0 });
+});
+
+test('paints the same idle frame before the script runs', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 720, height: 450 } });
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.evaluate(() => document.fonts.ready).catch(() => undefined);
+  await page.waitForTimeout(300);
+  const site = await page.screenshot();
+  const reference = await browser.newPage({ viewport: { width: 720, height: 450 } });
+  await reference.route('http://frame.test/**', (route) => {
+    const isFont = route.request().url().endsWith('/font.woff2');
+    return route.fulfill({ body: isFont ? FONT : FIXTURE, contentType: isFont ? 'font/woff2' : 'text/html' });
+  });
+  await reference.goto('http://frame.test/');
+  await reference.evaluate(() => document.fonts.ready);
+  const frame = await reference.screenshot();
+  const diff = await diffPngs(reference, site, frame);
+  await reference.close();
+  await context.close();
+  expect(diff).toEqual({ total: 720 * 450, differing: 0, visible: 0, maxChannelDelta: 0 });
 });
 
 test.describe('window scaling', () => {
@@ -138,16 +161,16 @@ test.describe('window scaling', () => {
           if (element === null) throw new Error(`missing ${selector}`);
           return element.getBoundingClientRect();
         };
-        const timeBox = box('.time');
+        const timeBox = box('.time--main');
         const controls = box('.controls');
-        const start = box('.button--start');
+        const start = box('.button--primary');
         const icon = box('.icon-button');
         const corner = box('.corner');
         return {
-          time: Number.parseFloat(getComputedStyle(document.querySelector('.time') ?? document.body).fontSize),
+          time: Number.parseFloat(getComputedStyle(document.querySelector('.time--main') ?? document.body).fontSize),
           gap: controls.top - timeBox.bottom,
           buttonHeight: start.height,
-          buttonFont: getComputedStyle(document.querySelector('.button--start') ?? document.body).fontSize,
+          buttonFont: getComputedStyle(document.querySelector('.button--primary') ?? document.body).fontSize,
           iconBox: icon.width,
           insetTop: corner.top,
           insetRight: window.innerWidth - corner.right,
@@ -167,7 +190,7 @@ test.describe('window scaling', () => {
 test('every button keeps a tap area of at least 44 px', async ({ page }) => {
   await openIdle(page);
   const area = await page.evaluate(() => {
-    const style = getComputedStyle(document.querySelector('.button--start') ?? document.body, '::before');
+    const style = getComputedStyle(document.querySelector('.button--primary') ?? document.body, '::before');
     return { width: Number.parseFloat(style.width), height: Number.parseFloat(style.height) };
   });
   expect(area.width).toBeGreaterThanOrEqual(44);

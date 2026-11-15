@@ -1,0 +1,36 @@
+/* Timeline mode, sized in reference pixels and scaled with the window like the time. */
+@layer mode {
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: max(calc(var(--mode-gap) * 1px), calc(var(--mode-gap) * var(--u) * var(--time-scale)));
+  }
+
+  .timeline__svg {
+    display: block;
+    width: calc(var(--timeline-width) * var(--u) * var(--time-scale));
+    height: calc(var(--timeline-height) * var(--u) * var(--time-scale));
+  }
+
+  .timeline__line--past,
+  .timeline__tick--past {
+    stroke: var(--color-muted);
+  }
+
+  .timeline__line--future,
+  .timeline__tick--future {
+    stroke: var(--color-faint);
+  }
+
+  .timeline__label {
+    fill: var(--color-muted);
+    font-family: var(--font-family);
+    font-size: var(--timeline-label-size);
+    text-anchor: middle;
+  }
+
+  .timeline__strip {
+    animation: timeline-scroll var(--timeline-duration) linear both;
+  }
+}

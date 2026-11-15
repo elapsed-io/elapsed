@@ -11,7 +11,7 @@
 import type { Plugin } from 'vite';
 import { HEADER_RULES, headersForPath, renderHeadersFile } from './headers.ts';
 import { renderTemplate } from './html.ts';
-import { renderTokensCss } from '../src/styles/tokens.ts';
+import { isModeTokenId, renderModeTokensCss, renderTokensCss } from '../src/styles/tokens.ts';
 
 export function templateHtml(): Plugin {
   return {
@@ -21,14 +21,29 @@ export function templateHtml(): Plugin {
 }
 
 const TOKENS_ID = 'virtual:tokens.css';
-// Resolved without the usual "\0" prefix so Vite's CSS pipeline handles it.
+const MODE_TOKENS_PREFIX = 'virtual:tokens/';
+// Resolved without the usual "\0" prefix so Vite's CSS pipeline handles them.
 const RESOLVED_TOKENS_ID = '/@stopwatch/tokens.css';
+const RESOLVED_MODE_PREFIX = '/@stopwatch/tokens/';
 
+/** Serves `virtual:tokens.css` (core tier) and `virtual:tokens/<mode>.css` (loaded with each mode). */
 export function tokensCss(): Plugin {
   return {
     name: 'stopwatch:tokens-css',
-    resolveId: (id) => (id === TOKENS_ID ? RESOLVED_TOKENS_ID : undefined),
-    load: (id) => (id === RESOLVED_TOKENS_ID ? renderTokensCss() : undefined),
+    resolveId(id) {
+      if (id === TOKENS_ID) return RESOLVED_TOKENS_ID;
+      if (id.startsWith(MODE_TOKENS_PREFIX)) return RESOLVED_MODE_PREFIX + id.slice(MODE_TOKENS_PREFIX.length);
+      return undefined;
+    },
+    load(id) {
+      if (id === RESOLVED_TOKENS_ID) return renderTokensCss();
+      if (id.startsWith(RESOLVED_MODE_PREFIX)) {
+        const mode = id.slice(RESOLVED_MODE_PREFIX.length).replace(/\.css$/, '');
+        if (!isModeTokenId(mode)) throw new Error(`no tokens for display mode ${mode}`);
+        return renderModeTokensCss(mode);
+      }
+      return undefined;
+    },
   };
 }
 

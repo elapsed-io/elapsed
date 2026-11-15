@@ -29,7 +29,10 @@ export function compressedSize(path: string, contents: Buffer): number {
 
 interface ManifestChunk {
   readonly file: string;
+  readonly src?: string;
   readonly imports?: readonly string[];
+  readonly css?: readonly string[];
+  readonly assets?: readonly string[];
 }
 type Manifest = Readonly<Record<string, ManifestChunk>>;
 
@@ -84,3 +87,43 @@ export function coreFiles(distDir: string): CoreFile[] {
   }
   return files.sort((a, b) => a.path.localeCompare(b.path));
 }
+
+const ART = /\.(?:svg|png|webp|avif|jpe?g|gif)$/;
+
+export interface ChunkSize {
+  readonly codeBytes: number;
+  readonly artBytes: number;
+  readonly files: readonly string[];
+}
+
+/**
+ * What one lazily loaded package (a display mode, later a widget) adds on top
+ * of the core: its own chunk, its stylesheets, its art, and any chunk it
+ * imports that the core does not already load.
+ */
+export function packageSize(distDir: string, source: string): ChunkSize {
+  const manifest = JSON.parse(readFileSync(join(distDir, '.vite', 'manifest.json'), 'utf8')) as Manifest;
+  const entry = Object.values(manifest).find((chunk) => chunk.src === source);
+  if (entry === undefined) throw new Error(`${source} is not in the build`);
+  const core = new Set(coreFiles(distDir).map((file) => file.path));
+  const files = new Set<string>();
+  const visit = (chunk: ManifestChunk): void => {
+    if (core.has(chunk.file) || files.has(chunk.file)) return;
+    files.add(chunk.file);
+    for (const path of [...(chunk.css ?? []), ...(chunk.assets ?? [])]) if (!core.has(path)) files.add(path);
+    for (const imported of chunk.imports ?? []) {
+      const next = manifest[imported];
+      if (next !== undefined) visit(next);
+    }
+  };
+  visit(entry);
+  let codeBytes = 0;
+  let artBytes = 0;
+  for (const path of files) {
+    const bytes = compressedSize(path, readFileSync(join(distDir, path)));
+    if (ART.test(path)) artBytes += bytes;
+    else codeBytes += bytes;
+  }
+  return { codeBytes, artBytes, files: [...files].sort() };
+}
+

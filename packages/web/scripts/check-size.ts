@@ -6,7 +6,8 @@
 
 import { fileURLToPath } from 'node:url';
 import { CONFIG } from '@stopwatch/core';
-import { coreFiles, verdict } from './size-budget.ts';
+import { MODE_MANIFESTS } from '../src/modes/manifests.ts';
+import { coreFiles, packageSize, verdict } from './size-budget.ts';
 import type { Verdict } from './size-budget.ts';
 
 const distDir = fileURLToPath(new URL('../dist', import.meta.url));
@@ -23,6 +24,13 @@ const checks: [string, number, number][] = [
   ['core JavaScript', javascript, core.javascriptBytes],
   ['core total', total, core.totalBytes],
 ];
+
+// Each display mode downloaded on demand has its own budget, declared in its manifest.
+for (const manifest of MODE_MANIFESTS.filter((mode) => mode.tier === 'on-choice')) {
+  const size = packageSize(distDir, manifest.source);
+  checks.push([`${manifest.id} mode code`, size.codeBytes, manifest.budget.codeBytes]);
+  checks.push([`${manifest.id} mode art`, size.artBytes, manifest.budget.artBytes]);
+}
 
 const inCi = process.env['GITHUB_ACTIONS'] === 'true';
 let failed = false;

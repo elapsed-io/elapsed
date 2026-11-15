@@ -1,0 +1,38 @@
+/* Ring mode, sized in reference pixels and scaled with the window like the time. */
+@layer mode {
+  .ring {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--ring-box) * var(--u) * var(--time-scale));
+    height: calc(var(--ring-box) * var(--u) * var(--time-scale));
+  }
+
+  .ring__svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .ring__track {
+    fill: none;
+    stroke: var(--color-faint);
+  }
+
+  .ring__tail {
+    fill: none;
+    stroke: var(--color-accent);
+  }
+
+  .ring__head {
+    fill: var(--color-accent);
+  }
+
+  .ring__turn {
+    transform-box: view-box;
+    transform-origin: 50% 50%;
+    animation: ring-turn var(--ring-revolution) linear infinite;
+  }
+}

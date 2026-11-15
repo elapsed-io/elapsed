@@ -35,6 +35,7 @@ describe('lint safety rules', () => {
     'el.setHTMLUnsafe(html);',
     'document.write(html);',
     "el.setAttribute('onclick', code);",
+    "el.setAttribute('style', css);",
   ])('bans the HTML sink in %s', (code) => {
     expect(ruleIds(code)).toContain('no-restricted-syntax');
   });
@@ -50,6 +51,7 @@ describe('lint safety rules', () => {
     'el.textContent = userText;',
     'el.replaceChildren(child);',
     "el.setAttribute('aria-label', label);",
+    "el.style.setProperty('--x', '1em');",
     'const html = el.innerHTML;',
     'writer.write(chunk);',
   ])('allows %s', (code) => {
