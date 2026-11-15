@@ -1,7 +1,7 @@
 import { Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
 import { describe, expect, it } from 'vitest';
-import { safetyRules, storageRules } from './restrictions.js';
+import { coreRules, safetyRules, storageRules } from './restrictions.js';
 
 const linter = new Linter({ configType: 'flat' });
 const config: Linter.Config[] = [
@@ -63,5 +63,19 @@ describe('lint safety rules', () => {
     "document.cookie = 'a=b';",
   ])('keeps browser storage behind the adapters: %s', (code) => {
     expect(ruleIds(code).length).toBeGreaterThan(0);
+  });
+
+  describe('core determinism', () => {
+    const coreConfig: Linter.Config[] = [{ files: ['**/*.ts'], languageOptions: { parser: tseslint.parser }, rules: coreRules }];
+    const coreIds = (code: string): string[] =>
+      linter.verify(code, coreConfig, 'example.ts').map((message) => message.ruleId ?? 'parse-error');
+
+    it.each(['Date.now();', 'new Date();', 'performance.now();', 'Math.random();', 'el.innerHTML = x;'])('bans %s in core', (code) => {
+      expect(coreIds(code).length).toBeGreaterThan(0);
+    });
+
+    it.each(['clock.now();', 'new Date(at);', 'Date.UTC(2026, 0, 1);', 'Math.floor(x);'])('allows %s in core', (code) => {
+      expect(coreIds(code)).toEqual([]);
+    });
   });
 });

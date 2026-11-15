@@ -46,6 +46,28 @@ export const CONFIG = {
     endNowGuard: 300,
     /** Controls must respond within this time (Principles: appealing and fast). */
     controlResponseTarget: 100,
+    /** Upper bounds that keep a stored or synced session small enough to validate cheaply. */
+    limits: {
+      maxSegments: 10_000,
+      maxGaps: 10_000,
+      maxModeSpans: 1000,
+      modeIdMaxLength: 32,
+    },
+  },
+
+  /** The timer engine (Release 1, round 2). */
+  engine: {
+    /**
+     * While the page is open the engine compares the device clock with the
+     * monotonic clock. When the device clock falls behind by more than this,
+     * the open session is shifted back by the difference (owner decision,
+     * 2026-11-15). Smaller steps are absorbed without a shift.
+     */
+    clockJumpTolerance: 250,
+    /** A timer that fires this close before its deadline counts as on time. */
+    timerEarlyTolerance: 2,
+    /** The "paused for" time shows seconds, so the paused view changes every second. */
+    pausedPrecision: 1 * SECOND,
   },
 
   /** History, streaks and retention (Release 3). */

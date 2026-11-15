@@ -9,8 +9,10 @@ Working rules apply to every change. The visual source of truth is the design ca
 ## Layout
 
 ```text
-packages/core   Pure TypeScript: config (every tunable number), brand (name and all copy), and from
-                round 2 the session model and timer engine. No DOM, no network.
+packages/core   Pure TypeScript: config (every tunable number), brand (name and all copy), the
+                session model and its validation, the event bus, and the timer engine with its
+                single scheduler. Test helpers (a fake clock) at @stopwatch/core/testing.
+                No DOM, no network.
 packages/web    The site: index.html, styles, themes, icons, the self-hosted font, build plugins,
                 CI scripts and end-to-end tests.
 docs            plan.md, decisions.md, data-inventory.md, safety/ (one overview per round)

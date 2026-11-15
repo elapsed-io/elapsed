@@ -5,7 +5,8 @@ updates it in the same change (plan, Privacy > Living inventory).
 
 ## What the site does today
 
-As of Release 1, round 1 (Foundations), the site stores nothing and sends nothing.
+As of Release 1, round 2 (Timer engine), the site stores nothing and sends nothing. The engine built in
+round 2 holds a session in memory only, and is not yet connected to the page; storage arrives in round 4.
 
 | | Current state |
 | --- | --- |

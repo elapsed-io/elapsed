@@ -2,7 +2,7 @@
 import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
-import { safetyRules, storageRules } from './tooling/eslint/restrictions.js';
+import { coreRules, safetyRules, storageRules } from './tooling/eslint/restrictions.js';
 
 export default defineConfig(
   {
@@ -34,6 +34,12 @@ export default defineConfig(
     files: ['packages/web/src/**/*.ts'],
     ignores: ['packages/web/src/storage/**'],
     rules: storageRules,
+  },
+  {
+    // Core: time and randomness only through injected dependencies (tests may use anything).
+    files: ['packages/core/src/**/*.ts'],
+    ignores: ['packages/core/src/**/*.test.ts'],
+    rules: coreRules,
   },
   {
     // Plain JavaScript config files are linted without type information.

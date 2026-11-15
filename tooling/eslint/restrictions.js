@@ -16,17 +16,8 @@ const HTML_METHOD = /^(insertAdjacentHTML|createContextualFragment|setHTMLUnsafe
 const htmlSinkMessage =
   'Unsafe HTML sink. Trusted Types blocks it at runtime; build DOM with createElement, textContent and replaceChildren.';
 
-/**
- * Rules that apply to every TypeScript and JavaScript file.
- * @type {import('eslint').Linter.RulesRecord}
- */
-export const safetyRules = {
-  'no-eval': 'error',
-  'no-implied-eval': 'error',
-  'no-new-func': 'error',
-  'no-script-url': 'error',
-  'no-restricted-syntax': [
-    'error',
+/** Syntax banned everywhere. */
+const safetySyntax = [
     {
       selector: `AssignmentExpression > MemberExpression.left[property.name=${HTML_PROPERTY}]`,
       message: htmlSinkMessage,
@@ -47,6 +38,38 @@ export const safetyRules = {
       selector: "CallExpression[callee.property.name='setAttribute'][arguments.0.value=/^(on|srcdoc$)/i]",
       message: 'Event-handler and srcdoc attributes are banned; use addEventListener.',
     },
+];
+
+/**
+ * Rules that apply to every TypeScript and JavaScript file.
+ * @type {import('eslint').Linter.RulesRecord}
+ */
+export const safetyRules = {
+  'no-eval': 'error',
+  'no-implied-eval': 'error',
+  'no-new-func': 'error',
+  'no-script-url': 'error',
+  'no-restricted-syntax': ['error', ...safetySyntax],
+};
+
+const injectedClockMessage = 'Core reads time only through the injected Clock (plan, Architecture invariant 1).';
+
+/**
+ * Core code is deterministic: time comes from the injected clock and ids from
+ * the injected generator, so tests can control both.
+ * @type {import('eslint').Linter.RulesRecord}
+ */
+export const coreRules = {
+  'no-restricted-syntax': [
+    'error',
+    ...safetySyntax,
+    { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: injectedClockMessage },
+  ],
+  'no-restricted-properties': [
+    'error',
+    { object: 'Date', property: 'now', message: injectedClockMessage },
+    { object: 'performance', property: 'now', message: injectedClockMessage },
+    { object: 'Math', property: 'random', message: 'Core takes randomness from an injected generator.' },
   ],
 };
 
