@@ -41,7 +41,7 @@ Mirrors the plan's Privacy table. "Round" says when each item starts to exist; u
 | Cookies | None | One session cookie: HttpOnly, Secure, SameSite | Browser | R3 |
 | IP address | Not stored | Used briefly for rate limiting; never saved with the account | Memory only | R1 round 6 (crash report rate limit); the counting endpoint never reads it |
 | Usage counts | Anonymous daily visit and session counts, on by default, can be switched off | Same | A Cloudflare Worker on the site's own address, storing daily totals only in Cloudflare D1 | R1 round 4 (the switch: round 6) |
-| Crash reports | Off unless switched on | Same | Our server only (a D1 table): error message, stack, build version, day, browser family and major version; query strings and anything typed stripped; size-capped; kept 14 days | R1 round 6 |
+| Crash reports | Off unless switched on | Same | A Cloudflare D1 table, deleted after 14 days: error message, stack, build version, day, and browser family and major version. Query strings and anything the user typed are stripped; nothing else about the person or device is kept | R1 round 6 |
 | Analytics, ads, other third-party requests | None | None, apart from the CAPTCHA on the sign-up page | Nowhere | — |
 
 Never stored: what the user is working on, IP address, device fingerprint, or activity in other tabs.
