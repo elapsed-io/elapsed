@@ -11,6 +11,8 @@
 import { CONFIG } from '../config.ts';
 import { SESSION_ID_PATTERN, SESSION_SCHEMA, freezeSession, isEndReason, isModeId, isTime } from './session.ts';
 import type { EndReason, Gap, ModeSpan, Segment, Session } from './session.ts';
+import { ACTIVE_STATE_SCHEMA, freezeState } from './state.ts';
+import type { ActiveState } from './state.ts';
 
 export class SessionValidationError extends Error {
   override readonly name = 'SessionValidationError';
@@ -160,5 +162,49 @@ export function migrateSession(value: unknown): Session {
       : undefined;
   const migrate = typeof schema === 'number' && Object.hasOwn(MIGRATIONS, schema) ? MIGRATIONS[schema] : undefined;
   if (migrate === undefined) throw new SessionValidationError('schema', `unsupported schema ${String(schema)}`);
+  return migrate(value);
+}
+
+const ACTIVE_FIELDS = ['schema', 'session', 'presenceAt', 'missedCheckInAt', 'pauseLimitMs'] as const;
+
+/**
+ * Validates the active state read back from the device (round 4): an open
+ * session plus what the rules remember about it, consistent with each other.
+ */
+export function parseActiveState(value: unknown): ActiveState {
+  const fields = plainObject(value, 'state', ACTIVE_FIELDS);
+  if (fields['schema'] !== ACTIVE_STATE_SCHEMA) throw new SessionValidationError('state.schema', `expected ${String(ACTIVE_STATE_SCHEMA)}`);
+  const session = parseSession(fields['session']);
+  if (session.endReason !== null) throw new SessionValidationError('state.session', 'an active session cannot have ended');
+  const start = session.segments[0]?.start ?? 0;
+  const last = session.segments.at(-1);
+  const presenceAt = time(fields['presenceAt'], 'state.presenceAt');
+  if (presenceAt < start) throw new SessionValidationError('state.presenceAt', 'before the session started');
+  if (last !== undefined && last.end === null && presenceAt < last.start) {
+    throw new SessionValidationError('state.presenceAt', 'before the running segment began');
+  }
+  const missed = fields['missedCheckInAt'] === null ? null : time(fields['missedCheckInAt'], 'state.missedCheckInAt');
+  if (missed !== null && (last === undefined || last.end !== missed)) {
+    throw new SessionValidationError('state.missedCheckInAt', 'a missed check-in pauses the session where it fell due');
+  }
+  const rawLimit = fields['pauseLimitMs'];
+  const { min, max } = CONFIG.session.pauseLimit;
+  const pauseLimitMs = rawLimit === null ? null : time(rawLimit, 'state.pauseLimitMs');
+  if (pauseLimitMs !== null && (pauseLimitMs < min || pauseLimitMs > max)) {
+    throw new SessionValidationError('state.pauseLimitMs', 'outside the allowed range');
+  }
+  return freezeState({ schema: ACTIVE_STATE_SCHEMA, session, presenceAt, missedCheckInAt: missed, pauseLimitMs });
+}
+
+const ACTIVE_MIGRATIONS: Readonly<Record<number, (value: unknown) => ActiveState>> = {
+  1: parseActiveState,
+};
+
+/** Reads a stored active state of any supported schema. */
+export function migrateActiveState(value: unknown): ActiveState {
+  const schema =
+    value !== null && typeof value === 'object' && Object.hasOwn(value, 'schema') ? (value as Fields)['schema'] : undefined;
+  const migrate = typeof schema === 'number' && Object.hasOwn(ACTIVE_MIGRATIONS, schema) ? ACTIVE_MIGRATIONS[schema] : undefined;
+  if (migrate === undefined) throw new SessionValidationError('state.schema', `unsupported schema ${String(schema)}`);
   return migrate(value);
 }

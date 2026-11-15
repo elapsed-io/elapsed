@@ -30,8 +30,12 @@ export {
   timeWhenFocusReached,
 } from './session/derive.ts';
 export { createSession, endSession, pauseSession, resumeSession, shiftSession, switchMode } from './session/commands.ts';
-export type { NewSession } from './session/commands.ts';
-export { SessionValidationError, migrateSession, parseSession } from './session/validate.ts';
+export type { NewSession, TimeOptions } from './session/commands.ts';
+export { SessionValidationError, migrateActiveState, migrateSession, parseActiveState, parseSession } from './session/validate.ts';
+export { ACTIVE_STATE_SCHEMA, recordGap, shiftState, startState } from './session/state.ts';
+export type { ActiveState } from './session/state.ts';
+export { advance, applyTrigger, checkInDueAt, defaultRules, nextTrigger, normaliseRules, pendingCheckIn } from './session/rules.ts';
+export type { RuleKind, RuleOutcome, RuleSettings, RuleTrigger } from './session/rules.ts';
 
 export { EventBus } from './events/bus.ts';
 export type { Emitter, EventBusOptions, Handler } from './events/bus.ts';

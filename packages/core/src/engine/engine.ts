@@ -1,30 +1,36 @@
 /**
- * The timer engine (plan, Release 1 round 2; Architecture invariants 1 to 3).
+ * The timer engine (plan, Release 1 rounds 2 and 4; Architecture invariants 1
+ * to 3; Session lifecycle and abandonment).
  *
  * - Elapsed time is always computed from the session's timestamps, never
  *   counted in ticks, so throttled timers and sleeping devices lose nothing.
- * - It wakes only when the visible value will next change, through the one
- *   shared scheduler.
+ * - It wakes only when something visible will change, when a rule falls due,
+ *   or for the 30-second heartbeat, all through the one shared scheduler.
  * - It emits typed events and calls nothing outside itself.
  *
- * Device clock changes (owner decision, 2026-11-15): on every wake and command
- * the engine compares how far the device clock moved with how far the
- * monotonic clock moved. If the device clock fell behind by more than the
- * tolerance, it was set back: the open session is shifted back by the same
- * amount, so no focused time is lost and segments stay in order. A forward
- * jump cannot be told apart from a sleeping device, so it counts like sleep;
- * round 4's check-ins cap it and the Release 3 server checks it.
+ * Device clock changes (plan, Session lifecycle > Clock changes): on every
+ * wake and command the engine compares how far the device clock moved with
+ * how far the monotonic clock moved. If the device clock fell behind by more
+ * than the tolerance, it was set back, and the open session shifts back by the
+ * same amount. When a saved session is restored with the clock behind its last
+ * heartbeat, it resumes from its last saved elapsed time. A forward jump
+ * counts like sleep.
  *
- * The abandonment rules (check-ins, pause limit, session maximum) and the
- * heartbeat arrive in round 4; they slot in at `#refresh`.
+ * Abandonment rules (session/rules.ts) are replayed in order on every wake,
+ * so after sleep or a reopened tab the session is exactly what it would have
+ * been had the page stayed open.
  */
 
 import { CONFIG } from '../config.ts';
 import type { Emitter } from '../events/bus.ts';
-import { createSession, endSession, pauseSession, resumeSession, shiftSession, switchMode } from '../session/commands.ts';
+import { createSession, endSession, pauseSession, resumeSession, switchMode } from '../session/commands.ts';
 import { currentMode, focusedMs, latestStamp, sessionStatus, timeWhenFocusReached } from '../session/derive.ts';
+import { advance, checkInDueAt, defaultRules, nextTrigger, normaliseRules, pendingCheckIn } from '../session/rules.ts';
+import type { RuleSettings } from '../session/rules.ts';
 import { isEndReason } from '../session/session.ts';
 import type { EndReason, Session } from '../session/session.ts';
+import { freezeState, recordGap, shiftState, startState } from '../session/state.ts';
+import type { ActiveState } from '../session/state.ts';
 import type { Clock } from '../time/clock.ts';
 import { systemTimeZone } from '../time/local-day.ts';
 import type { TimerEvents } from './events.ts';
@@ -34,6 +40,8 @@ import type { SecondsDisplay, TimerStatus, TimerView } from './view.ts';
 
 const HOUR = 60 * 60 * 1000;
 const VIEW_TASK = 'engine.view';
+const RULES_TASK = 'engine.rules';
+const HEARTBEAT_TASK = 'engine.heartbeat';
 
 export interface TimerEngineOptions {
   readonly clock: Clock;
@@ -45,6 +53,14 @@ export interface TimerEngineOptions {
   /** The device's time zone, read when a session starts. Defaults to the runtime's. */
   readonly timeZone?: () => string;
   readonly seconds?: SecondsDisplay;
+  /**
+   * Check-in interval and pause limit. Defaults to the plan's defaults. null
+   * turns the abandonment rules off, which only tests of pure timekeeping do;
+   * check-ins are always on in Release 1.
+   */
+  readonly rules?: RuleSettings | null;
+  /** Write a heartbeat every 30 seconds while a session is open. Defaults to true. */
+  readonly heartbeat?: boolean;
 }
 
 interface ClockReference {
@@ -59,12 +75,21 @@ export class TimerEngine {
   readonly #newId: () => string;
   readonly #timeZone: () => string;
   readonly #scheduler: Scheduler;
+  readonly #heartbeatOn: boolean;
   #seconds: SecondsDisplay;
-  #session: Session | null = null;
+  #rules: RuleSettings | null;
+  /** The open session and what the rules remember about it. */
+  #state: ActiveState | null = null;
+  /** The last ended session, shown until the next start. */
+  #ended: Session | null = null;
+  #heartbeatAt: number | null = null;
+  #heartbeatScheduled = false;
   #reference: ClockReference | null = null;
   #view: TimerView;
   #viewKey: string;
   #hoursReached = 0;
+  #announcedCheckIn: number | null = null;
+  #dirty = false;
   #disposed = false;
 
   constructor(options: TimerEngineOptions) {
@@ -73,18 +98,26 @@ export class TimerEngine {
     this.#newId = options.newId;
     this.#timeZone = options.timeZone ?? systemTimeZone;
     this.#seconds = options.seconds ?? 'blur-away';
+    this.#rules = options.rules === null ? null : normaliseRules(options.rules ?? defaultRules());
+    this.#heartbeatOn = options.heartbeat ?? true;
     this.#scheduler = new Scheduler({ clock: options.clock, onError: options.onError });
     this.#view = computeView(null, this.#observe(), this.#seconds);
     this.#viewKey = viewKey(this.#view);
   }
 
-  /** The current session, frozen; null before the first start. An ended session stays until the next start. */
+  /** The current or last ended session, frozen; null before the first start. */
   get session(): Session | null {
-    return this.#session;
+    return this.#state?.session ?? this.#ended;
+  }
+
+  /** The state to keep on the device: the open session and what the rules remember. */
+  get state(): ActiveState | null {
+    return this.#state;
   }
 
   get status(): TimerStatus {
-    return this.#session === null ? 'idle' : sessionStatus(this.#session);
+    const session = this.session;
+    return session === null ? 'idle' : sessionStatus(session);
   }
 
   /** The view as of the last wake or command. Subscribe to `view.changed` to follow it. */
@@ -96,38 +129,53 @@ export class TimerEngine {
   start(mode: string): boolean {
     if (this.#disposed) return false;
     const now = this.#observe();
-    if (this.status === 'running' || this.status === 'paused') return false;
-    this.#session = createSession({ id: this.#newId(), mode, at: now, timeZone: this.#timeZone() });
+    if (this.#state !== null) return false;
+    const session = createSession({ id: this.#newId(), mode, at: now, timeZone: this.#timeZone() });
+    this.#state = startState(session);
+    this.#ended = null;
     this.#hoursReached = 0;
-    this.#events.emit('session.started', { at: now, session: this.#session });
+    this.#announcedCheckIn = null;
+    this.#heartbeatAt = now;
+    this.#dirty = true;
+    this.#events.emit('session.started', { at: now, session });
     this.#afterChange(now);
     return true;
   }
 
-  /** Pauses a running session. Returns false if it is not running or has reached its segment limit. */
+  /** Pauses a running session (a sign of presence). Returns false if it is not running or has reached its segment limit. */
   pause(): boolean {
     if (this.#disposed) return false;
     const now = this.#observe();
-    const session = this.#session;
-    if (session === null || sessionStatus(session) !== 'running') return false;
-    if (session.segments.length >= CONFIG.session.limits.maxSegments) return false;
+    const state = this.#state;
+    if (state === null || sessionStatus(state.session) !== 'running') return false;
+    if (state.session.segments.length >= CONFIG.session.limits.maxSegments) return false;
     this.#emitMilestones(now);
-    const at = this.#stamp(session, now);
-    this.#session = pauseSession(session, at);
-    this.#events.emit('session.paused', { at, session: this.#session });
+    const at = this.#stamp(state.session, now);
+    this.#state = freezeState({
+      ...state,
+      session: pauseSession(state.session, at),
+      presenceAt: at,
+      missedCheckInAt: null,
+      pauseLimitMs: (this.#rules ?? defaultRules()).pauseLimit,
+    });
+    this.#announcedCheckIn = null;
+    this.#dirty = true;
+    this.#events.emit('session.paused', { at, session: this.#state.session, reason: 'user' });
     this.#afterChange(now);
     return true;
   }
 
-  /** Resumes a paused session. Returns false if it is not paused. */
+  /** Resumes a paused session (a sign of presence), including one paused by a missed check-in. */
   resume(): boolean {
     if (this.#disposed) return false;
     const now = this.#observe();
-    const session = this.#session;
-    if (session === null || sessionStatus(session) !== 'paused') return false;
-    const at = this.#stamp(session, now);
-    this.#session = resumeSession(session, at);
-    this.#events.emit('session.resumed', { at, session: this.#session });
+    const state = this.#state;
+    if (state === null || sessionStatus(state.session) !== 'paused') return false;
+    const at = this.#stamp(state.session, now);
+    this.#state = freezeState({ ...state, session: resumeSession(state.session, at), presenceAt: at, missedCheckInAt: null, pauseLimitMs: null });
+    this.#announcedCheckIn = null;
+    this.#dirty = true;
+    this.#events.emit('session.resumed', { at, session: this.#state.session });
     this.#afterChange(now);
     return true;
   }
@@ -137,12 +185,25 @@ export class TimerEngine {
     if (this.#disposed) return false;
     if (!isEndReason(reason)) throw new TypeError(`not an end reason: ${JSON.stringify(reason)}`);
     const now = this.#observe();
-    const session = this.#session;
-    if (session === null || sessionStatus(session) === 'ended') return false;
+    const state = this.#state;
+    if (state === null) return false;
     this.#emitMilestones(now);
-    const at = this.#stamp(session, now);
-    this.#session = endSession(session, reason, at);
-    this.#events.emit('session.ended', { at, session: this.#session, reason });
+    const at = this.#stamp(state.session, now);
+    this.#finish(endSession(state.session, reason, at), reason, at);
+    this.#afterChange(now);
+    return true;
+  }
+
+  /** Answers the check-in waiting for any key, click or tap. Returns false if none is waiting. */
+  answerCheckIn(): boolean {
+    if (this.#disposed) return false;
+    const now = this.#observe();
+    const state = this.#state;
+    if (state === null || this.#rules === null || pendingCheckIn(state, this.#rules, now) === null) return false;
+    this.#state = freezeState({ ...state, presenceAt: now });
+    this.#announcedCheckIn = null;
+    this.#dirty = true;
+    this.#events.emit('checkin.answered', { at: now, session: state.session });
     this.#afterChange(now);
     return true;
   }
@@ -154,12 +215,13 @@ export class TimerEngine {
   switchMode(mode: string): boolean {
     if (this.#disposed) return false;
     const now = this.#observe();
-    const session = this.#session;
-    if (session === null || sessionStatus(session) === 'ended' || currentMode(session) === mode) return false;
-    if (session.modes.length >= CONFIG.session.limits.maxModeSpans) return false;
-    const at = this.#stamp(session, now);
-    this.#session = switchMode(session, mode, at);
-    this.#events.emit('mode.switched', { at, mode, session: this.#session });
+    const state = this.#state;
+    if (state === null || currentMode(state.session) === mode) return false;
+    if (state.session.modes.length >= CONFIG.session.limits.maxModeSpans) return false;
+    const at = this.#stamp(state.session, now);
+    this.#state = freezeState({ ...state, session: switchMode(state.session, mode, at) });
+    this.#dirty = true;
+    this.#events.emit('mode.switched', { at, mode, session: this.#state.session });
     this.#afterChange(now);
     return true;
   }
@@ -171,16 +233,66 @@ export class TimerEngine {
     this.sync();
   }
 
+  /** Changes the check-in interval and pause limit (a pause keeps the limit it began with). */
+  setRules(rules: RuleSettings): void {
+    this.#rules = normaliseRules(rules);
+    this.sync();
+  }
+
   /**
-   * Brings the view up to date now. The site calls this when the page becomes
-   * visible again, so a woken device shows the right time without waiting for
-   * the next scheduled wake.
+   * Restores a session saved on this device (a refresh or reopened tab), with
+   * the last heartbeat written for it. Applies the clock rule, records a gap
+   * if the heartbeat is stale, then replays the rules up to now.
+   */
+  restore(state: ActiveState, heartbeatAt: number | null): boolean {
+    if (this.#disposed || this.#state !== null) return false;
+    const now = this.#observe();
+    let restored = state;
+    let heartbeat = heartbeatAt ?? now;
+    // The device clock is behind the last heartbeat: resume from the last saved elapsed time.
+    if (now < heartbeat - CONFIG.engine.clockJumpTolerance) {
+      const delta = Math.max(-(restored.session.segments[0]?.start ?? 0), Math.round(now - heartbeat));
+      restored = shiftState(restored, delta);
+      heartbeat = now;
+      this.#events.emit('clock.jumped', { at: now, deltaMs: delta, session: restored.session });
+    }
+    this.#state = restored;
+    this.#ended = null;
+    this.#heartbeatAt = heartbeat;
+    this.#hoursReached = Math.floor(focusedMs(restored.session, Math.min(now, heartbeat)) / HOUR);
+    this.#announcedCheckIn = null;
+    this.#dirty = true;
+    this.#refresh(now);
+    return true;
+  }
+
+  /**
+   * Takes the state another tab saved (plan, invariant 15: one active session
+   * per browser). null means the other tab ended or cleared the session.
+   */
+  adopt(state: ActiveState | null): void {
+    if (this.#disposed) return;
+    const now = this.#observe();
+    if (state === null) {
+      this.#state = null;
+      this.#ended = null;
+    } else {
+      if (this.#state?.session.id !== state.session.id) this.#hoursReached = Math.floor(focusedMs(state.session, now) / HOUR);
+      this.#state = state;
+      this.#ended = null;
+      this.#heartbeatAt ??= now;
+    }
+    this.#announcedCheckIn = null;
+    this.#refresh(now);
+  }
+
+  /**
+   * Brings everything up to date now. The site calls this when the page becomes
+   * visible again, so a woken device shows the right time at once.
    */
   sync(): void {
     if (this.#disposed) return;
-    const now = this.#observe();
-    this.#emitMilestones(now);
-    this.#afterChange(now);
+    this.#refresh(this.#observe());
   }
 
   /** Stops all timers. The engine emits nothing afterwards. */
@@ -189,7 +301,7 @@ export class TimerEngine {
     this.#scheduler.dispose();
   }
 
-  /** Reads both clocks, handles a device clock set back, and returns the engine's current time. */
+  /** Observes the clocks; a detected jump shifts the open state. Returns the engine's now. */
   #observe(): number {
     const wall = this.#clock.now();
     const monotonic = this.#clock.monotonic();
@@ -201,7 +313,7 @@ export class TimerEngine {
       const expected = previous.effective + (monotonic - previous.monotonic);
       const behind = Math.round(expected - wall);
       if (behind > CONFIG.engine.clockJumpTolerance) {
-        shifted = this.#shiftOpenSession(-behind, wall);
+        shifted = this.#shiftOpenState(-behind, wall);
       } else {
         // Small backward steps are absorbed: time holds still until the clock catches up.
         effective = Math.max(wall, previous.effective);
@@ -210,20 +322,26 @@ export class TimerEngine {
     this.#reference = { effective, monotonic };
     // The view and the next wake were worked out in the old clock frame; redo them,
     // even if the command that observed the jump then turns out not to apply.
-    if (shifted) this.#afterChange(effective);
+    if (shifted) this.#refresh(effective);
     return effective;
   }
 
-  /** Returns whether the open session was shifted. */
-  #shiftOpenSession(deltaMs: number, at: number): boolean {
-    const session = this.#session;
-    if (session === null || sessionStatus(session) === 'ended') return false;
-    const first = session.segments[0]?.start ?? 0;
+  /** Returns whether the open state was shifted. */
+  #shiftOpenState(deltaMs: number, at: number): boolean {
+    const state = this.#state;
+    if (state === null) {
+      if (this.#heartbeatAt !== null) this.#heartbeatAt += deltaMs;
+      return false;
+    }
+    const first = state.session.segments[0]?.start ?? 0;
     // Move far enough that no record is later than now, but never before 1970.
-    const delta = Math.max(-first, Math.min(deltaMs, at - latestStamp(session)));
+    const delta = Math.max(-first, Math.min(deltaMs, at - latestStamp(state.session)));
+    if (this.#heartbeatAt !== null) this.#heartbeatAt += delta;
     if (delta === 0) return false;
-    this.#session = shiftSession(session, delta);
-    this.#events.emit('clock.jumped', { at, deltaMs: delta, session: this.#session });
+    this.#state = shiftState(state, delta);
+    if (this.#announcedCheckIn !== null) this.#announcedCheckIn += delta;
+    this.#dirty = true;
+    this.#events.emit('clock.jumped', { at, deltaMs: delta, session: this.#state.session });
     return true;
   }
 
@@ -232,11 +350,66 @@ export class TimerEngine {
     return Math.max(now, latestStamp(session));
   }
 
-  /** Emits one milestone for each whole hour of focus reached since the last, dated exactly. */
-  #emitMilestones(now: number): void {
-    const session = this.#session;
-    if (session === null || sessionStatus(session) !== 'running') return;
-    const hours = Math.floor(focusedMs(session, now) / HOUR);
+  #finish(ended: Session, reason: EndReason, at: number): void {
+    this.#state = null;
+    this.#ended = ended;
+    this.#announcedCheckIn = null;
+    this.#dirty = true;
+    this.#events.emit('session.ended', { at, session: ended, reason });
+  }
+
+  /** Heartbeat and gaps, the rules in order, milestones and check-ins, then the view. */
+  #refresh(now: number): void {
+    this.#beat(now);
+    this.#applyRules(now);
+    this.#emitMilestones(now);
+    this.#announceCheckIn(now);
+    this.#afterChange(now);
+  }
+
+  /** Records a gap if the last heartbeat is stale, then writes a fresh one. */
+  #beat(now: number): void {
+    const state = this.#state;
+    if (state === null || !this.#heartbeatOn) return;
+    const last = this.#heartbeatAt;
+    if (last !== null && now - last > CONFIG.session.gapThreshold) {
+      const gap = { start: last, end: now };
+      const session = recordGap(state.session, gap);
+      if (session !== state.session) {
+        this.#state = freezeState({ ...state, session });
+        this.#dirty = true;
+        this.#events.emit('gap.detected', { at: now, gap, session });
+      }
+    }
+    if (last === null || now - last >= CONFIG.session.heartbeatInterval || this.#dirty) {
+      this.#heartbeatAt = now;
+      this.#events.emit('heartbeat', { at: now });
+    }
+  }
+
+  #applyRules(now: number): void {
+    const state = this.#state;
+    if (state === null || this.#rules === null) return;
+    for (const outcome of advance(state, this.#rules, now)) {
+      // Hours reached before the rule's outcome are real; any reached after it (in time a missed
+      // check-in takes back) never happened.
+      this.#emitMilestones(outcome.at);
+      if (outcome.kind === 'paused') {
+        this.#state = outcome.state;
+        this.#dirty = true;
+        this.#events.emit('session.paused', { at: outcome.at, session: outcome.state.session, reason: 'checkin_missed' });
+      } else {
+        this.#finish(outcome.session, outcome.reason, outcome.at);
+      }
+    }
+  }
+
+  /** Emits one milestone for each whole hour of focus reached by `upTo` since the last, dated exactly. */
+  #emitMilestones(upTo: number): void {
+    const session = this.#state?.session;
+    if (session === undefined || sessionStatus(session) !== 'running') return;
+    const now = upTo;
+    const hours = Math.floor(focusedMs(session, upTo) / HOUR);
     while (this.#hoursReached < hours) {
       this.#hoursReached += 1;
       const at = timeWhenFocusReached(session, this.#hoursReached * HOUR, now) ?? now;
@@ -244,20 +417,63 @@ export class TimerEngine {
     }
   }
 
-  /** Recomputes the view, emits it if it looks different, and schedules the next wake. */
+  #announceCheckIn(now: number): void {
+    const state = this.#state;
+    if (state === null || this.#rules === null) return;
+    const due = pendingCheckIn(state, this.#rules, now);
+    if (due !== null && due !== this.#announcedCheckIn) {
+      this.#announcedCheckIn = due;
+      this.#events.emit('checkin.due', { at: due, session: state.session });
+    }
+  }
+
+  /** Saves state if it changed, recomputes the view, emits it if it looks different, and schedules wakes. */
   #afterChange(now: number): void {
-    const view = computeView(this.#session, now, this.#seconds);
+    if (this.#dirty) {
+      this.#dirty = false;
+      this.#events.emit('state.changed', { state: this.#state });
+    }
+    const state = this.#state;
+    const rules = this.#rules;
+    const view = computeView(this.session, now, this.#seconds, {
+      checkInDueAt: state === null || rules === null ? null : pendingCheckIn(state, rules, now),
+      missedCheckInAt: state?.missedCheckInAt ?? null,
+    });
     const key = viewKey(view);
     this.#view = view;
     if (key !== this.#viewKey) {
       this.#viewKey = key;
       this.#events.emit('view.changed', { view });
     }
+    this.#schedule(view, now);
+  }
+
+  #schedule(view: TimerView, now: number): void {
     const delay = msUntilNextChange(view);
-    if (delay === null) {
-      this.#scheduler.clear(VIEW_TASK);
-    } else {
+    if (delay === null) this.#scheduler.clear(VIEW_TASK);
+    else
       this.#scheduler.set(VIEW_TASK, delay, () => {
+        this.sync();
+      });
+
+    const state = this.#state;
+    const rules = this.#rules;
+    const due = state === null || rules === null ? null : checkInDueAt(state, rules);
+    const trigger = state === null || rules === null ? null : nextTrigger(state, rules);
+    const times = [trigger?.decidedAt, due !== null && due > now ? due : undefined].filter((time): time is number => time !== undefined);
+    if (times.length === 0) this.#scheduler.clear(RULES_TASK);
+    else
+      this.#scheduler.set(RULES_TASK, Math.max(0, Math.min(...times) - now), () => {
+        this.sync();
+      });
+
+    if (state === null || !this.#heartbeatOn) {
+      this.#scheduler.clear(HEARTBEAT_TASK);
+      this.#heartbeatScheduled = false;
+    } else if (!this.#heartbeatScheduled) {
+      this.#heartbeatScheduled = true;
+      this.#scheduler.set(HEARTBEAT_TASK, CONFIG.session.heartbeatInterval, () => {
+        this.#heartbeatScheduled = false;
         this.sync();
       });
     }

@@ -26,8 +26,15 @@ export interface Adjustable {
 export const CONFIG = {
   /** Session lifecycle and abandonment (Release 1, round 4). */
   session: {
-    /** Check-in interval: 2 h by default, adjustable from 30 min to 3 h. */
+    /**
+     * Check-in interval: running time since the last sign of presence (start,
+     * pause, resume or an answered check-in). 2 h by default, 30 min to 3 h.
+     */
     checkInInterval: { default: 2 * HOUR, min: 30 * MINUTE, max: 3 * HOUR },
+    /** A check-in unanswered this long is missed: the session pauses, backdated to when it appeared. */
+    checkInResponseWindow: 1 * HOUR,
+    /** A pause caused by a missed check-in ignores the pause limit and waits this long, then the session ends. */
+    missedCheckInHold: 12 * HOUR,
     /** Pause limit: a longer pause ends the session. 30 min, adjustable 5 to 60 min. */
     pauseLimit: { default: 30 * MINUTE, min: 5 * MINUTE, max: 60 * MINUTE },
     /** Session maximum: 16 h of focus in one session. */

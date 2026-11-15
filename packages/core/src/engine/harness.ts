@@ -4,6 +4,7 @@ import { EventBus } from '../events/bus.ts';
 import { FakeClock } from '../testing/fake-clock.ts';
 import { TimerEngine } from './engine.ts';
 import type { TimerEvents } from './events.ts';
+import type { RuleSettings } from '../session/rules.ts';
 import type { SecondsDisplay, TimerView } from './view.ts';
 
 export const EVENT_TYPES = [
@@ -15,6 +16,10 @@ export const EVENT_TYPES = [
   'clock.jumped',
   'view.changed',
   'milestone.hour',
+  'checkin.due',
+  'checkin.answered',
+  'gap.detected',
+  'state.changed',
 ] as const satisfies readonly (keyof TimerEvents)[];
 
 export type Recorded = { [K in keyof TimerEvents]: { readonly type: K; readonly payload: TimerEvents[K] } }[keyof TimerEvents];
@@ -23,6 +28,10 @@ export interface HarnessOptions {
   readonly now?: number;
   readonly seconds?: SecondsDisplay;
   readonly timeZone?: string;
+  /** Abandonment rules; off (null) unless a test is about them. */
+  readonly rules?: RuleSettings | null;
+  /** The 30-second heartbeat; off unless a test is about it, so wake counts stay exact. */
+  readonly heartbeat?: boolean;
 }
 
 export function harness(options: HarnessOptions = {}) {
@@ -40,6 +49,8 @@ export function harness(options: HarnessOptions = {}) {
     },
     onError: (error) => errors.push(error),
     timeZone: () => zone,
+    rules: options.rules ?? null,
+    heartbeat: options.heartbeat ?? false,
     ...(options.seconds === undefined ? {} : { seconds: options.seconds }),
   });
   let log: Recorded[] = [];
@@ -60,8 +71,9 @@ export function harness(options: HarnessOptions = {}) {
       log = [];
       return taken;
     },
+    /** Event types, leaving out the bookkeeping events storage listens to (state.changed). */
     types(events: readonly Recorded[]): string[] {
-      return events.map((event) => event.type);
+      return events.map((event) => event.type).filter((type) => type !== 'state.changed');
     },
     views(events: readonly Recorded[]): TimerView[] {
       return events.flatMap((event) => (event.type === 'view.changed' ? [event.payload.view] : []));

@@ -11,7 +11,7 @@
 
 import { CONFIG } from '../config.ts';
 import { currentMode, focusedMs, pausedForMs, sessionStatus } from '../session/derive.ts';
-import type { Session, SessionStatus } from '../session/session.ts';
+import type { EndReason, Session, SessionStatus } from '../session/session.ts';
 
 const SECOND = 1000;
 const TEN_SECONDS = 10 * SECOND;
@@ -38,6 +38,17 @@ export interface TimerView {
   readonly pausedForShownMs: number | null;
   /** The session's current display mode, or null when idle. */
   readonly mode: string | null;
+  /** When the check-in now waiting for an answer fell due, or null. */
+  readonly checkInDueAt: number | null;
+  /** While paused after a missed check-in: when that check-in fell due. */
+  readonly missedCheckInAt: number | null;
+  /** Why an ended session ended, or null. */
+  readonly endReason: EndReason | null;
+}
+
+export interface ViewExtras {
+  readonly checkInDueAt?: number | null;
+  readonly missedCheckInAt?: number | null;
 }
 
 export function isSecondsDisplay(value: unknown): value is SecondsDisplay {
@@ -57,7 +68,7 @@ function roundDown(value: number, unit: number): number {
   return Math.floor(value / unit) * unit;
 }
 
-export function computeView(session: Session | null, at: number, display: SecondsDisplay): TimerView {
+export function computeView(session: Session | null, at: number, display: SecondsDisplay, extras: ViewExtras = {}): TimerView {
   if (session === null) {
     return {
       status: 'idle',
@@ -68,6 +79,9 @@ export function computeView(session: Session | null, at: number, display: Second
       pausedForMs: null,
       pausedForShownMs: null,
       mode: null,
+      checkInDueAt: null,
+      missedCheckInAt: null,
+      endReason: null,
     };
   }
   const focused = focusedMs(session, at);
@@ -82,12 +96,15 @@ export function computeView(session: Session | null, at: number, display: Second
     pausedForMs: pausedFor,
     pausedForShownMs: pausedFor === null ? null : roundDown(pausedFor, CONFIG.engine.pausedPrecision),
     mode: currentMode(session),
+    checkInDueAt: extras.checkInDueAt ?? null,
+    missedCheckInAt: extras.missedCheckInAt ?? null,
+    endReason: session.endReason,
   };
 }
 
 /** Identifies what is visible; two views with the same key look the same. */
 export function viewKey(view: TimerView): string {
-  return [view.status, view.mode, view.shownMs, view.precisionMs, view.pausedForShownMs].join('|');
+  return [view.status, view.mode, view.shownMs, view.precisionMs, view.pausedForShownMs, view.checkInDueAt, view.missedCheckInAt, view.endReason].join('|');
 }
 
 /**

@@ -8,7 +8,8 @@
 import { describe, expect, it } from 'vitest';
 import { focusedMs } from '../session/derive.ts';
 import { HOUR, MINUTE } from '../session/fixtures.ts';
-import { parseSession } from '../session/validate.ts';
+import { defaultRules } from '../session/rules.ts';
+import { parseActiveState, parseSession } from '../session/validate.ts';
 import { harness } from './harness.ts';
 import type { Recorded } from './harness.ts';
 
@@ -30,12 +31,14 @@ interface RunOptions {
   readonly seed: number;
   readonly jumps: boolean;
   readonly steps: number;
+  /** Run the abandonment rules and the heartbeat as the site does. */
+  readonly rules?: boolean;
 }
 
-function run({ seed, jumps, steps }: RunOptions) {
+function run({ seed, jumps, steps, rules = false }: RunOptions) {
   const random = generator(seed);
   const pick = <T>(items: readonly T[]): T => items[Math.floor(random() * items.length)] as T;
-  const h = harness({ seconds: pick(['blur-away', 'always', 'never'] as const) });
+  const h = harness({ seconds: pick(['blur-away', 'always', 'never'] as const), ...(rules ? { rules: defaultRules(), heartbeat: true } : {}) });
 
   // A model of the true focused time, kept only when the device clock is honest.
   let modelFocus = 0;
@@ -58,8 +61,12 @@ function run({ seed, jumps, steps }: RunOptions) {
       expect(() => parseSession(session)).not.toThrow();
       expect(view.focusedMs).toBe(focusedMs(session, view.at));
     }
+    const state = h.engine.state;
+    if (state !== null) expect(() => parseActiveState(JSON.parse(JSON.stringify(state)))).not.toThrow();
     for (const event of events) {
       if (event.type === 'session.started') lastFocus.set(event.payload.session.id, 0);
+      // A missed check-in takes back the unconfirmed time, by design.
+      if (event.type === 'session.paused' && event.payload.reason === 'checkin_missed') lastFocus.set(event.payload.session.id, 0);
       if (event.type === 'view.changed' && event.payload.view.status !== 'idle' && session !== null) {
         // Focus never goes backward within a session, whatever the clock does.
         const previous = lastFocus.get(session.id) ?? 0;
@@ -74,7 +81,7 @@ function run({ seed, jumps, steps }: RunOptions) {
       }
       if (event.type === 'clock.jumped') expect(jumps).toBe(true);
     }
-    if (!jumps) expect(session === null ? 0 : focusedMs(session, h.clock.now())).toBe(modelFocus);
+    if (!jumps && !rules) expect(session === null ? 0 : focusedMs(session, h.clock.now())).toBe(modelFocus);
   };
 
   for (let step = 0; step < steps; step += 1) {
@@ -103,7 +110,8 @@ function run({ seed, jumps, steps }: RunOptions) {
     } else if (roll < 0.85) {
       h.engine.switchMode(pick(MODES));
     } else if (roll < 0.9) {
-      h.engine.sync();
+      if (rules && random() < 0.5) h.engine.answerCheckIn();
+      else h.engine.sync();
     } else if (jumps) {
       const big = random() < 0.5;
       const delta = big ? Math.floor((random() - 0.5) * 4 * HOUR) : -Math.floor(random() * 200);
@@ -128,6 +136,12 @@ describe('engine invariants under random operations', () => {
     const { tally } = run({ seed, jumps: false, steps: 1500 });
     expect(tally.sessions).toBeGreaterThan(10);
     expect(tally.milestones).toBeGreaterThan(0);
+  });
+
+  it.each([21, 22, 23, 24, 25, 26])('with the rules and heartbeat, seed %i: saved state stays valid through sleep and clock changes', (seed) => {
+    const { h, tally } = run({ seed, jumps: true, steps: 1500, rules: true });
+    expect(tally.sessions).toBeGreaterThan(5);
+    expect(h.errors).toEqual([]);
   });
 
   it.each([11, 12, 13, 14, 15, 16, 17, 18])('changing clock, seed %i: sessions stay valid and focus never goes backward', (seed) => {

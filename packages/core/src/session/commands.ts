@@ -35,6 +35,24 @@ function assertNotBefore(session: Session, at: number): void {
   if (at < latest) throw new SessionError(`time ${String(at)} is before the session's latest record ${String(latest)}`);
 }
 
+/**
+ * A backdated time, as the abandonment rules use (a missed check-in pauses the
+ * session where the check-in appeared; a session maximum ends it where focus
+ * reached the maximum). It may precede informational records such as gaps and
+ * mode changes, but never the segment it closes.
+ */
+function assertWithinSegments(session: Session, at: number): void {
+  assertTime(at);
+  const last = lastSegment(session);
+  const floor = last.end ?? last.start;
+  if (at < floor) throw new SessionError(`time ${String(at)} is before the session's last segment boundary ${String(floor)}`);
+}
+
+export interface TimeOptions {
+  /** Allow a time earlier than gaps and mode changes, but not earlier than the last segment boundary. */
+  readonly backdate?: boolean;
+}
+
 export function createSession({ id, mode, at, timeZone }: NewSession): Session {
   if (!SESSION_ID_PATTERN.test(id)) throw new SessionError('session id must be a lowercase UUID');
   if (!isModeId(mode)) throw new SessionError(`not a display mode id: ${JSON.stringify(mode)}`);
@@ -50,9 +68,10 @@ export function createSession({ id, mode, at, timeZone }: NewSession): Session {
   });
 }
 
-export function pauseSession(session: Session, at: number): Session {
+export function pauseSession(session: Session, at: number, options: TimeOptions = {}): Session {
   if (sessionStatus(session) !== 'running') throw new SessionError('only a running session can pause');
-  assertNotBefore(session, at);
+  if (options.backdate === true) assertWithinSegments(session, at);
+  else assertNotBefore(session, at);
   const running = lastSegment(session);
   return freezeSession({
     ...session,
@@ -67,11 +86,12 @@ export function resumeSession(session: Session, at: number): Session {
 }
 
 /** Ends a session. A running session's last segment closes at `at`; a paused session ends where its pause began. */
-export function endSession(session: Session, reason: EndReason, at: number): Session {
+export function endSession(session: Session, reason: EndReason, at: number, options: TimeOptions = {}): Session {
   if (sessionStatus(session) === 'ended') throw new SessionError('the session has already ended');
   if (!isEndReason(reason)) throw new SessionError(`not an end reason: ${JSON.stringify(reason)}`);
-  assertNotBefore(session, at);
-  const closed = sessionStatus(session) === 'running' ? pauseSession(session, at) : session;
+  if (options.backdate === true) assertWithinSegments(session, at);
+  else assertNotBefore(session, at);
+  const closed = sessionStatus(session) === 'running' ? pauseSession(session, at, options) : session;
   return freezeSession({ ...closed, endReason: reason });
 }
 
