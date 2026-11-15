@@ -32,7 +32,7 @@ Each of the four core development points is stated as rules that can be checked 
 | Customizable | Almost everything is user-customizable, and every design in the design file is only a default. A user can import their own background, move, rotate, stretch or hide any element (the timer, buttons, icons, widgets), and retune colours, fonts, timings and each display mode's parameters. Each new feature exposes its look and behaviour through the settings schema and CSS variables from its first round, never as hard-coded values. |
 | Appealing and fast | Animations use only `transform`, `opacity` and `filter`, with smooth easing so motion reads as fluid. `prefers-reduced-motion` is honoured. Controls respond within 100 ms. The display re-renders only when the visible value changes. CSS does all motion; JavaScript only changes state when something happens, such as a minute ticking over, a check-in falling due or a button press, and never runs an animation loop. |
 | Lightweight | No UI framework. First load is at most 150 KB compressed, including one self-hosted font, with at most 50 KB of JavaScript. CI warns when a budget is exceeded and fails only past twice the budget; see Loading and performance. Display modes, the layout editor and widgets are lazy-loaded. Every runtime dependency needs owner approval. |
-| Private | No ads, analytics or third-party requests from the timer page itself. Exceptions are isolated and opt-in: Google sign-in on the account page, and widgets a user connects, which run in a separate sandboxed origin, plus Cloudflare's CAPTCHA on the sign-up page only and, for signed-in users, the live-sync connection to the project's own Supabase database. Anonymous usage counts (daily visits and sessions started, with nothing that identifies a person or device) are on by default and can be switched off in settings. Crash reports are opt-in and go only to our own server. No cookies for guests. Only the data listed under Privacy is collected. |
+| Private | No ads, analytics or third-party requests from the timer page itself. Exceptions are isolated and opt-in: Google sign-in on the account page, and widgets a user connects, which run in a separate sandboxed origin, plus Cloudflare's CAPTCHA on the sign-up page only and, for signed-in users, the live-sync connection to the project's own Supabase database. Anonymous usage counts (daily visits and sessions started, with nothing that identifies a person or device; a visit is a page load that is not a reload or a back-and-forward navigation, and nothing is stored on the device to count it) are on by default and can be switched off in settings. Crash reports are opt-in and go only to our own server. No cookies for guests. Only the data listed under Privacy is collected. |
 | Safe | A strict Content Security Policy from round 1. No `eval`. No `innerHTML` with dynamic content. All input is validated at the boundary, including data read back from storage, imported files and widget data. Every round ends with a safety overview. |
 
 ## Decisions already made
@@ -60,8 +60,8 @@ These are settled by the owner and are not to be reopened during a round.
 - **Guest invite:** the end screen invites a guest to create an account. Signing up in the same tab saves the session just finished.
 - **Guest storage:** the browser's local storage holds only the active session and settings; an imported background image is kept on the device in IndexedDB. A finished guest session moves to tab-scoped storage (`sessionStorage`) and is deleted when the tab closes or a new session starts. Nothing is sent to a server. On a shared browser, device data is kept separately for each account, and signing out offers to remove that account's data from the device. When a guest signs up, their settings, layout, theme, device images and the session just finished carry over.
 - **Survival:** a session survives refresh, tab close and a shut laptop lid. With an account, one live session exists across devices: a session started on a laptop appears on a phone and can be paused there. If two devices each start a session while offline, both are kept as separate sessions when they reconnect, so nothing is lost and the user can delete one. The site works offline and installs to a home screen as a web app, syncing when back online. Optional system notifications cover check-ins and the pause limit, and permission is requested only when they are switched on. On iPhones, web notifications work only after the site is added to the home screen, and the setting says so.
-- **Check-ins:** one rule covers open and shut lids, and lid-shut time is credited for at most one check-in interval. From Release 2, anyone can switch check-ins off; the setting warns that sessions without check-ins count towards history but won't count towards competitions. Sessions without check-ins still count toward personal records and streaks; personal history carries no verified or unverified tags.
-- **Pause limit:** a pause longer than the limit ends the session, dated to when the pause began. The default is 30 minutes, adjustable from 5 to 60. Research sets no such threshold, so this is a product definition. A changed limit applies from the next pause.
+- **Check-ins:** one rule covers open and shut lids, and lid-shut time is credited for at most one check-in interval plus the hour allowed to answer the check-in. From Release 2, anyone can switch check-ins off; the setting warns that sessions without check-ins count towards history but won't count towards competitions. Sessions without check-ins still count toward personal records and streaks; personal history carries no verified or unverified tags.
+- **Pause limit:** a pause longer than the limit ends the session, dated to when the pause began. The default is 30 minutes, adjustable from 5 to 60. Research sets no such threshold, so this is a product definition. A changed limit applies from the next pause. A pause caused by a missed check-in ignores the limit and waits up to 12 hours instead.
 - **History:** sessions under 1 minute are not saved. A day counts toward a streak at 15 focused minutes, and a streak counts qualifying days and survives one busy day: it breaks only when 48 hours pass after the last qualifying session without another. Two qualifying days inside that window both count. There are no streak freezes. Free accounts keep 12 months of sessions, and older sessions are deleted; lifetime totals, personal records and best streaks are kept for everyone, and the paid unlock keeps all history. Sessions have no labels. Users can delete a session but cannot edit one or add one manually.
 - **Accounts:** email and password, or Google sign-in, plus a display name (not unique) chosen at sign-up and editable later. Names pass a word filter and can be reported. A name is public only in competitions. Accounts are for ages 13 and up; guests have no age limit because guest mode collects nothing that identifies a person. Email is required and is the recovery route. It is used only for verification, password resets and receipts; any future marketing email, such as merchandise drops, would be strictly opt-in. Deleting an account deletes all its data, including the paid unlock, and both checkout and the deletion screen say so. There are no public profiles; the dashboard is always private. Free accounts sync every setting across devices; the unlock adds per-device settings. Statistics: totals by day, week, month and all time, streak, record, average session and a calendar heatmap. When sessions sync, the server checks their times against its own clock and flags any that don't fit, so changing the device clock cannot fake a session or a record.
 - **Discipline:** the site does not block or monitor other apps or sites. It relies on the user to stay on task.
@@ -72,7 +72,7 @@ These are settled by the owner and are not to be reopened during a round.
 
 The framework below is fixed from round 1, so later releases add modules instead of restructuring.
 
-**Stack:** strict TypeScript, Vite for the build, plain CSS with custom properties, and no UI framework. Release 1 is a static site plus one small endpoint that receives anonymous usage counts and opt-in crash reports.
+**Stack:** strict TypeScript, Vite for the build, plain CSS with custom properties, and no UI framework. Release 1 is a static site plus one small endpoint that receives anonymous usage counts and opt-in crash reports. The endpoint is a Cloudflare Worker on the site's own address that writes daily totals to Cloudflare D1 through a direct binding, so no database key is stored, nothing pauses while the site is idle, and the anonymous counts live apart from account data in Supabase.
 
 ```text
 /packages/core   Pure TypeScript: session model, timer engine, events, validation. No DOM, no network.
@@ -235,7 +235,7 @@ About, privacy, terms, feedback, source code and donations sit in the footer, no
 
 ## Design system
 
-The design canvas is the visual source of truth. Every product screen is built to match its frame: the same layout, proportions, colors, type and motion. Where a frame and this section disagree, stop and ask the owner. Frames are drawn at reference sizes (timer screens 720 × 450, results 720 × 520, settings and dashboard 1280 wide). The product scales them to the window, and the time size setting multiplies the timer's scale.
+The design canvas is the visual source of truth. Every product screen is built to match its frame: the same layout, proportions, colors, type and motion. Where a frame and this section disagree, stop and ask the owner. Frames are drawn at reference sizes (timer screens 720 × 450, results 720 × 520, settings and dashboard 1280 wide). In the product, only the time and the gap below it scale, by min(window width ÷ 720, window height ÷ 450), multiplied by the time size setting. Buttons, button text, corner icons and their insets stay at the frame's pixel sizes at every window size, including phones, where the time shrinks to fit but controls never get smaller than the frame. A dedicated phone frame may refine this later.
 
 ### Frame index
 
@@ -244,7 +244,7 @@ The design canvas is the visual source of truth. Every product screen is built t
 | Idle | Time at 00:00:00 and the start button | 1 | Build |
 | Running | Seconds blurring away after start | 1 | Build; the canvas runs it at 5× speed for review |
 | Check-in | Blurred time with "press any key if you're still here" | 1 | Build |
-| Paused | Blurred time with "paused for" and the pause length | 1 | Build |
+| Paused | Blurred time with "paused for" and the pause length; a second frame, "paused after a missed check-in," also shows the time of the unanswered check-in | 1 | Build both |
 | Ending countdown | "Tabulating results," the 5-second bar, cancel and end now | 1 | Build |
 | Session maximum | The 16-hour notice | 1 | Build |
 | Results: digits and timeline | Focus strip replay | 1 | Build |
@@ -268,9 +268,9 @@ The design canvas is the visual source of truth. Every product screen is built t
 
 ### Type
 
-- **Family:** Archivo, self-hosted and trimmed, at width 92 on its width axis.
+- **Family:** Archivo, self-hosted and trimmed, at width 92 on its width axis. Because trimming makes it a modified version, its internal name is changed (for example to "Timer Sans"), and the license file and docs credit Archivo as the source.
 - **Time:** weight 300, tabular figures, letter-spacing −0.01em, always centered. Colons are tightened by 0.05em on each side and raised 0.06em.
-- **Interface text:** weight 400 to 500, lowercase.
+- **Interface text:** also at width 92, weight 400 to 500, lowercase. One trimmed font file serves the time and all interface text.
 - **Sizes at reference:** 104 px for the time on the idle, running, check-in, paused, ocean, height and interstellar screens; 60 px for the results headline; 56 px in timeline; 52 px in ring; 44 px for the paused-for time; 30 px under the tree; 11 to 13 px for labels; 12 px for buttons.
 
 ### Color
@@ -311,7 +311,7 @@ The design canvas is the visual source of truth. Every product screen is built t
 
 ### Display modes
 
-- **Ring:** one revolution per hour; an 8 px track in the faint color; a head dot with a 55° tail in 22 steps fading as (1 − i/22)^1.8.
+- **Ring:** one revolution per hour; an 8 px track in the faint color; a head dot with a 55° tail in 22 steps fading as (1 − i/22)^1.8. At 00:00 only the head shows at 12 o'clock; the tail grows in behind it over the first 9 minutes, so it never covers time that hasn't passed.
 - **Analog stopwatch:** one revolution per hour, labels every 5 minutes, an hours subdial, and the hand in the accent color.
 - **Timeline:** at reference, 10 minutes per 100 px with now at the center; the past line muted, the future faint; ticks every 5 minutes and hh:mm labels every 10. The personal record is a dashed marker labeled "pr: hh:mm:ss."
 - **Ocean depth:** 15 m per focused minute, stopping at 10,935 m. The background is linear RGB (0.0232, 0.212, 0.392) × e^(−K·depth) with K = (0.30, 0.06, 0.023) per meter, drawn as a gradient from depth − 6 m to depth + 6 m, with text in #DCE8EE.
@@ -354,22 +354,23 @@ interface Session {
 
 ## Session lifecycle and abandonment
 
-A session always survives; unattended time is credited only up to the next check-in.
+A session always survives; unattended time is credited only up to the next check-in, plus the hour allowed to answer it.
 
 | Situation | Rule | Default |
 | --- | --- | --- |
 | Refresh or reopened tab | The session resumes from storage with no time lost. | Always |
 | Background tab | Time counts normally. Browsers slow background timers, which is why the engine uses timestamps. | Always |
-| Check-in | The elapsed time blurs and a short line asks for any key, click or tap. It is non-modal, and it is always announced to screen readers. Users can switch check-ins off from Release 2. | Every 2 h running, adjustable 30 min to 3 h |
-| Missed check-in | The session pauses, backdated to when the check-in appeared. The pause limit then applies. | 30 min to respond |
-| Lid shut or tab closed | Time keeps counting. On return, the engine replays the check-in rule against the clock. A check-in that fell due while away and went unanswered is a missed check-in. | Same as above |
+| Check-in | The elapsed time blurs and a short line asks for any key, click or tap. It is non-modal, and it is always announced to screen readers. Users can switch check-ins off from Release 2. | Every 2 h of running time since the last sign of presence (start, pause, resume or an answered check-in); pauses don't add to the count. Adjustable 30 min to 3 h. |
+| Missed check-in | If a check-in goes unanswered for 1 hour, the session pauses, backdated to when the check-in appeared, so the unconfirmed hour is not counted. This pause ignores the pause limit: the session waits, and when the user returns the paused screen explains the missed check-in and resume continues the same session. After 12 hours it is saved and ended, dated to the check-in. | 1 h to respond; then waits up to 12 h |
+| Lid shut or tab closed | Time keeps counting. On return, the engine replays the check-in rule against the clock as if the page had been open: a check-in that fell due while away can still be answered until 1 hour after it fell due, and after that it is a missed check-in. | Same as above |
 | Long pause | The session ends automatically, dated to the moment the pause began. | 30 min, adjustable 5 to 60 min |
 | Session maximum | The session ends and is saved, and a notice explains the 16-hour maximum for a single session. A new session can start right away. Guests are limited too. | 16 h of focus in one session |
 
 - **Replay on wake:** the rules are pure functions of the session and the current time. A sleeping device runs no code, so after sleep or a reopened tab the engine applies the rules in order as if it had been running.
-- **Consequence:** unattended time is credited only up to the next check-in. A user studying with the lid shut must open the laptop once per interval.
+- **Consequence:** unattended time is credited only up to the next check-in, plus the hour allowed to answer it. A user studying with the lid shut must open the laptop once per interval.
 - **User settings:** the check-in interval and the pause limit are the only thresholds users can change. From Release 2, check-ins can be switched off; the pause limit cannot.
 - **Heartbeat:** the engine writes a timestamp every 30 seconds and records a gap when it is more than 5 minutes stale. Gaps are informational and do not change focused time.
+- **Clock changes:** While the page is open, the engine compares the device clock with the browser's steady clock to spot jumps. If the device clock moves backward, every stored time in the open session shifts back by the same amount, so no focused time is lost or gained. If the clock is found behind the last heartbeat when the page reopens, the session resumes from its last saved elapsed time. A forward jump is treated like sleep: check-ins cap it and, for accounts, the server flags it. Time zone and daylight saving changes are not jumps, because times are stored in UTC.
 - **No modal "are you still there?" prompt.** A modal interrupts focus and spoils filmed sessions.
 - **One code path:** guests and accounts follow identical rules, although only accounts have records at stake.
 - **Tunable:** every default above lives in the config module.
@@ -477,7 +478,7 @@ Guests send nothing to a server, and accounts store only what tracking requires.
 | Widget content (events, to-dos, emails) | No | Shown, never stored | Provider; held in memory while displayed |
 | Cookies | None | One session cookie: HttpOnly, Secure, SameSite | Browser |
 | IP address | Not stored | Used briefly for rate limiting; never saved with the account | Memory only |
-| Usage counts | Anonymous daily visit and session counts, on by default, can be switched off | Same | Server, as daily totals only |
+| Usage counts | Anonymous daily visit and session counts, on by default, can be switched off | Same | A Cloudflare Worker on the site's own address, storing daily totals only in Cloudflare D1, kept apart from account data |
 | Crash reports | Off unless switched on | Same | Our server only, without personal data, kept briefly |
 | Analytics, ads, other third-party requests | None | None, apart from the CAPTCHA on the sign-up page | Nowhere |
 
@@ -493,10 +494,10 @@ Six releases ship in order; only Release 1 is broken into rounds now, and each l
 
 1. **Foundations.** Repository layout, strict TypeScript, build, test runner, CI, CSP and security headers, size-budget check, decisions log, brand module, theme tokens with the contrast check, self-hosted default font.
 2. **Timer engine.** Session model, injected clock and events in `core`. Unit tests with fake time cover sleep, throttling and system clock changes.
-3. **Default screen.** Digits, ring and timeline modes through the contract; start, pause and end with transitions; seconds blur-away; keyboard control (space starts and pauses); elapsed time in the tab title.
+3. **Default screen.** Digits, ring and timeline modes through the contract; start, pause and end with transitions; seconds blur-away; keyboard control (space starts and pauses); the tab title, updated once a minute (running "00:42 · \[site\]", paused "paused for 00:04 · \[site\]", check-in waiting "check in · 02:00 · \[site\]", idle "\[site\]").
 4. **Persistence and abandonment.** Storage adapters, heartbeat, replay on wake, check-ins, pause limit, session maximum, multi-tab coordination, the service worker for offline use and installing to the home screen, and the anonymous counting endpoint.
 5. **End screen.** Tabulating countdown with end now and cancel, results fade-in, replays for the three Release 1 modes, all session data, retry, guest account invite and tab-scoped storage of the finished session. The share icon shares text and a link through the device's share sheet.
-6. **Settings and themes.** Settings panel with search and per-category resets, covering the Release 1 parts of the settings catalog: preset themes and theme colors, font choice including the user's own font file, time size, clock format, seconds, check-in and pause settings, notifications, usage counts and crash reports. Versioned settings.
+6. **Settings and themes.** Settings panel with search and per-category resets, covering the Release 1 parts of the settings catalog: display mode (digits, ring, timeline), preset themes and theme colors, font choice including the user's own font file, time size, clock format, seconds, check-in and pause settings, notifications, usage counts and crash reports. Versioned settings. Remove the temporary ?mode= URL parameter from round 3 when the display mode setting ships.
 7. **Custom CSS.** Editor, sanitizer, constructable stylesheet, safe mode, malicious-CSS test corpus.
 8. **Hardening.** Accessibility pass against WCAG 2.2 AA (small buttons keep 44 px tap areas), reduced motion, performance budget, cross-browser checks. Then the full release safety review, followed by a private test run: a handful of friends use the site on their own devices for about a week, and their problems are fixed before the public launch.
 
@@ -601,5 +602,5 @@ The owner must settle each item before the round that depends on it.
 - [ ] **Final assets:** ocean life catalog and art (before each ships; placeholders until then).
 - [ ] **Browser support.** Decided: the last two versions of Chrome, Firefox, Safari and Edge.
 - [ ] **Hosting** Cloudflare for the domain is decided. Supabase for the database and Cloudflare Turnstile for the CAPTCHA are decided; the rest of the infrastructure table is a recommendation. Still open: an email provider with a free tier that can grow or be swapped later (before Release 3).
-- [ ] **Minimum age and legal documents**, drafted later. They must cover how widget data is handled and Google's API Services User Data Policy, including its Limited Use requirements. The review should also confirm that no cookie banner is needed, since the only cookie is the strictly necessary sign-in cookie (before Release 3).
+- [ ] **Minimum age and legal documents**, drafted later. They must cover how widget data is handled and Google's API Services User Data Policy, including its Limited Use requirements. The review should also confirm that no cookie banner is needed, since the only cookie is the strictly necessary sign-in cookie. The privacy policy must explain the anonymous usage counts and how to switch them off (before Release 3).
 - [ ] **Day boundary for streaks.** Decided for now: 04:00 local time, so late-night sessions count toward the previous day. Revisit if international users join.
