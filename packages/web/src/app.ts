@@ -166,7 +166,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       if (!checkInWaiting()) return;
       sync.pull();
       engine.answerCheckIn();
-      if (answersCheckIn(event) === 'consume') {
+      if (answersCheckIn(event, event.target instanceof HTMLElement ? event.target : null) === 'consume') {
         consumedKey = event.code;
         event.preventDefault();
         event.stopImmediatePropagation();

@@ -9,7 +9,7 @@
  * Release 3 adds clearing the caches on sign-out.
  */
 
-import { PAGE_KEY, cacheName, cacheable, routeFor, staleCaches } from './logic.ts';
+import { CACHE_PREFIX, PAGE_KEY, SWITCH_OFF_MESSAGE, cacheName, cacheable, routeFor, staleCaches } from './logic.ts';
 
 declare const self: ServiceWorkerGlobalScope;
 /** Filled in at build time. */
@@ -19,6 +19,28 @@ declare const __SW_PRECACHE__: readonly string[];
 const VERSION = __SW_VERSION__;
 const PRECACHE = __SW_PRECACHE__;
 const CACHE = cacheName(VERSION);
+/**
+ * Only this version's cache. Vary is ignored: servers may vary on Origin or
+ * Accept-Encoding, and the module scripts' CORS requests then never match what
+ * was cached on install, though the files themselves cannot differ.
+ */
+const MATCH: MultiCacheQueryOptions = { cacheName: CACHE, ignoreVary: true };
+
+/** Set by the remote kill switch: from then on every request goes to the network and nothing is kept. */
+let switchedOff = false;
+/** Read through a function: the flag can change while a request awaits the network. */
+const isSwitchedOff = (): boolean => switchedOff;
+
+async function deleteAllCaches(): Promise<void> {
+  for (const name of await caches.keys()) if (name.startsWith(CACHE_PREFIX)) await caches.delete(name);
+}
+
+self.addEventListener('message', (event) => {
+  // Only pages of this origin can message their worker.
+  if (event.data !== SWITCH_OFF_MESSAGE) return;
+  switchedOff = true;
+  event.waitUntil(deleteAllCaches());
+});
 
 self.addEventListener('install', (event) => {
   // The core: the page and everything it loads before it is interactive.
@@ -42,10 +64,12 @@ self.addEventListener('activate', (event) => {
 
 async function fromNetwork(request: Request, key: Request | string): Promise<Response> {
   const response = await fetch(request);
-  if (cacheable(response)) {
+  if (cacheable(response) && !isSwitchedOff()) {
     try {
       const cache = await caches.open(CACHE);
       await cache.put(key, response.clone());
+      // Switched off while this copy was being written.
+      if (isSwitchedOff()) await deleteAllCaches();
     } catch {
       // Storage full or blocked: answer without keeping a copy.
     }
@@ -57,18 +81,19 @@ async function networkFirst(request: Request, key: Request | string): Promise<Re
   try {
     return await fromNetwork(request, key);
   } catch (error) {
-    const cached = await caches.match(key, { cacheName: CACHE });
+    const cached = await caches.match(key, MATCH);
     if (cached !== undefined) return cached;
     throw error;
   }
 }
 
 async function cacheFirst(request: Request): Promise<Response> {
-  const cached = await caches.match(request, { cacheName: CACHE });
+  const cached = await caches.match(request, MATCH);
   return cached ?? fromNetwork(request, request);
 }
 
 self.addEventListener('fetch', (event) => {
+  if (switchedOff) return;
   const { request } = event;
   const route = routeFor(new URL(request.url), request.method, self.location.origin);
   if (route === 'network') return;

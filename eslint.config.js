@@ -19,6 +19,7 @@ export default defineConfig(
           './packages/web/tsconfig.json',
           './packages/web/tsconfig.sw.json',
           './packages/web/tsconfig.node.json',
+          './packages/endpoint/tsconfig.test.json',
         ],
         tsconfigRootDir: import.meta.dirname,
       },

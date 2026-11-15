@@ -46,3 +46,6 @@ export function staleCaches(names: readonly string[], version: string): string[]
 export function cacheable(response: { readonly ok: boolean; readonly status: number; readonly type: string; readonly redirected: boolean }): boolean {
   return response.ok && response.status === 200 && response.type === 'basic' && !response.redirected;
 }
+
+/** The page's message telling the worker the kill switch is off: stop caching and empty every cache. */
+export const SWITCH_OFF_MESSAGE = 'switch-off';

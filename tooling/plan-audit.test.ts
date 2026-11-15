@@ -77,7 +77,7 @@ describe('plan audit: performance', () => {
 describe('plan audit: security', () => {
   it('reaches browser storage only through storage adapters (the service worker keeps the offline cache)', () => {
     for (const path of SITE_SOURCE.filter((p) => !p.includes('/storage/') && !p.includes('/sw/'))) {
-      const text = readFileSync(path, 'utf8');
+      const text = withoutComments(readFileSync(path, 'utf8'));
       expect(text, rel(path)).not.toMatch(/\b(localStorage|sessionStorage|indexedDB|caches|document\.cookie)\b/);
     }
   });
@@ -114,8 +114,11 @@ describe('plan audit: design', () => {
     // theme/contrast.ts names colour pairs for the CI contrast report, which only developers read.
     for (const path of SITE_SOURCE.filter((p) => !p.endsWith('theme/contrast.ts'))) {
       const text = withoutComments(readFileSync(path, 'utf8'));
-      // Strings handed to the DOM come from BRAND; a quoted lowercase phrase with a space is copy.
-      const phrases = [...text.matchAll(/['"`]([a-z]+(?: [a-z]+){1,})['"`]/g)].map((match) => match[1] ?? '');
+      // Strings handed to the DOM come from BRAND; a quoted lowercase phrase with a space is copy,
+      // unless it is a list of class names.
+      const phrases = [...text.matchAll(/(class: )?['"`]([a-z]+(?: [a-z]+){1,})['"`]/g)]
+        .filter((match) => match[1] === undefined)
+        .map((match) => match[2] ?? '');
       const allowed = ['prefers-reduced-motion: reduce', 'no display modes are registered', 'the page is missing'];
       expect(
         phrases.filter((phrase) => !allowed.some((ok) => phrase.startsWith(ok)) && !/^(not|no|the|a|an) /.test(phrase)),

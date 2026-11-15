@@ -5,16 +5,19 @@ updates it in the same change (plan, Privacy > Living inventory).
 
 ## What the site does today
 
-As of Release 1, round 3 (Default screen), the site stores nothing and sends nothing. The running session
-lives in the page's memory only and is lost on refresh until round 4 adds storage.
+As of Release 1, round 4 (Persistence and abandonment).
 
 | | Current state |
 | --- | --- |
-| Requests on a visit | Four, all to the site's own origin: the page, its script, its stylesheet and the default font; choosing ring or timeline adds that mode's script and stylesheet. No third-party requests. Verified by `packages/web/e2e/idle.spec.ts` and `modes.spec.ts`. |
-| Browser storage | None. No `localStorage`, `sessionStorage`, IndexedDB or Cache Storage keys. Lint restricts storage access to the future storage adapters. |
-| Cookies | None. Lint bans `document.cookie`. |
-| Server endpoints | None. The anonymous counting endpoint arrives in round 4. |
-| Logs | None of our own. The static host (Cloudflare) keeps its standard request logs. |
+| Requests on a visit | All to the site's own origin, none to anyone else (`e2e/idle.spec.ts`): the page, its script, its stylesheet, the default font and the tab icon (`/icons/icon.svg`); `GET /sw-control.json` (the offline kill switch, never cached); `POST /api/count` with `{"event":"visit"}` unless the load is a reload or a back-and-forward navigation. Ring or timeline adds that mode's script and stylesheet. |
+| Requests later | `POST /api/count` with `{"event":"session"}` when a session starts. The service worker (`/sw.js`) fetches the core files, `/manifest.webmanifest` and the tab icon when it installs, and the browser re-checks `/sw.js` on each visit. Installing to a home screen fetches the PNG icons. |
+| What a count request carries | The event's name and nothing else: no cookies (credentials omitted), no referrer, no time, no identifier, nothing stored on the device. The server sees the request's IP address and headers as any web server does; the Worker reads none of them except `Origin`, `Sec-Fetch-Site`, `Content-Type` and `Content-Length`, and keeps none. |
+| Local storage | Only while a session is open, both removed when it ends: `timer.active` (the session's random id, its start, pause, resume and end timestamps, informational gaps, display modes with their start times, its local day, the last sign of presence, the time of a missed check-in, and the pause limit in force) and `timer.heartbeat` (the time of the last heartbeat). Nothing about what the user is doing. Validated whenever read. |
+| Cache Storage | `timer-offline-<version>`: copies of the site's own files (page, script, stylesheet, font, manifest, icon, and display modes once picked). No personal data and nothing from `/api/`. Old versions are removed when a new one takes over; the kill switch empties it. |
+| Service worker | One registration for the site's own scope (`/`). |
+| `sessionStorage`, IndexedDB, cookies | None. Lint bans `document.cookie`. |
+| Server data | Cloudflare D1, table `daily_counts`: one row per UTC day and event (`visit`, `session`) holding a total. Nothing else. Kept as long as the site runs; totals describe no one. |
+| Logs | The Worker writes none (`observability` off). Cloudflare's platform keeps its own standard request logs for the site. |
 
 ## Planned inventory
 
@@ -36,9 +39,9 @@ Mirrors the plan's Privacy table. "Round" says when each item starts to exist; u
 | Widget connections | No | Optional, per integration. Access tokens only, encrypted; disconnecting deletes them | Server or the widget's own origin | R4 |
 | Widget content (events, to-dos, emails) | No | Shown, never stored | Provider; held in memory while displayed | R4 |
 | Cookies | None | One session cookie: HttpOnly, Secure, SameSite | Browser | R3 |
-| IP address | Not stored | Used briefly for rate limiting; never saved with the account | Memory only | R1 round 4 (counting endpoint) |
-| Usage counts | Anonymous daily visit and session counts, on by default, can be switched off | Same | Server, as daily totals only | R1 round 4 |
-| Crash reports | Off unless switched on | Same | Our server only, without personal data, kept briefly | R1 round 4 |
+| IP address | Not stored | Used briefly for rate limiting; never saved with the account | Memory only | R1 round 6 (crash report rate limit); the counting endpoint never reads it |
+| Usage counts | Anonymous daily visit and session counts, on by default, can be switched off | Same | A Cloudflare Worker on the site's own address, storing daily totals only in Cloudflare D1 | R1 round 4 (the switch: round 6) |
+| Crash reports | Off unless switched on | Same | Our server only (a D1 table): error message, stack, build version, day, browser family and major version; query strings and anything typed stripped; size-capped; kept 14 days | R1 round 6 |
 | Analytics, ads, other third-party requests | None | None, apart from the CAPTCHA on the sign-up page | Nowhere | — |
 
 Never stored: what the user is working on, IP address, device fingerprint, or activity in other tabs.

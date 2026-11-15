@@ -73,17 +73,21 @@ test('no task blocks the main thread for 50 ms while using the controls', async 
   expect(tasks).toEqual([]);
 });
 
-test('stores nothing in the browser and sets no cookies', async ({ page, context }) => {
+test('stores only the open session, nothing once it ends, and sets no cookies', async ({ page, context }) => {
+  const stored = () =>
+    page.evaluate(async () => ({
+      local: Object.keys(localStorage).sort(),
+      session: Object.keys(sessionStorage),
+      databases: (await indexedDB.databases()).map((database) => database.name),
+      caches: await caches.keys(),
+    }));
   await page.goto('/');
+  await page.locator('.button--primary').waitFor();
+  expect(await stored()).toEqual({ local: [], session: [], databases: [], caches: [] });
   await page.keyboard.press('Space');
   await page.waitForTimeout(1200);
+  expect(await stored()).toEqual({ local: ['timer.active', 'timer.heartbeat'], session: [], databases: [], caches: [] });
   await page.keyboard.press('e');
-  const stored = await page.evaluate(async () => ({
-    local: Object.keys(localStorage),
-    session: Object.keys(sessionStorage),
-    databases: (await indexedDB.databases()).map((database) => database.name),
-    caches: await caches.keys(),
-  }));
-  expect(stored).toEqual({ local: [], session: [], databases: [], caches: [] });
+  expect(await stored()).toEqual({ local: [], session: [], databases: [], caches: [] });
   expect(await context.cookies()).toEqual([]);
 });

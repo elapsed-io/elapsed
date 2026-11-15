@@ -153,3 +153,69 @@ Owner decisions are marked **owner**.
 | 88 | **owner** Install icon: a placeholder (the ring's track and head dot in graphite and the accent green) generated as SVG and PNG by a committed script, replaced when an icon is designed. | No icon exists in the canvas. |
 | 89 | **owner** Crash reports arrive in **round 6**: kept 14 days in a D1 table holding the error message, stack, build version, day, and browser family and major version; query strings and anything the user typed are stripped, each report's size is capped, and the endpoint is rate-limited. | "Kept briefly" needed a number; round 6 adds the switch. |
 | 90 | The paused frame still sets the "paused for" label at width 100. The plan now says the canvas draws all interface text at width 92, and the site does; the frame needs that one fix. | Frame and plan disagree on one property; the plan is explicit. |
+
+## Release 1, round 4: Persistence and abandonment (2026-11-15)
+
+Owner answers for this round are decisions 83 to 90 above.
+
+### Rules and engine
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| 91 | The abandonment rules are pure functions of the **active state** (the open session, the last sign of presence, the missed check-in's time and the pause limit fixed when the pause began) and the current time (`core/src/session/rules.ts`). The engine applies every rule due, in the order each is decided, on every wake, command and restore. A missed check-in is decided an hour after it falls due, so a session maximum reached inside that hour still ends the session at 16 h. | Plan: "the rules are pure functions of the session and the current time"; replay on wake. |
+| 92 | Hour milestones are emitted up to each rule's outcome before it applies: an hour crossed before a backdated pause is real; one crossed only in the hour the pause takes back never happened. | Found by the randomised engine test with the rules on. |
+| 93 | The engine writes its first heartbeat when a session starts, then every 30 s. A heartbeat more than 5 min old at the next wake records a gap. | So a tab closed in the first 30 s still leaves a heartbeat to measure from. |
+| 94 | The engine takes `beforeWake` (run before every scheduled wake) and `observeHeartbeat(at)`. The site uses them to read what other tabs saved before applying any rule, and to count another tab's heartbeat as its own. | A tab frozen in the background would otherwise apply a missed check-in that another tab already answered, or record a gap another tab was watching. |
+| 95 | Adopting another tab's state does not re-announce a check-in already announced for the same session. | A gap recorded by another tab is not a new check-in. |
+
+### Storage and tabs
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| 96 | `SessionStore` keeps two local storage keys: `timer.active` (the active state as JSON with a fixed field order) and `timer.heartbeat` (a whole number of milliseconds). Both are removed when no session is open, so an idle site stores nothing. | Plan, Guest storage: local storage holds only the active session (and settings, round 6). |
+| 97 | Read-back is untrusted: over 1,048,576 characters is not parsed; JSON is parsed, then validated and migrated by `core` (`parseActiveState`, `migrateActiveState`); a heartbeat must be digits only. Unreadable data is removed and the site starts idle, unless its schema number is newer than this version knows (a newer tab may be open), in which case it is left alone and not adopted. Full or blocked storage leaves the session running in memory. | Plan, Working rules: stored data is untrusted. |
+| 98 | `SettingsStore` arrives with versioned settings in round 6. Until then the check-in interval (2 h), pause limit (30 min), seconds display and usage counts (on) are the defaults in code. | Round 6's scope is "versioned settings"; nothing in round 4 lets a user change a setting. |
+| 99 | Tabs: the stored state is the single source of truth. A tab writes it when its own engine changes the session and posts `"changed"` on a BroadcastChannel; a tab re-reads storage on that message, on the `storage` event, before every scheduled wake and when shown again, and adopts the text if it changed. Messages carry no session data. A tab that ends a session posts `"ended"` with its id and reason, so another tab showing that session also shows the session maximum notice. | Invariant 15. A message can arrive before the write is visible in another tab; the storage event and the wake check close that gap without ordering numbers. |
+| 100 | A restored session keeps the display mode it was shown in unless `?mode=` asks for another; then the switch is recorded in the session. | The temporary parameter (decision 59) should still work after a refresh. |
+
+### Screens
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| 101 | Check-in screen: the time is held (blur 10 px, 40 %) and "press any key if you’re still here" (15 px, foreground) is centred over it, in every mode, while the session keeps running and the buttons stay pause and end. The line does not wrap: on a phone it is wider than the shrunken time and stays centred. | Check-in frame; plan, Motion. |
+| 102 | Any key answers. A key without Ctrl, Alt or Meta is then consumed, keydown and keyup, so Space does not also pause or press a focused button; Tab and keys typed into a text field pass through. Any pointer press answers and still acts, so a click on pause answers and pauses. | Plan: "any key, click or tap", non-modal. |
+| 103 | A polite live region announces a check-in, a pause after a missed check-in ("a check-in went unanswered at 2:00 pm") and the session maximum. | Plan: a check-in "is always announced to screen readers". |
+| 104 | The missed check-in's time uses the browser's locale ("follow region") with `hour: numeric, minute: 2-digit`, lowercased, with the narrow no-break space before am/pm shown as a space as in the frame. Round 6's clock format setting replaces the locale default. | Paused-after-a-missed-check-in frame; Settings catalog > Clock format. |
+| 105 | Session maximum notice: replaces the time and buttons; the corner icons stay. Its time scales like every time (decision 1); text, icon and the 16 px gaps keep frame sizes. It fades in over 200 ms. Its icon is drawn as in the frame (a clock with a top button; not a Tabler icon). Focus moves to "view results" when it was in the hidden buttons or nowhere. Space or "view results" returns to idle, and a new session can start at once. | Session maximum frame; owner decision 87. No motion is specified for it. |
+| 106 | A session ended by the pause limit or after a missed check-in's 12 hours returns to idle until round 5. | Round 5 adds results; "sessions that end automatically skip the countdown". |
+| 107 | The notice's copy says the session "has ended and been saved", as in the frame. Until round 5 an ended guest session is not kept anywhere. | Copy is the frame's; round 5 adds tab-scoped storage. Listed as an open risk. |
+
+### Counting endpoint
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| 108 | The endpoint is `packages/endpoint`: one Cloudflare Worker that serves the built site as static assets and runs its script only for `/api/*` (`run_worker_first`). `POST /api/count` adds one to `daily_counts(day, event, count)` in D1 through the `COUNTS` binding. Round 6 adds crash reports to the same Worker. | Plan, Stack (owner decision 83). The plan's layout lists `core`, `web` and (Release 3) `api`; this small package is the Release 1 endpoint. |
+| 109 | Counted: a page load whose navigation type is not `reload` or `back_forward` (a prerendered page counts when shown; a browser without the entry counts), and each session start in the tab that started it (not a restore or another tab's session). The request is `fetch` with `keepalive`, no credentials, no referrer, no cache, and a body of only the event's name. Offline counts are lost, never queued. | Owner decision 85; plan: nothing stored on the device to count. |
+| 110 | The Worker accepts only a same-origin (`Sec-Fetch-Site`, `Origin`) POST of `application/json`, at most 256 bytes of valid UTF-8, whose body is exactly `{"event":"visit"}` or `{"event":"session"}` (shared validation in `core/src/counts.ts`). The day is the server's UTC date. Every response carries its own security headers and `no-store`, because `_headers` does not apply to Worker responses. Worker logs (`observability`), `workers.dev` and preview URLs are off. | Plan, Security > Anonymous counts: no cookies, no stored addresses, totals only. |
+| 111 | No Workers or D1 type package and no Wrangler are installed: the few D1 calls are typed by hand, and tests run the real migration and SQL on Node's built-in SQLite. `wrangler.jsonc` holds a placeholder database id until the first deploy. | No new dependencies; nothing is deployed in Release 1 rounds. |
+
+### Offline and installing
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| 112 | The service worker (`src/sw/sw.ts`) is built as `/sw.js`, an extra entry of the site build that the build checks has no imports or exports, and registered as a classic script for scope `/`. | One self-contained file at the root, so its scope covers the site. |
+| 113 | On install it caches the core: the page and everything it loads before it is interactive (the same closure as the size budget), the manifest and the tab icon. Hashed files are cache-first and cached when first fetched, so a display mode is kept once picked and never fetched in advance. The page is network-first; every address of it shares one cache entry. Other files are network-first. `/api/`, `/sw.js` and `/sw-control.json` are never handled. Matching ignores `Vary`. | Plan, Infrastructure > Offline. Servers may vary on Origin, and module scripts are CORS requests. |
+| 114 | Version check: the build version (a hash of the page, the worker and every file name) is written into `/sw.js`, which is registered with `updateViaCache: 'none'` and served `no-cache`, so every visit checks it. A new version installs in the background, removes old caches when it takes over, and takes over once no tab uses the old one. | A running tab keeps the files it started with; old lazy chunks stay reachable. |
+| 115 | Kill switch: `/sw-control.json` (`{"serviceWorker":"on"}`) is read on every load with `no-store`. `"off"` tells the worker to stop caching, unregisters it and empties its caches. No answer (offline) leaves offline support on. A failed registration (private browsing, blocked) is not reported as an error. | Plan: "a remote kill switch"; offline must keep working when the network is gone. |
+| 116 | CSP: `trusted-types service-worker` replaces `'none'`: one policy, created once, that accepts exactly `/sw.js` as a worker script URL. `worker-src 'self'` and `manifest-src 'self'` are added. No origin is added. | Trusted Types refuse a string as a worker URL; without `manifest-src` the default `'none'` blocks the manifest. |
+| 117 | Web app manifest from the brand module and the default theme (standalone, theme colour graphite), with the placeholder icon as SVG, 192 and 512 px PNGs (the 512 px file also as maskable: the drawing stays in the safe zone) and a 180 px apple-touch-icon. The tab icon replaces the empty `data:` icon. | Owner decision 88. |
+| 118 | The icons are drawn by `packages/web/scripts/icons/` without any image library (4 × 4 supersampled coverage, PNG written with Node's zlib); a test checks the committed files still match the script. | No new dependencies; reproducible art. |
+
+### Tests and checks
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| 119 | Playwright blocks service workers in every test except `offline.spec.ts`, where they would otherwise answer requests out of the tests' reach. | Isolation. |
+| 120 | Playwright's fake clock replaces `performance`, which hides navigation entries, so "no visit on reload" is tested without it. | Otherwise every reload under the fake clock looks like a new visit. |
+| 121 | The session maximum frame test removes focus before comparing: the browser rings the focused button, and the frame draws no focus state. Focus styles are round 8's accessibility pass. | The notice moves focus on purpose (decision 105). |
+| 122 | The plan audit now also keeps Cache Storage behind the storage adapters (the service worker excepted), ignores comments when looking for storage, and does not treat lists of class names as copy. | Found by the audit itself this round. |

@@ -1,0 +1,11 @@
+{
+  "name": "@stopwatch/endpoint",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The site's one small endpoint: a Cloudflare Worker that keeps anonymous daily usage counts in D1.",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "dependencies": {
+    "@stopwatch/core": "0.0.0"
+  }
+}

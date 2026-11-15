@@ -161,10 +161,13 @@
     max-width: 100%;
     padding-inline: var(--icon-inset);
     text-align: center;
-    animation: notice-in var(--motion-morph) var(--ease-standard) both;
+    animation: notice-in var(--motion-morph) var(--ease-standard);
   }
 
-  .notice[hidden] {
+  /* Hidden while the notice takes their place. */
+  .notice[hidden],
+  .mode-root[hidden],
+  .controls[hidden] {
     display: none;
   }
 
@@ -181,8 +184,16 @@
     font-weight: var(--font-weight-label);
   }
 
+  /* Set like the time (modes/shared/time.css), at the notice's own size. */
   .notice__time {
+    font-family: var(--font-family);
+    font-weight: var(--font-weight-time);
+    font-stretch: var(--font-stretch);
+    font-variant-numeric: tabular-nums;
     font-size: calc(var(--notice-time-size) * var(--u) * var(--time-scale));
+    line-height: 1;
+    letter-spacing: var(--time-letter-spacing);
+    white-space: nowrap;
   }
 
   .notice__body {

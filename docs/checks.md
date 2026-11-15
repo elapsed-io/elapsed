@@ -31,6 +31,10 @@ Then confirm the GitHub Actions run for the pushed commit passed.
 | Security | Dependency advisories and registry signatures | `npm audit`, `npm audit signatures` |
 | | Exact CSP and headers; Trusted Types and inline styles blocked; no CSP violations; no third-party requests | `packages/web/e2e/idle.spec.ts` |
 | | No markup from strings; storage only through adapters; nothing loaded from another origin | lint, `tooling/plan-audit.test.ts` |
-| | Only the stored data `docs/data-inventory.md` lists | `packages/web/e2e/quality.spec.ts` |
+| | Only the stored data `docs/data-inventory.md` lists, and nothing once a session ends | `packages/web/e2e/quality.spec.ts`, `persistence.spec.ts` |
+| | Stored data read back as untrusted input; forged or broken data is discarded | `packages/web/src/storage/*.test.ts`, `e2e/persistence.spec.ts` |
+| | The counting endpoint refuses anything but a same-origin, size-capped, exact event; nothing from `/api/` is cached | `packages/endpoint/src/*.test.ts`, `e2e/offline.spec.ts` |
+| | The service worker registers under the CSP and Trusted Types; the kill switch removes it | `packages/web/e2e/offline.spec.ts` |
+| Behaviour | Refresh, a closed tab, check-ins, missed check-ins, the pause limit, the session maximum, two tabs, offline | `packages/core/src/**/*.test.ts`, `packages/web/e2e/persistence.spec.ts`, `offline.spec.ts` |
 | Design | Every built screen against its canvas frame, pixel by pixel | `packages/web/e2e/frames.spec.ts`, `idle.spec.ts` |
 | | Preset contrast; lowercase copy; copy only in the brand module; numbers only in the config module | `npm run check:contrast`, `tooling/plan-audit.test.ts`, brand tests |

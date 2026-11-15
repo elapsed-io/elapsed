@@ -26,11 +26,16 @@ const TYPING = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 /** Controls that act on Space themselves. */
 const ACTIVATES_ON_SPACE = new Set(['BUTTON', 'A', 'SUMMARY']);
 
+/** Whether keys pressed on `target` type text. */
+export function isTypingTarget(target: TargetLike | null): boolean {
+  return TYPING.has(target?.tagName?.toUpperCase() ?? '') || target?.isContentEditable === true;
+}
+
 export function shortcutFor(event: KeyLike, target: TargetLike | null): Shortcut | null {
   if (event.defaultPrevented || event.repeat || event.isComposing) return null;
   if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return null;
   const tag = target?.tagName?.toUpperCase() ?? '';
-  if (TYPING.has(tag) || target?.isContentEditable === true) return null;
+  if (isTypingTarget(target)) return null;
   if (event.key === ' ') return ACTIVATES_ON_SPACE.has(tag) ? null : 'toggle';
   if (event.key === 'e' || event.key === 'E') return 'end';
   return null;

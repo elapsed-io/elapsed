@@ -18,6 +18,9 @@
 
 import { clearOfflineCaches } from '../storage/offline-cache.ts';
 
+/** Must match SWITCH_OFF_MESSAGE in src/sw/logic.ts (checked by a test). */
+export const SWITCH_OFF_MESSAGE = 'switch-off';
+
 export const SERVICE_WORKER_URL = '/sw.js';
 export const CONTROL_URL = '/sw-control.json';
 export const TRUSTED_TYPES_POLICY = 'service-worker';
@@ -69,6 +72,8 @@ export function registerServiceWorker(win: Window, report: (error: unknown) => v
   const container = win.navigator.serviceWorker;
   const run = async (): Promise<void> => {
     if ((await readControl(win)) === 'off') {
+      // The worker still serves this page until it closes: tell it to stop caching first.
+      container.controller?.postMessage(SWITCH_OFF_MESSAGE);
       for (const registration of await container.getRegistrations()) await registration.unregister();
       await clearOfflineCaches(win);
       return;

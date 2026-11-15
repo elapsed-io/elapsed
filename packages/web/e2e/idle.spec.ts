@@ -42,6 +42,8 @@ test('loads under the CSP with no violations, errors or third-party requests', a
   const errors: string[] = [];
   const requests: string[] = [];
   page.on('console', (message) => {
+    // Playwright's own notice that it blocks service workers in this test (playwright.config.ts).
+    if (message.text() === 'Service Worker registration blocked by Playwright') return;
     if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text());
   });
   page.on('pageerror', (error) => errors.push(error.message));

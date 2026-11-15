@@ -13,7 +13,8 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { TIMELINE_FRAME_LABELS, pausedFrame, ringFrame, runningFrame, timelineFrame } from './fixtures/frames.ts';
+import { TIMELINE_FRAME_LABELS, checkInFrame, limitFrame, pausedFrame, pausedMissedFrame, ringFrame, runningFrame, timelineFrame } from './fixtures/frames.ts';
+import { createSession, pauseSession, resumeSession, serializeActiveState, startState } from '@stopwatch/core';
 import { MINUTE, SECOND, compareWithReference, holdAnimationsAt, openApp, settle } from './helpers.ts';
 
 /** Moments across both blur-away windows, including their ends. */
@@ -106,4 +107,53 @@ test('timeline matches the timeline frame', async ({ page, browser }) => {
   const diff = await compareWithReference(page, browser, timelineFrame({ labels: false }));
   expect(diff.visible).toBeLessThanOrEqual(20);
   expect(diff.maxChannelDelta).toBeLessThanOrEqual(48);
+});
+
+test('a check-in waiting matches the check-in frame exactly', async ({ page, browser }) => {
+  await openApp(page);
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(120 * MINUTE);
+  await page.mouse.move(0, 0);
+  await settle(page);
+  const diff = await compareWithReference(page, browser, checkInFrame());
+  expect(diff).toMatchObject({ differing: 0 });
+});
+
+test.describe('paused after a missed check-in', () => {
+  // The check-in falls due at 16:00:30 UTC: 2:00 pm two hours west of UTC, as in the frame.
+  test.use({ locale: 'en-US', timezoneId: 'Etc/GMT+2' });
+
+  test('matches its frame exactly', async ({ page, browser }) => {
+    await openApp(page);
+    await page.locator('.button--primary').click();
+    await page.clock.runFor(120 * MINUTE + 72 * MINUTE + 40 * SECOND);
+    await page.mouse.move(0, 0);
+    await settle(page);
+    const diff = await compareWithReference(page, browser, pausedMissedFrame());
+    expect(diff).toMatchObject({ differing: 0 });
+  });
+});
+
+test('the session maximum matches its frame exactly', async ({ page, browser }) => {
+  const HOUR = 60 * MINUTE;
+  const T0 = Date.UTC(2026, 10, 16, 14, 0, 0);
+  let session = createSession({ id: '3f2c8a4e-9b1d-4c7a-8e5f-1a2b3c4d5e6f', mode: 'digits', at: T0 - 16 * HOUR - 10 * MINUTE, timeZone: 'UTC' });
+  session = resumeSession(pauseSession(session, T0 - 16 * HOUR), T0 - 15 * HOUR - 49 * MINUTE);
+  const state = { ...startState(session), presenceAt: T0 - 30 * MINUTE };
+  await page.goto('/sw-control.json');
+  await page.evaluate((text) => {
+    localStorage.setItem('timer.active', text);
+  }, serializeActiveState(state));
+  await openApp(page);
+  await page.clock.runFor(MINUTE);
+  const notice = page.locator('.notice');
+  await notice.waitFor();
+  await notice.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+  // The notice's button took focus, and the browser rings it; the frame draws no focus state.
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
+  await settle(page);
+  const diff = await compareWithReference(page, browser, limitFrame());
+  expect(diff).toMatchObject({ differing: 0 });
 });

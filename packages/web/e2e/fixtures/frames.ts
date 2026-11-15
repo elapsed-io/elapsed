@@ -67,6 +67,32 @@ export function pausedFrame(): string {
   return root(26, time + buttons);
 }
 
+/** The check-in frame: 02:00 held behind the blur, with the line asking for any key. */
+export function checkInFrame(): string {
+  const time = `<div style="position: relative; display: flex; align-items: center; justify-content: center"><div aria-hidden="true" style="${TIME_STYLE}; font-size: 104px; filter: blur(10px); opacity: 0.4">02${COLON}00</div><div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="font-size: 15px; color: ${C.text}; text-align: center">press any key if you’re still here</div></div></div>`;
+  return root(26, time + RUNNING_BUTTONS);
+}
+
+/** The "paused after a missed check-in" frame: 02:00 held, paused for 01:12:40, the check-in at 2:00 pm. */
+export function pausedMissedFrame(): string {
+  const time = `<div style="position: relative; display: flex; align-items: center; justify-content: center"><div aria-hidden="true" style="${TIME_STYLE}; font-size: 104px; filter: blur(10px); opacity: 0.4">02${COLON}00</div><div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="position: relative; ${TIME_STYLE}; font-size: 44px">01${COLON}12${COLON}40<div style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; font-size: 12px; font-weight: 400; color: ${C.muted}; letter-spacing: 0.14em; white-space: nowrap">paused for</div><div style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 12px; font-size: 13px; font-weight: 400; color: ${C.muted}; white-space: nowrap; font-variant-numeric: normal">a check-in went unanswered at 2:00 pm</div></div></div></div>`;
+  const buttons = `<div style="display: flex; gap: 14px">${BUTTON('resume', C.accent)}${BUTTON('end', C.end)}</div>`;
+  return root(26, time + buttons);
+}
+
+/** The session maximum frame. */
+export function limitFrame(): string {
+  const icon = `<svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="${C.muted}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M10 2h4"></path></svg>`;
+  const children = [
+    icon,
+    '<div style="font-size: 20px; text-align: center">16-hour session max reached</div>',
+    `<div style="${TIME_STYLE}; font-size: 56px">16${COLON}00${COLON}00</div>`,
+    `<div style="font-size: 13px; color: ${C.muted}; text-align: center; line-height: 1.6; max-width: 400px">a single session can hold up to 16 hours of focus. this one has ended and been saved; start a new one whenever you’re ready.</div>`,
+    `<div style="display: flex; gap: 14px">${BUTTON('view results', C.accent)}</div>`,
+  ];
+  return root(16, children.join(''));
+}
+
 /**
  * The ring frame: 01:24, the head 24 minutes into the hour.
  *

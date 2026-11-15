@@ -147,6 +147,7 @@ export class TimerEngine {
     this.#heartbeatAt = now;
     this.#dirty = true;
     this.#events.emit('session.started', { at: now, session });
+    if (this.#heartbeatOn) this.#events.emit('heartbeat', { at: now });
     this.#afterChange(now);
     return true;
   }

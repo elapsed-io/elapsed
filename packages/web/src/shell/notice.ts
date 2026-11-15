@@ -21,7 +21,7 @@ function hours(text: string): string {
 function timeOf(doc: Document, ms: number): HTMLDivElement {
   const { hours: h, minutes, seconds } = durationParts(ms);
   const colon = (): HTMLSpanElement => html(doc, 'span', { class: 'time__colon' }, [':']);
-  return html(doc, 'div', { class: 'time notice__time' }, [pad(h), colon(), pad(minutes), colon(), pad(seconds)]);
+  return html(doc, 'div', { class: 'notice__time' }, [pad(h), colon(), pad(minutes), colon(), pad(seconds)]);
 }
 
 export class MaximumNotice {

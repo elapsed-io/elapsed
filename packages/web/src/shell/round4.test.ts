@@ -21,6 +21,12 @@ describe('answering a check-in from the keyboard', () => {
     expect(answersCheckIn(key('r', { metaKey: true }))).toBe('pass');
     expect(answersCheckIn(key('Tab'))).toBe('pass');
   });
+
+  it('never swallows a key typed into a text field', () => {
+    expect(answersCheckIn(key('e'), { tagName: 'INPUT' })).toBe('pass');
+    expect(answersCheckIn(key(' '), { tagName: 'DIV', isContentEditable: true })).toBe('pass');
+    expect(answersCheckIn(key(' '), { tagName: 'BUTTON' })).toBe('consume');
+  });
 });
 
 describe('counting visits', () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { SWITCH_OFF_MESSAGE as PAGE_SWITCH_OFF } from '../offline/register.ts';
 import { OFFLINE_CACHE_PREFIX } from '../storage/offline-cache.ts';
-import { CACHE_PREFIX, cacheName, cacheable, routeFor, staleCaches } from './logic.ts';
+import { CACHE_PREFIX, SWITCH_OFF_MESSAGE, cacheName, cacheable, routeFor, staleCaches } from './logic.ts';
 
 const ORIGIN = 'https://site.example';
 const route = (path: string, method = 'GET', origin = ORIGIN): string => routeFor(new URL(path, origin), method, ORIGIN);
@@ -31,8 +32,9 @@ describe('service worker routes', () => {
 });
 
 describe('service worker caches', () => {
-  it('share one prefix with the page’s kill switch', () => {
+  it('share one prefix and one switch-off message with the page’s kill switch', () => {
     expect(CACHE_PREFIX).toBe(OFFLINE_CACHE_PREFIX);
+    expect(SWITCH_OFF_MESSAGE).toBe(PAGE_SWITCH_OFF);
   });
 
   it('drop only older versions of its own caches', () => {
