@@ -219,3 +219,22 @@ Owner answers for this round are decisions 83 to 90 above.
 | 120 | Playwright's fake clock replaces `performance`, which hides navigation entries, so "no visit on reload" is tested without it. | Otherwise every reload under the fake clock looks like a new visit. |
 | 121 | The session maximum frame test removes focus before comparing: the browser rings the focused button, and the frame draws no focus state. Focus styles are round 8's accessibility pass. | The notice moves focus on purpose (decision 105). |
 | 122 | The plan audit now also keeps Cache Storage behind the storage adapters (the service worker excepted), ignores comments when looking for storage, and does not treat lists of class names as copy. | Found by the audit itself this round. |
+
+## Round 5 answers (2026-11-15)
+
+Settled by the owner before round 5 (End screen) began.
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| 123 | **owner** The results frames' guest invite ("this session isn’t saved. create an account to keep it.") is hidden until accounts exist in Release 3. | Release 1 has no accounts; no dead link. |
+| 124 | **owner** For guests, the session maximum notice drops "and been saved": "a single session can hold up to 16 hours of focus. this one has ended; start a new one whenever you’re ready." Accounts (Release 3) get the frame's wording. | The results frame tells guests their session isn't saved. |
+| 125 | **owner** The results headline counts up during the replay as in the frame, in CSS alone: an integer custom property registered with `@property`, animated from 0 to the total seconds over the replay, shown as hours, minutes and seconds through `counter()` with tabular figures. No JavaScript loop. With reduced motion, or where unsupported, the final value shows at once. | The frame counts up; the plan forbids animation loops in script. This one animated custom property is the only exception to "transform, opacity and filter". |
+| 126 | **owner** Ring (and later analog) results: up to 6 hours exactly as the frame; beyond that the rings get closer and thinner so every hour fits in the same 230 px circle. | A session can hold 16 hours; 13 px rings fit about 6. |
+| 127 | **owner** A session ended through the countdown ends at the moment end was pressed; the countdown's seconds are not focus. Cancel resumes as if end had never been pressed, so those seconds count. | "Cancel resumes with no time lost." |
+| 128 | **owner** Retry, and Space on the results screen, start a new session at once. | |
+| 129 | **owner** No settings and account icons during the 5-second countdown and the 0.9 s tabulating hold, as in the frames; they return with the results. | Frames and plan disagreed; the frames win here. |
+| 130 | **owner** Results sizing: the focused headline scales like the timer's time; text, stats, icons and buttons stay at frame sizes; the replay graphic (strip, rings or chart) shrinks to fit narrower windows but never grows past its frame size; below 720 px wide, the six stats wrap into two rows of three. | Results frames are 720 × 520 with a 600 px strip. |
+| 131 | **owner** Share opens the device's share sheet on touch devices (touch as the main pointer) and copies the text on computers, even where the browser has a share sheet. | Plan: "through the device's share sheet, or copies it on desktop". |
+| 132 | **owner** After copying, the share icon becomes a check mark for 2 seconds, and screen readers hear "copied". | No frame shows it. |
+| 133 | **owner** A session shorter than a minute still gets the countdown and results; the 1-minute rule is for saved history (Release 3). | |
+| 134 | **owner** Reloading a tab that shows results shows them again from tab storage, in their final state, without the replay. | The replay plays once. |
