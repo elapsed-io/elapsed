@@ -69,3 +69,33 @@ export async function compareWithReference(page: Page, browser: Browser, markup:
   await scratch.close();
   return diff;
 }
+
+/** The end button of the timer's own controls (the countdown has an "end now" button of the same style). */
+export const TIMER_END = '.screen > .controls .button--end';
+
+/**
+ * Ends the session through the countdown: end, then end now once its 300 ms
+ * guard has passed (the countdown runs on the browser's own animation clock).
+ */
+export async function endThroughCountdown(page: Page): Promise<void> {
+  await page.locator(TIMER_END).click();
+  await page.locator('.ending').waitFor();
+  await page.waitForTimeout(350);
+  await page.getByRole('button', { name: 'end now' }).click();
+  await page.locator('.results').waitFor();
+}
+
+/** Finishes every running animation (the tabulating fade, the results fade-in, the replay), as if their time had passed. */
+export async function finishResults(page: Page): Promise<void> {
+  await page.locator('.results .action').first().waitFor();
+  await page.evaluate(async () => {
+    for (let round = 0; round < 3; round += 1) {
+      const running = document.getAnimations().filter((animation) => !(animation instanceof CSSAnimation));
+      for (const animation of running) animation.finish();
+      // Let finish handlers (which cancel spent animations and remove masks) run. The page's timers
+      // may be held by the test clock, so only promises are awaited.
+      await Promise.allSettled(running.map((animation) => animation.finished));
+      await Promise.resolve();
+    }
+  });
+}

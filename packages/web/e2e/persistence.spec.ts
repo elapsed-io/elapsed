@@ -9,7 +9,7 @@ import { expect, test } from '@playwright/test';
 import type { BrowserContext, Page, Request } from '@playwright/test';
 import { BRAND, createSession, resumeSession, pauseSession, serializeActiveState, startState } from '@stopwatch/core';
 import type { ActiveState } from '@stopwatch/core';
-import { MINUTE, SECOND, T0, T_READY, openApp, settle } from './helpers.ts';
+import { MINUTE, SECOND, T0, T_READY, endThroughCountdown, finishResults, openApp, settle } from './helpers.ts';
 
 const NAME = BRAND.name;
 const HOUR = 60 * MINUTE;
@@ -47,7 +47,8 @@ async function reopenLater(context: BrowserContext, away: number): Promise<Page>
   await later.setViewportSize({ width: 720, height: 450 });
   await later.clock.setSystemTime(T_READY + 10 * MINUTE + away);
   await later.goto('/');
-  await later.locator('.button--primary').waitFor();
+  // The script has run once its live region exists (the timer may be replaced by results).
+  await later.locator('[role="status"]').waitFor({ state: 'attached' });
   return later;
 }
 
@@ -178,7 +179,9 @@ test.describe('check-ins', () => {
     await page.close();
     // The check-in fell due at 16:00:30; twelve hours after it, the session ended.
     const later = await reopenLater(context, 14 * HOUR);
-    await expect(primary(later)).toHaveAccessibleName('start');
+    // Sessions that end on their own skip the countdown and show their results.
+    await expect(later.getByRole('button', { name: 'retry' })).toBeVisible();
+    await expect(later.locator('.ending__controls')).toBeHidden();
     expect(await storedKeys(later)).toEqual([]);
   });
 });
@@ -191,10 +194,12 @@ test('a pause longer than the limit ends the session', async ({ page }) => {
   await page.clock.runFor(30 * MINUTE - SECOND);
   await expect(primary(page)).toHaveAccessibleName('resume');
   await page.clock.runFor(SECOND);
-  await settle(page);
-  await expect(primary(page)).toHaveAccessibleName('start');
+  await expect(page.getByRole('button', { name: 'retry' })).toBeVisible();
   expect(await page.title()).toBe(NAME);
   expect(await storedKeys(page)).toEqual([]);
+  // Dated to when the pause began: five minutes of focus, no pause counted.
+  await finishResults(page);
+  await expect(page.locator('.results .visually-hidden')).toHaveText('00:05:00');
 });
 
 test.describe('the session maximum', () => {
@@ -207,7 +212,7 @@ test.describe('the session maximum', () => {
     return { ...startState(session), presenceAt: T0 - 30 * MINUTE };
   }
 
-  test('ends the session at exactly 16 hours and explains it; view results returns to idle', async ({ page }) => {
+  test('ends the session at exactly 16 hours and explains it; view results shows the results', async ({ page }) => {
     const state = nearlyMaximum();
     await seed(page, { 'timer.active': serializeActiveState(state), 'timer.heartbeat': String(T0 - 10 * SECOND) });
     await openApp(page);
@@ -217,7 +222,7 @@ test.describe('the session maximum', () => {
     await expect(page.locator('.notice__heading')).toHaveText('16-hour session max reached');
     await expect(page.locator('.notice__time')).toHaveText('16:00:00');
     await expect(page.locator('.notice__body')).toHaveText(
-      'a single session can hold up to 16 hours of focus. this one has ended and been saved; start a new one whenever you’re ready.',
+      'a single session can hold up to 16 hours of focus. this one has ended; start a new one whenever you’re ready.',
     );
     await expect(page.locator('.mode-root')).toBeHidden();
     await expect(page.locator('.screen > .controls')).toBeHidden();
@@ -226,11 +231,11 @@ test.describe('the session maximum', () => {
 
     await page.getByRole('button', { name: 'view results' }).click();
     await expect(notice(page)).toBeHidden();
-    await expect(primary(page)).toHaveAccessibleName('start');
-    expect(await shownTime(page)).toBe('00:00:00');
+    await finishResults(page);
+    await expect(page.locator('.results .visually-hidden')).toHaveText('16:00:00');
   });
 
-  test('from the keyboard, the notice’s button has focus, and a new session can start right away', async ({ page }) => {
+  test('from the keyboard: the notice’s button, then retry, have focus, and a new session can start right away', async ({ page }) => {
     await seed(page, { 'timer.active': serializeActiveState(nearlyMaximum()), 'timer.heartbeat': String(T0) });
     await openApp(page);
     await page.clock.runFor(MINUTE);
@@ -238,7 +243,7 @@ test.describe('the session maximum', () => {
     await expect(page.getByRole('button', { name: 'view results' })).toBeFocused();
     await page.keyboard.press('Space');
     await expect(notice(page)).toBeHidden();
-    await expect(primary(page)).toBeFocused();
+    await expect(page.getByRole('button', { name: 'retry' })).toBeFocused();
     await page.keyboard.press('Space');
     await expect(primary(page)).toHaveAccessibleName('pause');
   });
@@ -282,8 +287,11 @@ test('tabs show one session: started, paused and ended from either', async ({ pa
   await primary(page).click();
   await expect(primary(other)).toHaveAccessibleName('pause');
 
-  await other.keyboard.press('e');
+  // Ended by the user in one tab: its results show there, and the other tab goes idle.
+  await endThroughCountdown(other);
   await expect(primary(page)).toHaveAccessibleName('start');
+  await expect(page.locator('.results')).toBeHidden();
+  await expect(other.getByRole('button', { name: 'retry' })).toBeVisible();
   expect(await storedKeys(page)).toEqual([]);
 });
 

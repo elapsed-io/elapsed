@@ -3,7 +3,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { BRAND } from '@stopwatch/core';
-import { MINUTE, SECOND, openApp, settle } from './helpers.ts';
+import { MINUTE, SECOND, TIMER_END, endThroughCountdown, openApp, settle } from './helpers.ts';
 
 const NAME = BRAND.name;
 
@@ -22,7 +22,7 @@ async function timeText(page: Page, selector = '.time--main'): Promise<string> {
 }
 
 const primary = (page: Page) => page.locator('.button--primary');
-const end = (page: Page) => page.locator('.button--end');
+const end = (page: Page) => page.locator(TIMER_END);
 
 test('starts, pauses, resumes and ends with the buttons', async ({ page }) => {
   await openApp(page);
@@ -55,12 +55,18 @@ test('starts, pauses, resumes and ends with the buttons', async ({ page }) => {
   await page.clock.runFor(MINUTE);
   expect(await timeText(page)).toBe('00:03');
 
+  // End opens the countdown; cancel goes back with no time lost.
   await end(page).click();
-  await settle(page);
-  await expect(end(page)).toBeHidden();
-  await expect(primary(page)).toHaveAccessibleName('start');
+  await expect(page.locator('.ending')).toBeVisible();
+  await expect(page.locator('.corner')).toBeHidden();
+  await page.getByRole('button', { name: 'cancel' }).click();
+  await expect(page.locator('.ending')).toBeHidden();
+  await expect(primary(page)).toHaveAccessibleName('pause');
   await expect(primary(page)).toBeFocused();
-  expect(await timeText(page)).toBe('00:00:00');
+
+  await endThroughCountdown(page);
+  await expect(page.getByRole('button', { name: 'retry' })).toBeVisible();
+  await expect(page.locator('.screen > .controls')).toBeHidden();
   expect(await page.title()).toBe(NAME);
 });
 
@@ -74,9 +80,24 @@ test('space starts, pauses and resumes; E ends', async ({ page }) => {
   await expect(primary(page)).toHaveAccessibleName('resume');
   await page.keyboard.press('Space');
   await expect(primary(page)).toHaveAccessibleName('pause');
+  // E opens the countdown; Space cancels it; E then E again (after its guard) ends now.
   await page.keyboard.press('e');
-  await expect(primary(page)).toHaveAccessibleName('start');
-  await expect(end(page)).toBeHidden();
+  await expect(page.locator('.ending')).toBeVisible();
+  await page.keyboard.press('Space');
+  await expect(page.locator('.ending')).toBeHidden();
+  await expect(primary(page)).toHaveAccessibleName('pause');
+  await page.locator('body').focus();
+  await page.keyboard.press('e');
+  await page.keyboard.press('e');
+  await expect(page.locator('.ending')).toBeVisible();
+  await page.waitForTimeout(350);
+  await page.keyboard.press('e');
+  await expect(page.locator('.results')).toBeVisible();
+  // Space on the results starts the next session.
+  await page.locator('body').focus();
+  await page.keyboard.press('Space');
+  await expect(primary(page)).toHaveAccessibleName('pause');
+  await expect(page.locator('.results')).toBeHidden();
 });
 
 test('space on a focused button acts once, not twice', async ({ page }) => {

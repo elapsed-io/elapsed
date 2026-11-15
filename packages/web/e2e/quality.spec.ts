@@ -73,11 +73,11 @@ test('no task blocks the main thread for 50 ms while using the controls', async 
   expect(tasks).toEqual([]);
 });
 
-test('stores only the open session, nothing once it ends, and sets no cookies', async ({ page, context }) => {
+test('stores only the open session, then the finished one in tab storage, and sets no cookies', async ({ page, context }) => {
   const stored = () =>
     page.evaluate(async () => ({
       local: Object.keys(localStorage).sort(),
-      session: Object.keys(sessionStorage),
+      session: Object.keys(sessionStorage).sort(),
       databases: (await indexedDB.databases()).map((database) => database.name),
       caches: await caches.keys(),
     }));
@@ -88,6 +88,15 @@ test('stores only the open session, nothing once it ends, and sets no cookies', 
   await page.waitForTimeout(1200);
   expect(await stored()).toEqual({ local: ['timer.active', 'timer.heartbeat'], session: [], databases: [], caches: [] });
   await page.keyboard.press('e');
-  expect(await stored()).toEqual({ local: [], session: [], databases: [], caches: [] });
+  await page.waitForTimeout(350);
+  await page.keyboard.press('e');
+  await page.locator('.results').waitFor();
+  // The finished session moves to this tab's storage (plan, Guest storage).
+  expect(await stored()).toEqual({ local: [], session: ['timer.finished'], databases: [], caches: [] });
+  // A new session deletes it.
+  await page.locator('body').focus();
+  await page.keyboard.press('Space');
+  await expect(page.locator('.button--primary')).toHaveAccessibleName('pause');
+  expect((await stored()).session).toEqual([]);
   expect(await context.cookies()).toEqual([]);
 });
