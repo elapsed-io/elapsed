@@ -57,21 +57,15 @@ test('loads under the CSP with no violations, errors or third-party requests', a
   expect(errors).toEqual([]);
   const origin = new URL(baseURL ?? '').origin;
   expect(requests.filter((url) => !url.startsWith('data:') && new URL(url).origin !== origin)).toEqual([]);
-  // The page, its script, its stylesheet, the preloaded font and the tab icon; the visit count and
-  // the offline kill switch. No display mode chunk loads for digits.
+  // The page, its script, its stylesheet and the preloaded font; the visit count and the offline kill
+  // switch. The browser fetches the tab icon when it chooses, so it may or may not have happened yet.
+  // No display mode chunk loads for digits.
   const paths = requests
     .filter((url) => !url.startsWith('data:'))
     .map((url) => new URL(url).pathname.replace(/^\/assets\/([a-z-]+)-[\w-]+\.(\w+)$/, '/assets/$1.$2'))
+    .filter((path) => path !== '/icons/icon.svg')
     .sort();
-  expect(paths).toEqual([
-    '/',
-    '/api/count',
-    '/assets/index.css',
-    '/assets/index.js',
-    '/assets/timer-sans.woff2',
-    '/icons/icon.svg',
-    '/sw-control.json',
-  ]);
+  expect(paths).toEqual(['/', '/api/count', '/assets/index.css', '/assets/index.js', '/assets/timer-sans.woff2', '/sw-control.json']);
 });
 
 test('the browser enforces Trusted Types and blocks inline styles', async ({ page }) => {
