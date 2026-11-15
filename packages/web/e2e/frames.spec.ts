@@ -3,15 +3,17 @@
  * 720 × 450 in the default theme.
  *
  * Screens with nothing moving match exactly. Where the plan moves things with
- * transforms (the seconds re-centring, the ring turning, the timeline
- * sliding), the browser draws the moving part as its own layer, which shifts
- * anti-aliasing by a fraction of a pixel; those comparisons allow a few dozen
- * pixels of edge noise (more than 8 levels apart) and nothing larger. A
- * misplaced element by even one pixel differs in hundreds of pixels.
+ * transforms, browsers draw the moving part as its own layer, and how a layer
+ * is rasterised differs between browser versions. The ring and timeline
+ * references therefore draw the frame's geometry through the same kind of
+ * layer (see fixtures/frames.ts), so they compare geometry rather than
+ * rasteriser details. The seconds blur-away compares against the frame's own
+ * markup and allows a few dozen pixels of edge noise. A misplaced element by
+ * even one pixel differs in hundreds of pixels.
  */
 
 import { expect, test } from '@playwright/test';
-import { pausedFrame, ringFrame, runningFrame, timelineFrame } from './fixtures/frames.ts';
+import { TIMELINE_FRAME_LABELS, pausedFrame, ringFrame, runningFrame, timelineFrame } from './fixtures/frames.ts';
 import { MINUTE, SECOND, compareWithReference, holdAnimationsAt, openApp, settle } from './helpers.ts';
 
 /** Moments across both blur-away windows, including their ends. */
@@ -57,7 +59,7 @@ test('ring matches the ring frame', async ({ page, browser }) => {
   await settle(page);
   await holdAnimationsAt(page, 84 * MINUTE);
   const diff = await compareWithReference(page, browser, ringFrame());
-  expect(diff.visible).toBeLessThanOrEqual(100);
+  expect(diff.visible).toBeLessThanOrEqual(20);
   expect(diff.maxChannelDelta).toBeLessThanOrEqual(40);
 });
 
@@ -67,7 +69,41 @@ test('timeline matches the timeline frame', async ({ page, browser }) => {
   await page.clock.runFor(84 * MINUTE);
   await settle(page);
   await holdAnimationsAt(page, 84 * MINUTE);
-  const diff = await compareWithReference(page, browser, timelineFrame());
-  expect(diff.visible).toBeLessThanOrEqual(150);
+
+  // Labels: the same text, centred at the frame's positions, in the frame's type and colour.
+  const labels = await page.evaluate(() => {
+    const drawing = document.querySelector('.timeline__svg');
+    if (drawing === null) throw new Error('no timeline');
+    const box = drawing.getBoundingClientRect();
+    return [...document.querySelectorAll('.timeline__label')]
+      .map((text) => {
+        const rect = text.getBoundingClientRect();
+        const style = getComputedStyle(text);
+        return {
+          text: text.textContent,
+          centre: rect.x + rect.width / 2 - box.x,
+          size: style.fontSize,
+          family: style.fontFamily,
+          weight: style.fontWeight,
+          fill: style.fill,
+          baseline: text.getAttribute('y'),
+        };
+      })
+      .filter((label) => label.centre > 0 && label.centre < box.width);
+  });
+  expect(labels.map((label) => label.text)).toEqual(TIMELINE_FRAME_LABELS.map(([text]) => text));
+  labels.forEach((label, index) => {
+    // Within a quarter pixel (text boxes are measured in 1/64 px layout units); a minute is 10 px.
+    expect(Math.abs(label.centre - (TIMELINE_FRAME_LABELS[index]?.[1] ?? Number.NaN))).toBeLessThan(0.25);
+    expect(label).toMatchObject({ size: '11px', family: '"Timer Sans", system-ui, sans-serif', weight: '400', fill: 'rgb(136, 135, 133)', baseline: '90' });
+  });
+
+  // Everything else, pixel for pixel. Text anti-aliasing inside a sliding layer varies between
+  // browser versions, so the labels are compared by geometry above rather than here.
+  await page.evaluate(() => {
+    for (const label of document.querySelectorAll<SVGElement>('.timeline__label')) label.style.setProperty('visibility', 'hidden');
+  });
+  const diff = await compareWithReference(page, browser, timelineFrame({ labels: false }));
+  expect(diff.visible).toBeLessThanOrEqual(20);
   expect(diff.maxChannelDelta).toBeLessThanOrEqual(48);
 });

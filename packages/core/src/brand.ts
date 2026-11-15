@@ -42,6 +42,18 @@ export const BRAND = {
       ring: 'ring',
       timeline: 'timeline',
     },
+    themes: {
+      graphite: 'graphite',
+      paper: 'paper',
+      'deep-sea': 'deep sea',
+      forest: 'forest',
+      oxblood: 'oxblood',
+      plum: 'plum',
+      lilac: 'lilac',
+      sky: 'sky',
+      sand: 'sand',
+      mint: 'mint',
+    },
     icons: {
       settings: 'settings',
       account: 'account',

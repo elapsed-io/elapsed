@@ -131,3 +131,12 @@ Owner decisions are marked **owner**.
 | 76 | The engine's `sync()` runs on `visibilitychange` (when visible), `pageshow` and `focus`. | Closes round 2's open risk: a woken device shows the right time at once. |
 | 77 | Lint now also bans `setAttribute('style', …)`. Measured values (the seconds widths) are set with `element.style.setProperty`, which the CSP allows. | The CSP blocks style attributes at runtime. |
 | 78 | Pixel tests: screens with nothing moving must match exactly; screens with transform animations (the seconds re-centring, the ring, the timeline) allow up to 60–150 pixels that differ by more than 8 levels. A 1 px change to a gap fails every one of them. | Browsers draw transform-animated elements as separate layers, which moves anti-aliasing by a fraction of a pixel. |
+
+## Between rounds 3 and 4 (2026-11-15)
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| 79 | Between-round checks are written down in `docs/checks.md` and mostly automated: a plan audit over the source (`tooling/plan-audit.test.ts`) and browser checks for response time, layout shift, long tasks and stored data (`packages/web/e2e/quality.spec.ts`). | Owner instruction: performance, security and design checks between rounds. |
+| 80 | The round 3 CI run failed: GitHub's newer Chromium rasterises text inside the sliding timeline layer differently from a static drawing (983 differing pixels against a limit of 150). The ring and timeline references now draw the frame's geometry through the same kind of layer (a group turned or slid by a paused CSS animation, over the same extent), and the timeline's labels are checked by geometry (text, centre within 0.25 px, size, family, weight, colour) instead of pixels. The ring now matches exactly. | Tests should check geometry, not how a given browser version anti-aliases a layer. |
+| 81 | The theme preset names moved from `theme/presets.ts` into the brand module. | Found by the audit: they are user-facing copy (shown in settings in round 6), and invariant 12 keeps all copy in one file. |
+| 82 | The layout-shift check counts only shifts without recent input, as the Cumulative Layout Shift metric does. The controls row re-centring after a key press or click is the screen answering that input (and slides smoothly). | Load and idle produce no shift at all. |
