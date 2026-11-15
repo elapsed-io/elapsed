@@ -4,7 +4,7 @@ import { createSession } from './commands.ts';
 import { focusedMs } from './derive.ts';
 import { HOUR, ID, MINUTE, T0 } from './fixtures.ts';
 import { advance, checkInDueAt, defaultRules, nextTrigger, normaliseRules, pendingCheckIn } from './rules.ts';
-import { startState } from './state.ts';
+import { serializeActiveState, startState } from './state.ts';
 import type { ActiveState } from './state.ts';
 import { parseActiveState } from './validate.ts';
 
@@ -90,6 +90,14 @@ describe('parseActiveState', () => {
     ['an extra field', { note: 'x' }],
   ])('rejects %s', (_label, change) => {
     expect(() => parseActiveState({ ...valid(), ...change })).toThrow();
+  });
+
+  it('serialises equal states to the same text, which reads back as the same state', () => {
+    const state = parseActiveState(valid());
+    const reordered = { pauseLimitMs: null, missedCheckInAt: null, presenceAt: T0, session: state.session, schema: 1 };
+    const text = serializeActiveState(state);
+    expect(serializeActiveState(parseActiveState(reordered))).toBe(text);
+    expect(serializeActiveState(parseActiveState(JSON.parse(text)))).toBe(text);
   });
 
   it('rejects an ended session', () => {

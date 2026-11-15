@@ -14,7 +14,7 @@ export interface IconElement {
   readonly attributes: Readonly<Record<string, string>>;
 }
 
-export type IconName = 'settings' | 'account';
+export type IconName = 'settings' | 'account' | 'maximum';
 
 export const ICONS: Readonly<Record<IconName, readonly IconElement[]>> = {
   settings: [
@@ -29,6 +29,12 @@ export const ICONS: Readonly<Record<IconName, readonly IconElement[]>> = {
   account: [
     { tag: 'circle', attributes: { cx: '12', cy: '7', r: '4' } },
     { tag: 'path', attributes: { d: 'M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2' } },
+  ],
+  /** The session maximum notice: a clock face with a button on top, as drawn in the canvas's session maximum frame (not a Tabler icon). */
+  maximum: [
+    { tag: 'circle', attributes: { cx: '12', cy: '13', r: '8' } },
+    { tag: 'path', attributes: { d: 'M12 9v4l2 2' } },
+    { tag: 'path', attributes: { d: 'M10 2h4' } },
   ],
 };
 

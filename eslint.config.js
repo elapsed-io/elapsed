@@ -17,6 +17,7 @@ export default defineConfig(
           './tsconfig.json',
           './packages/core/tsconfig.json',
           './packages/web/tsconfig.json',
+          './packages/web/tsconfig.sw.json',
           './packages/web/tsconfig.node.json',
         ],
         tsconfigRootDir: import.meta.dirname,
@@ -30,9 +31,10 @@ export default defineConfig(
     },
   },
   {
-    // Site code: storage only through adapters (src/storage arrives in round 4).
+    // Site code: storage only through adapters. The service worker is the
+    // offline cache itself and runs apart from the page.
     files: ['packages/web/src/**/*.ts'],
-    ignores: ['packages/web/src/storage/**'],
+    ignores: ['packages/web/src/storage/**', 'packages/web/src/sw/**'],
     rules: storageRules,
   },
   {

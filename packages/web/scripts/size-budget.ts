@@ -37,18 +37,19 @@ interface ManifestChunk {
 type Manifest = Readonly<Record<string, ManifestChunk>>;
 
 /** Same-origin URLs a document or stylesheet references directly. */
-function htmlReferences(html: string): string[] {
+export function htmlReferences(html: string): string[] {
   const found: string[] = [];
   const tags = /<(?:script|link)\b[^>]*>/g;
   for (const [tag] of html.matchAll(tags)) {
-    if (/\brel=["']?icon\b/.test(tag)) continue;
+    // Icons for tabs and home screens, and the manifest, are not part of what the page needs to run.
+    if (/\brel=["']?(?:icon|apple-touch-icon|manifest)\b/.test(tag)) continue;
     const url = /\b(?:src|href)=["']([^"']+)["']/.exec(tag)?.[1];
     if (url !== undefined && url.startsWith('/')) found.push(url.slice(1));
   }
   return found;
 }
 
-function cssReferences(css: string): string[] {
+export function cssReferences(css: string): string[] {
   const found: string[] = [];
   for (const match of css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) {
     const url = match[1];

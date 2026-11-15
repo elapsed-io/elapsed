@@ -88,7 +88,8 @@
     opacity: var(--held-opacity);
   }
 
-  .paused {
+  /* Text centred over the held time: the pause length, or the check-in line. */
+  .overlay {
     position: absolute;
     inset: 0;
     display: flex;
@@ -101,10 +102,17 @@
       visibility 0s linear var(--motion-morph);
   }
 
-  .paused--shown {
+  .overlay--shown {
     opacity: 1;
     visibility: visible;
     transition: opacity var(--motion-morph) var(--ease-standard);
+  }
+
+  .check-in__text {
+    font-size: var(--check-in-size);
+    color: var(--color-foreground);
+    text-align: center;
+    white-space: nowrap;
   }
 
   .time--paused-for {
@@ -122,6 +130,21 @@
     font-weight: var(--font-weight-label);
     color: var(--color-muted);
     letter-spacing: var(--paused-label-tracking);
+    white-space: nowrap;
+  }
+
+  /* Paused after a missed check-in: when the check-in appeared, below the pause length. */
+  .paused__missed {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: var(--paused-missed-gap);
+    font-size: var(--paused-missed-size);
+    font-weight: var(--font-weight-label);
+    font-variant-numeric: normal;
+    color: var(--color-muted);
+    white-space: nowrap;
   }
 
   /* Reduced motion: no blur animates; the pause still crossfades. */

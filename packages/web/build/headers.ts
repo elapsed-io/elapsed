@@ -15,8 +15,12 @@ export type CspDirectives = Readonly<Record<string, readonly string[]>>;
  *   domain registered before Release 4, so until then no frame is allowed.
  * - require-trusted-types-for / trusted-types: browsers that support Trusted
  *   Types refuse every string passed to an HTML or script sink (innerHTML,
- *   script src, ...). No policy may be created, so the page cannot opt back in.
- *   Browsers without support ignore both directives.
+ *   script src, ...). One policy may be created, `service-worker`, which
+ *   accepts exactly /sw.js as a worker script URL (src/offline/register.ts);
+ *   no other policy, and no default policy, can exist. Browsers without
+ *   support ignore both directives.
+ * - worker-src and manifest-src: the service worker and the web app manifest
+ *   (round 4). Both are the site's own files; no other origin is added.
  */
 export const CSP_DIRECTIVES: CspDirectives = {
   'default-src': ["'none'"],
@@ -25,12 +29,14 @@ export const CSP_DIRECTIVES: CspDirectives = {
   'img-src': ["'self'", 'data:', 'blob:'],
   'font-src': ["'self'"],
   'connect-src': ["'self'"],
+  'worker-src': ["'self'"],
+  'manifest-src': ["'self'"],
   'frame-src': ["'none'"],
   'base-uri': ["'none'"],
   'form-action': ["'self'"],
   'frame-ancestors': ["'none'"],
   'require-trusted-types-for': ["'script'"],
-  'trusted-types': ["'none'"],
+  'trusted-types': ['service-worker'],
 };
 
 export function renderCsp(directives: CspDirectives = CSP_DIRECTIVES): string {
@@ -62,6 +68,10 @@ export const HEADER_RULES: readonly HeaderRule[] = [
   { path: '/*', headers: SECURITY_HEADERS },
   // Vite writes hashed file names here, so they never change in place.
   { path: '/assets/*', headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
+  // The browser checks the service worker for a new version on every visit, past any cache.
+  { path: '/sw.js', headers: { 'Cache-Control': 'no-cache' } },
+  // The kill switch must never be answered from a cache.
+  { path: '/sw-control.json', headers: { 'Cache-Control': 'no-store' } },
 ];
 
 /** Renders Cloudflare's `_headers` format (static assets on Pages and Workers). */

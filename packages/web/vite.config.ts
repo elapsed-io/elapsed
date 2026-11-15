@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite';
-import { preloadFont, securityHeaders, templateHtml, tokensCss } from './build/plugins.ts';
+import { countStub, preloadFont, securityHeaders, templateHtml, tokensCss } from './build/plugins.ts';
+import { serviceWorker } from './build/service-worker.ts';
+import { webApp } from './build/web-app.ts';
 
 export default defineConfig({
-  plugins: [templateHtml(), tokensCss(), preloadFont('timer-sans.woff2'), securityHeaders()],
+  plugins: [templateHtml(), tokensCss(), preloadFont('timer-sans.woff2'), securityHeaders(), webApp(), serviceWorker(), countStub()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,

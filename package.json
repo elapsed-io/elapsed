@@ -14,7 +14,7 @@
     "dev": "npm run dev -w @stopwatch/web",
     "build": "npm run build -w @stopwatch/web",
     "preview": "npm run preview -w @stopwatch/web",
-    "typecheck": "tsc -p tsconfig.json && tsc -p packages/core && tsc -p packages/web && tsc -p packages/web/tsconfig.node.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p packages/core && tsc -p packages/web && tsc -p packages/web/tsconfig.sw.json && tsc -p packages/web/tsconfig.node.json",
     "lint": "eslint --max-warnings 0 .",
     "test": "vitest run",
     "test:watch": "vitest",

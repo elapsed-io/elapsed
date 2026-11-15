@@ -6,9 +6,15 @@
  * - preloadFont: adds a preload link for the hashed default font file.
  * - securityHeaders: writes Cloudflare's `_headers` file into the build and
  *   applies the same headers in `vite preview`, so tests run under the CSP.
+ * - countStub: answers the counting endpoint in `vite` and `vite preview`
+ *   with 204 and keeps nothing; the real endpoint is packages/endpoint.
+ *
+ * web-app.ts and service-worker.ts hold the manifest and offline plugins.
  */
 
-import type { Plugin } from 'vite';
+import type { ServerResponse } from 'node:http';
+import type { Connect, Plugin } from 'vite';
+import { COUNT_PATH } from '@stopwatch/core';
 import { HEADER_RULES, headersForPath, renderHeadersFile } from './headers.ts';
 import { renderTemplate } from './html.ts';
 import { isModeTokenId, renderModeTokensCss, renderTokensCss } from '../src/styles/tokens.ts';
@@ -82,6 +88,30 @@ export function securityHeaders(): Plugin {
         for (const [name, value] of Object.entries(headersForPath(path))) response.setHeader(name, value);
         next();
       });
+    },
+  };
+}
+
+function answerCounts(request: Connect.IncomingMessage, response: ServerResponse, next: Connect.NextFunction): void {
+  if (request.url !== COUNT_PATH) {
+    next();
+    return;
+  }
+  // Drain the body; nothing is kept.
+  request.resume();
+  response.statusCode = request.method === 'POST' ? 204 : 405;
+  response.setHeader('Cache-Control', 'no-store');
+  response.end();
+}
+
+export function countStub(): Plugin {
+  return {
+    name: 'stopwatch:count-stub',
+    configureServer(server) {
+      server.middlewares.use(answerCounts);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(answerCounts);
     },
   };
 }

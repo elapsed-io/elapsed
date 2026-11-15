@@ -28,7 +28,7 @@ test('serves the security headers on the page', async ({ request }) => {
   const response = await request.get('/');
   const headers = response.headers();
   expect(headers['content-security-policy']).toBe(
-    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types 'none'",
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'; trusted-types service-worker",
   );
   expect(headers['strict-transport-security']).toBe('max-age=63072000; includeSubDomains; preload');
   expect(headers['x-content-type-options']).toBe('nosniff');
@@ -47,16 +47,29 @@ test('loads under the CSP with no violations, errors or third-party requests', a
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('request', (request) => requests.push(request.url()));
 
+  const controlRead = page.waitForRequest('**/sw-control.json');
   await openIdle(page);
+  await controlRead;
 
   expect(await violations()).toEqual([]);
   expect(errors).toEqual([]);
   const origin = new URL(baseURL ?? '').origin;
   expect(requests.filter((url) => !url.startsWith('data:') && new URL(url).origin !== origin)).toEqual([]);
-  // The page, its script, its stylesheet and the preloaded font. No display mode chunk loads for digits.
-  const paths = requests.filter((url) => !url.startsWith('data:')).map((url) => new URL(url).pathname);
-  expect(paths).toHaveLength(4);
-  expect(paths.filter((path) => /\/assets\/(ring|timeline)-/.test(path))).toEqual([]);
+  // The page, its script, its stylesheet, the preloaded font and the tab icon; the visit count and
+  // the offline kill switch. No display mode chunk loads for digits.
+  const paths = requests
+    .filter((url) => !url.startsWith('data:'))
+    .map((url) => new URL(url).pathname.replace(/^\/assets\/([a-z-]+)-[\w-]+\.(\w+)$/, '/assets/$1.$2'))
+    .sort();
+  expect(paths).toEqual([
+    '/',
+    '/api/count',
+    '/assets/index.css',
+    '/assets/index.js',
+    '/assets/timer-sans.woff2',
+    '/icons/icon.svg',
+    '/sw-control.json',
+  ]);
 });
 
 test('the browser enforces Trusted Types and blocks inline styles', async ({ page }) => {

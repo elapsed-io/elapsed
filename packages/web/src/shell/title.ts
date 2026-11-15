@@ -1,8 +1,8 @@
 /**
  * The tab title (owner decision, 2026-11-15): "00:42 · name" while running,
  * "paused for 00:04 · name" while paused (the pause length), the name when
- * idle. All times hh:mm, so the title changes at most once a minute.
- * Round 4 adds "check in · 02:00 · name" while a check-in waits.
+ * idle, and "check in · 02:00 · name" while a check-in waits (focused
+ * time). All times hh:mm, so the title changes at most once a minute.
  */
 
 import { BRAND, durationParts } from '@stopwatch/core';
@@ -21,6 +21,7 @@ function fill(template: string, time: string): string {
 
 export function titleFor(view: TimerView): string {
   const { title } = BRAND.copy;
+  if (view.status === 'running' && view.checkInDueAt !== null) return fill(title.checkIn, hoursMinutes(view.focusedMs));
   if (view.status === 'running') return fill(title.running, hoursMinutes(view.focusedMs));
   if (view.status === 'paused') return fill(title.paused, hoursMinutes(view.pausedForMs ?? 0));
   return fill(title.idle, '');

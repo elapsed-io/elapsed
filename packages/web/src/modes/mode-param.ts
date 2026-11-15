@@ -7,6 +7,11 @@
 import { DEFAULT_MODE_ID, isKnownMode } from './manifests.ts';
 
 export function modeFromSearch(search: string): string {
+  return requestedMode(search) ?? DEFAULT_MODE_ID;
+}
+
+/** The known mode the URL asks for, or null if it asks for none. */
+export function requestedMode(search: string): string | null {
   const requested = new URLSearchParams(search).get('mode');
-  return requested !== null && isKnownMode(requested) ? requested : DEFAULT_MODE_ID;
+  return requested !== null && isKnownMode(requested) ? requested : null;
 }

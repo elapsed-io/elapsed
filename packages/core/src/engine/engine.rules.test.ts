@@ -9,6 +9,7 @@ import { CONFIG } from '../config.ts';
 import { focusedMs } from '../session/derive.ts';
 import { HOUR, MINUTE, T0 } from '../session/fixtures.ts';
 import { defaultRules } from '../session/rules.ts';
+import type { ActiveState } from '../session/state.ts';
 import { parseActiveState } from '../session/validate.ts';
 import { harness } from './harness.ts';
 import type { Recorded } from './harness.ts';
@@ -219,6 +220,65 @@ describe('restore and adopt', () => {
     expect(tab.engine.view).toMatchObject({ status: 'running', focusedMs: 5 * MINUTE, mode: 'ring' });
     tab.engine.adopt(null);
     expect(tab.engine.status).toBe('idle');
+  });
+
+  it('takes up another tab’s answer before a frozen tab applies the rules', () => {
+    let saved: ActiveState | null = null;
+    const a = harness({ rules });
+    a.bus.on('state.changed', ({ state }) => {
+      saved = state;
+    });
+    let pulls = 0;
+    const b = harness({
+      rules,
+      beforeWake: () => {
+        pulls += 1;
+        b.engine.adopt(saved);
+      },
+    });
+    a.engine.start('digits');
+    b.engine.adopt(saved);
+    a.clock.advance(2 * HOUR + 10 * MINUTE);
+    expect(a.engine.answerCheckIn()).toBe(true);
+    // Tab b was frozen in the background; its overdue timers fire when it thaws an hour later.
+    b.clock.sleep(3 * HOUR + 10 * MINUTE, { monotonic: 'advances' });
+    expect(pulls).toBeGreaterThan(0);
+    expect(of(b.take(), 'session.paused')).toEqual([]);
+    expect(b.engine.view).toMatchObject({ status: 'running', focusedMs: 3 * HOUR + 10 * MINUTE, checkInDueAt: null });
+  });
+
+  it('records no gap for time another tab was watching', () => {
+    let beat = T0;
+    const b = harness({
+      rules,
+      heartbeat: true,
+      beforeWake: () => {
+        b.engine.observeHeartbeat(beat);
+      },
+    });
+    b.engine.start('digits');
+    // Another tab kept writing heartbeats while this one was frozen.
+    beat = T0 + HOUR - 20 * SECOND;
+    b.clock.sleep(HOUR, { monotonic: 'advances' });
+    expect(b.engine.session?.gaps).toEqual([]);
+    // Without that tab, the same freeze is a gap.
+    b.clock.sleep(HOUR, { monotonic: 'advances' });
+    expect(b.engine.session?.gaps).toEqual([{ start: T0 + HOUR - 20 * SECOND, end: T0 + 2 * HOUR }]);
+  });
+
+  it('does not announce a check-in again when another tab only recorded a gap', () => {
+    const tab = harness({ rules });
+    tab.engine.start('digits');
+    tab.clock.advance(2 * HOUR);
+    expect(of(tab.take(), 'checkin.due')).toHaveLength(1);
+    const state = tab.engine.state;
+    if (state === null) throw new Error('expected an open session');
+    const withGap = parseActiveState(
+      JSON.parse(JSON.stringify({ ...state, session: { ...state.session, gaps: [{ start: T0 + MINUTE, end: T0 + 7 * MINUTE }] } })),
+    );
+    tab.engine.adopt(withGap);
+    expect(of(tab.take(), 'checkin.due')).toEqual([]);
+    expect(tab.engine.view.checkInDueAt).toBe(T0 + 2 * HOUR);
   });
 
   it('reports every change to the saved state', () => {

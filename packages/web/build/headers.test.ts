@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CSP_DIRECTIVES, headersForPath, renderCsp, renderHeadersFile, SECURITY_HEADERS } from './headers.ts';
 
 describe('content security policy', () => {
-  it('is the plan policy, with frame-src closed until the widget origin exists, plus Trusted Types', () => {
+  it('is the plan policy, with frame-src closed until the widget origin exists, plus Trusted Types with one policy for the service worker', () => {
     expect(renderCsp()).toBe(
       [
         "default-src 'none'",
@@ -11,12 +11,14 @@ describe('content security policy', () => {
         "img-src 'self' data: blob:",
         "font-src 'self'",
         "connect-src 'self'",
+        "worker-src 'self'",
+        "manifest-src 'self'",
         "frame-src 'none'",
         "base-uri 'none'",
         "form-action 'self'",
         "frame-ancestors 'none'",
         "require-trusted-types-for 'script'",
-        "trusted-types 'none'",
+        'trusted-types service-worker',
       ].join('; '),
     );
   });
@@ -47,6 +49,12 @@ describe('security headers', () => {
   it('caches hashed assets forever and pages not at all', () => {
     expect(headersForPath('/assets/timer-sans-abc.woff2')['Cache-Control']).toBe('public, max-age=31536000, immutable');
     expect(headersForPath('/')['Cache-Control']).toBeUndefined();
+  });
+
+  it('makes the browser check the service worker and the kill switch on every visit', () => {
+    expect(headersForPath('/sw.js')['Cache-Control']).toBe('no-cache');
+    expect(headersForPath('/sw-control.json')['Cache-Control']).toBe('no-store');
+    expect(headersForPath('/sw.js')['Content-Security-Policy']).toBe(renderCsp());
   });
 
   it('renders the Cloudflare _headers file', () => {

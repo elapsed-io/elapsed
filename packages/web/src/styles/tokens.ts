@@ -29,7 +29,7 @@ const ms = (value: number): string => `${String(value)}ms`;
 const percent = (fraction: number): string => `${String(Math.round(fraction * 10_000) / 100)}%`;
 
 export function designCustomProperties(): CustomProperties {
-  const { reference, type, controls, icons, paused } = CONFIG.design;
+  const { reference, type, controls, icons, paused, checkIn, notice } = CONFIG.design;
   const { motion } = CONFIG;
   return {
     '--font-family': `"${DEFAULT_FONT_FAMILY}", system-ui, sans-serif`,
@@ -56,6 +56,18 @@ export function designCustomProperties(): CustomProperties {
     '--paused-label-size': px(paused.labelPx),
     '--paused-label-gap': px(paused.labelGapPx),
     '--paused-label-tracking': em(paused.labelTrackingEm),
+    '--paused-missed-size': px(paused.missedPx),
+    '--paused-missed-gap': px(paused.missedGapPx),
+    '--check-in-size': px(checkIn.textPx),
+
+    '--notice-gap': px(notice.gapPx),
+    '--notice-icon-size': px(notice.iconPx),
+    '--notice-icon-stroke': String(notice.iconStrokeWidth),
+    '--notice-heading-size': px(notice.headingPx),
+    '--notice-time-size': String(notice.timePx),
+    '--notice-body-size': px(notice.bodyPx),
+    '--notice-body-line-height': String(notice.bodyLineHeight),
+    '--notice-body-width': px(notice.bodyMaxWidthPx),
 
     '--button-height': px(controls.buttonHeightPx),
     '--button-padding-x': px(controls.buttonPaddingXPx),

@@ -75,10 +75,10 @@ describe('plan audit: performance', () => {
 });
 
 describe('plan audit: security', () => {
-  it('reaches browser storage only through storage adapters', () => {
-    for (const path of SITE_SOURCE.filter((p) => !p.includes('/storage/'))) {
+  it('reaches browser storage only through storage adapters (the service worker keeps the offline cache)', () => {
+    for (const path of SITE_SOURCE.filter((p) => !p.includes('/storage/') && !p.includes('/sw/'))) {
       const text = readFileSync(path, 'utf8');
-      expect(text, rel(path)).not.toMatch(/\b(localStorage|sessionStorage|indexedDB|document\.cookie)\b/);
+      expect(text, rel(path)).not.toMatch(/\b(localStorage|sessionStorage|indexedDB|caches|document\.cookie)\b/);
     }
   });
 

@@ -61,6 +61,13 @@ export interface TimerEngineOptions {
   readonly rules?: RuleSettings | null;
   /** Write a heartbeat every 30 seconds while a session is open. Defaults to true. */
   readonly heartbeat?: boolean;
+  /**
+   * Called at the start of every scheduled wake, before the engine looks at
+   * its state. The site uses it to take up what other tabs saved meanwhile
+   * (adopt, observeHeartbeat), so a tab that was frozen in the background
+   * never applies the rules to a state another tab has already moved on from.
+   */
+  readonly beforeWake?: () => void;
 }
 
 interface ClockReference {
@@ -76,6 +83,7 @@ export class TimerEngine {
   readonly #timeZone: () => string;
   readonly #scheduler: Scheduler;
   readonly #heartbeatOn: boolean;
+  readonly #beforeWake: (() => void) | null;
   #seconds: SecondsDisplay;
   #rules: RuleSettings | null;
   /** The open session and what the rules remember about it. */
@@ -100,6 +108,7 @@ export class TimerEngine {
     this.#seconds = options.seconds ?? 'blur-away';
     this.#rules = options.rules === null ? null : normaliseRules(options.rules ?? defaultRules());
     this.#heartbeatOn = options.heartbeat ?? true;
+    this.#beforeWake = options.beforeWake ?? null;
     this.#scheduler = new Scheduler({ clock: options.clock, onError: options.onError });
     this.#view = computeView(null, this.#observe(), this.#seconds);
     this.#viewKey = viewKey(this.#view);
@@ -277,13 +286,27 @@ export class TimerEngine {
       this.#state = null;
       this.#ended = null;
     } else {
-      if (this.#state?.session.id !== state.session.id) this.#hoursReached = Math.floor(focusedMs(state.session, now) / HOUR);
+      if (this.#state?.session.id !== state.session.id) {
+        this.#hoursReached = Math.floor(focusedMs(state.session, now) / HOUR);
+        this.#announcedCheckIn = null;
+      }
       this.#state = state;
       this.#ended = null;
       this.#heartbeatAt ??= now;
     }
-    this.#announcedCheckIn = null;
+    // A check-in already announced for this session is not announced again.
     this.#refresh(now);
+  }
+
+  /**
+   * Notes a heartbeat another tab wrote for the same session, so time that tab
+   * was watching is not recorded as a gap here.
+   */
+  observeHeartbeat(at: number): void {
+    if (this.#disposed || !Number.isFinite(at)) return;
+    const now = this.#observe();
+    const seen = Math.min(Math.round(at), now);
+    if (this.#heartbeatAt === null || seen > this.#heartbeatAt) this.#heartbeatAt = seen;
   }
 
   /**
@@ -293,6 +316,12 @@ export class TimerEngine {
   sync(): void {
     if (this.#disposed) return;
     this.#refresh(this.#observe());
+  }
+
+  /** A scheduled wake: take up other tabs' changes first, then bring everything up to date. */
+  #wake(): void {
+    this.#beforeWake?.();
+    this.sync();
   }
 
   /** Stops all timers. The engine emits nothing afterwards. */
@@ -453,7 +482,7 @@ export class TimerEngine {
     if (delay === null) this.#scheduler.clear(VIEW_TASK);
     else
       this.#scheduler.set(VIEW_TASK, delay, () => {
-        this.sync();
+        this.#wake();
       });
 
     const state = this.#state;
@@ -464,7 +493,7 @@ export class TimerEngine {
     if (times.length === 0) this.#scheduler.clear(RULES_TASK);
     else
       this.#scheduler.set(RULES_TASK, Math.max(0, Math.min(...times) - now), () => {
-        this.sync();
+        this.#wake();
       });
 
     if (state === null || !this.#heartbeatOn) {
@@ -474,7 +503,7 @@ export class TimerEngine {
       this.#heartbeatScheduled = true;
       this.#scheduler.set(HEARTBEAT_TASK, CONFIG.session.heartbeatInterval, () => {
         this.#heartbeatScheduled = false;
-        this.sync();
+        this.#wake();
       });
     }
   }

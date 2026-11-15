@@ -77,6 +77,21 @@ export const CONFIG = {
     pausedPrecision: 1 * SECOND,
   },
 
+  /** Device storage (Release 1, round 4). */
+  storage: {
+    /**
+     * A stored active session longer than this many characters is not read.
+     * The session limits keep a real one under about 1 MB of JSON.
+     */
+    maxActiveStateChars: 1_048_576,
+  },
+
+  /** Anonymous usage counts (Release 1, round 4; Privacy). */
+  counts: {
+    /** The counting endpoint reads at most this many bytes of a request body. */
+    maxBodyBytes: 256,
+  },
+
   /** History, streaks and retention (Release 3). */
   history: {
     /** A day counts toward a streak at 15 focused minutes. */
@@ -163,6 +178,24 @@ export const CONFIG = {
       labelPx: 12,
       labelGapPx: 10,
       labelTrackingEm: 0.14,
+      /** The "paused after a missed check-in" frame: the check-in's time 12 px below the pause length, 13 px muted. */
+      missedPx: 13,
+      missedGapPx: 12,
+    },
+    /** The check-in frame: "press any key if you're still here" in 15 px foreground text over the held time. */
+    checkIn: {
+      textPx: 15,
+    },
+    /** The session maximum frame: icon, heading, time, explanation and button, 16 px apart. */
+    notice: {
+      gapPx: 16,
+      iconPx: 40,
+      iconStrokeWidth: 1.3,
+      headingPx: 20,
+      timePx: 56,
+      bodyPx: 13,
+      bodyLineHeight: 1.6,
+      bodyMaxWidthPx: 400,
     },
     icons: {
       strokeWidth: 1.6,

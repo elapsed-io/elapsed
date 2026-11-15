@@ -87,12 +87,14 @@ export const storageRules = {
     { name: 'localStorage', message: 'Use a store from src/storage (SettingsStore, SessionStore, MediaStore).' },
     { name: 'sessionStorage', message: 'Use a store from src/storage (SettingsStore, SessionStore, MediaStore).' },
     { name: 'indexedDB', message: 'Use a store from src/storage (SettingsStore, SessionStore, MediaStore).' },
+    { name: 'caches', message: 'The offline cache is reached only from src/storage and the service worker.' },
   ],
   'no-restricted-properties': [
     'error',
     { object: 'window', property: 'localStorage', message: 'Use a store from src/storage.' },
     { object: 'window', property: 'sessionStorage', message: 'Use a store from src/storage.' },
     { object: 'window', property: 'indexedDB', message: 'Use a store from src/storage.' },
+    { object: 'window', property: 'caches', message: 'The offline cache is reached only from src/storage and the service worker.' },
     { object: 'document', property: 'cookie', message: 'The site sets no cookies for guests.' },
   ],
 };

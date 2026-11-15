@@ -61,3 +61,27 @@ export function recordGap(session: Session, gap: Gap): Session {
 export function isOpen(session: Session): boolean {
   return sessionStatus(session) !== 'ended';
 }
+
+/**
+ * The state as JSON with its fields in one fixed order, so two equal states
+ * always serialise to the same text (storage compares the text to notice
+ * another tab's change).
+ */
+export function serializeActiveState(state: ActiveState): string {
+  const { session } = state;
+  return JSON.stringify({
+    schema: state.schema,
+    session: {
+      schema: session.schema,
+      id: session.id,
+      segments: session.segments.map(({ start, end }) => ({ start, end })),
+      gaps: session.gaps.map(({ start, end }) => ({ start, end })),
+      modes: session.modes.map(({ mode, start }) => ({ mode, start })),
+      endReason: session.endReason,
+      localDay: session.localDay,
+    },
+    presenceAt: state.presenceAt,
+    missedCheckInAt: state.missedCheckInAt,
+    pauseLimitMs: state.pauseLimitMs,
+  });
+}

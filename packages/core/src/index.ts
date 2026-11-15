@@ -2,6 +2,8 @@ export { CONFIG } from './config.ts';
 export type { Adjustable, Config } from './config.ts';
 export { BRAND } from './brand.ts';
 export type { Brand } from './brand.ts';
+export { COUNT_EVENTS, COUNT_PATH, countBody, isCountEvent, parseCountBody } from './counts.ts';
+export type { CountEvent } from './counts.ts';
 
 export type { Clock, TimerHandle } from './time/clock.ts';
 export { durationParts } from './time/duration.ts';
@@ -32,7 +34,7 @@ export {
 export { createSession, endSession, pauseSession, resumeSession, shiftSession, switchMode } from './session/commands.ts';
 export type { NewSession, TimeOptions } from './session/commands.ts';
 export { SessionValidationError, migrateActiveState, migrateSession, parseActiveState, parseSession } from './session/validate.ts';
-export { ACTIVE_STATE_SCHEMA, recordGap, shiftState, startState } from './session/state.ts';
+export { ACTIVE_STATE_SCHEMA, recordGap, serializeActiveState, shiftState, startState } from './session/state.ts';
 export type { ActiveState } from './session/state.ts';
 export { advance, applyTrigger, checkInDueAt, defaultRules, nextTrigger, normaliseRules, pendingCheckIn } from './session/rules.ts';
 export type { RuleKind, RuleOutcome, RuleSettings, RuleTrigger } from './session/rules.ts';

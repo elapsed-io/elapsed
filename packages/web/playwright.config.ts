@@ -12,6 +12,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4173',
     trace: 'off',
+    // The service worker would answer requests out of reach of page.route; offline tests turn it on.
+    serviceWorkers: 'block',
   },
   projects: [
     {

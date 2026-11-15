@@ -32,6 +32,8 @@ export interface HarnessOptions {
   readonly rules?: RuleSettings | null;
   /** The 30-second heartbeat; off unless a test is about it, so wake counts stay exact. */
   readonly heartbeat?: boolean;
+  /** Runs before every scheduled wake (another tab's saved state, in tests of several tabs). */
+  readonly beforeWake?: () => void;
 }
 
 export function harness(options: HarnessOptions = {}) {
@@ -51,6 +53,7 @@ export function harness(options: HarnessOptions = {}) {
     timeZone: () => zone,
     rules: options.rules ?? null,
     heartbeat: options.heartbeat ?? false,
+    ...(options.beforeWake === undefined ? {} : { beforeWake: options.beforeWake }),
     ...(options.seconds === undefined ? {} : { seconds: options.seconds }),
   });
   let log: Recorded[] = [];

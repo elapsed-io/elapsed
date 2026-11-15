@@ -4,6 +4,7 @@ import { modeFromSearch } from '../modes/mode-param.ts';
 import { MODE_MANIFESTS } from '../modes/manifests.ts';
 import { shortcutFor } from './shortcuts.ts';
 import type { KeyLike } from './shortcuts.ts';
+import { formatClockTime } from './clock-time.ts';
 import { hoursMinutes, titleFor } from './title.ts';
 
 const key = (overrides: Partial<KeyLike>): KeyLike => ({
@@ -71,6 +72,22 @@ describe('tab title', () => {
     expect(titleFor(computeView(session, T0 + 42 * 60_000 + 30_000, 'blur-away'))).toBe(`00:42 · ${BRAND.name}`);
     const paused = pauseSession(session, T0 + 60_000);
     expect(titleFor(computeView(paused, T0 + 60_000 + 4 * 60_000 + 59_000, 'blur-away'))).toBe(`paused for 00:04 · ${BRAND.name}`);
+    const waiting = computeView(session, T0 + 2 * 3_600_000 + 30_000, 'blur-away', { checkInDueAt: T0 + 2 * 3_600_000 });
+    expect(titleFor(waiting)).toBe(`check in · 02:00 · ${BRAND.name}`);
+  });
+});
+
+describe('clock times', () => {
+  const at = Date.UTC(2026, 10, 16, 14, 0, 0);
+  const format = (locale: string): Intl.DateTimeFormat =>
+    new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' });
+
+  it('read like the frame: lowercase, with a plain space before am or pm', () => {
+    expect(formatClockTime(at, format('en-US'))).toBe('2:00 pm');
+  });
+
+  it('follow the region’s 24-hour clock', () => {
+    expect(formatClockTime(at, format('en-GB'))).toBe('14:00');
   });
 });
 
