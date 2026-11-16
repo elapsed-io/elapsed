@@ -35,7 +35,7 @@ import { parseSettingsFile, settingsFile, settingsFileName } from '@stopwatch/co
 import 'virtual:tokens/settings.css';
 import { html, svg } from '../dom.ts';
 import { formatBytes } from '../fonts/font-file.ts';
-import { listDownloadedModes, removeDownloadedMode } from '../offline/downloaded-modes.ts';
+import { listDownloadedModes, removeDownloadedMode } from '../storage/mode-cache.ts';
 import { BUILT_IN_FONTS, OWN_FONT_FAMILY, familyStack, previewFamily } from '../fonts/registry.ts';
 import { iconElement } from '../icons/icon-element.ts';
 import { restartInSafeMode } from '../shell/safe-mode.ts';

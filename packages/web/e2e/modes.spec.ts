@@ -60,10 +60,10 @@ test('the ring glides 6° a minute on its own layer, anchored once a minute, and
   expect(await ringRotor(page)).toMatchObject({ rest: 'rotate(0deg)', glide: null, tail: '0deg', layer: 'auto' });
   await page.locator('.button--primary').click();
   await page.clock.runFor(30 * SECOND);
-  // Half way through the first minute: gliding from 12 o'clock, the tail grown in half-degree steps behind it.
+  // Half way through the first minute: gliding from 12 o'clock; the tail grows on whole minutes behind it.
   expect(await ringRotor(page)).toMatchObject({
     glide: { from: 'rotate(0deg)', to: 'rotate(6deg)', easing: 'linear', duration: 60_000, state: 'running' },
-    tail: '3deg',
+    tail: '0deg',
     layer: 'transform',
   });
   expect((await ringRotor(page)).glide?.at).toBeCloseTo(30_000, -3);

@@ -15,7 +15,7 @@
  */
 
 import { CONFIG } from '@stopwatch/core';
-import { OFFLINE_CACHE_PREFIX } from '../storage/offline-cache.ts';
+import { OFFLINE_CACHE_PREFIX } from './offline-cache.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -116,31 +116,24 @@ export async function removeUnusedModes(win: Window, now: number, keep: string):
 
 /**
  * Tells the service worker a mode was just shown: it keeps the mode's files for offline use and records
- * `at` as its last use. Resolves once that is done (or at once, without a worker).
+ * `at` as its last use. Resolves once that is done.
  */
 export async function recordModeUse(win: Window, id: string, at: number): Promise<void> {
   const container = 'serviceWorker' in win.navigator ? win.navigator.serviceWorker : null;
   if (container === null) return;
-  const registration = await Promise.race([
-    container.ready,
-    new Promise<null>((resolve) => {
-      win.setTimeout(() => {
-        resolve(null);
-      }, 10_000);
-    }),
-  ]);
-  const worker = registration?.active ?? null;
+  // Without a worker (in development) this never settles, which is harmless: nothing waits on it.
+  const registration = await container.ready;
+  const worker = registration.active;
   if (worker === null) return;
   const message = { type: MODE_USED_MESSAGE, id, at };
   await new Promise<void>((resolve) => {
     const channel = new MessageChannel();
-    const done = (): void => {
+    // A worker from before Release 2 never answers; then this never settles, which only means the list in
+    // settings shows the mode the next time it opens.
+    channel.port1.onmessage = () => {
       channel.port1.close();
       resolve();
     };
-    channel.port1.onmessage = done;
-    // A worker from before Release 2 never answers; nothing waits on it for long.
-    win.setTimeout(done, 30_000);
     worker.postMessage(message, [channel.port2]);
   });
 }

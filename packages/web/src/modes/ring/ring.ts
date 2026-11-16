@@ -14,9 +14,11 @@
  * At the start of a session only the head shows at 12 o'clock; the tail grows
  * in behind it over the first nine minutes, always fading out over whatever
  * length it has, so it never covers time that has not passed and never ends in
- * a hard edge. Its length is a gradient, which no transform can stretch, so
- * while the head glides it grows in steps of half a degree (CONFIG.modes.ring
- * .tailStep); once whole, it never changes again.
+ * a hard edge. Its length is a gradient, which no transform can stretch, and
+ * timers belong to the one scheduler (which must not wake a hidden tab), so the
+ * length grows once a minute, as the frames draw it; between, the tail turns
+ * with the head and its transparent far end leaves 12 o'clock by up to 6°
+ * (decision 267). Once whole, it never changes again.
  */
 
 import 'virtual:tokens/ring.css';
@@ -35,20 +37,16 @@ const DEGREES_PER_MINUTE = 360 / (RING.revolution / MINUTE_MS);
 const DRIFT_MS = 250;
 
 /**
- * Where the head points and how long the tail is, in degrees, after `focusedMs` of focus. Stepped (low
- * power, reduced motion): whole minutes only. Gliding: the head exactly, the tail in its small steps.
+ * Where the head points and how long the tail is, in degrees, after `focusedMs` of focus. The tail grows
+ * on whole minutes. Stepped (low power, reduced motion), so does the head; gliding, the head is exact.
  * Unbounded, so the head always turns forward, also past 12 o'clock.
  */
 export function ringAngles(focusedMs: number, stepped = true): { readonly head: number; readonly tail: number } {
   const focused = Math.max(0, focusedMs);
   const minutes = Math.floor(focused / MINUTE_MS);
-  if (stepped) {
-    const head = minutes * DEGREES_PER_MINUTE;
-    return { head, tail: Math.min(RING.tailDegrees, head) };
-  }
-  const head = (focused / MINUTE_MS) * DEGREES_PER_MINUTE;
-  const grown = ((Math.floor(focused / RING.tailStep) * RING.tailStep) / MINUTE_MS) * DEGREES_PER_MINUTE;
-  return { head, tail: Math.min(RING.tailDegrees, grown) };
+  const whole = minutes * DEGREES_PER_MINUTE;
+  const tail = Math.min(RING.tailDegrees, whole);
+  return { head: stepped ? whole : (focused / MINUTE_MS) * DEGREES_PER_MINUTE, tail };
 }
 
 type State = 'idle' | 'running' | 'held';
@@ -63,7 +61,6 @@ export function createRingMode(): DisplayMode {
   let glidingMinute: number | null = null;
   let still = '';
   let tail = '';
-  let tailTimer: ReturnType<typeof setTimeout> | null = null;
 
   const deg = (value: number): string => `${String(value)}deg`;
   const rotate = (value: number): string => `rotate(${deg(value)})`;
@@ -75,30 +72,11 @@ export function createRingMode(): DisplayMode {
     rotor.style.setProperty('--ring-tail', value);
   };
 
-  const stopTail = (): void => {
-    if (tailTimer !== null) clearTimeout(tailTimer);
-    tailTimer = null;
-  };
-
-  /** While the head glides and the tail is not yet whole, grows the tail at each step of focused time. */
-  const growTail = (focusedMs: number, at: number): void => {
-    stopTail();
-    const { tail: degrees } = ringAngles(focusedMs, false);
-    showTail(degrees);
-    if (degrees >= RING.tailDegrees) return;
-    const wait = RING.tailStep - (Math.max(0, focusedMs) % RING.tailStep);
-    tailTimer = setTimeout(() => {
-      tailTimer = null;
-      growTail(focusedMs + (Date.now() - at), Date.now());
-    }, wait);
-  };
-
-  const place = (focusedMs: number, at: number, state: State): void => {
+  const place = (focusedMs: number, state: State): void => {
     if (rotor === null) return;
     const stepped = context?.lowPower === true;
     if (state !== 'running' || stepped) {
       // Still: where the glide had reached (held), or on the minute (low power, reduced motion, idle).
-      stopTail();
       const angles = ringAngles(focusedMs, stepped || state === 'idle');
       const key = `${String(angles.head)}/${state}`;
       showTail(angles.tail);
@@ -131,7 +109,7 @@ export function createRingMode(): DisplayMode {
     if (glide === null) return;
     if (fresh || glide.playState === 'finished' || Math.abs(Number(glide.currentTime) - into) >= DRIFT_MS) glide.currentTime = into;
     if (glide.playState !== 'running') glide.play();
-    growTail(focusedMs, at);
+    showTail(ringAngles(focusedMs, false).tail);
   };
 
   return {
@@ -156,7 +134,7 @@ export function createRingMode(): DisplayMode {
     render(view: TimerView) {
       display?.render(view);
       const state: State = view.status === 'idle' || view.status === 'ended' ? 'idle' : view.status === 'running' && view.checkInDueAt === null ? 'running' : 'held';
-      place(view.focusedMs, view.at, state);
+      place(view.focusedMs, state);
     },
     replay(target: HTMLElement, session: Session) {
       drawRings(target, session);
@@ -165,7 +143,6 @@ export function createRingMode(): DisplayMode {
       display?.measure();
     },
     unmount() {
-      stopTail();
       glide?.cancel();
       root?.replaceChildren();
       root = null;

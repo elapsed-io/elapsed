@@ -1,6 +1,6 @@
 import { CONFIG } from '@stopwatch/core';
 import { describe, expect, it } from 'vitest';
-import { parseLastUse, unusedTooLong } from './downloaded-modes.ts';
+import { parseLastUse, unusedTooLong } from './mode-cache.ts';
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 10, 16, 12);

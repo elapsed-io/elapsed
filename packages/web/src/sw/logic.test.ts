@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SWITCH_OFF_MESSAGE as PAGE_SWITCH_OFF } from '../offline/register.ts';
 import { OFFLINE_CACHE_PREFIX } from '../storage/offline-cache.ts';
-import { LAST_USE_PATH as PAGE_LAST_USE, MODE_CACHE_PREFIX as PAGE_MODE_PREFIX, MODE_USED_MESSAGE as PAGE_MODE_USED } from '../offline/downloaded-modes.ts';
+import { LAST_USE_PATH as PAGE_LAST_USE, MODE_CACHE_PREFIX as PAGE_MODE_PREFIX, MODE_USED_MESSAGE as PAGE_MODE_USED } from '../storage/mode-cache.ts';
 import { CACHE_PREFIX, LAST_USE_PATH, MODE_CACHE_PREFIX, MODE_USED_MESSAGE, SWITCH_OFF_MESSAGE, cacheName, cacheable, modeCacheName, modeOfCache, modesByFile, readModeUsed, routeFor, staleCaches } from './logic.ts';
 
 const ORIGIN = 'https://site.example';

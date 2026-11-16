@@ -17,7 +17,7 @@ import { DEFAULT_MODE_ID } from './modes/manifests.ts';
 import { findMode } from './modes/registry.ts';
 import type { RegisteredMode } from './modes/registry.ts';
 import { registerServiceWorker } from './offline/register.ts';
-import { recordModeUse, removeUnusedModes } from './offline/downloaded-modes.ts';
+import { recordModeUse, removeUnusedModes } from './storage/mode-cache.ts';
 import type * as ResultsModule from './results/results.ts';
 import type { ResultsScreen } from './results/results.ts';
 import { SettingsController } from './settings/controller.ts';

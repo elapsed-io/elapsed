@@ -419,12 +419,6 @@ export const CONFIG = {
       trackPx: 8,
       /** The tail: up to 55° long, one smooth conic gradient fading from the accent at the head to nothing. */
       tailDegrees: 55,
-      /**
-       * While the head glides, the tail grows in behind it over the first nine minutes in steps this far
-       * apart in focused time (0.5°, about a pixel at the frame's size): its length is a gradient, which no
-       * transform can stretch (decision 267).
-       */
-      tailStep: 5 * SECOND,
       /** The gradient's stops, from the far end: the accent at these shares of full strength, at these shares of the tail's length. */
       tailStops: [
         { at: 0.45, strength: 0.15 },
