@@ -30,8 +30,11 @@ export interface Measure {
 export type Phase = readonly [string, number, number];
 export interface Cycle {
   readonly id: string;
+  /** Its length; for a calendar cycle, the length of one of its days. */
   readonly minutes: number;
   readonly phases?: readonly Phase[];
+  /** A Gregorian perpetual calendar counting days of `minutes` each, from Monday 1 January 2024 (calendar.ts). */
+  readonly calendar?: 'gregorian';
 }
 
 /** A zone: its id, its name as shown, and where it starts along the measure. */
@@ -106,8 +109,24 @@ export interface DialLayer extends LayerBase {
   readonly ticks?: { readonly major?: number; readonly minor?: number };
   readonly labels?: { readonly count?: number; readonly format?: 'minutes' | 'hours' | 'none' };
   readonly hand?: Hand;
-  readonly subdials?: readonly { readonly cycle: string; readonly radius?: number; readonly offset?: readonly [number, number]; readonly labels?: number; readonly hand?: Hand }[];
+  readonly subdials?: readonly Subdial[];
 }
+export interface Subdial {
+  readonly cycle: string;
+  readonly radius?: number;
+  readonly offset?: readonly [number, number];
+  readonly labels?: number;
+  readonly hand?: Hand;
+  /** `dial` (default): a small dial with its marks and hand; `hand`: the hand alone (another hand from the centre). */
+  readonly face?: 'dial' | 'hand';
+  /** On a calendar cycle, what it shows: the date, the weekday, the month, the leap year, or the moon (a disc). */
+  readonly part?: 'date' | 'weekday' | 'month' | 'leap-year' | 'moon';
+  /** Its marks' names, one a place (for the parts: 31, 7, 12 or 4). */
+  readonly names?: readonly string[];
+  /** A word under it ("hours"). */
+  readonly title?: string;
+}
+
 export interface TrackLayer extends LayerBase {
   readonly type: 'track';
   readonly width?: number;

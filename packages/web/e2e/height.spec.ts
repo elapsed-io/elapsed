@@ -163,32 +163,45 @@ test('height stops at 100 km', async ({ page }) => {
 });
 
 test('the height palette keeps its text and buttons readable over the sky, the icons dimmer while paused', async ({ page }) => {
-  const colours = (): Promise<{ time: string; icon: string; button: string }> =>
+  // Two stacked copies of the time and of each corner icon, the frames' colours and deep navy; one shows.
+  const colours = (): Promise<{ time: string; icon: string; button: string; shown: string }> =>
     page.locator('.screen').evaluate((screen) => {
-      const time = screen.querySelector('.time--main');
-      const icon = screen.querySelector('.icon-button--settings');
+      const navy = screen.querySelector('.contrast__shade');
+      const dark = navy !== null && getComputedStyle(navy).opacity === '1';
+      const time = screen.querySelector(dark ? '.contrast__shade .time--main' : '.contrast__lit .time--main');
+      const icon = screen.querySelector(dark ? '.icon-button--settings .icon-shade' : '.icon-button--settings > svg');
       const button = screen.querySelector('.controls button');
-      return { time: time === null ? '' : getComputedStyle(time).color, icon: icon === null ? '' : getComputedStyle(icon).color, button: button === null ? '' : getComputedStyle(button).color };
+      return { time: time === null ? '' : getComputedStyle(time).color, icon: icon === null ? '' : getComputedStyle(icon).color, button: button === null ? '' : getComputedStyle(button).color, shown: dark ? 'navy' : 'own' };
     });
   // Near the ground, where the sky is bright, the time and the icons are deep navy (owner, changes 3); the buttons keep theirs.
   await openApp(page, { mode: 'height' });
+  await settle(page);
   const navy = 'rgb(14, 36, 64)';
-  expect(await colours()).toEqual({ time: navy, icon: navy, button: 'rgb(238, 244, 250)' });
+  expect(await colours()).toEqual({ time: navy, icon: navy, button: 'rgb(238, 244, 250)', shown: 'navy' });
   // Above the switch (4,046 m), the frames' own palette.
   await restoreAt(page, 13_388_571);
-  expect(await colours()).toMatchObject({ time: 'rgb(238, 244, 250)', icon: 'rgb(201, 220, 238)' });
+  await settle(page);
+  expect(await colours()).toMatchObject({ time: 'rgb(238, 244, 250)', icon: 'rgb(201, 220, 238)', shown: 'own' });
   await primary(page).click();
   await settle(page);
   expect((await colours()).icon).toBe('rgb(154, 166, 200)');
 });
 
-test('the contrast switch turns the time and the icons back from navy as the sky darkens past 4,046 m', async ({ page }) => {
+test('the contrast switch crossfades the time and the icons back from navy, by opacity alone, as the sky darkens past 4,046 m', async ({ page }) => {
   const contrast = (): Promise<string | undefined> => page.locator('.screen').evaluate((screen) => (screen as HTMLElement).dataset['contrast']);
   // 4,046 m is reached after 28 minutes 54 seconds of focus; the display redraws on the minute.
   await restoreAt(page, 28 * MINUTE + 50 * SECOND);
   expect(await contrast()).toBe('dark');
   await page.clock.runFor(20 * SECOND);
   expect(await contrast()).toBeUndefined();
+  // The two copies cross by opacity over 220 ms: nothing but opacity transitions.
+  const fades = await page.locator('.contrast__lit, .contrast__shade, .icon-lit, .icon-shade').evaluateAll((elements) =>
+    elements.map((element) => {
+      const style = getComputedStyle(element);
+      return `${style.transitionProperty} ${style.transitionDuration}`;
+    }),
+  );
+  expect(new Set(fades)).toEqual(new Set(['opacity 0.22s']));
 });
 
 /** Everything about the pause's streaks, read from the page. */
@@ -219,7 +232,7 @@ test('paused above the stars: the altitude line, shooting stars and a shower, al
   await restoreAt(page, 13_388_571);
   await primary(page).click();
   await settle(page);
-  await expect(page.locator('.recipe__caption')).toHaveText('31,240 m · stratosphere');
+  await expect(page.locator('.recipe__caption .contrast__lit')).toHaveText('31,240 m · stratosphere');
   await expect(page.locator('.recipe__caption')).toHaveCSS('opacity', '1');
   const drawn = await meteors(page);
   const shooting = drawn.filter((meteor) => !meteor.shower);
@@ -271,7 +284,7 @@ test('paused below the stars: the altitude line, and no shooting stars', async (
   await page.clock.runFor(84 * MINUTE);
   await primary(page).click();
   await settle(page);
-  await expect(page.locator('.recipe__caption')).toHaveText('11,760 m · troposphere');
+  await expect(page.locator('.recipe__caption .contrast__lit')).toHaveText('11,760 m · troposphere');
   await expect(page.locator('.meteor')).toHaveCount(0);
 });
 

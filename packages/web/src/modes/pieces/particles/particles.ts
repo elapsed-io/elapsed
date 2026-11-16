@@ -4,10 +4,13 @@
  * low power or reduced motion: the recipe mode keeps every particle layer hidden then. Everything moves by CSS
  * animations timed from when it is drawn; nothing runs per frame.
  *
- * - `shape: image`, arriving by drifting in: the "ocean depth, paused" frame's ocean life, the zone's catalog
- *   (its far, middle and near schools and its bubbles, each a slot) drawn as the frame places it, schools crossing
- *   at three distances and bubbles rising, fading in. The frame's arrangement is the placeholder for the plan's
- *   random picks from each zone's catalog (decision 323).
+ * - `shape: image`, arriving by drifting in: ocean life (owner, changes 4). Arrivals come at random from the
+ *   current zone's catalog (its far, middle and near fish and its bubbles, each a slot): every few seconds as the
+ *   layer sets out (`every`), at most `maxAtOnce` at once, each staying its `lifetime`, at three distances (far
+ *   ones smaller, higher and slower), schools and single fish drifting and bubbles rising, fading in and out. The
+ *   schedule is drawn at random once, when the pause starts, for a few minutes that then repeat; each arrival
+ *   is one animation of opacity and transform, so nothing runs per frame. The "ocean depth, paused" frame shows
+ *   one such moment.
  * - `shape: streak`: the "height, paused" frame's shooting stars, each drawn at random once with its own length,
  *   thickness, colour, slope, travel and period from the layer's ranges, and its rare burst (a meteor shower).
  */
@@ -46,53 +49,135 @@ function leave(element: HTMLElement): void {
   );
 }
 
+/** How long a drawn schedule of arrivals runs before it repeats, in seconds. */
+export const ARRIVAL_CYCLE_SECONDS = 180;
+/** Each arrival fades in and out over this long (at most a quarter of its stay). */
+const ARRIVAL_FADE_SECONDS = 2;
+
+/** One arrival: what comes, where, when (seconds into the pause) and for how long, and how far it drifts. */
+export interface Arrival {
+  /** Index into the zone's catalog: 0 far, 1 middle and 2 near fish, 3 bubbles. */
+  readonly art: 0 | 1 | 2 | 3;
+  readonly start: number;
+  readonly life: number;
+  /** Where it appears, as shares of the screen. */
+  readonly x: number;
+  readonly y: number;
+  /** How far it moves over its stay, in the frame's pixels. */
+  readonly dx: number;
+  readonly dy: number;
+  /** Fish drawn at this scale (the distance's, varied by the layer's size range); facing right or left. */
+  readonly scale: number;
+  readonly right: boolean;
+  /** Each fish's or bubble's offset from the arrival's place, in pixels (and a bubble's radius). */
+  readonly members: readonly (readonly [number, number, number])[];
+}
+
 /**
- * The drifting images as the ocean frame places them: bubbles rising and schools at three distances, the zone's
- * art from its four slots (far, middle and near schools, a bubble), each moved by CSS animations alone.
+ * The pause's arrivals, drawn at random once: the first within the layer's shortest interval, each next one an
+ * interval later, never more than `maxAtOnce` at once, all within one cycle. Three distances as the frame draws
+ * them (rows, sizes and speeds), schools of three to seven and single fish, and columns of bubbles.
  */
-export function drawDrift(doc: Document, art: readonly [string, string, string, string]): HTMLElement[] {
-  const { frameWidthPx: W, frameHeightPx: H, spanPx, phasePx, wiggleRate, bobRate, bubbleSpanPx, bubbleSwayRate } = LIFE;
-  const [far, mid, near, bubbleKey] = art;
-  const byDistance = { far, mid, near };
-  const fish = LIFE.fish.map(([ox, oy, row, speed, direction, scale, phase]) => {
-    const distance = LIFE.distances[row] ?? 'near';
-    const drawn = ART.draw(doc, byDistance[distance], `art life__fish${direction > 0 ? ' life__fish--right' : ''}`);
-    drawn.setAttribute('width', String(54 * scale));
-    drawn.setAttribute('height', String(22 * scale));
-    const body = html(doc, 'div', { class: 'life__body' }, [drawn]);
-    body.style.setProperty('--fish-x', `${String(ox)}px`);
-    body.style.setProperty('--fish-y', `${String(oy - 11 * scale)}px`);
-    const bob = html(doc, 'div', { class: 'life__bob' }, [body]);
-    bob.style.setProperty('--sine-amp', `${String(LIFE.bobPx)}px`);
+export function scheduleArrivals(layer: ParticlesLayer, random: () => number = Math.random, cycle = ARRIVAL_CYCLE_SECONDS): Arrival[] {
+  const { frameHeightPx: H, bubbleFromPx } = LIFE;
+  const rows = [150, 300, 390] as const;
+  const scales = [0.3, 0.55, 1.25] as const;
+  const speeds = [7, 13, 26] as const;
+  const every = layer.every;
+  const lifetime = layer.lifetime ?? [8, 20];
+  const sizes = layer.size?.scale ?? [1, 1];
+  const ends: number[] = [];
+  const arrivals: Arrival[] = [];
+  let at = between(random, [Math.min(1, every[0]), every[0]]);
+  for (;;) {
+    const life = between(random, lifetime);
+    // At most `maxAtOnce` at once: a newcomer waits for the first to leave.
+    const active = ends.filter((end) => end > at).sort((a, b) => a - b);
+    if (active.length >= layer.maxAtOnce) at = active[active.length - layer.maxAtOnce] ?? at;
+    if (at + life > cycle) break;
+    const art = Math.min(3, Math.floor(random() * 4)) as Arrival['art'];
+    if (art === 3) {
+      // A column of bubbles rising from below the screen.
+      const count = 3 + Math.floor(random() * 4);
+      const speed = between(random, [22, 38]);
+      const members = Array.from({ length: count }, (_, k) => [(random() * 2 - 1) * 12, k * between(random, [26, 48]), between(random, [2.5, 6])] as const);
+      arrivals.push({ art, start: at, life, x: between(random, [0.1, 0.9]), y: bubbleFromPx / H, dx: 0, dy: -speed * life, scale: 1, right: true, members });
+    } else {
+      const row = rows[art];
+      const right = random() < 0.5;
+      const school = random() < 0.6;
+      const count = school ? 3 + Math.floor(random() * 5) : 1;
+      const members = Array.from({ length: count }, (_, k) => (k === 0 ? ([0, 0, 0] as const) : ([(random() * 2 - 1) * 70, (random() * 2 - 1) * 26, 0] as const)));
+      arrivals.push({
+        art,
+        start: at,
+        life,
+        x: between(random, [0.12, 0.88]),
+        y: (row + (random() * 2 - 1) * 30) / H,
+        dx: (right ? 1 : -1) * speeds[art] * life,
+        dy: 0,
+        scale: scales[art] * between(random, sizes),
+        right,
+        members,
+      });
+    }
+    ends.push(at + life);
+    at += between(random, every);
+  }
+  return arrivals;
+}
+
+/** The arrivals drawn: each an element moved by one animation of opacity and transform, repeating each cycle. */
+export function drawArrivals(doc: Document, arrivals: readonly Arrival[], art: readonly [string, string, string, string], cycle = ARRIVAL_CYCLE_SECONDS): HTMLElement[] {
+  const { wiggleRate, bobRate, bubbleSwayRate } = LIFE;
+  return arrivals.map((arrival, index) => {
+    const key = art[arrival.art];
+    const members = arrival.members.map(([ox, oy, radius]) => {
+      if (arrival.art === 3) {
+        const drawn = ART.draw(doc, key, 'art life__bubble');
+        drawn.setAttribute('width', String(2 * radius));
+        drawn.setAttribute('height', String(2 * radius));
+        const ball = html(doc, 'div', { class: 'life__ball life__member' }, [drawn]);
+        ball.style.setProperty('--bubble-r', `${String(radius)}px`);
+        ball.style.setProperty('--member-x', `${ox.toFixed(1)}px`);
+        ball.style.setProperty('--member-y', `${oy.toFixed(1)}px`);
+        return ball;
+      }
+      const drawn = ART.draw(doc, key, `art life__fish${arrival.right ? ' life__fish--right' : ''}`);
+      drawn.setAttribute('width', (54 * arrival.scale).toFixed(1));
+      drawn.setAttribute('height', (22 * arrival.scale).toFixed(1));
+      const body = html(doc, 'div', { class: 'life__member' }, [drawn]);
+      body.style.setProperty('--member-x', `${(ox - 27 * arrival.scale).toFixed(1)}px`);
+      body.style.setProperty('--member-y', `${(oy - 11 * arrival.scale).toFixed(1)}px`);
+      return body;
+    });
+    // Fish bob and wiggle a little; bubbles sway (the frame's own motions).
+    const sway = html(doc, 'div', { class: 'life__wiggle' }, members);
+    sway.style.setProperty('--sine-amp', `${String(arrival.art === 3 ? LIFE.bubbleSwayPx : LIFE.wigglePx)}px`);
+    sway.style.setProperty('--sine-period', `${String((2 * Math.PI) / (arrival.art === 3 ? bubbleSwayRate : wiggleRate))}s`);
+    sway.style.setProperty('--sine-delay', `${String(-index / wiggleRate)}s`);
+    const bob = html(doc, 'div', { class: 'life__bob' }, [sway]);
+    bob.style.setProperty('--sine-amp', `${String(arrival.art === 3 ? 0 : LIFE.bobPx)}px`);
     bob.style.setProperty('--sine-period', `${String((2 * Math.PI) / bobRate)}s`);
-    bob.style.setProperty('--sine-delay', `${String(-(2 * phase) / bobRate)}s`);
-    const wiggle = html(doc, 'div', { class: 'life__wiggle' }, [bob]);
-    wiggle.style.setProperty('--sine-amp', `${String(LIFE.wigglePx)}px`);
-    wiggle.style.setProperty('--sine-period', `${String((2 * Math.PI) / wiggleRate)}s`);
-    wiggle.style.setProperty('--sine-delay', `${String(-phase / wiggleRate)}s`);
-    const travel = html(doc, 'div', { class: direction > 0 ? 'life__travel life__travel--right' : 'life__travel life__travel--left' }, [wiggle]);
-    travel.style.setProperty('--life-row', String(row / H));
-    travel.style.setProperty('--travel-period', `${String(spanPx / speed)}s`);
-    travel.style.setProperty('--travel-delay', `${String(-((phase * phasePx) % spanPx) / speed)}s`);
-    return travel;
+    bob.style.setProperty('--sine-delay', `${String(-index / bobRate)}s`);
+    const element = html(doc, 'div', { class: 'life__arrival', attrs: { 'data-distance': ['far', 'mid', 'near', 'bubbles'][arrival.art] ?? '' } }, [bob]);
+    element.style.setProperty('--arrival-x', String(arrival.x));
+    element.style.setProperty('--arrival-y', String(arrival.y));
+    const fade = Math.min(ARRIVAL_FADE_SECONDS, arrival.life / 4);
+    const share = (seconds: number): number => seconds / cycle;
+    const moved = `translate(${arrival.dx.toFixed(1)}px, ${arrival.dy.toFixed(1)}px)`;
+    element.animate(
+      [
+        { offset: 0, opacity: 0, transform: 'translate(0px, 0px)' },
+        { offset: share(fade), opacity: 1 },
+        { offset: share(arrival.life - fade), opacity: 1 },
+        { offset: share(arrival.life), opacity: 0, transform: moved },
+        { offset: 1, opacity: 0, transform: moved },
+      ],
+      { duration: cycle * 1000, delay: arrival.start * 1000, iterations: Infinity, easing: 'linear', fill: 'backwards' },
+    );
+    return element;
   });
-  const bubbles = LIFE.bubbles.map(([x, radius, speed, phase], index) => {
-    const drawn = ART.draw(doc, bubbleKey, 'art life__bubble');
-    drawn.setAttribute('width', String(2 * radius));
-    drawn.setAttribute('height', String(2 * radius));
-    const ball = html(doc, 'div', { class: 'life__ball' }, [drawn]);
-    ball.style.setProperty('--bubble-r', `${String(radius)}px`);
-    const sway = html(doc, 'div', { class: 'life__wiggle' }, [ball]);
-    sway.style.setProperty('--sine-amp', `${String(LIFE.bubbleSwayPx)}px`);
-    sway.style.setProperty('--sine-period', `${String((2 * Math.PI) / bubbleSwayRate)}s`);
-    sway.style.setProperty('--sine-delay', `${String(-index / bubbleSwayRate)}s`);
-    const rise = html(doc, 'div', { class: 'life__rise' }, [sway]);
-    rise.style.setProperty('--life-x', String(x / W));
-    rise.style.setProperty('--rise-period', `${String(bubbleSpanPx / speed)}s`);
-    rise.style.setProperty('--rise-delay', `${String(-phase / speed)}s`);
-    return rise;
-  });
-  return [...bubbles, ...fish];
 }
 
 /** A random number between the ends of `range`. */
@@ -178,7 +263,7 @@ export function particlesPiece({ doc, layer, recipe, slots }: PieceSetup<Particl
       if (art === null) return;
       void slots.images(layer.catalogByZone?.[zone] ?? []).then(() => {
         if (shown !== element) return;
-        element.replaceChildren(...drawDrift(doc, art));
+        element.replaceChildren(...drawArrivals(doc, scheduleArrivals(layer), art));
         element.classList.add('life--in');
       });
       return;

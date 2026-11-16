@@ -30,7 +30,7 @@ Files:
 | `time` | The clock, with the seconds setting | all |
 | `text` | A caption from a template | any |
 | `ring` | Track, fading tail that can grow in, round head | ring |
-| `dial` | Ticks, labels, hand, up to 3 subdials | analog |
+| `dial` | Ticks, labels, hand, up to 8 subdials: small dials, further hands from the centre, a calendar's parts (date, weekday, month, leap year) and the moon | analog, perpetual calendar (a test mode) |
 | `track` | Scrolling time scale with faded ends and the personal-record marker | timeline |
 | `sprite` | An image strip; the frame follows a cycle, a zone or the measure, with crossfades | tree (your own art) |
 | `tree` | The procedural tree, side or isometric, with growth, leaf colours per season, cluster offsets, snow and ground | tree |
@@ -45,6 +45,22 @@ Files:
 | `image-path` | A marker travelling along points over an image | (new modes: a road trip on a map) |
 
 **Bindings** let any number follow the measure, a cycle or the replay's progress through 2 to 16 stops, linear or smooth. There are no formulas; the light model and the camera are presets with a few knobs.
+
+## Additions from the first new mode (2026-11-16)
+
+The perpetual calendar test mode (`recipes/calendar.json`), made after a perpetual-calendar watch as a test of the
+recipe system, needed four things version 1 lacked. They are optional, so every recipe written before stays valid:
+
+- **Calendar cycles.** A cycle with `"calendar": "gregorian"` counts days of its `minutes` each on a Gregorian
+  perpetual calendar from Monday 1 January 2024 (a leap year): months of their own lengths, the four-year leap
+  cycle (2100 a common year), and the real moon of the date shown.
+- **Subdial faces and parts.** A subdial's `face` is `dial` (a small dial with its marks and hand, the default) or
+  `hand` (its hand alone, from wherever it sits: an hours hand or a sweeping seconds hand from the centre). On a
+  calendar cycle its `part` says what it shows: `date`, `weekday`, `month`, `leap-year` (each stepping at the turn
+  of its day, as a perpetual calendar jumps at midnight) or `moon` (a disc with two moons turning behind a window).
+- **Names and titles.** `names` gives a small dial's marks their words, one a place (an empty name leaves a mark
+  unnamed); `title` puts a word under it (the analog dial's "hours").
+- **More subdials:** up to 8 (from 3).
 
 ## Safety
 

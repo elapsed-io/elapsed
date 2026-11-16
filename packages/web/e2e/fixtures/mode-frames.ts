@@ -185,10 +185,11 @@ export function oceanFrame(depth: number, minutes: number): string {
 
 /**
  * The "ocean depth, paused" frame at `t` seconds into the pause (canvas version 1794830661-c660): the water at
- * 90 m, the frame's placeholder fish and bubbles where its own formulas put them at that moment, and the time
- * held behind the blur with "paused for" `pausedFor` (hh:mm:ss).
+ * 90 m, the frame's placeholder fish and bubbles where its own formulas put them at that moment (one moment of the
+ * random arrivals, owner, changes 4; `life` false leaves them out), and the time held behind the blur with
+ * "paused for" `pausedFor` (hh:mm:ss).
  */
-export function oceanPausedFrame(t: number, pausedFor: string): string {
+export function oceanPausedFrame(t: number, pausedFor: string, life = true): string {
   const c = { icon: '#9EC3D6', text: '#DCE8EE', accent: '#35764E', end: '#A8403D' };
   const sm = (x: number): number => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
   const bx = [120, 190, 560, 610, 330, 420, 250];
@@ -216,7 +217,7 @@ export function oceanPausedFrame(t: number, pausedFor: string): string {
   const [h, m, s] = pausedFor.split(':');
   const colon = '<span style="margin: 0 -0.05em; position: relative; top: -0.06em">:</span>';
   return frameDocument(`<div style="width: 720px; height: 450px; box-sizing: border-box; background: ${oceanWaterAt(90)}; color: #DCE8EE; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px">
-<svg aria-hidden="true" width="720" height="450" viewBox="0 0 720 450" style="position: absolute; top: 0; left: 0"><g opacity="${sm(t / 6).toFixed(2)}">${bubbles}${fishes}</g></svg>
+<svg aria-hidden="true" width="720" height="450" viewBox="0 0 720 450" style="position: absolute; top: 0; left: 0"><g opacity="${sm(t / 6).toFixed(2)}">${life ? bubbles + fishes : ''}</g></svg>
 <div style="position: absolute; top: 14px; right: 14px; display: flex; gap: 4px"><button aria-label="settings" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${c.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><circle cx="12" cy="12" r="3"></circle></svg></button><button aria-label="account" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${c.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"></circle><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path></svg></button></div>
 <div style="position: relative; display: flex; align-items: center; justify-content: center">
 <div aria-hidden="true" style="font-family: Archivo, system-ui, sans-serif; font-weight: 300; font-stretch: 92%; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; white-space: nowrap; text-align: center; font-size: 104px; filter: blur(10px); opacity: 0.4">00${colon}06</div>

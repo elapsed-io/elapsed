@@ -28,7 +28,12 @@ export const SETTINGS_CATEGORIES = ['timer', 'display', 'appearance', 'notificat
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
 /** The display modes, in the tiles' order (Release 2 adds each in its round: analog in 2.2). */
-export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree'] as const;
+export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'calendar'] as const;
+/**
+ * Test modes: early modes that may change or disappear (plan-release-2, round 2.8). Their tiles show only when the
+ * site is opened with `?test=<id>` (round 2.8 adds the test-modes switch), or while one is chosen.
+ */
+export const TEST_MODES: readonly (typeof MODE_CHOICES)[number][] = ['calendar'];
 export type ModeChoice = (typeof MODE_CHOICES)[number];
 
 /** The tree's views (a mode option; plan, Settings catalog: "tree view (side or isometric)", side by default). */

@@ -125,8 +125,16 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     reducedMotion: reducedMotion(),
     lowPower: lowPower(),
     options: modeOptions(settings.current.mode),
-    // The contrast switch: the time, the icons and the labels in the mode's dark colour, or its own.
+    // The contrast switch: the time, the icons and the labels crossfade to the mode's dark colour, or back. Each
+    // corner icon gets a dark copy the first time, stacked over it (modes/recipe/recipe.css).
     chrome: (share, dark) => {
+      for (const icon of corner.querySelectorAll<SVGElement>('.icon-button > svg:not(.icon-shade)')) {
+        if (icon.parentElement?.querySelector('.icon-shade') !== null) continue;
+        const copy = icon.cloneNode(true) as SVGElement;
+        copy.classList.add('icon-shade');
+        icon.classList.add('icon-lit');
+        icon.after(copy);
+      }
       if (share <= 0) delete screenElement.dataset['contrast'];
       else screenElement.dataset['contrast'] = 'dark';
       screenElement.style.setProperty('--contrast-dark', dark);

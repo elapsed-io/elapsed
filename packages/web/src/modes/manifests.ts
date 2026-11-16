@@ -67,6 +67,8 @@ export const MODE_MANIFESTS: readonly ModeManifest[] = [
   },
   { id: 'height', name: BRAND.copy.modes.height, tier: 'on-choice', budget, source: 'src/modes/built-in/height.ts', art: ['sky/stars', 'sky/stars-card', ...CONFIG.modes.height.results.passing.things.map((thing) => thing.key)], options: { landmarks: 'heightLandmarks' } },
   { id: 'tree', name: BRAND.copy.modes.tree, tier: 'on-choice', budget, source: 'src/modes/built-in/tree.ts', art: TREE_DRAWING, options: { 'tree-view': 'treeView' } },
+  // A test mode (TEST_MODES): its tile shows only when asked for (?test=calendar).
+  { id: 'calendar', name: BRAND.copy.modes.calendar, tier: 'on-choice', budget, source: 'src/modes/built-in/calendar.ts', art: [], options: {} },
 ];
 
 export const DEFAULT_MODE_ID = 'digits';

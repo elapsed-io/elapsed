@@ -101,9 +101,11 @@ export function captionText(recipe: Recipe, template: string, value: number): st
 
 interface Built {
   readonly display: TimeDisplay;
+  /** The contrast switch's dark copy of the display, stacked over it (only with the switch). */
+  readonly shade: TimeDisplay | null;
   readonly environment: Environment | null;
   readonly pieces: readonly { readonly layer: Layer; readonly piece: Piece }[];
-  readonly caption: { readonly element: HTMLElement; readonly template: string } | null;
+  readonly caption: { readonly element: HTMLElement; readonly parts: readonly HTMLElement[]; readonly template: string } | null;
   /** Which layers it drew, so a change of options that changes them rebuilds it. */
   readonly drawn: string;
 }
@@ -148,17 +150,30 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
       for (const [name, value] of Object.entries(figure.style ?? {})) box.style.setProperty(name, value);
       return [box];
     });
+    // The contrast switch crossfades two stacked copies of the time, one in the light colours and one in the
+    // dark, by opacity alone (owner, changes 4). The dark copy is for the eye only: hidden from screen readers
+    // and out of the focus order. A figure is drawn once, under the light copy.
+    const shade = darkShare === null || figure !== undefined ? null : new TimeDisplay(doc, displayContext);
+    const shown =
+      shade === null
+        ? display.element
+        : html(doc, 'div', { class: 'contrast' }, [
+            html(doc, 'div', { class: 'contrast__lit' }, [display.element]),
+            html(doc, 'div', { class: 'contrast__shade', attrs: { 'aria-hidden': 'true', inert: '' } }, [shade.element]),
+          ]);
     const backdrop = pieces.flatMap(({ piece }) => piece.backdrop ?? []);
     if (environment !== null) environment.element.append(...backdrop);
     const template = recipe.states?.paused?.caption;
-    const caption = template === undefined ? null : { element: html(doc, 'div', { class: 'recipe__caption', attrs: { 'aria-hidden': 'true' } }), template };
-    element.replaceChildren(...(environment === null ? backdrop : [environment.element]), display.element, ...pieces.flatMap(({ piece }) => piece.overlay ?? []), ...(caption === null ? [] : [caption.element]));
+    const captionText = template === undefined ? null : [html(doc, 'span', { class: 'contrast__lit' }), ...(darkShare === null ? [] : [html(doc, 'span', { class: 'contrast__shade' })])];
+    const caption = template === undefined || captionText === null ? null : { element: html(doc, 'div', { class: 'recipe__caption', attrs: { 'aria-hidden': 'true' } }, captionText), parts: captionText, template };
+    element.replaceChildren(...(environment === null ? backdrop : [environment.element]), shown, ...pieces.flatMap(({ piece }) => piece.overlay ?? []), ...(caption === null ? [] : [caption.element]));
     if (time?.size === undefined) element.style.removeProperty('--mode-time-size');
     else element.style.setProperty('--mode-time-size', String(time.size));
     void doc.fonts.ready.then(() => {
       display.measure();
+      shade?.measure();
     });
-    return { display, environment, pieces, caption, drawn: drawnKey(values) };
+    return { display, shade, environment, pieces, caption, drawn: drawnKey(values) };
   };
 
   const teardown = (): void => {
@@ -186,6 +201,7 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
       }
       last = view;
       built.display.render(view);
+      built.shade?.render(view);
       const state = stateOf(view);
       const value = measureAt(recipe.measure, view.focusedMs);
       const frame: Frame = { view, activity: activityOf(view), paused: view.status === 'paused', value, active: true };
@@ -199,7 +215,7 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
       if (built.caption !== null) {
         // The caption is ambient: shown while paused, never with low power.
         const shown = frame.paused && !context.lowPower;
-        if (shown) built.caption.element.textContent = captionText(recipe, built.caption.template, value);
+        if (shown) for (const part of built.caption.parts) part.textContent = captionText(recipe, built.caption.template, value);
         built.caption.element.classList.toggle('recipe__caption--shown', shown);
       }
     },
@@ -209,7 +225,11 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
     },
     relayout() {
       built?.display.measure();
-      if (last !== null) built?.display.render(last);
+      built?.shade?.measure();
+      if (last !== null) {
+        built?.display.render(last);
+        built?.shade?.render(last);
+      }
     },
     unmount() {
       teardown();

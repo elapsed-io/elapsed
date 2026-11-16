@@ -150,6 +150,7 @@ export function designCustomProperties(): CustomProperties {
 
     '--motion-morph': scaled(motion.startMorph),
     '--motion-fade': scaled(motion.fade),
+    '--motion-contrast': scaled(motion.contrastFade),
     '--motion-control': scaled(motion.control),
     '--ease-standard': `cubic-bezier(${motion.standardEasing.join(', ')})`,
     // The start morph's slight spring; where CSS has no linear() easing, the standard ease-out (springBlock).
@@ -214,7 +215,7 @@ function narrowBlock(): string {
 }
 
 /** Durations scaled by --motion-scale, registered as times so script reads them resolved ("0.2s"). */
-export const SCALED_DURATIONS = ['--motion-morph', '--motion-fade', '--motion-control', '--tabulating-hold', '--tabulating-fade', '--results-fade-delay', '--results-fade', '--replay-delay'] as const;
+export const SCALED_DURATIONS = ['--motion-morph', '--motion-fade', '--motion-contrast', '--motion-control', '--tabulating-hold', '--tabulating-fade', '--results-fade-delay', '--results-fade', '--replay-delay'] as const;
 
 function registeredProperties(): string {
   const time = SCALED_DURATIONS.map((name) => `@property ${name} {\n  syntax: "<time>";\n  inherits: true;\n  initial-value: 0s;\n}`);
@@ -440,8 +441,10 @@ function analogTokens(): string {
     '--analog-pin-size': String(2 * pinRadius),
     '--analog-label-size': px(analog.labelPx),
     '--analog-hours-label-size': px(analog.hoursLabelPx),
+    '--analog-sublabel-size': px(analog.subLabelPx),
   };
-  return block('[data-mode="analog"]', properties);
+  // The dial piece's tokens, for every mode drawn with it: the analog stopwatch and the perpetual calendar.
+  return block('[data-mode="analog"], [data-mode="calendar"]', properties);
 }
 
 function oceanTokens(): string {
@@ -547,14 +550,12 @@ function profileTokens({ origin, chart, landmark: mark, near, far, passing }: Pr
 /** Ocean life's colours and motions (the "ocean depth, paused" frame), from CONFIG.modes.ocean.life. */
 function lifeTokens(): string {
   const life = CONFIG.modes.ocean.life;
-  const share = (px: number, of: number): string => `${String((px / of) * 100)}%`;
   const sine = (axis: 'X' | 'Y'): string => {
     const steps = 24;
     const frames = Array.from({ length: steps + 1 }, (_, i) => `    ${String((i / steps) * 100)}% { transform: translate${axis}(calc(var(--sine-amp) * ${String(Math.round(Math.sin((2 * Math.PI * i) / steps) * 1e6) / 1e6)})); }`);
     return `  @keyframes life-sine-${axis.toLowerCase()} {\n${frames.join('\n')}\n  }`;
   };
   const colours = block('[data-mode="ocean"]', {
-    '--life-enter': ms(life.enterMs),
     '--life-far': life.colours.far,
     '--life-mid': life.colours.mid,
     '--life-near': life.colours.near,
@@ -562,16 +563,8 @@ function lifeTokens(): string {
     '--life-bubble-opacity': String(life.colours.bubbleOpacity),
     '--life-bubble-stroke': px(life.bubbleStrokePx),
   });
-  const from = share(life.fromPx, life.frameWidthPx);
-  const to = share(life.fromPx + life.spanPx, life.frameWidthPx);
-  const riseFrom = share(life.bubbleFromPx, life.frameHeightPx);
-  const riseTo = share(life.bubbleFromPx - life.bubbleSpanPx, life.frameHeightPx);
   return [
     colours,
-    `  @keyframes life-enter {\n    from { opacity: 0; }\n    to { opacity: 1; }\n  }`,
-    `  @keyframes life-travel-right {\n    from { transform: translateX(${from}); }\n    to { transform: translateX(${to}); }\n  }`,
-    `  @keyframes life-travel-left {\n    from { transform: translateX(${to}); }\n    to { transform: translateX(${from}); }\n  }`,
-    `  @keyframes life-rise {\n    from { transform: translateY(${riseFrom}); }\n    to { transform: translateY(${riseTo}); }\n  }`,
     sine('X'),
     sine('Y'),
   ].join('\n');

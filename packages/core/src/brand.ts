@@ -108,6 +108,7 @@ export const BRAND = {
       ocean: 'ocean depth',
       height: 'height',
       tree: 'tree',
+      calendar: 'perpetual calendar',
     },
     analog: {
       /** Under the hours subdial (the analog frame). */

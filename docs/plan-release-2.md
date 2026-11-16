@@ -240,7 +240,8 @@ distance line, random comets with tails pointing away from the Sun, and the sky 
 minutes from a strip drawn once from the HYG database (stars to magnitude 5, under CC BY-SA, credited, its
 derived data in its own folder with its licence file); the journey replay pulling the camera back; its tile.
 No Oort cloud or Proxima Centauri until Release 4. One build for everyone: opening the site once with
-`?test=interstellar` shows a "test modes" switch in advanced settings (the Release 2 advanced frame), off by
+(The perpetual calendar, a test mode made in changes 4 as a test of the recipe system, joins interstellar behind
+this switch; until it exists, `?test=calendar` shows its tile.) `?test=interstellar` shows a "test modes" switch in advanced settings (the Release 2 advanced frame), off by
 default; switching it on adds interstellar to the mode tiles ("interstellar appears only while test modes
 are on."). The switch, once shown, stays shown on that device; turning it off while interstellar is chosen
 falls back to digits.

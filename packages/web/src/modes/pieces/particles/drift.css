@@ -1,7 +1,7 @@
 /*
- * Image particles that drift in (particles.ts, `arrive: drift-in`): the ocean life of the "ocean depth, paused"
- * frame, schools crossing at three distances and bubbles rising, each moved by CSS animations alone (their
- * keyframes are generated from the config module with the mode's tokens).
+ * Image particles that drift in (particles.ts, `arrive: drift-in`): ocean life arriving at random, schools and single
+ * fish at three distances and columns of bubbles, each arrival moved by one animation of opacity and transform; the
+ * fish wiggle and bob and the bubbles sway by the frame's own keyframes (generated with the mode's tokens).
  */
 @layer mode {
   .particles {
@@ -16,21 +16,26 @@
   }
 
   .life--in {
-    animation: life-enter var(--life-enter) var(--ease-smoothstep) both;
+    opacity: 1;
   }
 
-  .life__travel {
+  /* One arrival: placed at its share of the screen, moved and faded by its one animation (particles.ts). */
+  .life__arrival {
     position: absolute;
-    left: 0;
-    top: calc(var(--life-row) * 100%);
-    width: 100%;
+    left: calc(var(--arrival-x) * 100%);
+    top: calc(var(--arrival-y) * 100%);
+    width: 0;
     height: 0;
-    animation: life-travel-right var(--travel-period) linear var(--travel-delay) infinite;
+    opacity: 0;
   }
 
-  .life__travel--left {
-    animation-name: life-travel-left;
+  .life__member {
+    position: absolute;
+    left: var(--member-x);
+    top: var(--member-y);
   }
+
+
 
   .life__wiggle {
     animation: life-sine-x var(--sine-period) linear var(--sine-delay) infinite;
@@ -40,11 +45,6 @@
     animation: life-sine-y var(--sine-period) linear var(--sine-delay) infinite;
   }
 
-  .life__body {
-    position: absolute;
-    left: var(--fish-x);
-    top: var(--fish-y);
-  }
 
   .life__fish {
     display: block;
@@ -57,19 +57,15 @@
     transform-origin: left center;
   }
 
-  .life__rise {
-    position: absolute;
-    top: 0;
-    left: calc(var(--life-x) * 100%);
-    width: 0;
-    height: 100%;
-    animation: life-rise var(--rise-period) linear var(--rise-delay) infinite;
+
+  /* An arrival's fish face their way about their own middle. */
+  .life__member .life__fish--right {
+    transform-origin: center;
   }
 
   .life__ball {
-    position: absolute;
-    left: calc(-1 * var(--bubble-r));
-    top: calc(-1 * var(--bubble-r));
+    margin-left: calc(-1 * var(--bubble-r));
+    margin-top: calc(-1 * var(--bubble-r));
   }
 
   .life__bubble {

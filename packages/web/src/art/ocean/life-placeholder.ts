@@ -1,7 +1,7 @@
 /**
  * Ocean life's placeholder art (the "ocean depth, paused" frame): the canvas's one fish, at three distances,
  * and a bubble. Each depth zone has its own catalog (life-<zone>.ts) under its own keys, so the commissioned
- * art for each zone replaces these file for file. Art, not code: see LICENSE.md in this folder.
+ * art for each zone replaces these file for file. Art, not code: see LICENSE in this folder (CC0).
  */
 
 import type { ArtCatalog, ArtEntry } from '../registry.ts';

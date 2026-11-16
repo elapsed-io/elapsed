@@ -102,6 +102,7 @@ describe('mode manifests', () => {
       ['ocean', 'on-choice'],
       ['height', 'on-choice'],
       ['tree', 'on-choice'],
+      ['calendar', 'on-choice'],
     ]);
     for (const manifest of MODE_MANIFESTS) {
       expect(manifest.name).toBe(manifest.name.toLowerCase());

@@ -2,7 +2,7 @@
  * The tree's isometric view (the "tree, isometric" frame): the grassy field and its blades, the snow, the
  * fallen leaves, the branches, the leaf cubes (a left, a right and a top face each) and the falling leaves.
  * Drawn through the asset registry, element for element as the frame draws it (canvas version
- * 1794830661-c660). Art, not code: see LICENSE.md in this folder.
+ * 1794830661-c660). Art, not code: see LICENSE in this folder (CC0).
  */
 
 import type { ArtCatalog } from '../registry.ts';

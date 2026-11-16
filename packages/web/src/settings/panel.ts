@@ -22,6 +22,7 @@ import {
   CLOCK_FORMATS,
   CONFIG,
   MODE_CHOICES,
+  TEST_MODES,
   SECONDS_DISPLAYS,
   SETTINGS_CATEGORIES,
   THEME_IDS,
@@ -478,7 +479,11 @@ export class SettingsPanel {
   #modes(): Item {
     const doc = this.#doc;
     const grid = html(doc, 'div', { class: 'mode-tiles', attrs: { 'aria-label': copy.mode.label } });
-    const tiles = MODE_CHOICES.map((value) => ({
+    // A test mode's tile shows only when the site was opened with ?test=<its id>, or while it is chosen.
+    const asked = new URLSearchParams(doc.defaultView?.location.search ?? '').getAll('test');
+    const chosen = this.#host.controller.current.mode;
+    const offered = MODE_CHOICES.filter((value) => !TEST_MODES.includes(value) || asked.includes(value) || chosen === value);
+    const tiles = offered.map((value) => ({
       value,
       element: html(doc, 'button', { class: 'mode-tile' }, [modePreview(doc, value), BRAND.copy.modes[value]]),
     }));
@@ -1077,8 +1082,8 @@ function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
       ...RING_TILE_TAIL.map(([d, opacity]) => svg(doc, 'path', { class: 'mode-tile__accent', d, 'stroke-width': 3, 'stroke-opacity': opacity, 'stroke-linecap': 'butt' })),
       svg(doc, 'circle', { class: 'mode-tile__head', cx: 38.39, cy: 22, r: 2.2 }),
     );
-  } else if (mode === 'analog') {
-    // The Release 2 display frame's analog tile: a muted dial with twelve ticks, an accent hand and pin.
+  } else if (mode === 'analog' || mode === 'calendar') {
+    // The Release 2 display frame's analog tile (the perpetual calendar, a test mode, borrows it): a muted dial with twelve ticks, an accent hand and pin.
     root.append(
       svg(doc, 'circle', { class: 'mode-tile__muted', cx: 28, cy: 16, r: 12, 'stroke-width': 1.5 }),
       ...ANALOG_TILE_TICKS.map(([x1, y1, x2, y2]) => svg(doc, 'line', { class: 'mode-tile__muted', x1, y1, x2, y2, 'stroke-width': 1.2 })),

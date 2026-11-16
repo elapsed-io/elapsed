@@ -17,6 +17,7 @@ const LOADERS: Readonly<Record<string, () => Promise<DisplayModeFactory>>> = {
   ocean: async () => (await import('./built-in/ocean.ts')).createOceanMode,
   height: async () => (await import('./built-in/height.ts')).createHeightMode,
   tree: async () => (await import('./built-in/tree.ts')).createTreeMode,
+  calendar: async () => (await import('./built-in/calendar.ts')).createCalendarMode,
 };
 
 export interface RegisteredMode {

@@ -3,7 +3,7 @@
  * (a dark, a base and a light circle each), the falling leaves and the leaves on the ground, in the frame's own
  * coordinates (the trunk's foot at 0, 0).
  * Drawn through the asset registry, element for element as the frame draws it (canvas version
- * 1794830661-c660). Art, not code: see LICENSE.md in this folder.
+ * 1794830661-c660). Art, not code: see LICENSE in this folder (CC0).
  */
 
 import type { ArtCatalog } from '../registry.ts';

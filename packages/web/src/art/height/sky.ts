@@ -1,7 +1,7 @@
 /**
  * Height's sky while the timer shows: the "height, full climb" frame's own star field (its faint stars and its
  * brighter ones, with their glows), drawn through the asset registry in the frame's 720 × 450 box. Art, not code:
- * see LICENSE.md in this folder.
+ * see LICENSE in this folder (CC0).
  */
 
 import type { ArtCatalog, ArtShape } from '../registry.ts';

@@ -40,15 +40,4 @@
   .results[data-replay="ocean"] .lit__art [data-tone="glow"] {
     fill: var(--passing-glow);
   }
-
-  /*
-   * The contrast switch (recipe-mode.ts, recipe/contrast.ts): over a bright surface, the time, the icons and the
-   * labels take the recipe's dark colour until the water darkens (the buttons keep theirs).
-   */
-  .screen[data-mode="ocean"][data-contrast="dark"] > .mode-root,
-  .screen[data-mode="ocean"][data-contrast="dark"]:has(> .mode-root:not([hidden])) > .corner,
-  .screen[data-mode="ocean"][data-contrast="dark"] > .mode-root > * {
-    --color-foreground: var(--contrast-dark);
-    --color-muted: var(--contrast-dark);
-  }
 }

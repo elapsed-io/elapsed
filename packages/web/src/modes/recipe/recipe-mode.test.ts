@@ -107,6 +107,7 @@ describe('the manifests', () => {
       ocean: OCEAN,
       height: HEIGHT,
       tree: TREE,
+      calendar: (await import('../../../../../docs/recipes/recipes/calendar.json', { with: { type: 'json' } })).default,
     };
     for (const manifest of MODE_MANIFESTS) {
       const own = recipeArt(files[manifest.id] as object);

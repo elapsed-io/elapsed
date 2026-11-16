@@ -1,7 +1,7 @@
 /**
  * Ocean depth's results art: the things that pass as the replay crosses their zone (plan, Display modes >
  * Results replays). Placeholder silhouettes from the design canvas, drawn through the asset registry until the
- * commissioned art replaces this file. Art, not code: see LICENSE.md in this folder.
+ * commissioned art replaces this file. Art, not code: see LICENSE in this folder (CC0).
  */
 
 import type { ArtCatalog, ArtShape } from '../registry.ts';

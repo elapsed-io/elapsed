@@ -57,6 +57,7 @@ export {
   CLOCK_FORMATS,
   FONT_CHOICES,
   MODE_CHOICES,
+  TEST_MODES,
   TREE_VIEWS,
   SETTINGS,
   SETTINGS_CATEGORIES,
@@ -113,6 +114,8 @@ export type { LeafState, Weather } from './modes/tree.ts';
 export { DIGITS_RECIPE, checkRecipe, parseRecipe, recipeOrDigits } from './recipes/load.ts';
 export type { LoadOptions, RecipeResult } from './recipes/load.ts';
 export { RECIPE_LIMITS } from './recipes/limits.ts';
+export { CALENDAR_PLACES, LUNATION_DAYS, calendarDay, calendarShare, moonAge } from './recipes/calendar.ts';
+export type { CalendarDay, CalendarPart } from './recipes/calendar.ts';
 export {
   RECIPE_MINUTE_MS,
   TEXT_CONTRAST,

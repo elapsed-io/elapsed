@@ -88,3 +88,22 @@ references, a prototype key, and unknown versions: each is refused.
 3. **Piece tokens** for the built-in modes are still scoped to their mode (`[data-mode="ocean"]`); a copied mode
    (a later release) needs them scoped to the piece.
 4. **Art licence and the analog hours hand:** still the owner's questions.
+
+## Changes 4 (2026-11-16): the owner's answers and the first new mode
+
+- **What changed:** ocean life arrives at random (decision 333); the contrast switch crossfades two stacked copies
+  by opacity (334); the placeholder art is released under CC0, with the licence text beside it (332); and a test
+  mode, the perpetual calendar, built from a recipe, which added four optional fields to the schema (335 to 337).
+- **Inputs:** the schema's new fields are refused as the rest are: a calendar is one named kind; faces and parts are
+  fixed words; names are at most 31 strings of at most 48 characters without `<`, `>` or braces, drawn as SVG text
+  through `textContent`; at most 8 subdials. The loader refuses a calendar part off a calendar cycle, a calendar
+  cycle without a part, and names that do not number a part's places. The address's `?test=` values are only
+  compared with the test modes' ids, never stored or shown.
+- **Data:** nothing new is stored or sent; `mode` may also be `calendar`.
+- **Cost:** ocean life draws one schedule a pause (about 30 arrivals over three minutes, at most four showing), each
+  one animation; the contrast switch doubles the time's drawing in ocean depth and height only (the dark copy at
+  zero opacity until it shows); the calendar's hands step or glide once a minute like analog's.
+- **Dependencies:** none added.
+- **Tests:** the calendar's arithmetic (months, leap years, 2100, the moon) in unit tests; its tile, steps, moon,
+  gliding hands and low power end to end; ocean life's arrivals by what they do; the contrast crossfade's copies
+  and their opacity-only transitions.

@@ -143,11 +143,19 @@ WebKit through the reference image)
   loader refuses a failing recipe and shows digits. Corrections to the recipes, where the frames win, are in
   decision 320. Checks: `npm run check` (712 unit tests, one to do in round 2.9; core JavaScript 49.0 KB of 50 KB); the
   reference image in Chromium, Firefox and WebKit: 825 passed, 18 skipped as declared, 0 failed.
+- Changes 4 (2026-11-16): plan version 8; the owner's answers built (the hours hand's glide confirmed, CC0 for the
+  placeholder art, ocean life's random arrivals, the contrast crossfade by stacked copies; decisions 332 to 334);
+  and the perpetual calendar test mode, a test of the recipe system after a perpetual-calendar watch, which added
+  four optional fields to the schema (decisions 335 to 337; question 12). Checks: `npm run check` (724 unit
+  tests; core JavaScript 49.4 KB of 50 KB); the reference image in Chromium, Firefox and WebKit: 836 passed,
+  16 skipped as declared, 0 failed.
 
 ## Questions for the owner
 
 Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 and 9; their answers are built in
-round 2.7 (decisions 327 to 330) and 2.8. Still open: 1 and 3, and the new 10 and 11.
+round 2.7 (decisions 327 to 330) and 2.8. Answered in changes 4: 1 (the hours hand glides, as built), 3 (CC0 for
+the placeholder art and slot templates), 10 (crossfade by stacked copies) and 11 (random arrivals now); built in
+decisions 332 to 334. Open: 12.
 
 1. **The analog hours hand (round 2.2).** The analog frame draws the hours subdial's hand at the whole hour
    (30° at 1 h 24 min). The plan's rule that anything moving with time glides puts it at 42°, which is what
@@ -202,4 +210,9 @@ round 2.7 (decisions 327 to 330) and 2.8. Still open: 1 and 3, and the new 10 an
     "ocean depth, paused" frame draws a fixed placeholder arrangement (three schools at three distances and
     seven bubbles), which is what the site draws. Should the random arrivals replace the frame's arrangement now,
     or when the commissioned art arrives?
+12. **The recipe schema after its first new mode (decision 336).** The perpetual calendar test mode needed
+    calendar cycles, subdial faces and calendar parts (date, weekday, month, leap year, moon), names for a small
+    dial's marks, and up to 8 subdials. I added them as optional fields, so every recipe written before stays
+    valid, and kept the schema's name and version (`mode-recipe-1`). Keep them as version 1 additions, or call the
+    schema version 2?
 

@@ -155,6 +155,8 @@ export const CONFIG = {
     startMorph: 160,
     fade: 180,
     control: 120,
+    /** The contrast switch crossfades its two stacked copies over this long (owner, changes 4: about 220 ms). */
+    contrastFade: 220,
     /** The slight spring of the start morph: a damped spring drawn through CSS linear() at this many points. */
     spring: { dampingRatio: 0.75, settle: 5, points: 24 },
     /** Seconds blur-away: the ones digit clears over 0 to 10 s, the tens digit and colon over 10 to 60 s. */
@@ -477,6 +479,8 @@ export const CONFIG = {
       hoursHand: { tipY: 184, width: 2 },
       labelPx: 12,
       hoursLabelPx: 10,
+      /** A small dial's marks' names (the perpetual calendar's dates, days and months). */
+      subLabelPx: 6.5,
     },
     timeline: {
       minutesPer100Px: 10,
@@ -513,59 +517,19 @@ export const CONFIG = {
       landmarksPerBand: 2,
       landmarkBandMetres: 1000,
       /**
-       * Ocean life (the "ocean depth, paused" frame): while a session is paused, bubbles rise and three
-       * schools swim across at three distances, fading in over 6 s; they leave when the timer resumes.
-       * Positions are the frame's own, in a 720 × 450 screen: each fish [x offset, y offset, its school's
-       * row, speed px/s, direction (1 right, −1 left), scale, phase]; each bubble [x, radius, speed px/s,
-       * phase]. Fish cross from −140 px to 860 px and bob 4 px across and 3 px up and down; bubbles rise
-       * from 470 px over 520 px and sway 6 px.
+       * Ocean life while paused (particles.ts): arrivals at random as its recipe sets out, at three distances as the
+       * "ocean depth, paused" frame draws them (rows 150, 300 and 390 px of a 720 × 450 screen; fish at 0.3, 0.55
+       * and 1.25 of 54 × 22 px; drifting 7, 13 and 26 px/s), fish wiggling 4 px across and bobbing 3 px; bubbles
+       * rising from 470 px and swaying 6 px.
        */
       life: {
-        enterMs: 6000,
         frameWidthPx: 720,
         frameHeightPx: 450,
-        fromPx: -140,
-        spanPx: 1000,
-        phasePx: 40,
         wigglePx: 4,
         wiggleRate: 1.1,
         bobPx: 3,
         bobRate: 0.9,
-        fish: [
-          [17.2, 13.5, 150, 7, 1, 0.3, 4.77],
-          [61.9, 13.4, 150, 7, 1, 0.3, 5.53],
-          [-65.9, -1.9, 150, 7, 1, 0.3, 5.66],
-          [20.9, 22.5, 150, 7, 1, 0.3, 0.68],
-          [-4.3, -14.2, 150, 7, 1, 0.3, 3.26],
-          [10.4, -27.3, 150, 7, 1, 0.3, 1.3],
-          [-30.9, 23.3, 150, 7, 1, 0.3, 4.59],
-          [-47.7, 16.6, 150, 7, 1, 0.3, 0.83],
-          [16.4, -20.9, 150, 7, 1, 0.3, 0.01],
-          [52.0, -16.3, 150, 7, 1, 0.3, 1.29],
-          [67.5, 20.9, 150, 7, 1, 0.3, 1.74],
-          [64.6, 2.2, 300, 13, -1, 0.55, 4.07],
-          [-41.3, 24.7, 300, 13, -1, 0.55, 4.14],
-          [65.3, 22.0, 300, 13, -1, 0.55, 1.79],
-          [-19.4, -18.7, 300, 13, -1, 0.55, 0.87],
-          [-60.9, -11.1, 300, 13, -1, 0.55, 3.62],
-          [-69.5, 10.0, 300, 13, -1, 0.55, 2.03],
-          [-26.6, 17.8, 300, 13, -1, 0.55, 2.88],
-          [0, 0, 390, 26, 1, 1.25, 1.89],
-          [150, 18, 390, 26, 1, 1.25, 2.89],
-        ] as readonly (readonly [number, number, number, number, number, number, number])[],
-        /** Each school's distance, by its row: far, middle, near. */
-        distances: { 150: 'far', 300: 'mid', 390: 'near' } as Readonly<Record<number, 'far' | 'mid' | 'near'>>,
-        bubbles: [
-          [120, 5, 26, 0],
-          [190, 3.5, 34, 180],
-          [560, 6, 22, 90],
-          [610, 3, 30, 300],
-          [330, 4.5, 28, 400],
-          [420, 2.5, 38, 260],
-          [250, 4, 24, 140],
-        ] as readonly (readonly [number, number, number, number])[],
         bubbleFromPx: 470,
-        bubbleSpanPx: 520,
         bubbleSwayPx: 6,
         bubbleSwayRate: 1.4,
         bubbleStrokePx: 1.2,

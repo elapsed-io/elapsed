@@ -451,18 +451,23 @@ test('ocean depth stops at 10,935 m', async ({ page }) => {
 
 test('the ocean palette keeps its text and buttons readable over the water: deep navy near the surface', async ({ page }) => {
   await openApp(page, { mode: 'ocean' });
+  // Two stacked copies of the time and of each corner icon, the frames' colours and deep navy; one shows.
   const colours = (): Promise<{ time: string; icon: string; button: string }> =>
     page.locator('.screen').evaluate((screen) => {
-      const time = screen.querySelector('.time--main');
-      const icon = screen.querySelector('.icon-button--settings');
+      const navy = screen.querySelector('.contrast__shade');
+      const dark = navy !== null && getComputedStyle(navy).opacity === '1';
+      const time = screen.querySelector(dark ? '.contrast__shade .time--main' : '.contrast__lit .time--main');
+      const icon = screen.querySelector(dark ? '.icon-button--settings .icon-shade' : '.icon-button--settings > svg');
       const button = screen.querySelector('.controls button');
       return { time: time === null ? '' : getComputedStyle(time).color, icon: icon === null ? '' : getComputedStyle(icon).color, button: button === null ? '' : getComputedStyle(button).color };
     });
+  await settle(page);
   // At the surface the water is bright: the time and the icons are deep navy (owner, changes 3); the buttons keep theirs.
   expect(await colours()).toEqual({ time: 'rgb(14, 36, 64)', icon: 'rgb(14, 36, 64)', button: 'rgb(220, 232, 238)' });
   // Past 4.3 m (17 seconds of focus), the frames' own colours, from the next redraw.
   await page.locator('.button--primary').click();
   await page.clock.runFor(MINUTE);
+  await settle(page);
   expect(await colours()).toMatchObject({ time: 'rgb(220, 232, 238)', icon: 'rgb(158, 195, 214)' });
 });
 
@@ -476,7 +481,7 @@ function lifeRequests(page: Page): string[] {
   return fetched;
 }
 
-test('ocean life drifts in while paused, from the zone the dive is in, and leaves when the timer resumes', async ({ page }) => {
+test('ocean life arrives at random while paused, from the zone the dive is in, and leaves when the timer resumes', async ({ page }) => {
   const fetched = lifeRequests(page);
   await openApp(page, { mode: 'ocean' });
   await page.locator('.button--primary').click();
@@ -488,13 +493,38 @@ test('ocean life drifts in while paused, from the zone the dive is in, and leave
   // 90 m: the sunlight zone's catalog, and only it.
   await expect(page.locator('.life')).toHaveAttribute('data-zone', 'sunlight');
   expect(fetched.filter((zone) => zone !== 'placeholder')).toEqual(['sunlight']);
-  const keys = await page.locator('.life [data-art]').evaluateAll((art) => [...new Set(art.map((element) => element.getAttribute('data-art')))].sort());
-  expect(keys).toEqual(['sunlight/bubble', 'sunlight/fish-far', 'sunlight/fish-mid', 'sunlight/fish-near']);
-  // Twenty fish at three distances and seven bubbles, moved by CSS animations alone.
-  await expect(page.locator('.life__fish')).toHaveCount(20);
-  await expect(page.locator('.life__bubble')).toHaveCount(7);
-  const kinds = await page.locator('.life').evaluate((layer) => [...new Set(layer.getAnimations({ subtree: true }).map((animation) => animation.constructor.name))]);
-  expect(kinds).toEqual(['CSSAnimation']);
+  // Arrivals at random from that zone's catalog (far, middle and near fish, and bubbles), as the recipe sets out:
+  // the first within 3 s, the next 3 to 9 s apart, each staying 8 to 20 s, never more than four at once.
+  const keys = await page.locator('.life [data-art]').evaluateAll((art) => [...new Set(art.map((element) => element.getAttribute('data-art')))]);
+  expect(keys.every((key) => /^sunlight\/(fish-far|fish-mid|fish-near|bubble)$/.test(key ?? ''))).toBe(true);
+  const arrivals = await page.locator('.life__arrival').evaluateAll((elements) =>
+    elements.map((element) => {
+      const [animation] = element.getAnimations().filter((candidate) => !(candidate instanceof CSSAnimation));
+      const timing = animation?.effect?.getComputedTiming();
+      const frames = (animation?.effect as KeyframeEffect | undefined)?.getKeyframes() ?? [];
+      return {
+        start: (timing?.delay ?? 0) / 1000,
+        life: (frames[3]?.computedOffset ?? 0) * (Number(timing?.duration ?? 0) / 1000),
+        properties: [...new Set(frames.flatMap((frame) => Object.keys(frame).filter((key) => !['offset', 'computedOffset', 'easing', 'composite'].includes(key))))].sort(),
+        iterations: timing?.iterations,
+      };
+    }),
+  );
+  expect(arrivals.length).toBeGreaterThan(10);
+  expect(arrivals[0]?.start).toBeLessThanOrEqual(3);
+  for (const [k, arrival] of arrivals.entries()) {
+    expect(arrival.properties).toEqual(['opacity', 'transform']);
+    expect(arrival.iterations).toBe(Infinity);
+    expect(arrival.life).toBeGreaterThanOrEqual(8 - 1e-6);
+    expect(arrival.life).toBeLessThanOrEqual(20 + 1e-6);
+    const next = arrivals[k + 1];
+    if (next !== undefined) expect(next.start - arrival.start).toBeGreaterThanOrEqual(3 - 1e-6);
+    const atOnce = arrivals.filter((other) => other.start <= arrival.start && other.start + other.life > arrival.start).length;
+    expect(atOnce).toBeLessThanOrEqual(4);
+  }
+  // Fish at three distances, wiggling and bobbing by CSS; nothing else animates.
+  const kinds = await page.locator('.life').evaluate((layer) => [...new Set(layer.getAnimations({ subtree: true }).map((animation) => animation.constructor.name))].sort());
+  expect(kinds).toEqual(['Animation', 'CSSAnimation']);
   await page.locator('.button--primary').click();
   await expect(page.locator('.life')).toHaveCount(0);
 });

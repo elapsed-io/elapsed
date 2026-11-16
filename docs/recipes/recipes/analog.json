@@ -52,7 +52,8 @@
             "length": 16,
             "width": 2,
             "color": "theme.text"
-          }
+          },
+          "title": "hours"
         }
       ]
     }

@@ -73,15 +73,4 @@
     fill: none;
     stroke: var(--passing-rigging);
   }
-
-  /*
-   * The contrast switch (recipe-mode.ts, recipe/contrast.ts): over a bright sky, the time, the icons and the
-   * labels take the recipe's dark colour until the sky darkens (the buttons keep theirs).
-   */
-  .screen[data-mode="height"][data-contrast="dark"] > .mode-root,
-  .screen[data-mode="height"][data-contrast="dark"]:has(> .mode-root:not([hidden])) > .corner,
-  .screen[data-mode="height"][data-contrast="dark"] > .mode-root > * {
-    --color-foreground: var(--contrast-dark);
-    --color-muted: var(--contrast-dark);
-  }
 }
