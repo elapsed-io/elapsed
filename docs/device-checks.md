@@ -118,6 +118,8 @@ only, over USB (chrome://inspect on a computer); no third-party monitoring.
     - [ ] The idle screen appears drawn as the frame, with the time in its font, without a jump when the
       font arrives.
     - [ ] Start responds to the first tap at once.
+    - [ ] With ring chosen in settings, reload: the ring appears without a noticeable flash of the digits
+      screen first.
 23. DevTools → Performance: record starting, pausing, resuming and ending a session.
     - [ ] Each tap is followed by a painted frame within 100 ms, and no task takes 50 ms or more.
 24. Performance monitor during a running session, in each display mode, after the first minute:

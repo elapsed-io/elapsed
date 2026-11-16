@@ -12,6 +12,9 @@ it is so and where it was decided; "launch" marks what must be settled before th
   arrive when the page next runs, or not at all. The session itself is always right when the page runs
   again: the rules are replayed from timestamps. On iPhone, notifications work only once the site is on
   the home screen, and the setting says so. (`docs/device-checks.md`, steps 8, 9 and 29.)
+- **Safari removes a site's stored data after seven days without a visit**, unless the site is on the home
+  screen: settings, custom CSS and your own font file would then be gone. This is Safari's rule for every
+  site; adding elapsed to the home screen avoids it.
 - **A hidden tab wakes about twice a minute.** Nothing is drawn while the tab is hidden, but the heartbeat
   (every 30 s, so a long background session is never mistaken for a sleeping device) and the tab title
   (once a minute) still run. Decision 222; the owner is asked to accept it in `docs/safety/release-1.md`.
