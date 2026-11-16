@@ -90,8 +90,8 @@ the owner's environment; it only reads responses.
 - `tooling/plan-audit.test.ts`: no animated blur but the seconds blur-away.
 - `tooling/repository-text.test.ts`: no secrets; local secret files ignored.
 - `tooling/deployed-headers.test.ts`: the deployed-header check's parsing, matching and judging.
-- Totals: 515 unit tests; 173 end-to-end tests, run in Chromium, Firefox and WebKit (a few are engine-
-  specific: decisions 223, 224, 231).
+- Totals: 520 unit tests; 178 end-to-end tests in Chromium, with 2 skipped in Firefox and 4 in WebKit
+  (decisions 223, 224 and 231), all inside the reference image (CI run 43825186233, commit `2c9c8ff`).
 
 ### 8. Open risks
 
