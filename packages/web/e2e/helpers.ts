@@ -51,11 +51,18 @@ export async function openApp(
  */
 export async function settle(page: Page): Promise<void> {
   await page.evaluate(async () => {
-    const running = document
-      .getAnimations()
-      .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
-      .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide') === true));
-    await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
+    // A short real-time wait: the tests' clock holds timers and animation frames, but not animations.
+    const frames = (): Promise<unknown> => document.documentElement.animate([], { duration: 40 }).finished;
+    // Until a few frames pass with nothing left running: a busy browser can start a transition a frame late.
+    for (let round = 0; round < 10; round += 1) {
+      const running = document
+        .getAnimations()
+        .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide') === true));
+      if (running.length === 0 && round > 0) return;
+      await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
+      await frames();
+    }
   });
 }
 
