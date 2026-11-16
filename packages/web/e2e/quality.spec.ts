@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { seedSettings } from './helpers.ts';
 
 test('controls respond within 100 ms, from click to the next painted frame', async ({ page }) => {
   await page.goto('/');
@@ -60,7 +61,8 @@ test('no task blocks the main thread for 50 ms while using the controls', async 
       for (const entry of list.getEntries()) tasks.push(entry.duration);
     }).observe({ type: 'longtask', buffered: true });
   });
-  await page.goto('/?mode=timeline');
+  await seedSettings(page, { mode: 'timeline' });
+  await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(() => {
     (window as unknown as { __longTasks: number[] }).__longTasks.length = 0;

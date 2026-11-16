@@ -139,7 +139,7 @@ export const BRAND = {
       shortcuts: { label: 'shortcuts', items: ['space · start or pause', 'e · end', ', · settings'] },
       mode: { label: 'display mode' },
       theme: { label: 'theme' },
-      colors: { label: 'theme colors', background: 'background', foreground: 'foreground', accent: 'accent' },
+      colors: { label: 'theme colors', background: 'background', foreground: 'foreground', accent: 'accent', hex: '{name} hex code' },
       font: {
         label: 'font',
         loadOwn: 'load your own',

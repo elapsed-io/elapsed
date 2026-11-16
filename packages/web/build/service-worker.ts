@@ -30,7 +30,13 @@ function text(bundle: Rollup.OutputBundle, file: string): string | undefined {
   return typeof output.source === 'string' ? output.source : new TextDecoder().decode(output.source);
 }
 
-/** The page and every file it loads before it is interactive, as bundle file names. */
+/**
+ * The page and every file it loads before it is interactive, as bundle file
+ * names: what the HTML and CSS reference, scripts' static imports and their
+ * CSS. Asset URLs a script only mentions (the built-in fonts, fetched when
+ * chosen) are left out, as the size check leaves them out; the worker caches
+ * each of them the first time it is fetched.
+ */
 export function coreClosure(bundle: Rollup.OutputBundle): string[] {
   const pending = ['index.html'];
   const seen = new Set<string>();
@@ -44,7 +50,7 @@ export function coreClosure(bundle: Rollup.OutputBundle): string[] {
     if (file.endsWith('.css')) pending.push(...cssReferences(body));
     if (output.type === 'chunk') {
       pending.push(...output.imports);
-      pending.push(...(output.viteMetadata?.importedCss ?? []), ...(output.viteMetadata?.importedAssets ?? []));
+      pending.push(...(output.viteMetadata?.importedCss ?? []));
     }
   }
   return [...seen].sort();

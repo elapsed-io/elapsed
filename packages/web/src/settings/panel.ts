@@ -443,7 +443,7 @@ export class SettingsPanel {
       const name = copy.colors[part];
       const swatch = html(doc, 'span', { class: 'color-row__swatch', attrs: { 'aria-hidden': 'true' } });
       const picker = html(doc, 'input', { class: 'color-row__picker', attrs: { type: 'color', 'aria-label': name } });
-      const hex = html(doc, 'input', { class: 'color-row__hex', attrs: { type: 'text', 'aria-label': name, maxlength: '7', spellcheck: 'false', autocomplete: 'off' } });
+      const hex = html(doc, 'input', { class: 'color-row__hex', attrs: { type: 'text', 'aria-label': copy.colors.hex.replace('{name}', name), maxlength: '7', spellcheck: 'false', autocomplete: 'off' } });
       const choose = (value: string): void => {
         const colour = normaliseHex(value);
         if (colour === null) return;

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { corePaths } from './helpers.ts';
 import { diffPngs } from './pixels.ts';
 
 const FIXTURE = readFileSync(fileURLToPath(new URL('fixtures/idle-frame.html', import.meta.url)));
@@ -62,10 +63,13 @@ test('loads under the CSP with no violations, errors or third-party requests', a
   // No display mode chunk loads for digits.
   const paths = requests
     .filter((url) => !url.startsWith('data:'))
-    .map((url) => new URL(url).pathname.replace(/^\/assets\/([a-z-]+)-[\w-]+\.(\w+)$/, '/assets/$1.$2'))
+    .map((url) => new URL(url).pathname)
     .filter((path) => path !== '/icons/icon.svg')
     .sort();
-  expect(paths).toEqual(['/', '/api/count', '/assets/index.css', '/assets/index.js', '/assets/timer-sans.woff2', '/sw-control.json']);
+  expect(paths).toEqual([...corePaths(), '/api/count', '/sw-control.json'].sort());
+  // The core is the page, its scripts, one stylesheet and the default font: no display mode, panel or other font.
+  expect(corePaths().filter((path) => /\.woff2$/.test(path)).map((path) => path.replace(/-[\w-]{8}\.woff2$/, ''))).toEqual(['/assets/timer-sans']);
+  expect(corePaths().some((path) => /\/(ring|timeline|panel|results)-/.test(path))).toBe(false);
 });
 
 test('the browser enforces Trusted Types and blocks inline styles', async ({ page }) => {

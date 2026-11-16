@@ -12,7 +12,20 @@
 
 import { timelineStripMinutes } from '../../src/modes/timeline/strip.ts';
 
-const C = {
+export interface FramePalette {
+  readonly bg: string;
+  readonly text: string;
+  readonly accent: string;
+  readonly icon: string;
+  readonly muted: string;
+  readonly faint: string;
+  readonly track: string;
+  readonly gray: string;
+  readonly end: string;
+}
+
+/** The frames' palettes, computed by their own pal() for each theme. */
+export const GRAPHITE: FramePalette = {
   bg: '#0E0F11',
   text: '#ECEAE4',
   accent: '#35764E',
@@ -24,26 +37,56 @@ const C = {
   end: '#A8403D',
 };
 
+export const PAPER: FramePalette = {
+  bg: '#F6F5F2',
+  text: '#1A1B1E',
+  accent: '#4A9E6C',
+  icon: '#7d7d7d',
+  muted: '#7d7d7d',
+  faint: '#d3d2d0',
+  track: '#e2e1df',
+  gray: '#cac9c8',
+  end: '#E28A86',
+};
+
+let C: FramePalette = GRAPHITE;
+
+/** Builds frames in another theme (the light frames are the same markup in the paper theme). */
+export function inPalette<T>(palette: FramePalette, build: () => T): T {
+  const saved = C;
+  C = palette;
+  try {
+    return build();
+  } finally {
+    C = saved;
+  }
+}
+
 const HEAD = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>frame</title><style>
 @font-face{font-family:Archivo;src:url(/font.woff2) format("woff2");font-weight:300 500;font-stretch:92%;font-style:normal;font-display:block}
 body{margin:0;font-stretch:92%}
 button{font-stretch:inherit}
 </style></head><body>`;
 
-const CORNER = `<div style="position: absolute; top: 14px; right: 14px; display: flex; gap: 4px"><button aria-label="settings" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${C.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><circle cx="12" cy="12" r="3"></circle></svg></button><button aria-label="account" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${C.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"></circle><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path></svg></button></div>`;
+const corner = (): string => `<div style="position: absolute; top: 14px; right: 14px; display: flex; gap: 4px"><button aria-label="settings" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${C.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><circle cx="12" cy="12" r="3"></circle></svg></button><button aria-label="account" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${C.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"></circle><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path></svg></button></div>`;
 
 const COLON = '<span style="margin: 0 -0.05em; position: relative; top: -0.06em">:</span>';
 const TIME_STYLE = 'font-family: Archivo, system-ui, sans-serif; font-weight: 300; font-stretch: 92%; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; white-space: nowrap; text-align: center';
 const BUTTON = (label: string, background: string): string =>
   `<button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${C.text}; background: ${background}">${label}</button>`;
-const RUNNING_BUTTONS = `<div style="display: flex; gap: 14px">${BUTTON('pause', C.gray)}${BUTTON('end', C.end)}</div>`;
+const runningButtons = (): string => `<div style="display: flex; gap: 14px">${BUTTON('pause', C.gray)}${BUTTON('end', C.end)}</div>`;
 
-function root(gap: number, children: string, corner = true): string {
-  return `${HEAD}<div style="width: 720px; height: 450px; box-sizing: border-box; background: ${C.bg}; color: ${C.text}; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: ${String(gap)}px">${corner ? CORNER : ''}${children}</div></body></html>`;
+function root(gap: number, children: string, withCorner = true): string {
+  return `${HEAD}<div style="width: 720px; height: 450px; box-sizing: border-box; background: ${C.bg}; color: ${C.text}; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: ${String(gap)}px">${withCorner ? corner() : ''}${children}</div></body></html>`;
 }
 
 const pad = (value: number): string => String(value).padStart(2, '0');
 const smoothstep = (x: number): number => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+
+/** The idle frame (and, in the paper palette, the "idle, paper theme" frame). */
+export function idleFrame(): string {
+  return root(26, `<div style="${TIME_STYLE}; font-size: 104px">00${COLON}00${COLON}00</div><div style="display: flex; gap: 14px">${BUTTON('start', C.accent)}</div>`);
+}
 
 /** The running frame at `t` seconds of focus, as its renderVals() computes it. */
 export function runningFrame(t: number): string {
@@ -59,7 +102,7 @@ export function runningFrame(t: number): string {
   const B = fade(b);
   const mm = pad(Math.floor(t / 60));
   const time = `<div style="${TIME_STYLE}; font-size: 104px">00${COLON}${mm}<span style="display: inline-grid; grid-template-columns: ${B.w}fr; vertical-align: top"><span style="min-width: 0; white-space: nowrap; filter: blur(${B.blur}px); opacity: ${B.op}">${COLON}${String(Math.floor(s / 10))}</span></span><span style="display: inline-grid; grid-template-columns: ${A.w}fr; vertical-align: top"><span style="min-width: 0; white-space: nowrap; filter: blur(${A.blur}px); opacity: ${A.op}">${String(s % 10)}</span></span></div>`;
-  return root(26, time + RUNNING_BUTTONS);
+  return root(26, time + runningButtons());
 }
 
 /** The paused frame: 01:24 held behind the blur, paused for 00:04:12. */
@@ -72,7 +115,7 @@ export function pausedFrame(): string {
 /** The check-in frame: 02:00 held behind the blur, with the line asking for any key. */
 export function checkInFrame(): string {
   const time = `<div style="position: relative; display: flex; align-items: center; justify-content: center"><div aria-hidden="true" style="${TIME_STYLE}; font-size: 104px; filter: blur(10px); opacity: 0.4">02${COLON}00</div><div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="font-size: 15px; color: ${C.text}; text-align: center">press any key if you’re still here</div></div></div>`;
-  return root(26, time + RUNNING_BUTTONS);
+  return root(26, time + runningButtons());
 }
 
 /** The "paused after a missed check-in" frame: 02:00 held, paused for 01:12:40, the check-in at 2:00 pm. */
@@ -117,7 +160,7 @@ export function ringFrame(): string {
     )
     .join('');
   const ring = `<div style="position: relative; width: 280px; height: 280px; display: flex; align-items: center; justify-content: center"><svg role="img" width="280" height="280" viewBox="0 0 280 280" style="position: absolute; top: 0; left: 0"><circle cx="140" cy="140" r="112" fill="none" stroke="${C.faint}" stroke-width="8"></circle><g><g style="${turned}">${tail}</g></g><g style="${turned}"><circle cx="140" cy="28" r="4" fill="${C.accent}"></circle></g></svg><div style="position: relative; ${TIME_STYLE}; font-size: 52px">01${COLON}24</div></div>`;
-  return root(20, ring + RUNNING_BUTTONS);
+  return root(20, ring + runningButtons());
 }
 
 /**
@@ -149,7 +192,7 @@ export function timelineFrame(options: { readonly labels?: boolean } = {}): stri
   const keyframes = '<style>@keyframes strip { from { transform: translateX(320px); } to { transform: translateX(-9280px); } }</style>';
   const svg = `${keyframes}<svg role="img" width="640" height="110" viewBox="0 0 640 110"><defs><clipPath id="past"><rect x="0" y="0" width="320" height="110"></rect></clipPath><clipPath id="future"><rect x="320" y="0" width="320" height="110"></rect></clipPath></defs><line x1="0" y1="60" x2="320" y2="60" stroke="${C.muted}" stroke-width="2"></line><line x1="320" y1="60" x2="640" y2="60" stroke="${C.faint}" stroke-width="2"></line><g clip-path="url(#past)"><g style="${slid}">${ticks(C.muted)}</g></g><g clip-path="url(#future)"><g style="${slid}">${ticks(C.faint)}</g></g><g style="${slid}">${labels.join('')}</g></svg>`;
   const time = `<div style="${TIME_STYLE}; font-size: 56px">01${COLON}24</div>`;
-  return root(18, time + svg + RUNNING_BUTTONS);
+  return root(18, time + svg + runningButtons());
 }
 
 /** Where the timeline frame draws its labels at 01:24: text and centre x within the 640 px drawing. */
@@ -191,7 +234,7 @@ export interface ResultsData {
 const RESULTS_ICON = (label: string, paths: string): string =>
   `<button aria-label="${label}" style="width: 32px; height: 32px; padding: 0; background: transparent; border: 0; color: ${C.text}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${paths}</svg></button>`;
 /** The retry and share icons; the guest invite below them is hidden until Release 3 (owner decision 123). */
-const RESULTS_ACTIONS = `<div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><div style="display: flex; gap: 14px">${RESULTS_ICON(
+const resultsActions = (): string => `<div style="display: flex; flex-direction: column; align-items: center; gap: 6px"><div style="display: flex; gap: 14px">${RESULTS_ICON(
   'retry',
   '<path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path>',
 )}${RESULTS_ICON('share', '<path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"></path><path d="M7 9l5 -5l5 5"></path><path d="M12 4l0 12"></path>')}</div></div>`;
@@ -211,7 +254,7 @@ function statsGrid(stats: readonly string[], columns: number): string {
 }
 
 function resultsRoot(gap: number, children: string): string {
-  return `${HEAD}<div style="width: 720px; height: 520px; box-sizing: border-box; background: ${C.bg}; color: ${C.text}; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden"><div style="position: absolute; top: 0; left: 0; width: 720px; height: 520px; box-sizing: border-box; padding: 24px 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: ${String(gap)}px; opacity: 1; transform: translateY(0px)">${CORNER}${children}</div></div></body></html>`;
+  return `${HEAD}<div style="width: 720px; height: 520px; box-sizing: border-box; background: ${C.bg}; color: ${C.text}; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden"><div style="position: absolute; top: 0; left: 0; width: 720px; height: 520px; box-sizing: border-box; padding: 24px 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: ${String(gap)}px; opacity: 1; transform: translateY(0px)">${corner()}${children}</div></div></body></html>`;
 }
 
 /** The "results: digits and timeline" frame after its replay, for `data`. */
@@ -227,7 +270,7 @@ export function resultsStripFrame(data: ResultsData): string {
     .map(({ text, minute }) => `<div style="position: absolute; left: ${((minute / data.total) * 600 - 16).toFixed(4)}px; top: 0">${text}</div>`)
     .join('');
   const strip = `<div style="width: 600px; display: flex; flex-direction: column; gap: 6px"><div style="position: relative; width: 600px; height: 12px"><div style="position: absolute; top: 5px; left: 0; width: 600px; height: 2px; background: ${C.track}"></div>${bars}</div><div style="position: relative; width: 600px; height: 14px; font-size: 11px; color: ${C.muted}; font-variant-numeric: tabular-nums"><div style="position: absolute; left: 0; top: 0">${data.start}</div>${hours}<div style="position: absolute; right: 0; top: 0">${data.end}</div></div></div>`;
-  return resultsRoot(22, headline(data.focused) + strip + statsGrid(data.stats, 6) + RESULTS_ACTIONS);
+  return resultsRoot(22, headline(data.focused) + strip + statsGrid(data.stats, 6) + resultsActions());
 }
 
 /** The "results: analog and ring" frame after its replay, for `data` (up to six hours). */
@@ -258,5 +301,5 @@ export function resultsRingFrame(data: ResultsData): string {
   const svg = `<svg role="img" width="230" height="230" viewBox="0 0 250 250">${tracks}<path d="${green === '' ? 'M0 0' : green}" fill="none" stroke="${C.accent}" stroke-width="8"></path><circle cx="125" cy="125" r="104.5" fill="none" stroke="${C.muted}" stroke-width="5" stroke-dasharray="1.5 53.22" transform="rotate(-90.4 125 125)"></circle>${text(125, 10, '0')}${text(240, 125, '15')}${text(125, 240, '30')}${text(10, 125, '45')}<line x1="125" y1="125" x2="125" y2="84" stroke="${C.text}" stroke-width="4" stroke-linecap="round" transform="rotate(${ha} 125 125)"></line><line x1="125" y1="136" x2="125" y2="26" stroke="${C.text}" stroke-width="2" stroke-linecap="round" transform="rotate(${ma} 125 125)"></line><circle cx="125" cy="125" r="4" fill="${C.text}"></circle></svg>`;
   const legend = `<div style="display: flex; gap: 14px; font-size: 11px; color: ${C.muted}"><div style="display: flex; align-items: center; gap: 6px"><div style="width: 10px; height: 10px; border-radius: 2px; background: ${C.accent}"></div>focus</div><div style="display: flex; align-items: center; gap: 6px"><div style="width: 8px; height: 8px; border-radius: 2px; border: 1px solid ${C.faint}"></div>pause</div></div>`;
   const row = `<div style="display: flex; align-items: center; gap: 44px"><div style="display: flex; flex-direction: column; align-items: center; gap: 8px">${svg}${legend}</div><div style="width: 250px">${statsGrid(data.stats, 2)}</div></div>`;
-  return resultsRoot(16, headline(data.focused) + row + RESULTS_ACTIONS);
+  return resultsRoot(16, headline(data.focused) + row + resultsActions());
 }

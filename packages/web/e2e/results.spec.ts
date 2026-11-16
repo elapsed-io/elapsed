@@ -7,7 +7,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { BRAND } from '@stopwatch/core';
-import { endingFrame, resultsRingFrame, resultsStripFrame } from './fixtures/frames.ts';
+import { PAPER, endingFrame, inPalette, resultsRingFrame, resultsStripFrame } from './fixtures/frames.ts';
 import type { ResultsData } from './fixtures/frames.ts';
 import { MINUTE, SECOND, TIMER_END, compareWithReference, endThroughCountdown, finishResults, openApp, settle } from './helpers.ts';
 
@@ -20,8 +20,8 @@ const primary = (page: Page) => page.locator('.button--primary');
  * The frames' sample session, played through the site: started at 14:02,
  * 92 min of focus, a 10 min pause, 48 min, an 8 min pause, then 27 min 40 s.
  */
-async function playSampleSession(page: Page, mode?: string): Promise<void> {
-  await openApp(page, { width: 720, height: 520, ...(mode === undefined ? {} : { mode }) });
+async function playSampleSession(page: Page, mode?: string, settings?: Readonly<Record<string, unknown>>): Promise<void> {
+  await openApp(page, { width: 720, height: 520, ...(mode === undefined ? {} : { mode }), ...(settings === undefined ? {} : { settings }) });
   await page.clock.runFor(90 * SECOND);
   await primary(page).click();
   await page.clock.runFor(92 * MINUTE);
@@ -80,6 +80,12 @@ test('results for digits match the "results: digits and timeline" frame exactly'
   await playSampleSession(page);
   await expect(page.locator('.strip__label').filter({ hasText: '17:00' })).toBeHidden();
   const diff = await compareWithReference(page, browser, resultsStripFrame(SAMPLE));
+  expect(diff).toMatchObject({ differing: 0 });
+});
+
+test('results in the paper theme match the "results, paper theme" frame exactly', async ({ page, browser }) => {
+  await playSampleSession(page, undefined, { theme: 'paper' });
+  const diff = await compareWithReference(page, browser, inPalette(PAPER, () => resultsStripFrame(SAMPLE)));
   expect(diff).toMatchObject({ differing: 0 });
 });
 

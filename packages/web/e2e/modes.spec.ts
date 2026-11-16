@@ -1,4 +1,4 @@
-/** Display modes through the contract, the temporary ?mode= parameter, and lazy loading. */
+/** Display modes through the contract, chosen in settings, and lazy loading. */
 
 import { expect, test } from '@playwright/test';
 import { MINUTE, SECOND, openApp } from './helpers.ts';
@@ -15,13 +15,19 @@ test('loads ring and timeline only when asked for', async ({ page }) => {
   expect(scripts.some((path) => path.includes('/assets/timeline-'))).toBe(false);
 });
 
-for (const value of ['Ring', 'RING', 'analog', 'ocean', '../ring', 'ring;timeline', '', '%3Cscript%3E']) {
-  test(`ignores ?mode=${value} and shows digits`, async ({ page }) => {
-    await openApp(page, { mode: decodeURIComponent(value) });
+for (const value of ['Ring', 'analog', 'ocean', '../ring', '', 42]) {
+  test(`shows digits for a stored mode of ${JSON.stringify(value)}`, async ({ page }) => {
+    await openApp(page, { settings: { mode: value } });
     await expect(page.locator('.screen')).toHaveAttribute('data-mode', 'digits');
     await expect(page.locator('.ring, .timeline')).toHaveCount(0);
   });
 }
+
+test('no longer reads a mode from the address', async ({ page }) => {
+  await page.goto('/?mode=ring');
+  await page.locator('.button--primary').waitFor();
+  await expect(page.locator('.screen')).toHaveAttribute('data-mode', 'digits');
+});
 
 test('the ring tail grows in behind the head and is whole after about nine minutes', async ({ page }) => {
   await openApp(page, { mode: 'ring' });

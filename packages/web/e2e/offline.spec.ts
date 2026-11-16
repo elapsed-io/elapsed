@@ -6,6 +6,7 @@
 
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { corePaths } from './helpers.ts';
 
 test.use({ serviceWorkers: 'allow' });
 
@@ -50,14 +51,8 @@ test('registers the service worker under the CSP and Trusted Types, and works of
   });
   expect(cached.names).toHaveLength(1);
   expect(cached.names[0]).toMatch(/^timer-offline-[0-9a-f]{16}$/);
-  expect(cached.paths.map((path) => path.replace(/^\/assets\/([a-z-]+)-[\w-]+\.(\w+)$/, '/assets/$1.$2')).sort()).toEqual([
-    '/',
-    '/assets/index.css',
-    '/assets/index.js',
-    '/assets/timer-sans.woff2',
-    '/icons/icon.svg',
-    '/manifest.webmanifest',
-  ]);
+  // The core files (as the size check counts them), the manifest and the icon; no display mode or other font.
+  expect(cached.paths).toEqual([...corePaths(), '/icons/icon.svg', '/manifest.webmanifest'].sort());
   expect(cached.paths.filter((path) => path.startsWith('/api/'))).toEqual([]);
 
   await context.setOffline(true);
@@ -79,7 +74,10 @@ test('keeps a display mode picked once for offline use, but never fetches one in
         .filter((url) => /\/assets\/(ring|timeline)-/.test(url)).length,
     );
   expect(await cachedModes()).toBe(0);
-  await page.goto('/?mode=ring');
+  await page.evaluate(() => {
+    localStorage.setItem('settings', JSON.stringify({ schema: 1, mode: 'ring' }));
+  });
+  await page.goto('/');
   await page.locator('.ring__svg').waitFor();
   expect(await cachedModes()).toBeGreaterThan(0);
   await context.setOffline(true);

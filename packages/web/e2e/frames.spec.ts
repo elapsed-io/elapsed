@@ -13,7 +13,7 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { TIMELINE_FRAME_LABELS, checkInFrame, limitFrame, pausedFrame, pausedMissedFrame, ringFrame, runningFrame, timelineFrame } from './fixtures/frames.ts';
+import { PAPER, TIMELINE_FRAME_LABELS, checkInFrame, idleFrame, inPalette, limitFrame, pausedFrame, pausedMissedFrame, ringFrame, runningFrame, timelineFrame } from './fixtures/frames.ts';
 import { createSession, pauseSession, resumeSession, serializeActiveState, startState } from '@stopwatch/core';
 import { MINUTE, SECOND, compareWithReference, holdAnimationsAt, openApp, settle } from './helpers.ts';
 
@@ -39,6 +39,18 @@ test('running after a minute shows hh:mm exactly as the running frame', async ({
   await page.clock.runFor(75 * SECOND);
   await settle(page);
   const diff = await compareWithReference(page, browser, runningFrame(75));
+  expect(diff).toMatchObject({ differing: 0 });
+});
+
+test('idle in the paper theme matches the "idle, paper theme" frame exactly', async ({ page, browser }) => {
+  await openApp(page, { settings: { theme: 'paper' } });
+  const diff = await compareWithReference(page, browser, inPalette(PAPER, idleFrame));
+  expect(diff).toMatchObject({ differing: 0 });
+});
+
+test('the idle frame reconstruction matches the graphite idle screen too', async ({ page, browser }) => {
+  await openApp(page);
+  const diff = await compareWithReference(page, browser, idleFrame());
   expect(diff).toMatchObject({ differing: 0 });
 });
 

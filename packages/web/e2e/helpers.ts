@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { Browser, Page } from '@playwright/test';
+import { coreFiles } from '../scripts/size-budget.ts';
 import { diffPngs } from './pixels.ts';
 import type { PixelDiff } from './pixels.ts';
 
@@ -15,13 +16,28 @@ export const MINUTE = 60 * SECOND;
 export const T_READY = T0 + 30_000;
 
 /**
- * Opens the site with a controllable clock (Date, performance.now and timers),
- * then holds the clock at T_READY so every later moment is exact.
+ * Stores settings before the site's scripts run, as if chosen earlier, unless
+ * settings are already stored (so a reload keeps what the test changed).
  */
-export async function openApp(page: Page, options: { mode?: string; width?: number; height?: number } = {}): Promise<void> {
+export async function seedSettings(page: Page, settings: Readonly<Record<string, unknown>>): Promise<void> {
+  await page.addInitScript((text) => {
+    if (localStorage.getItem('settings') === null) localStorage.setItem('settings', text);
+  }, JSON.stringify({ schema: 1, ...settings }));
+}
+
+/**
+ * Opens the site with a controllable clock (Date, performance.now and timers),
+ * then holds the clock at T_READY so every later moment is exact. `mode`
+ * chooses the display mode through stored settings.
+ */
+export async function openApp(
+  page: Page,
+  options: { mode?: string; width?: number; height?: number; settings?: Readonly<Record<string, unknown>> } = {},
+): Promise<void> {
   await page.setViewportSize({ width: options.width ?? 720, height: options.height ?? 450 });
+  if (options.mode !== undefined || options.settings !== undefined) await seedSettings(page, { ...options.settings, ...(options.mode === undefined ? {} : { mode: options.mode }) });
   await page.clock.install({ time: T0 });
-  await page.goto(options.mode === undefined ? '/' : `/?mode=${encodeURIComponent(options.mode)}`);
+  await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
   await page.locator('.button--primary').waitFor();
   await page.clock.pauseAt(T_READY);
@@ -99,4 +115,14 @@ export async function finishResults(page: Page): Promise<void> {
       await Promise.resolve();
     }
   });
+}
+
+/**
+ * What the first visit loads, from the build the tests run against (the same
+ * reckoning as the size check): the page, its scripts and their static
+ * imports, its stylesheets and the default font, as paths.
+ */
+export function corePaths(): string[] {
+  const dist = fileURLToPath(new URL('../dist', import.meta.url));
+  return coreFiles(dist).map((file) => (file.path === 'index.html' ? '/' : `/${file.path}`));
 }
