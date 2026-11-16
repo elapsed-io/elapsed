@@ -109,7 +109,11 @@ test('a display mode downloads only when picked, into a cache of its own, and wo
   const [ring] = await modeCaches(page);
   expect(ring?.name).toBe('timer-offline-mode-ring');
   // Its code and styles, and its last use; nothing of the other mode, and nothing the version's cache holds.
-  expect(ring?.paths.filter((path) => path !== '/mode-last-use').every((path) => /^\/assets\/ring-[\w-]+\.(js|css)$/.test(path))).toBe(true);
+  // (Its recipe and pieces, and the piece library's small shared modules: nothing of another mode's.)
+  const assets = ring?.paths.filter((path) => path !== '/mode-last-use') ?? [];
+  expect(assets.every((path) => /^\/assets\/[\w-]+\.(js|css)$/.test(path))).toBe(true);
+  expect(assets.some((path) => /^\/assets\/ring-[\w-]+\.js$/.test(path))).toBe(true);
+  expect(assets.filter((path) => /^\/assets\/(digits|timeline|analog|ocean|height|tree|dial|track|light|particles|starfield|profile)-/.test(path))).toEqual([]);
   expect(ring?.paths).toContain('/mode-last-use');
   expect(ring?.paths.some((path) => path.endsWith('.js'))).toBe(true);
   await context.setOffline(true);

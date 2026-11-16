@@ -1,22 +1,22 @@
 /**
- * The display-mode registry. The app finds modes here and never imports one
+ * The display-mode registry. Every mode is a recipe drawn with its pieces (built-in/*.ts). The app finds modes here and never imports one
  * directly. Core-tier modes are bundled; the rest are separate chunks
  * downloaded the first time they are shown (plan, Loading and performance).
  */
 
 import type { DisplayModeFactory } from './contract.ts';
-import { createDigitsMode } from './digits/digits.ts';
+import { createDigitsMode } from './built-in/digits.ts';
 import { MODE_MANIFESTS } from './manifests.ts';
 import type { ModeManifest } from './manifests.ts';
 
 const LOADERS: Readonly<Record<string, () => Promise<DisplayModeFactory>>> = {
   digits: () => Promise.resolve(createDigitsMode),
-  ring: async () => (await import('./ring/ring.ts')).createRingMode,
-  timeline: async () => (await import('./timeline/timeline.ts')).createTimelineMode,
-  analog: async () => (await import('./analog/analog.ts')).createAnalogMode,
-  ocean: async () => (await import('./ocean/ocean.ts')).createOceanMode,
-  height: async () => (await import('./height/height.ts')).createHeightMode,
-  tree: async () => (await import('./tree/tree.ts')).createTreeMode,
+  ring: async () => (await import('./built-in/ring.ts')).createRingMode,
+  timeline: async () => (await import('./built-in/timeline.ts')).createTimelineMode,
+  analog: async () => (await import('./built-in/analog.ts')).createAnalogMode,
+  ocean: async () => (await import('./built-in/ocean.ts')).createOceanMode,
+  height: async () => (await import('./built-in/height.ts')).createHeightMode,
+  tree: async () => (await import('./built-in/tree.ts')).createTreeMode,
 };
 
 export interface RegisteredMode {

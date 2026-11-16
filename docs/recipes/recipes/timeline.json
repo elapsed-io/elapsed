@@ -1,0 +1,60 @@
+{
+  "recipe": 1,
+  "id": "timeline",
+  "name": "timeline",
+  "icon": "timeline",
+  "measure": {
+    "unit": "time",
+    "perMinute": 1
+  },
+  "environment": {
+    "type": "theme"
+  },
+  "layers": [
+    {
+      "type": "time",
+      "id": "time",
+      "size": 56,
+      "position": "top",
+      "seconds": "setting"
+    },
+    {
+      "type": "track",
+      "id": "track",
+      "width": 480,
+      "pxPerMinute": 10,
+      "ticks": {
+        "every": 5,
+        "labelEvery": 10,
+        "format": "hh:mm"
+      },
+      "fadeEnds": true,
+      "past": "theme.muted",
+      "future": "theme.faint",
+      "drawBeforeStart": false,
+      "marker": {
+        "source": "personal-record",
+        "label": "pr: {time}",
+        "color": "theme.pr"
+      }
+    }
+  ],
+  "states": {
+    "paused": {
+      "blur": "display"
+    },
+    "checkin": {
+      "blur": "display"
+    }
+  },
+  "results": {
+    "replay": {
+      "seconds": 2,
+      "easing": "fast",
+      "longSessionExtra": true
+    },
+    "view": {
+      "type": "strip"
+    }
+  }
+}

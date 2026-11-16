@@ -1,6 +1,6 @@
 /**
  * Results replay timing shared by every display mode (plan, Design system > Motion). Each mode keeps its own
- * base length and curve (CONFIG.modes.*.replay); this lengthens any of them for long sessions.
+ * base length and curve (its recipe's results.replay, replayTimingFor()); this lengthens any of them for long sessions.
  */
 
 import { CONFIG } from './config.ts';
@@ -11,6 +11,8 @@ const HOUR = 60 * 60 * 1000;
 export interface ReplayTiming {
   readonly durationMs: number;
   readonly easing: readonly [number, number, number, number];
+  /** Whether sessions over 2 hours replay longer (every built-in recipe says yes); true when left out. */
+  readonly longSessionExtra?: boolean;
 }
 
 /**
@@ -27,5 +29,5 @@ export function longSessionReplayExtraMs(elapsedMs: number): number {
 
 /** A replay's whole length for a session of `elapsedMs`, at normal speed. */
 export function replayLengthMs(timing: ReplayTiming, elapsedMs: number): number {
-  return timing.durationMs + longSessionReplayExtraMs(elapsedMs);
+  return timing.durationMs + (timing.longSessionExtra === false ? 0 : longSessionReplayExtraMs(elapsedMs));
 }

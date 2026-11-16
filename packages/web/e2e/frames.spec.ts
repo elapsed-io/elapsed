@@ -172,7 +172,7 @@ for (const [frame, focus, depth, minutes, into, limit] of [
 ] as const) {
   test(`ocean depth matches the "${frame}" frame`, async ({ page, browser, browserName }) => {
     await sessionAt(page, 'ocean', focus);
-    await freezeAnimations(page, { at: { '.ocean__strip': into } });
+    await freezeAnimations(page, { at: { '.light__strip': into } });
     const diff = await compareWithReference(page, browser, oceanFrame(depth, minutes));
     expectLikeFrame(diff, browserName, () => {
       expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(limit);
@@ -206,7 +206,7 @@ test('control: ocean life a second off fails the paused frame by far', async ({ 
 test('control: ocean water 15 m off fails the running frame by far', async ({ page, browser, browserName }) => {
   test.skip(browserName !== 'chromium' || process.env['PIXEL_REFERENCE'] !== '1', 'exact pixel rules hold only in the reference environment');
   await sessionAt(page, 'ocean', 5 * MINUTE);
-  await freezeAnimations(page, { at: { '.ocean__strip': 0 } });
+  await freezeAnimations(page, { at: { '.light__strip': 0 } });
   const diff = await compareWithReference(page, browser, oceanFrame(90, 5));
   expect(diff.maxChannelDelta).toBeGreaterThan(OCEAN_LEVELS);
 });

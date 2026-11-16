@@ -1,0 +1,80 @@
+{
+  "recipe": 1,
+  "id": "analog",
+  "name": "analog stopwatch",
+  "icon": "analog",
+  "measure": {
+    "unit": "time",
+    "perMinute": 1
+  },
+  "environment": {
+    "type": "theme"
+  },
+  "cycles": [
+    {
+      "id": "hour",
+      "minutes": 60
+    },
+    {
+      "id": "half-day",
+      "minutes": 720
+    }
+  ],
+  "layers": [
+    {
+      "type": "dial",
+      "id": "dial",
+      "cycle": "hour",
+      "radius": 150,
+      "ticks": {
+        "major": 12,
+        "minor": 60
+      },
+      "labels": {
+        "count": 12,
+        "format": "minutes"
+      },
+      "hand": {
+        "length": 114,
+        "width": 2.5,
+        "color": "theme.accent"
+      },
+      "subdials": [
+        {
+          "cycle": "half-day",
+          "radius": 22,
+          "offset": [
+            0,
+            50
+          ],
+          "labels": 0,
+          "hand": {
+            "length": 16,
+            "width": 2,
+            "color": "theme.text"
+          }
+        }
+      ]
+    }
+  ],
+  "states": {
+    "paused": {
+      "blur": "display"
+    },
+    "checkin": {
+      "blur": "display"
+    }
+  },
+  "results": {
+    "replay": {
+      "seconds": 2,
+      "easing": "fast",
+      "longSessionExtra": true
+    },
+    "view": {
+      "type": "rings-per-hour",
+      "hand": true,
+      "fitAfterHours": 6
+    }
+  }
+}

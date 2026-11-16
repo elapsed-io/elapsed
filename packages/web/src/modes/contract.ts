@@ -4,7 +4,7 @@
  * digits is built through it, not as a special case.
  */
 
-import type { ReplayTiming, SecondsDisplay, Session, TimerEvents, TimerView, TreeView } from '@stopwatch/core';
+import type { ReplayTiming, SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
 
 /**
  * What a mode reads from the site. The site owns this object and may change
@@ -24,21 +24,21 @@ export interface DisplayContext {
   readonly lowPower: boolean;
   /** The modes' own options (Settings > Display), as they are now. */
   readonly options: ModeOptions;
+  /**
+   * The contrast switch (plan, Display modes; owner, changes 3): over a bright environment, a mode tells the site
+   * how far the time, the icons and the labels have switched to its dark colour (0 none, 1 all), and which colour
+   * that is; the site's stylesheets mix them. Set back to 0 when the mode goes.
+   */
+  readonly chrome?: (darkShare: number, dark: string) => void;
 }
 
 /**
- * A mode's own options (plan, Interface: "each display mode's options live in the display mode section"),
- * as the site's settings hold them. Release 2 adds them round by round: results landmarks in 2.3, ocean life
- * in 2.4, the tree's view in 2.6.
+ * A mode's own options (plan, Interface: "each display mode's options live in the display mode section", each in
+ * its own options box): the values of its recipe's options, by the recipe's option ids, as the site's settings
+ * hold them (ocean depth: "ocean-life" and "landmarks"; height: "landmarks"; tree: "tree-view"). An option the
+ * settings do not hold takes the recipe's default.
  */
-export interface ModeOptions {
-  /** Sea life drifts in while a session is paused (ocean depth). */
-  readonly oceanLife: boolean;
-  /** Random landmarks on the results' profile chart (ocean depth, height). */
-  readonly resultsLandmarks: boolean;
-  /** The tree's view: side or isometric. */
-  readonly treeView: TreeView;
-}
+export type ModeOptions = Readonly<Record<string, string | boolean>>;
 
 /**
  * Where a results replay draws (decision 291): `graphic`, the replay's own place on the results card (the

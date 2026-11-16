@@ -108,5 +108,28 @@ export type { Landmark, LandmarkId, OceanZone } from './modes/ocean.ts';
 export { HEIGHT_LANDMARKS, atmosphereLayer, heightReached, pickHeightLandmarks, skyColour, skyLitColour, spreadHeightLandmarks, starsOpacity } from './modes/height.ts';
 export type { AtmosphereLayer, HeightLandmark, HeightLandmarkId } from './modes/height.ts';
 export { pickByBand, spreadBy } from './modes/landmarks.ts';
-export { grassColour, grassWeights, leafColour, leafScale, leafState, mixColour, seasonPhase, shares, stackedColour, treeGrowth, weather, yearPhase } from './modes/tree.ts';
+export { grassColour, grassWeights, leafColour, leafScale, leafState, mixColour, seasonPhase, shares, stackedColour, weather, yearPhase } from './modes/tree.ts';
 export type { LeafState, Weather } from './modes/tree.ts';
+export { DIGITS_RECIPE, checkRecipe, parseRecipe, recipeOrDigits } from './recipes/load.ts';
+export type { LoadOptions, RecipeResult } from './recipes/load.ts';
+export { RECIPE_LIMITS } from './recipes/limits.ts';
+export {
+  RECIPE_MINUTE_MS,
+  TEXT_CONTRAST,
+  bindingAt,
+  contrastText,
+  cycleShare,
+  environmentColour,
+  focusFor,
+  lightColour,
+  measureAt,
+  measureText,
+  phaseAt,
+  replayTimingFor,
+  smoothstep,
+  sourceValue,
+  stopsAt,
+  zoneAt,
+} from './recipes/measure.ts';
+export type { BindingInputs } from './recipes/measure.ts';
+export type * from './recipes/types.ts';

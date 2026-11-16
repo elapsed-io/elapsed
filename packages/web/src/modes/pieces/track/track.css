@@ -1,0 +1,92 @@
+/*
+ * Timeline mode, as the revised timeline frame: the time (which scales with
+ * the window) above a track drawn in CSS pixels that are never scaled. The
+ * track is at most its frame width; on narrower windows less of it shows,
+ * centred on now, and both ends fade out.
+ */
+@layer mode {
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: max(calc(var(--timeline-inner-gap) * 1px), calc(var(--timeline-inner-gap) * var(--u) * var(--time-scale)));
+  }
+
+  .timeline__track {
+    display: block;
+    overflow: hidden;
+    width: min(var(--timeline-width), calc(var(--view-width) - 2 * var(--timeline-edge)));
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--timeline-fade), #000 calc(100% - var(--timeline-fade)), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 var(--timeline-fade), #000 calc(100% - var(--timeline-fade)), transparent);
+  }
+
+  /*
+   * As in the frame, the drawing is inline in its block, so the line it sits
+   * on adds the font's descent below it; centred by margin when the track is
+   * narrower than the drawing.
+   */
+  .timeline__frame {
+    display: inline-block;
+    position: relative;
+    margin-left: calc((100% - var(--timeline-width)) / 2);
+    width: var(--timeline-width);
+    height: var(--timeline-height);
+  }
+
+  /* Now is the centre: the past line shows only left of it, the future line only right of it. */
+  .timeline__half {
+    position: absolute;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .timeline__half--past {
+    left: 0;
+  }
+
+  .timeline__half--future {
+    left: 50%;
+  }
+
+  /* Each layer is drawn once, ready to glide as a whole on the compositor; while it stands still (held, or
+     with reduced motion) it is drawn in place. */
+  .timeline__glide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    will-change: transform;
+  }
+
+  .timeline__glide--still {
+    will-change: auto;
+  }
+
+  .timeline__svg {
+    display: block;
+    overflow: visible;
+  }
+
+  .timeline__strip--past {
+    fill: var(--track-past, var(--color-muted));
+  }
+
+  .timeline__strip--future {
+    fill: var(--track-future, var(--color-faint));
+  }
+
+  /* A track without faded ends. */
+  .timeline__track--sharp {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .timeline__label {
+    fill: var(--color-muted);
+    font-family: var(--font-family);
+    font-size: var(--timeline-label-size);
+    font-variant-numeric: tabular-nums;
+    text-anchor: middle;
+  }
+}

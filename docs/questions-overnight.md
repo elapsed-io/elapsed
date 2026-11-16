@@ -1,14 +1,28 @@
-# Overnight: Release 2, rounds 2.1 to 2.7
+# Overnight: Release 2, rounds 2.1 to 2.8
 
 Working unattended on `claude/release-2` (owner, 2026-11-16 evening). The morning summary goes at the top
 when the run stops; questions for the owner are collected below as they come up.
 
 ## Morning summary
 
-Stopped after round 2.6: rounds 2.1 to 2.6 are done, checked in all three browsers and pushed. Round 2.7
-(interstellar) is not started: its turning sky is drawn from an all-sky star catalog whose licence you asked me
-to confirm, and it is not clear (question 9). The round cannot be finished without that answer, and the rules
-say a round is finished whole or not started on top of an unfinished one.
+Stopped after round 2.7 (recipes, the new round your changes 3 inserted): it is done, checked in all three
+browsers and pushed. Round 2.8 (interstellar, now as a recipe) is next and unblocked by your answer on the star
+catalog (HYG under CC BY-SA); I stopped here because the overnight run was scoped to end at round 2.7.
+
+**Tonight, round 2.7: recipes**
+
+- **Every display mode is now its recipe**, drawn by one recipe mode and a piece library (ring, dial, track,
+  tree, the light-falloff water and sky, particles, the starfield, and the strip, rings-per-hour, profile and
+  scene results views); the modes' own code is gone. Each mode still matches its frames.
+- **The loader** checks every recipe on load (the schema through the site's own validator, then references,
+  tuples, colours, slot paths and the runtime limits) and refuses a failing one: the mode shows digits. The
+  checker's validation, reference checks and 49 features are unit tests (48 hold now; the tree's "your art" is
+  round 2.9), with 45 safety cases, each refused.
+- **Recipes corrected where the frames win** (decision 320), and two things the frames do not draw left out
+  until you say (the tree's falling snow; ocean life's random arrivals, question 11).
+- **Your answers built:** the contrast switch (navy over bright water and sky; question 10 asks about its
+  crossfade), every mode's own options box (height's landmarks switch, the tree's view as a segmented control),
+  height's landmarks to the Kármán line, and the corrected height paused frame.
 
 **What each round built**
 
@@ -40,6 +54,7 @@ say a round is finished whole or not started on top of an unfinished one.
   (leaves growing, deepening, turning and falling, snow in winter, the isometric field's grass), its colours
   changed by opacity alone; its results growing the tree through the session's seasons from the one replay
   progress; its tile. The view option exists in settings but has no control yet (no frame draws it).
+- **Round 2.7, recipes:** above.
 
 **Test results** (each round: `npm run check`, then the whole end-to-end suite in Chromium, Firefox and
 WebKit through the reference image)
@@ -47,8 +62,9 @@ WebKit through the reference image)
 - Release 1 after the motion changes: 549 passed, 6 skipped (declared), 0 failed.
 - Release 2 after round 2.3: 693 passed, 12 skipped, 0 failed. After round 2.4: 711 passed, 13 skipped, and two
   WebKit page loads that stalled once (see the progress log; both passed four times over when repeated). After
-  round 2.5: 779 passed, 16 skipped, 0 failed. After round 2.6: 822 passed, 18 skipped, 0 failed.
-- Unit tests: 528 on Release 1, 567 on Release 2.
+  round 2.5: 779 passed, 16 skipped, 0 failed. After round 2.6: 822 passed, 18 skipped, 0 failed. After round
+  2.7: 825 passed, 18 skipped, 0 failed.
+- Unit tests: 528 on Release 1, 567 on Release 2 after round 2.6, 712 after round 2.7.
 - Along the way, intermittent failures were traced and fixed rather than retried: a test that re-created a
   cache it was checking (2.2), CSP reports read before the browser fired them, a helper fooled by a leftover
   countdown animation, transitions a busy WebKit starts a frame late, and Chromium's compositor drawing a
@@ -57,27 +73,19 @@ WebKit through the reference image)
 
 **Skipped and why**
 
-- Round 2.7 (interstellar): not started, waiting on the star catalog's licence (question 9).
-- The tree's view control: the setting and both views are built; the control waits for a frame (question 8).
-- Nothing was deployed, merged into Release 1 beyond your items 1 and 2 (and the test fixes they needed),
-  released, or changed on Cloudflare or GitHub settings.
+- Round 2.8 (interstellar) not started: the run ends at round 2.7. It is unblocked.
+- Not built in 2.7, as the plan places them later: the tree's "your art" (round 2.9) and the slot controls
+  (replace, reset, download template; round 2.9).
+- Nothing was deployed, merged into Release 1, released, or changed on Cloudflare or GitHub settings.
 
 **Questions waiting for you** (details in "Questions for the owner" below)
 
 1. The analog hours hand: glide (built, 42° at 1 h 24 min) or whole hours as drawn (30°)?
-2. Ocean icons near the surface: the frames' #9EC3D6 is 2.39:1 over the surface water; keep, or lighten?
 3. The placeholder art's licence (it is outside the GPL under its own licence file, with no licence granted
    yet).
-4. Height's paused frame draws a darker sky, brighter stars, another star field and another time than the
-   light model gives at its altitude: built per the plan; right?
-5. Height near the ground: icons below 3:1 for the first 1,937 m, paused labels below 4.5:1 for the first
-   8,654 m, as drawn; keep, or lighten?
-6. Height's landmarks stop at 25 km (the frame's eight): add higher ones?
-7. Should height get its own options box with "results landmarks" (today the one switch covers both)?
-8. The tree's view option has no frame: how should its control look?
-9. The star catalog for interstellar's turning sky: which one, under which licence?
-10. An intermittent WebKit page-load stall in the reference image under full load (progress log): watch it in
-    CI.
+10. The contrast switch: instant (built, as the motion rule allows) or a short colour crossfade?
+11. Ocean life: the frame's fixed arrangement (built) or the recipe's random arrivals, now or with the final art?
+- And to watch: an intermittent WebKit page-load stall in the reference image under full load (progress log).
 
 ## Progress log
 
@@ -128,8 +136,18 @@ WebKit through the reference image)
   reference image), the kill-switch test found a cache the service worker was still filling; it passed three
   times over on its own and in the reference run.
 - Stopped before round 2.7 (question 9).
+- Changes 3 (2026-11-16): plan version 7 adopted (the admin address redacted as before), the recipes unzipped
+  into docs/recipes, the breakdown renumbered (2.7 recipes, 2.8 interstellar, 2.9 layout editor and images,
+  2.10 picture-in-picture, wake lock and the check-ins switch, 2.11 hardening).
+- Round 2.7: recipes (decisions 319 to 331). Every mode is now its recipe drawn by the piece library; the
+  loader refuses a failing recipe and shows digits. Corrections to the recipes, where the frames win, are in
+  decision 320. Checks: `npm run check` (712 unit tests, one to do in round 2.9; core JavaScript 49.0 KB of 50 KB); the
+  reference image in Chromium, Firefox and WebKit: 825 passed, 18 skipped as declared, 0 failed.
 
 ## Questions for the owner
+
+Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 and 9; their answers are built in
+round 2.7 (decisions 327 to 330) and 2.8. Still open: 1 and 3, and the new 10 and 11.
 
 1. **The analog hours hand (round 2.2).** The analog frame draws the hours subdial's hand at the whole hour
    (30° at 1 h 24 min). The plan's rule that anything moving with time glides puts it at 42°, which is what
@@ -172,3 +190,16 @@ WebKit through the reference image)
    projected, magnitude-limited sky strip is a modified version. Which would you like: the Bright Star Catalog
    (after asking its keepers), or another catalog with a clear licence (for example the HYG database under
    CC BY-SA, whose share-alike would apply to that one art file)? Round 2.7 waits for this.
+10. **The contrast switch's crossfade (round 2.7, decision 327).** You asked for the time, icons and labels to
+    switch from white to deep navy where the sky or the water is bright, "crossfading as it darkens". The switch
+    is built: navy until 4,046 m in height and 4.3 m in ocean depth, where the frames' palette starts to meet
+    the contrast rule better (weighing the time, the icons and the labels together). It switches at once, at
+    the display's next redraw (once a minute while seconds are hidden), because a crossfade animates colour,
+    which the plan's motion rule does not allow. Is the instant switch right, or should it crossfade (a one-off
+    colour fade of about 0.2 s, an exception to the motion rule)?
+11. **Ocean life's arrivals (round 2.7, decision 323).** The recipe gives ocean life random arrivals from each
+    zone's catalog (every 3 to 9 s, at most 4 at once, each staying 8 to 20 s), as the plan describes; the
+    "ocean depth, paused" frame draws a fixed placeholder arrangement (three schools at three distances and
+    seven bubbles), which is what the site draws. Should the random arrivals replace the frame's arrangement now,
+    or when the commissioned art arrives?
+

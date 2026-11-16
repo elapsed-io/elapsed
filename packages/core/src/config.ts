@@ -179,10 +179,15 @@ export const CONFIG = {
     resultsFadeIn: 300,
     resultsRisePx: 6,
     /**
-     * The replay starts at 0.5 s; its length and curve are each mode's own (CONFIG.modes.*.replay). Sessions
+     * The replay starts at 0.5 s; its length and curve are each mode's own (its recipe's results.replay). Sessions
      * over 2 hours replay longer: 0.5 s more for each doubling past 2 hours, at most 1.5 s more.
      */
     replayDelay: 500,
+    /**
+     * The replay curves a recipe chooses from (results.replay.easing): fast, the fast exponential ease-out of digits,
+     * ring, timeline, analog and interstellar; gentle, the gentler ease-out of ocean depth, height and tree.
+     */
+    replayEasing: { fast: [0.16, 1, 0.3, 1] as const, gentle: [0.33, 1, 0.68, 1] as const },
     replayLongSession: { fromHours: 2, perDoubling: 500, max: 1500 },
     /**
      * Every interface animation's duration is multiplied by this ("normal"
@@ -252,6 +257,9 @@ export const CONFIG = {
       /** The "paused after a missed check-in" frame: the check-in's time 12 px below the pause length, 13 px muted. */
       missedPx: 13,
       missedGapPx: 12,
+      /** A recipe's paused caption (height's altitude and layer, the "height, paused" frame): 11 px, 16 px above the bottom. */
+      captionPx: 11,
+      captionBottomPx: 16,
     },
     /** The check-in frame: "press any key if you're still here" in 15 px foreground text over the held time. */
     checkIn: {
@@ -432,14 +440,9 @@ export const CONFIG = {
 
   /** Display modes (Design system > Display modes; Decisions already made). */
   modes: {
-    /**
-     * Each mode's results replay: its length and curve (plan, Design system > Motion). Digits 1.4 s; ring,
-     * timeline, analog and interstellar 2.0 s; ocean depth, height and tree, whose visuals are the point,
-     * 3.0 s on a gentler ease-out.
-     */
-    digits: { replay: { durationMs: 1400, easing: [0.16, 1, 0.3, 1] as const } },
+    // Each mode's results replay (its length and curve) is its recipe's (docs/recipes/recipes), from the two
+    // curves above (motion.replayEasing).
     ring: {
-      replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const },
       revolution: 1 * HOUR,
       trackPx: 8,
       /** The tail: up to 55° long, one smooth conic gradient fading from the accent at the head to nothing. */
@@ -457,7 +460,6 @@ export const CONFIG = {
       gapPx: 20,
     },
     analog: {
-      replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const },
       revolution: 1 * HOUR,
       labelEveryMinutes: 5,
       /** The hours subdial's hand turns once in this long. */
@@ -477,7 +479,6 @@ export const CONFIG = {
       hoursLabelPx: 10,
     },
     timeline: {
-      replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const },
       minutesPer100Px: 10,
       tickEveryMinutes: 5,
       labelEveryMinutes: 10,
@@ -504,7 +505,6 @@ export const CONFIG = {
       gapPx: 30,
     },
     ocean: {
-      replay: { durationMs: 3000, easing: [0.33, 1, 0.68, 1] as const },
       metresPerFocusedMinute: 15,
       maxDepthMetres: 10_935,
       surfaceLinearRgb: [0.0232, 0.212, 0.392] as readonly [number, number, number],
@@ -680,7 +680,6 @@ export const CONFIG = {
       },
     },
     height: {
-      replay: { durationMs: 3000, easing: [0.33, 1, 0.68, 1] as const },
       metresPerFocusedMinute: 140,
       maxHeightMetres: 100_000,
       /** The sky: linear RGB × e^(−K·h / 8,500 m), across ±1,500 m of the screen (plan, Display modes). */
@@ -696,7 +695,10 @@ export const CONFIG = {
       landmarkBandMetres: 10_000,
       /** Where each layer of the atmosphere ends (metres); the thermosphere runs to the top. */
       layers: { troposphere: 12_000, stratosphere: 50_000, mesosphere: 85_000 },
-      /** The landmarks a replay may show, by height (the "results: height (build this one)" frame; names in the brand module). */
+      /**
+       * The landmarks a replay may show, by height (the "results: height (build this one)" frame to 25 km, then to the
+       * Kármán line; names in the brand module).
+       */
       landmarks: [
         [828, 'burjKhalifa'],
         [5100, 'highestTown'],
@@ -706,6 +708,15 @@ export const CONFIG = {
         [18_300, 'concorde'],
         [19_000, 'armstrongLimit'],
         [25_000, 'ozoneLayer'],
+        // To the Kármán line (owner, changes 3): the meteors' band (about 80 to 100 km) at its middle.
+        [38_969, 'baumgartner'],
+        [41_422, 'eustace'],
+        [50_000, 'stratopause'],
+        [53_000, 'highestBalloon'],
+        [80_000, 'astronautWings'],
+        [83_000, 'noctilucent'],
+        [90_000, 'meteors'],
+        [100_000, 'karman'],
       ] as const,
       /** The height tile's preview (the Release 2 display frame): a mountain, its summit, and a star. */
       tile: { mountain: 'muted', summit: 'text', star: 'accent' } as const,
@@ -715,8 +726,6 @@ export const CONFIG = {
       gapPx: 22,
       /** The stars: the frames' own field, tinted (the "height, full climb" frame). */
       stars: { faint: '#DCE4FF', white: '#EAF0FF', warm: '#FFD2A6' },
-      /** While paused, the altitude and the layer, 11 px, 16 px above the bottom (the "height, paused" frame). */
-      altitudeLine: { textPx: 11, bottomPx: 16 },
       /**
        * While paused, once stars are visible: shooting stars, a few at a time, each about a second, at random
        * intervals of 7 to 15 s; each 60 to 130 px long, 1 to 2 px thick, white, pale gold, pale green or pale
@@ -781,13 +790,6 @@ export const CONFIG = {
          * opens in the colour the session ended in and crosses to the ground's over 0.35 s as the replay begins.
          */
         lit: { dim: 0.65, aboveMetres: 1500, belowMetres: 1500, blackFromMetres: 72_000, crossfadeMs: 350, stepMetres: 100 },
-        /** Stars fade in from 18 km to 42 km of the replay (the results frame's own star field, at 720 × 520). */
-        stars: { fromMetres: 18_000, spanMetres: 24_000 },
-        /**
-         * Earth's curved horizon: a 3,200 px disc whose top rises from 530 px into the card as the climb passes
-         * 15 km (fading in over 8 km), then 50 px more by 100 km, showing more of its curve.
-         */
-        horizon: { diameterPx: 3200, fromPx: 530, risePx: 70, fadeFromMetres: 15_000, fadeSpanMetres: 8000, highFromMetres: 23_000, highSpanMetres: 77_000, highRisePx: 50, glowPx: 40, glowSpreadPx: 10, colours: { body: '#0B2A4E', rim: '#2B6FB0', edge: 'rgba(120,190,255,0.0)', glow: 'rgba(110,180,255,0.45)' }, stops: { body: 0.92, rim: 0.988 } },
         /**
          * Things passing as the replay climbs past their heights, falling past you (placeholder silhouettes through
          * the asset registry): each falls from −90 px to 550 px of a 520 px card while the climb goes from `from`
@@ -811,14 +813,10 @@ export const CONFIG = {
       },
     },
     tree: {
-      replay: { durationMs: 3000, easing: [0.33, 1, 0.68, 1] as const },
       yearPerFocused: 1 * HOUR,
       season: 15 * MINUTE,
       /** Each leaf cluster is offset by up to a quarter season (the frames' offsets, 0 to 0.5, scaled as they scale them). */
       clusterOffsetSeasons: 0.25,
-      /** The results tree reaches full size at 60 focused minutes, from 45 %. */
-      fullSizeFocus: 60 * MINUTE,
-      resultsScale: { from: 0.45 },
       /**
        * The leaves' colours through the year, in order (the frames' season()): spring from #C2DE8E to #86C060,
        * summer to #3E8B47, autumn through #D9822F to #A9502A. Each cluster is drawn in these five colours,
@@ -844,7 +842,6 @@ export const CONFIG = {
       stepsPerMinute: 60,
     },
     interstellar: {
-      replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const },
       /** Map radius at reference: 26 + 30·log10(AU / 0.3) px. */
       mapRadiusBasePx: 26,
       mapRadiusPerDecadePx: 30,

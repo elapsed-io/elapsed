@@ -7,6 +7,7 @@ import { resultsHeightLitFrame } from './fixtures/frames.ts';
 import type { FrameLandmark, ResultsData } from './fixtures/frames.ts';
 import { heightFrame, heightPausedFrame } from './fixtures/mode-frames.ts';
 import { MINUTE, SECOND, T0, T_READY, compareWithReference, endThroughCountdown, finishResults, freezeAnimations, openApp, settle } from './helpers.ts';
+import { builtInRecipe } from './fixtures/recipes.ts';
 import { expectLikeFrame } from './pixels.ts';
 import type { Clip } from './helpers.ts';
 
@@ -42,9 +43,9 @@ interface Sky {
 const fourDecimals = (transform: string): string => transform.replace(/-?\d+\.\d+/g, (number) => String(Number(Number(number).toFixed(4))));
 
 async function sky(page: Page): Promise<Sky> {
-  const drawn = await page.locator('.height__sky').evaluate((element) => {
-    const strip = element.querySelector<HTMLElement>('.height__strip');
-    const stars = element.querySelector<HTMLElement>('.height__stars');
+  const drawn = await page.locator('.light').evaluate((element) => {
+    const strip = element.querySelector<HTMLElement>('.light__strip');
+    const stars = element.querySelector<HTMLElement>('.starfield');
     if (strip === null || stars === null) throw new Error('no sky');
     const found = strip.style.backgroundImage.match(/rgb\([^)]*\)/g) ?? [];
     const effect = (target: HTMLElement): KeyframeEffect | null => {
@@ -56,7 +57,7 @@ async function sky(page: Page): Promise<Sky> {
     const frames = glide?.getKeyframes() ?? [];
     const starFrames = twinkle?.getKeyframes() ?? [];
     return {
-      still: strip.classList.contains('height__strip--still'),
+      still: strip.classList.contains('light__strip--still'),
       height: strip.style.height,
       bottom: found[0] ?? '',
       top: found.at(-1) ?? '',
@@ -107,7 +108,7 @@ test('the stars fade in with the climb, from 18 km to 42 km, gliding with the sk
   const stars = (await sky(page)).stars.glide;
   expect(stars?.[0]).toBeCloseTo(sm((29_960 - 18_000) / 24_000), 6);
   expect(stars?.[1]).toBeCloseTo(sm((30_100 - 18_000) / 24_000), 6);
-  await expect(page.locator('.height__stars .art circle')).toHaveCount(127);
+  await expect(page.locator('.starfield .art circle')).toHaveCount(127);
   // Paused, they hold exactly where the climb is.
   await primary(page).click();
   await settle(page);
@@ -162,19 +163,32 @@ test('height stops at 100 km', async ({ page }) => {
 });
 
 test('the height palette keeps its text and buttons readable over the sky, the icons dimmer while paused', async ({ page }) => {
-  await openApp(page, { mode: 'height' });
-  const colours = (): Promise<{ time: string; icon: string }> =>
+  const colours = (): Promise<{ time: string; icon: string; button: string }> =>
     page.locator('.screen').evaluate((screen) => {
       const time = screen.querySelector('.time--main');
       const icon = screen.querySelector('.icon-button--settings');
-      return { time: time === null ? '' : getComputedStyle(time).color, icon: icon === null ? '' : getComputedStyle(icon).color };
+      const button = screen.querySelector('.controls button');
+      return { time: time === null ? '' : getComputedStyle(time).color, icon: icon === null ? '' : getComputedStyle(icon).color, button: button === null ? '' : getComputedStyle(button).color };
     });
-  expect(await colours()).toEqual({ time: 'rgb(238, 244, 250)', icon: 'rgb(201, 220, 238)' });
-  await primary(page).click();
-  await page.clock.runFor(MINUTE);
+  // Near the ground, where the sky is bright, the time and the icons are deep navy (owner, changes 3); the buttons keep theirs.
+  await openApp(page, { mode: 'height' });
+  const navy = 'rgb(14, 36, 64)';
+  expect(await colours()).toEqual({ time: navy, icon: navy, button: 'rgb(238, 244, 250)' });
+  // Above the switch (4,046 m), the frames' own palette.
+  await restoreAt(page, 13_388_571);
+  expect(await colours()).toMatchObject({ time: 'rgb(238, 244, 250)', icon: 'rgb(201, 220, 238)' });
   await primary(page).click();
   await settle(page);
   expect((await colours()).icon).toBe('rgb(154, 166, 200)');
+});
+
+test('the contrast switch turns the time and the icons back from navy as the sky darkens past 4,046 m', async ({ page }) => {
+  const contrast = (): Promise<string | undefined> => page.locator('.screen').evaluate((screen) => (screen as HTMLElement).dataset['contrast']);
+  // 4,046 m is reached after 28 minutes 54 seconds of focus; the display redraws on the minute.
+  await restoreAt(page, 28 * MINUTE + 50 * SECOND);
+  expect(await contrast()).toBe('dark');
+  await page.clock.runFor(20 * SECOND);
+  expect(await contrast()).toBeUndefined();
 });
 
 /** Everything about the pause's streaks, read from the page. */
@@ -205,16 +219,17 @@ test('paused above the stars: the altitude line, shooting stars and a shower, al
   await restoreAt(page, 13_388_571);
   await primary(page).click();
   await settle(page);
-  await expect(page.locator('.height__altitude')).toHaveText('31,240 m · stratosphere');
-  await expect(page.locator('.height__altitude')).toHaveCSS('opacity', '1');
+  await expect(page.locator('.recipe__caption')).toHaveText('31,240 m · stratosphere');
+  await expect(page.locator('.recipe__caption')).toHaveCSS('opacity', '1');
   const drawn = await meteors(page);
   const shooting = drawn.filter((meteor) => !meteor.shower);
   const shower = drawn.filter((meteor) => meteor.shower);
   const { meteors: m } = HEIGHT;
+  const recipeColours = builtInRecipe('height').layers.flatMap((layer) => (layer.type === 'particles' ? (layer.colors ?? []) : []));
+  expect(recipeColours).toHaveLength(4);
   expect(shooting).toHaveLength(m.count);
   expect(shower.length).toBeGreaterThanOrEqual(m.shower.count.min);
   expect(shower.length).toBeLessThanOrEqual(m.shower.count.max);
-  const colours = m.colours.map((colour) => colour.replaceAll(',', ', '));
   for (const meteor of drawn) {
     expect(meteor.css).toBe(true);
     expect(meteor.iterations).toBe('infinite');
@@ -222,7 +237,7 @@ test('paused above the stars: the altitude line, shooting stars and a shower, al
     expect(meteor.width).toBeLessThanOrEqual(m.lengthPx.max);
     expect(meteor.height).toBeGreaterThanOrEqual(m.thicknessPx.min);
     expect(meteor.height).toBeLessThanOrEqual(m.thicknessPx.max);
-    expect([...m.colours, ...colours]).toContain(meteor.colour);
+    expect(recipeColours).toContain(meteor.colour.toUpperCase());
   }
   for (const meteor of shooting) {
     expect(meteor.name).toBe('height-shoot');
@@ -247,7 +262,7 @@ test('paused above the stars: the altitude line, shooting stars and a shower, al
   await primary(page).click();
   await settle(page);
   await expect(page.locator('.meteors')).toHaveCount(0);
-  await expect(page.locator('.height__altitude')).toHaveCSS('opacity', '0');
+  await expect(page.locator('.recipe__caption')).toHaveCSS('opacity', '0');
 });
 
 test('paused below the stars: the altitude line, and no shooting stars', async ({ page }) => {
@@ -256,7 +271,7 @@ test('paused below the stars: the altitude line, and no shooting stars', async (
   await page.clock.runFor(84 * MINUTE);
   await primary(page).click();
   await settle(page);
-  await expect(page.locator('.height__altitude')).toHaveText('11,760 m · troposphere');
+  await expect(page.locator('.recipe__caption')).toHaveText('11,760 m · troposphere');
   await expect(page.locator('.meteor')).toHaveCount(0);
 });
 
@@ -270,7 +285,7 @@ for (const [how, settings, reduce] of [
     await primary(page).click();
     await settle(page);
     await expect(page.locator('.meteor')).toHaveCount(0);
-    await expect(page.locator('.height__altitude')).toHaveCSS('opacity', '0');
+    await expect(page.locator('.recipe__caption')).toHaveCSS('opacity', '0');
   });
 }
 
@@ -312,7 +327,7 @@ for (const [frame, focus, h, hhmm] of [
     // Half a second into the minute, so it reads as that minute; the glide is frozen at the minute's start.
     await restoreAt(page, focus + 500);
     await settle(page);
-    await freezeAnimations(page, { at: { '.height__strip': 0, '.height__stars': 0 } });
+    await freezeAnimations(page, { at: { '.light__strip': 0, '.starfield': 0 } });
     const diff = await compareWithReference(page, browser, heightFrame(h, hhmm));
     expectLikeFrame(diff, browserName, () => {
       expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(HEIGHT_TEXT_EDGES);
@@ -345,7 +360,7 @@ test('control: the sky 1,000 m off fails the running frame by far', async ({ pag
   test.skip(browserName !== 'chromium' || process.env['PIXEL_REFERENCE'] !== '1', 'exact pixel rules hold only in the reference environment');
   await restoreAt(page, 84 * MINUTE + 500);
   await settle(page);
-  await freezeAnimations(page, { at: { '.height__strip': 0, '.height__stars': 0 } });
+  await freezeAnimations(page, { at: { '.light__strip': 0, '.starfield': 0 } });
   for (const clip of SKY_ONLY) expect((await compareWithReference(page, browser, heightFrame(12_760, '01:24'), clip)).maxChannelDelta).toBeGreaterThan(HEIGHT_LEVELS);
 });
 
@@ -399,7 +414,7 @@ const LANDMARK_EDGES = 250;
 const LANDMARK_SMOOTHED = 20;
 
 test('results for height match the "results: height (build this one)" frame exactly, without landmarks', async ({ page, browser, browserName }) => {
-  await playSampleSession(page, { resultsLandmarks: false });
+  await playSampleSession(page, { heightLandmarks: false });
   await expect(page.locator('.profile__landmark')).toHaveCount(0);
   const diff = await compareWithReference(page, browser, resultsHeightLitFrame(SAMPLE, []));
   expectLikeFrame(diff, browserName, () => {
@@ -485,11 +500,11 @@ async function card(page: Page) {
       const element = results.querySelector(selector);
       return element === null ? null : getComputedStyle(element);
     };
-    const horizon = results.querySelector('.climb__horizon')?.getBoundingClientRect();
+    const horizon = results.querySelector('.card-shape')?.getBoundingClientRect();
     const box = results.getBoundingClientRect();
     return {
-      stars: Number(style('.climb__stars')?.opacity),
-      horizon: Number(style('.climb__horizon')?.opacity),
+      stars: Number(style('.card-stars')?.opacity),
+      horizon: Number(style('.card-shape')?.opacity),
       horizonTop: horizon === undefined ? Number.NaN : horizon.top - box.top,
       end: Number(style('.lit__end')?.opacity),
     };

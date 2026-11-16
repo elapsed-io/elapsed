@@ -25,12 +25,13 @@ import {
   SECONDS_DISPLAYS,
   SETTINGS_CATEGORIES,
   THEME_IDS,
+  TREE_VIEWS,
   declarationOf,
   normaliseHex,
   resetCategory,
   withSetting,
 } from '@stopwatch/core';
-import type { AnimationSpeed, ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId } from '@stopwatch/core';
+import type { AnimationSpeed, ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId, TreeView } from '@stopwatch/core';
 import { parseSettingsFile, settingsFile, settingsFileName } from '@stopwatch/core/settings-file';
 import 'virtual:tokens/settings.css';
 import { html, svg } from '../dom.ts';
@@ -492,41 +493,61 @@ export class SettingsPanel {
   }
 
   /**
-   * The chosen mode's own options, in a box under the tiles, as the Release 2 display frame draws "ocean
-   * depth options"; shown only while a mode that has options is chosen (plan, Interface: "each display mode's
-   * options live in the display mode section"): ocean life (round 2.4) and results landmarks (2.3).
+   * Each mode's own options, in its own box under the tiles, as the Release 2 display frame draws "ocean depth
+   * options" (owner, changes 3: every mode has its own options box); shown only while that mode is chosen (plan,
+   * Interface: "each display mode's options live in the display mode section"): ocean depth's ocean life and
+   * results landmarks, height's own results landmarks, and the tree's view as a segmented control.
    */
   #modeOptions(): Item {
     const doc = this.#doc;
     const text = copy.resultsLandmarks;
-    const title = html(doc, 'div', { class: 'mode-options__title' });
-    const row = (label: string, control: HTMLElement, help: HTMLElement): HTMLDivElement =>
-      html(doc, 'div', { class: 'setting' }, [html(doc, 'div', { class: 'setting__row' }, [html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [label]), control]), help]);
-    const lifeControl = toggle(doc, copy.oceanLife.label, (on) => {
-      this.#set('oceanLife', on);
+    const row = (label: string, control: HTMLElement, help: string | null): HTMLDivElement =>
+      html(doc, 'div', { class: 'setting' }, [
+        html(doc, 'div', { class: 'setting__row' }, [html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [label]), control]),
+        ...(help === null ? [] : [html(doc, 'div', { class: 'setting__help' }, [help])]),
+      ]);
+    const box = (mode: ModeChoice, title: string, rows: readonly HTMLElement[]): HTMLDivElement => {
+      const group = html(doc, 'div', { class: 'mode-options', attrs: { role: 'group', 'aria-label': title, 'data-options': mode } }, [html(doc, 'div', { class: 'mode-options__title' }, [title]), ...rows]);
+      this.#updates.push((settings) => {
+        group.hidden = settings.mode !== mode;
+      });
+      return group;
+    };
+    const switchRow = (key: 'oceanLife' | 'resultsLandmarks' | 'heightLandmarks', label: string, help: string): HTMLDivElement => {
+      const control = toggle(doc, label, (on) => {
+        this.#set(key, on);
+      });
+      this.#updates.push((settings) => {
+        control.update(settings[key]);
+      });
+      return row(label, control.element, help);
+    };
+    const views = TREE_VIEWS.map((value) => ({ value, label: copy.treeView.options[value] }));
+    const view = segmented<TreeView>(doc, copy.treeView.label, views, (value) => {
+      this.#set('treeView', value);
     });
-    const life = row(copy.oceanLife.label, lifeControl.element, html(doc, 'div', { class: 'setting__help' }, [copy.oceanLife.help]));
-    const control = toggle(doc, text.label, (on) => {
-      this.#set('resultsLandmarks', on);
-    });
-    const help = html(doc, 'div', { class: 'setting__help' });
-    const landmarks = row(text.label, control.element, help);
-    const group = html(doc, 'div', { class: 'mode-options', attrs: { role: 'group' } }, [title, life, landmarks]);
     this.#updates.push((settings) => {
-      const mode = settings.mode;
-      const options = mode === 'ocean' ? { title: copy.modeOptions.ocean, help: text.help.ocean, life: true } : null;
-      group.hidden = options === null;
-      if (options === null) return;
-      title.textContent = options.title;
-      group.setAttribute('aria-label', options.title);
-      life.hidden = !options.life;
-      help.textContent = options.help;
-      lifeControl.update(settings.oceanLife);
-      control.update(settings.resultsLandmarks);
+      view.update(settings.treeView);
     });
+    const boxes = [
+      box('ocean', copy.modeOptions.ocean, [switchRow('oceanLife', copy.oceanLife.label, copy.oceanLife.help), switchRow('resultsLandmarks', text.label, text.help.ocean)]),
+      box('height', copy.modeOptions.height, [switchRow('heightLandmarks', text.label, text.help.height)]),
+      box('tree', copy.modeOptions.tree, [row(copy.treeView.label, view.element, null)]),
+    ];
     return {
-      element: html(doc, 'div', { class: 'settings__item-contents' }, [group]),
-      search: searchText(copy.modeOptions.ocean, copy.oceanLife.label, copy.oceanLife.help, text.label, text.help.ocean),
+      element: html(doc, 'div', { class: 'settings__item-contents' }, boxes),
+      search: searchText(
+        copy.modeOptions.ocean,
+        copy.oceanLife.label,
+        copy.oceanLife.help,
+        text.label,
+        text.help.ocean,
+        copy.modeOptions.height,
+        text.help.height,
+        copy.modeOptions.tree,
+        copy.treeView.label,
+        ...views.map((option) => option.label),
+      ),
     };
   }
 

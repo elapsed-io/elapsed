@@ -157,6 +157,14 @@ export const BRAND = {
         concorde: 'concorde cruising altitude',
         armstrongLimit: 'armstrong limit: blood would boil',
         ozoneLayer: 'heart of the ozone layer',
+        baumgartner: 'felix baumgartner’s jump',
+        eustace: 'alan eustace’s jump',
+        stratopause: 'top of the stratosphere',
+        highestBalloon: 'highest uncrewed balloon',
+        astronautWings: 'us astronaut wings',
+        noctilucent: 'noctilucent clouds',
+        meteors: 'where most meteors burn up',
+        karman: 'kármán line: where space begins',
       },
       /** A landmark on the climb profile: its name and height. */
       landmark: '{name} · {height} m',
@@ -234,9 +242,10 @@ export const BRAND = {
       shortcuts: { label: 'shortcuts', items: ['space · start or pause', 'e · end', ', · settings'] },
       mode: { label: 'display mode' },
       /** Each mode's options, under the tiles while that mode is chosen (the Release 2 display frame). */
-      modeOptions: { ocean: 'ocean depth options' },
+      modeOptions: { ocean: 'ocean depth options', height: 'height options', tree: 'tree options' },
       oceanLife: { label: 'ocean life', help: 'sea life drifts in while you’re paused' },
-      resultsLandmarks: { label: 'results landmarks', help: { ocean: 'up to two per 1,000 m on the results' } },
+      resultsLandmarks: { label: 'results landmarks', help: { ocean: 'up to two per 1,000 m on the results', height: 'up to two per 10 km on the results' } },
+      treeView: { label: 'tree view', options: { side: 'side', isometric: 'isometric' } },
       theme: { label: 'theme' },
       colors: { label: 'theme colors', background: 'background', foreground: 'foreground', accent: 'accent', hex: '{name} hex code' },
       font: {

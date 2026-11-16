@@ -95,7 +95,7 @@ describe('height', () => {
   });
 
   it('names every landmark in the brand module, at most two per 10 km band, only from the catalog', () => {
-    for (const landmark of HEIGHT_LANDMARKS) expect(BRAND.copy.height.landmarks[landmark.id]).toMatch(/^[a-z’ ,:]+$/);
+    for (const landmark of HEIGHT_LANDMARKS) expect(BRAND.copy.height.landmarks[landmark.id]).toMatch(/^[\p{Ll}’ ,:]+$/u);
     let seed = 7;
     const random = (): number => {
       seed = (seed * 16807) % 2147483647;
@@ -109,7 +109,8 @@ describe('height', () => {
         const band = Math.floor(landmark.height / 10_000);
         perBand.set(band, (perBand.get(band) ?? 0) + 1);
       }
-      expect([...perBand.keys()].sort()).toEqual([0, 1, 2]);
+      // Every 10 km band with a landmark gives one or two: to 25 km, then on to the Kármán line (owner, changes 3).
+      expect([...perBand.keys()].sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 8, 9, 10]);
       expect(Math.max(...perBand.values())).toBeLessThanOrEqual(2);
       expect(picked.map((landmark) => landmark.height)).toEqual([...picked.map((landmark) => landmark.height)].sort((a, b) => a - b));
       expect(spreadHeightLandmarks(picked, 6, random).length).toBe(Math.min(6, picked.length));

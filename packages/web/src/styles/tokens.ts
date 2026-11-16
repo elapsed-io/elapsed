@@ -62,6 +62,8 @@ export function designCustomProperties(): CustomProperties {
     '--paused-label-tracking': em(paused.labelTrackingEm),
     '--paused-missed-size': px(paused.missedPx),
     '--paused-missed-gap': px(paused.missedGapPx),
+    '--caption-size': px(paused.captionPx),
+    '--caption-bottom': px(paused.captionBottomPx),
     '--check-in-size': px(checkIn.textPx),
 
     '--notice-gap': px(notice.gapPx),
@@ -392,19 +394,13 @@ export function isModeTokenId(value: string): value is ModeTokenId {
 
 function ringTokens(): string {
   const ring = CONFIG.modes.ring;
-  const diameter = 2 * ring.radiusPx + ring.trackPx;
   const [far, near] = ring.tailStops;
+  // The ring's radius, thickness and head come from its recipe (pieces/ring/ring.ts); these are the frame's own.
   const properties: CustomProperties = {
     '--mode-time-size': String(CONFIG.design.type.ringTimePx),
     '--mode-gap': String(ring.gapPx),
     // Reference pixels, scaled with the time.
     '--ring-box': String(ring.boxPx),
-    '--ring-diameter': String(diameter),
-    '--ring-inset': String((ring.boxPx - diameter) / 2),
-    '--ring-track': String(ring.trackPx),
-    '--ring-head': String(ring.headPx),
-    '--ring-head-left': String(ring.boxPx / 2 - ring.headPx / 2),
-    '--ring-head-top': String(ring.boxPx / 2 - ring.radiusPx - ring.headPx / 2),
     '--ring-tail-far': String(far.at),
     '--ring-tail-far-strength': share(far.strength),
     '--ring-tail-near': String(near.at),
@@ -419,7 +415,6 @@ function timelineTokens(): string {
     '--mode-time-size': String(CONFIG.design.type.timelineTimePx),
     '--mode-gap': String(timeline.gapPx),
     '--timeline-inner-gap': String(timeline.innerGapPx),
-    '--timeline-width': px(timeline.widthPx),
     '--timeline-height': px(timeline.heightPx),
     '--timeline-edge': px(timeline.edgePx),
     '--timeline-fade': share(timeline.fadeShare),
@@ -430,25 +425,16 @@ function timelineTokens(): string {
 
 function analogTokens(): string {
   const analog = CONFIG.modes.analog;
-  // The frame draws a viewBox of 300 × 310 units into 290 × 300 px: one unit is 290/300 px (the smaller scale),
-  // and the drawing sits half of the spare height below the top.
-  const viewBox = { width: 300, height: 310 };
-  const unit = Math.min(analog.widthPx / viewBox.width, analog.heightPx / viewBox.height);
+  // The dial's size and its subdial's centre come from its recipe (pieces/dial/dial.ts); these are the frame's own.
+  const { centre, pinRadius } = analog;
   // The drawing's own y runs from −10; the box's top is at y = −10.
   const top = (y: number): string => String(y + 10);
-  const { centre, subdial, pinRadius } = analog;
   const properties: CustomProperties = {
     '--mode-time-size': String(CONFIG.design.type.ringTimePx),
     '--mode-gap': String(analog.gapPx),
-    '--analog-width': String(analog.widthPx),
-    '--analog-height': String(analog.heightPx),
-    '--analog-unit': String(unit),
-    '--analog-top': String((analog.heightPx - viewBox.height * unit) / 2),
     // The hands turn about these points (the drawing's units, measured from the box's top).
     '--analog-centre-x': String(centre.x),
     '--analog-centre-y': top(centre.y),
-    '--analog-subdial-x': String(subdial.x),
-    '--analog-subdial-y': top(subdial.y),
     '--analog-pin-left': String(centre.x - pinRadius),
     '--analog-pin-top': top(centre.y - pinRadius),
     '--analog-pin-size': String(2 * pinRadius),
@@ -605,15 +591,13 @@ function heightTokens(): string {
     '--height-accent': height.palette.accent,
     '--height-end': height.palette.end,
     '--height-pause': height.palette.pause,
-    '--height-altitude-size': px(height.altitudeLine.textPx),
-    '--height-altitude-bottom': px(height.altitudeLine.bottomPx),
     '--meteor-radius': px(meteors.radiusPx),
     '--meteor-shower-period': `${String(meteors.shower.periodSeconds)}s`,
     ...stars,
   };
   // The climb profile and the lit card, on the results that replay height (whichever mode is showing).
   const chart = height.results;
-  const { passing, horizon } = chart;
+  const { passing } = chart;
   const profile: CustomProperties = {
     ...profileTokens({
       origin: 1,
@@ -625,24 +609,6 @@ function heightTokens(): string {
       passing,
     }),
     ...stars,
-    '--climb-stars-from': String(chart.stars.fromMetres),
-    '--climb-stars-span': String(chart.stars.spanMetres),
-    '--horizon-size': px(horizon.diameterPx),
-    '--horizon-from': String(horizon.fromPx / passing.cardHeightPx),
-    '--horizon-rise': String(horizon.risePx / passing.cardHeightPx),
-    '--horizon-high-rise': String(horizon.highRisePx / passing.cardHeightPx),
-    '--horizon-fade-from': String(horizon.fadeFromMetres),
-    '--horizon-fade-span': String(horizon.fadeSpanMetres),
-    '--horizon-high-from': String(horizon.highFromMetres),
-    '--horizon-high-span': String(horizon.highSpanMetres),
-    '--horizon-body': horizon.colours.body,
-    '--horizon-rim': horizon.colours.rim,
-    '--horizon-edge': horizon.colours.edge,
-    '--horizon-body-stop': `${String(horizon.stops.body * 100)}%`,
-    '--horizon-rim-stop': `${String(horizon.stops.rim * 100)}%`,
-    '--horizon-glow': px(horizon.glowPx),
-    '--horizon-glow-spread': px(horizon.glowSpreadPx),
-    '--horizon-glow-colour': horizon.colours.glow,
     '--passing-silhouette': passing.colours.silhouette,
     '--passing-cloud': passing.colours.cloud,
     '--passing-contrail': passing.colours.contrail,
@@ -664,27 +630,17 @@ function heightTokens(): string {
 
 function treeTokens(): string {
   const tree = CONFIG.modes.tree;
-  const { side, iso } = tree.shade;
+  // The leaves' colours and the trunk come from the tree's recipe (pieces/tree/tree.ts); these are the frames' own.
   const colours: Record<`--${string}`, string> = {
     '--tree-side-width': String(tree.side.widthPx),
     '--tree-side-height': String(tree.side.heightPx),
-    '--tree-trunk': tree.colours.trunk,
     '--tree-iso-trunk': tree.colours.isoTrunk,
     '--tree-snow': tree.colours.snow,
     '--tree-fall': tree.colours.fall,
     '--tree-ground-leaf': tree.colours.groundLeaf,
     '--tree-field-light': tree.colours.isoFieldLight,
   };
-  // Each leaf colour with its shades (side: dark and light; isometric: top and right), and each grass colour
-  // with its blades' darker one, as the frames mix them.
-  tree.leaves.forEach((colour, stage) => {
-    const k = String(stage);
-    colours[`--tree-leaf-${k}`] = colour;
-    colours[`--tree-leaf-${k}-dark`] = mixColour(colour, '#000000', side.dark);
-    colours[`--tree-leaf-${k}-light`] = mixColour(colour, '#FFFFFF', side.light);
-    colours[`--tree-leaf-${k}-top`] = mixColour(colour, '#FFFFFF', iso.top);
-    colours[`--tree-leaf-${k}-right`] = mixColour(colour, '#000000', iso.right);
-  });
+  // Each grass colour with its blades' darker one, as the frames mix them.
   tree.grass.forEach((colour, stage) => {
     colours[`--tree-grass-${String(stage)}`] = colour;
     colours[`--tree-blade-${String(stage)}`] = mixColour(colour, '#000000', tree.grassDark);

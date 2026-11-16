@@ -1,0 +1,36 @@
+/*
+ * What the recipe mode itself draws (recipe-mode.ts): the time kept for screen readers when a recipe shows none,
+ * and a state's caption (height's altitude while paused, the "height, paused" frame: 11 px, 16 px above the
+ * bottom, fading in and out as the paused text does).
+ */
+@layer mode {
+  .recipe__unseen {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .recipe__caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: var(--caption-bottom);
+    text-align: center;
+    font-size: var(--caption-size);
+    color: var(--color-muted);
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--motion-fade) var(--ease-standard),
+      visibility 0s linear var(--motion-fade);
+  }
+
+  .recipe__caption--shown {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--motion-fade) var(--ease-standard);
+  }
+}

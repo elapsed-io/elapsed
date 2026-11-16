@@ -332,14 +332,14 @@ interface Water {
 const fourDecimals = (transform: string): string => transform.replace(/-?\d+\.\d+/g, (number) => String(Number(Number(number).toFixed(4))));
 
 async function water(page: Page): Promise<Water> {
-  const drawn = await page.locator('.ocean__strip').evaluate((strip) => {
+  const drawn = await page.locator('.light__strip').evaluate((strip) => {
     const colours = /rgb\([^)]*\)/g;
     const found = strip.style.backgroundImage.match(colours) ?? [];
     const animation = strip.getAnimations()[0];
     const effect = animation?.effect instanceof KeyframeEffect ? animation.effect : null;
     const frames = effect?.getKeyframes() ?? [];
     return {
-      still: strip.classList.contains('ocean__strip--still'),
+      still: strip.classList.contains('light__strip--still'),
       height: strip.style.height,
       top: found[0] ?? '',
       bottom: found.at(-1) ?? '',
@@ -449,14 +449,21 @@ test('ocean depth stops at 10,935 m', async ({ page }) => {
   expect(await water(page)).toMatchObject({ height: '100%', top: rgb(10_929), glide: null });
 });
 
-test('the ocean palette keeps its text and buttons readable over the water', async ({ page }) => {
+test('the ocean palette keeps its text and buttons readable over the water: deep navy near the surface', async ({ page }) => {
   await openApp(page, { mode: 'ocean' });
-  const colours = await page.locator('.screen').evaluate((screen) => {
-    const time = screen.querySelector('.time--main');
-    const icon = screen.querySelector('.icon-button--settings');
-    return { time: time === null ? '' : getComputedStyle(time).color, icon: icon === null ? '' : getComputedStyle(icon).color };
-  });
-  expect(colours).toEqual({ time: 'rgb(220, 232, 238)', icon: 'rgb(158, 195, 214)' });
+  const colours = (): Promise<{ time: string; icon: string; button: string }> =>
+    page.locator('.screen').evaluate((screen) => {
+      const time = screen.querySelector('.time--main');
+      const icon = screen.querySelector('.icon-button--settings');
+      const button = screen.querySelector('.controls button');
+      return { time: time === null ? '' : getComputedStyle(time).color, icon: icon === null ? '' : getComputedStyle(icon).color, button: button === null ? '' : getComputedStyle(button).color };
+    });
+  // At the surface the water is bright: the time and the icons are deep navy (owner, changes 3); the buttons keep theirs.
+  expect(await colours()).toEqual({ time: 'rgb(14, 36, 64)', icon: 'rgb(14, 36, 64)', button: 'rgb(220, 232, 238)' });
+  // Past 4.3 m (17 seconds of focus), the frames' own colours, from the next redraw.
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(MINUTE);
+  expect(await colours()).toMatchObject({ time: 'rgb(220, 232, 238)', icon: 'rgb(158, 195, 214)' });
 });
 
 /** The life chunks the page fetched (art/ocean/life-<zone>). */

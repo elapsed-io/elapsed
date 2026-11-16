@@ -5,7 +5,7 @@
 
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { CONFIG } from '@stopwatch/core';
+import { CONFIG, DIGITS_RECIPE } from '@stopwatch/core';
 import { MINUTE, SECOND, TIMER_END, endThroughCountdown, openApp, settle } from './helpers.ts';
 
 const primary = (page: Page) => page.locator('.button--primary');
@@ -36,7 +36,7 @@ for (const speed of ['slower', 'faster'] as const) {
         .map((animation) => Math.round(Number(animation.effect?.getTiming().duration))),
     );
     // Digits replays for its own 1.4 s (a 5-minute session adds nothing), scaled.
-    expect(replay).toEqual([Math.round(CONFIG.modes.digits.replay.durationMs * scale)]);
+    expect(replay).toEqual([Math.round(DIGITS_RECIPE.results.replay.seconds * 1000 * scale)]);
   });
 }
 

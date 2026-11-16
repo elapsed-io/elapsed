@@ -1,0 +1,40 @@
+{
+  "recipe": 1,
+  "id": "digits",
+  "name": "digits",
+  "icon": "digits",
+  "measure": {
+    "unit": "time",
+    "perMinute": 1
+  },
+  "environment": {
+    "type": "theme"
+  },
+  "layers": [
+    {
+      "type": "time",
+      "id": "time",
+      "size": 104,
+      "position": "center",
+      "seconds": "setting"
+    }
+  ],
+  "states": {
+    "paused": {
+      "blur": "display"
+    },
+    "checkin": {
+      "blur": "display"
+    }
+  },
+  "results": {
+    "replay": {
+      "seconds": 1.4,
+      "easing": "fast",
+      "longSessionExtra": true
+    },
+    "view": {
+      "type": "strip"
+    }
+  }
+}

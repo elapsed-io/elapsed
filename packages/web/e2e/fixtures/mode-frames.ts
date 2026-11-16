@@ -267,16 +267,17 @@ ${HEIGHT_ICONS('#C9DCEE')}
 }
 
 /**
- * The "height, paused" frame without its shooting stars (canvas version 1794830661-c660), at `h` metres: the
- * time `hhmm` held behind the blur, "paused for" `pausedFor` (hh:mm:ss), and the altitude line. Where the frame
- * is a still picture, its sky and stars are the light model's at that height and the running frame's star field
- * (`ownSky` draws the frame's own instead, for the record): decision 304.
+ * The "height, paused" frame without its shooting stars (as corrected on the canvas, version 1794860610-fcf8: its
+ * sky the light model's at 31,240 m and its stars at the model's 58 %), at `h` metres: the time `hhmm` held behind
+ * the blur, "paused for" `pausedFor` (hh:mm:ss), and the altitude line. Its star field is still another random
+ * field than the running frame's, which the site keeps (pausing does not move the stars), so the test draws the
+ * running field (`ownSky` draws the frame's own, for the record): decisions 304 and 329.
  */
 export function heightPausedFrame(h: number, hhmm: string, pausedFor: string, line: string, ownSky = false): string {
   const [hh = '', mm = ''] = hhmm.split(':');
   const [ph = '', pm = '', ps = ''] = pausedFor.split(':');
-  const background = ownSky ? 'linear-gradient(180deg, #020A1C 0%, #041330 100%)' : heightSky(h);
-  const stars = ownSky ? `<g>${PAUSED_STARS.join('')}</g>` : `<g opacity="${smooth((h - 18000) / 24000).toFixed(3)}">${RUNNING_STARS.join('')}</g>`;
+  const background = ownSky ? 'linear-gradient(180deg, #020d21 0%, #031228 100%)' : heightSky(h);
+  const stars = ownSky ? `<g opacity="0.58">${PAUSED_STARS.join('')}</g>` : `<g opacity="${smooth((h - 18000) / 24000).toFixed(3)}">${RUNNING_STARS.join('')}</g>`;
   return frameDocument(`<div style="width: 720px; height: 450px; box-sizing: border-box; background: ${background}; color: #EEF4FA; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px">
 <svg aria-hidden="true" width="720" height="450" viewBox="0 0 720 450" style="position: absolute; top: 0; left: 0">${stars}</svg>
 ${HEIGHT_ICONS('#9AA6C8')}

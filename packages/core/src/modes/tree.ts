@@ -136,9 +136,3 @@ export function grassColour(phase: number): `#${string}` {
   if (g < 3) return mixColour(g2, g3, smoothstep((g - 2) / 0.6));
   return g4;
 }
-
-/** The results tree's size after `focusedMs` of focus: from 45 %, full at 60 focused minutes. */
-export function treeGrowth(focusedMs: number): number {
-  const from = TREE.resultsScale.from;
-  return from + (1 - from) * Math.min(1, Math.max(0, focusedMs) / TREE.fullSizeFocus);
-}

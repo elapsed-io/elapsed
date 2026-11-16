@@ -85,8 +85,10 @@ export interface Settings {
   readonly mode: ModeChoice;
   /** Mode option (ocean depth): sea life drifts in while a session is paused. */
   readonly oceanLife: boolean;
-  /** Mode option (ocean depth and height): random landmarks on the results' profile. */
+  /** Mode option (ocean depth): random landmarks on the results' dive profile. */
   readonly resultsLandmarks: boolean;
+  /** Mode option (height, its own options box; owner, changes 3): random landmarks on the results' climb profile. */
+  readonly heightLandmarks: boolean;
   /** Mode option (tree): the side view or the isometric one. */
   readonly treeView: TreeView;
   // Appearance
@@ -154,6 +156,7 @@ export type SettingDeclaration =
   | ChoiceSetting<'mode'>
   | SwitchSetting<'oceanLife'>
   | SwitchSetting<'resultsLandmarks'>
+  | SwitchSetting<'heightLandmarks'>
   | ChoiceSetting<'treeView'>
   | ChoiceSetting<'theme'>
   | ColorsSetting<'colors'>
@@ -196,6 +199,7 @@ export const SETTINGS: readonly SettingDeclaration[] = [
   { key: 'mode', kind: 'choice', category: 'display', options: MODE_CHOICES, default: 'digits', target: { site: 'mode' } },
   { key: 'oceanLife', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
   { key: 'resultsLandmarks', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
+  { key: 'heightLandmarks', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
   { key: 'treeView', kind: 'choice', category: 'display', options: TREE_VIEWS, default: 'side', target: { site: 'modeOptions' } },
   { key: 'theme', kind: 'choice', category: 'appearance', options: THEME_IDS, default: 'graphite', target: { theme: 'preset' } },
   { key: 'colors', kind: 'colors', category: 'appearance', default: null, target: { theme: 'colors' } },
@@ -290,7 +294,8 @@ export function migrateSettings(raw: unknown): Settings {
   const record = raw as Record<string, unknown>;
   const result: Record<string, unknown> = { schema: SETTINGS_SCHEMA };
   for (const setting of SETTINGS) {
-    const value = record[setting.key];
+    // Height's landmarks had ocean depth's switch until each mode had its own options box: kept as it was.
+    const value = setting.key === 'heightLandmarks' && !(setting.key in record) ? record['resultsLandmarks'] : record[setting.key];
     if (!isValidValue(setting, value)) {
       result[setting.key] = defaults[setting.key];
     } else if (setting.kind === 'colors' && value !== null) {

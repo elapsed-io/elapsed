@@ -9,6 +9,16 @@ The code is the reference: `packages/web/src/modes/contract.ts` (what a mode rec
 `packages/web/src/modes/manifests.ts` (what the site knows before loading a mode), and
 `packages/web/src/art/registry.ts` (art). This page explains them.
 
+## Every mode is a recipe
+
+Since round 2.7 every mode, digits included, is a recipe (`docs/recipes/mode-recipes.md`): a JSON file choosing
+and tuning pieces from a fixed library that the site's own code draws (`packages/web/src/modes/pieces`). The
+recipe mode (`modes/recipe/recipe-mode.ts`) builds the display from a recipe and its pieces and implements this
+contract the same way for every mode; a built-in mode is its recipe and the pieces it uses
+(`modes/built-in/*.ts`). The core checks every recipe when it loads (`core/src/recipes/load.ts`) and refuses
+one that fails; the mode then shows digits (decision 319). What a recipe may hold, and what it is refused, is in
+`docs/safety/round-2.7.md`.
+
 ## What the site knows before loading a mode: its manifest
 
 | Field | Meaning |
@@ -18,7 +28,8 @@ The code is the reference: `packages/web/src/modes/contract.ts` (what a mode rec
 | `tier` | `core`: shipped with the first visit (digits only). `on-choice`: downloaded the first time it is shown, kept for offline use, removed after 30 days unused (plan, Loading and performance). |
 | `budget` | Compressed size budgets the CI size check enforces: `codeBytes` (30 KB, failing at 60 KB) and `artBytes` (150 KB, failing at 300 KB). |
 | `source` | The module that holds the mode; the size check and the offline cache find its files by this. |
-| `art` | The asset-registry keys it draws (see Art). |
+| `art` | The asset-registry keys it draws: its recipe's slot defaults, and the tree piece's own drawing (see Art). |
+| `options` | Which setting holds each of its recipe's options, by option id. |
 
 ## What a mode receives
 
@@ -28,7 +39,11 @@ The code is the reference: `packages/web/src/modes/contract.ts` (what a mode rec
   - `reducedMotion`: the system asks for reduced motion;
   - `lowPower`: low power is on (by hand, or because of reduced motion): ambient animation stops and only
     the time shows; anything that moves with time steps once a minute instead of gliding.
-  - `options`: the modes' own options as they are now (ocean life, results landmarks).
+  - `options`: the mode's own options as they are now, by its recipe's option ids (ocean depth: `ocean-life`,
+    `landmarks`; height: `landmarks`; tree: `tree-view`), each mode's from its own options box;
+  - `chrome(share, dark)`: the contrast switch. Over a bright environment the mode says how far the time, the
+    icons and the labels have switched to its dark colour (0 or 1), and which colour; the site's stylesheets
+    apply it to the mode's root and the corner icons, never the buttons (decision 327).
   When a value changes the site calls `render` again (or `relayout` when the font changed).
 - **`render(view)`**: the timer's state (core, `engine/view.ts`), called only when the visible value
   changes: `status` (idle, running, paused, ended), `focusedMs` and `shownMs` (what the time shows, at

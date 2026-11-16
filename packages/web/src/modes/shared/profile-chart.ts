@@ -23,7 +23,6 @@ import { spreadBy, summarise } from '@stopwatch/core';
 import type { Session } from '@stopwatch/core';
 import { html, svg } from '../../dom.ts';
 import { ART } from '../../art/registry.ts';
-import type { ArtCatalog } from '../../art/registry.ts';
 import { formatClockTime } from '../../shell/clock-time.ts';
 import type { ReplaySurface } from '../contract.ts';
 import { focusStretches } from './replay-timing.ts';
@@ -87,8 +86,8 @@ export interface ProfileSpec {
     readonly fromPx: number;
     readonly travelPx: number;
     readonly cardHeightPx: number;
-    /** The mode's results art: the things that pass, and whatever its finale draws. */
-    readonly catalog: () => Promise<ArtCatalog>;
+    /** Loads the mode's results art (the things that pass, and whatever its finale draws) before it draws. */
+    readonly ready: () => Promise<void>;
   };
   /** The mode's finale: layers over the chart and on the card, given the geometry at rest. */
   readonly finale?: (context: FinaleContext) => { readonly chart?: readonly Element[]; readonly backdrop?: readonly Element[] };
@@ -245,8 +244,7 @@ export async function drawProfile(spec: ProfileSpec, surface: ReplaySurface, ses
   const random = options.random ?? Math.random;
   const copy = spec.copy;
   // The mode's results art (the things that pass, and whatever its finale draws) loads with its results.
-  const catalog = await spec.passing.catalog();
-  if (!catalog.entries.every((entry) => ART.has(entry.key))) ART.register(catalog);
+  await spec.passing.ready();
 
   // ---- The chart ----------------------------------------------------------------------------------------
   // Dashed lines where the zones begin, shown once the scale has room for them.

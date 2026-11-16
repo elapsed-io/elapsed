@@ -1,0 +1,87 @@
+/*
+ * Height's own colours (the height frames): the time, the icons (dimmer while paused) and the buttons over the sky,
+ * the paused labels, the results card's text in the sky, and the colours of the stars and the things that pass.
+ */
+@layer mode {
+  .screen[data-mode="height"] > :is(.mode-root, .controls),
+  .screen[data-mode="height"]:has(> .mode-root:not([hidden])) > .corner {
+    --color-foreground: var(--height-text);
+    --color-muted: var(--height-icon);
+    --color-accent: var(--height-accent);
+    --color-end: var(--height-end);
+    --color-pause: var(--height-pause);
+    color: var(--color-foreground);
+  }
+
+  /* While paused the icons dim, as the paused frame draws them. */
+  .screen[data-mode="height"]:has(> .mode-root:not([hidden]) .light--paused) > .corner {
+    --color-muted: var(--height-icon-paused);
+  }
+
+  /* "paused for" and the altitude line take the paused frame's label colour: set on the mode root's children,
+     so it holds whatever the specificity of the palette rule above (the build merges its selectors). */
+  .screen[data-mode="height"] > .mode-root > * {
+    --color-muted: var(--height-label);
+  }
+
+  /* The screen is the sky's stacking context, so the sky sits over its background and under its content. */
+  .results[data-replay="height"] {
+    --color-foreground: var(--profile-card-text);
+    --color-muted: var(--profile-card-muted);
+    color: var(--color-foreground);
+  }
+
+  .results[data-replay="height"] .art [data-tone="star-faint"] {
+    fill: var(--height-star-faint);
+  }
+
+  .results[data-replay="height"] .art [data-tone="star-white"] {
+    fill: var(--height-star-white);
+  }
+
+  .results[data-replay="height"] .art [data-tone="star-warm"] {
+    fill: var(--height-star-warm);
+  }
+
+  .results[data-replay="height"] .lit__art [data-tone="bird"] {
+    fill: none;
+    stroke: var(--passing-silhouette);
+  }
+
+  .results[data-replay="height"] .lit__art [data-tone="silhouette"] {
+    fill: var(--passing-silhouette);
+  }
+
+  .results[data-replay="height"] .lit__art [data-tone="cloud"] {
+    fill: var(--passing-cloud);
+  }
+
+  .results[data-replay="height"] .lit__art [data-tone="contrail"] {
+    fill: none;
+    stroke: var(--passing-contrail);
+  }
+
+  .results[data-replay="height"] .lit__art [data-tone="balloon"] {
+    fill: var(--passing-balloon);
+  }
+
+  .results[data-replay="height"] .lit__art [data-tone="rigging"] {
+    fill: var(--passing-rigging);
+  }
+
+  .results[data-replay="height"] .lit__art [data-tone="rigging-line"] {
+    fill: none;
+    stroke: var(--passing-rigging);
+  }
+
+  /*
+   * The contrast switch (recipe-mode.ts, recipe/contrast.ts): over a bright sky, the time, the icons and the
+   * labels take the recipe's dark colour until the sky darkens (the buttons keep theirs).
+   */
+  .screen[data-mode="height"][data-contrast="dark"] > .mode-root,
+  .screen[data-mode="height"][data-contrast="dark"]:has(> .mode-root:not([hidden])) > .corner,
+  .screen[data-mode="height"][data-contrast="dark"] > .mode-root > * {
+    --color-foreground: var(--contrast-dark);
+    --color-muted: var(--contrast-dark);
+  }
+}

@@ -1,0 +1,32 @@
+/*
+ * Streak particles (particles.ts, `shape: streak`): the shooting stars and meteor showers of the "height, paused"
+ * frame, each streak brightening toward its head and crossing the sky in the first moments of its period.
+ */
+@layer mode {
+  /*
+   * Shooting stars and the meteor shower while paused: each streak brightens toward its head (its right end),
+   * turned to its slope about the head, and crosses the sky in the first moments of its period (the frame's
+   * own keyframes, generated from the config module in styles/tokens.ts). height.ts draws them at random once.
+   */
+  .meteors {
+    position: absolute;
+    inset: 0;
+  }
+
+  .meteor {
+    position: absolute;
+    left: calc(var(--meteor-left) * 100%);
+    top: calc(var(--meteor-top) * 100%);
+    width: var(--meteor-length);
+    height: var(--meteor-thickness);
+    border-radius: var(--meteor-radius);
+    background: linear-gradient(90deg, transparent, var(--meteor-colour));
+    transform-origin: 100% 50%;
+    opacity: 0;
+    animation: height-shoot var(--meteor-period) linear var(--meteor-delay) infinite;
+  }
+
+  .meteor--shower {
+    animation: height-shower var(--meteor-shower-period) linear var(--meteor-delay) infinite;
+  }
+}

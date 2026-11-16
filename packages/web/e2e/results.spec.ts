@@ -6,7 +6,8 @@
 
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { BRAND, CONFIG, createSession, serializeActiveState, startState } from '@stopwatch/core';
+import { BRAND, CONFIG, createSession, replayTimingFor, serializeActiveState, startState } from '@stopwatch/core';
+import { builtInRecipe } from './fixtures/recipes.ts';
 import { PAPER, endingFrame, inPalette, resultsDepthLitFrame, resultsRingFrame, resultsStripFrame } from './fixtures/frames.ts';
 import type { FrameLandmark, ResultsData } from './fixtures/frames.ts';
 import { MINUTE, SECOND, T0, TIMER_END, compareWithReference, endThroughCountdown, finishResults, freezeAnimations, openApp, settle, untilEndNowAccepts } from './helpers.ts';
@@ -316,7 +317,7 @@ test('the ocean results card is lit by the dive: it opens in the colour the sess
   expect(surface).toMatch(/^matrix\(1, 0, 0, 1\.3333\d*, 0, 0\)$/);
   // Two sonar pings, timed from the replay's start to its end, and gone after.
   const pings = await page.locator('.profile__ping').evaluateAll((elements) => elements.map((element) => element.getAnimations()[0]?.effect?.getTiming().delay));
-  const length = CONFIG.modes.ocean.replay.durationMs;
+  const length = replayTimingFor(builtInRecipe('ocean-depth')).durationMs;
   expect(pings).toEqual([length, length + CONFIG.modes.ocean.results.pings.lagMs]);
 });
 

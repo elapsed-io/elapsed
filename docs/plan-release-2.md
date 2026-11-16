@@ -57,10 +57,11 @@ bounds. The small device features come last before hardening, since nothing else
 | 2.4 | Ocean life | Ocean depth: paused; "ocean life" |
 | 2.5 | Height | Height; Results: height; its tile |
 | 2.6 | Tree | Tree: side and isometric; Results: tree; its tile |
-| 2.7 | Interstellar, behind the test-modes switch | Interstellar: running and results; its tile; Release 2 settings: advanced (test modes) |
-| 2.8 | Layout editor and background images | Layout editor |
-| 2.9 | Picture-in-picture, wake lock, the check-ins switch | Release 2 settings: timer (check-ins, keep screen awake) and display (picture-in-picture) |
-| 2.10 | Hardening and the release review | every Release 2 frame |
+| 2.7 | Recipes: every mode as a recipe drawn by one piece library | every mode frame again, unchanged; the options boxes |
+| 2.8 | Interstellar, as a recipe, behind the test-modes switch | Interstellar: running, paused and results; its tile; Release 2 settings: advanced (test modes) |
+| 2.9 | Layout editor, background images, and each mode's replaceable art | Layout editor |
+| 2.10 | Picture-in-picture, wake lock, the check-ins switch | Release 2 settings: timer (check-ins, keep screen awake) and display (picture-in-picture) |
+| 2.11 | Hardening and the release review | every Release 2 frame |
 
 Every round ends as Release 1's did: `npm run check`, the end-to-end suite in Chromium, Firefox and WebKit
 (through the reference image), the round's safety overview in `docs/safety/round-2.<n>.md` with every item
@@ -74,10 +75,10 @@ it, and each frame is checked pixel for pixel once all of its controls exist:
 
 | Frame | Controls | Round |
 | --- | --- | --- |
-| timer | check-ins switch with its warning; keep screen awake ("only while elapsed is the active tab") | 2.9 |
-| display | mode tiles in four columns with a preview icon for each new mode (analog, ocean depth, height, tree, interstellar); ocean depth options (ocean life, results landmarks); picture-in-picture; downloaded modes with size and remove | tiles in each mode's round; downloaded modes 2.1; results landmarks 2.3; ocean life 2.4; picture-in-picture 2.9 |
+| timer | check-ins switch with its warning; keep screen awake ("only while elapsed is the active tab") | 2.10 |
+| display | mode tiles in four columns with a preview icon for each new mode (analog, ocean depth, height, tree, interstellar); ocean depth options (ocean life, results landmarks); picture-in-picture; downloaded modes with size and remove | tiles in each mode's round; downloaded modes 2.1; results landmarks 2.3; ocean life 2.4; each mode's own options box 2.7; picture-in-picture 2.10 |
 | appearance | animation speed (slower, normal, faster: "every animation, including the results replay"); low power ("stops ambient animation and shows only the time. on when your system asks for reduced motion.") | 2.1 |
-| advanced | test modes ("early modes that may change or disappear. shown after opening elapsed with ?test=interstellar.") | 2.7 |
+| advanced | test modes ("early modes that may change or disappear. shown after opening elapsed with ?test=interstellar.") | 2.8 |
 
 The tile grid has three columns while there are three modes (the Release 1 frame) and four from round 2.2,
 when the fourth mode arrives (the Release 2 frame).
@@ -190,25 +191,69 @@ results frame; motion only through slow CSS transitions; low power.
 
 **Safety overview:** art licences; art budget.
 
-### 2.7 Interstellar, behind the test-modes switch
+### 2.7 Recipes
 
-**Builds:** light-speed travel per session; the logarithmic map (radius 26 + 30·log10(AU/0.3) px at
-reference) with the planets' rings, the Kuiper belt edge, the heliopause, the Oort cloud band and Proxima
-Centauri; the still star field from the canvas catalog with the plan's projection and star sizes; the
-radial-map replay with callouts; its tile. One build for everyone: opening the site once with
+Owner, changes 3 (2026-11-16): every display mode, built-in included, becomes a recipe, a JSON file choosing
+and tuning pieces from a fixed library that the site's code draws (docs/recipes/mode-recipes.md). Recipes
+contain no code, formulas, markup or addresses; this is what lets users copy a mode and change it safely,
+and later share modes.
+
+**Builds:**
+
+1. The schema in the repository (`docs/recipes/mode-recipe-1.schema.json`) and a runtime loader that
+   validates every recipe on load and refuses one that fails, falling back to digits.
+2. The piece library in `core` and `web`, each piece implementing the display-mode contract and drawing
+   only with the plan's motion rules (CSS animations, transforms and opacity, one replay progress value,
+   nothing per frame), with reduced motion and low power applied to every piece automatically and the
+   contrast rule enforced at run time.
+3. Digits, ring, timeline, analog, ocean depth, height and tree converted to recipes, replacing their
+   mode-specific code; each still matches its frames exactly. Where a recipe in docs/recipes/recipes
+   differs from what is built, the plan and frames win: the recipe is corrected and the correction recorded.
+4. Slots through the asset registry: every image or catalog a mode uses is a named slot with a built-in
+   default.
+5. From the owner's answers: where the sky or the water is bright, the time, icons and labels switch from
+   white to deep navy, whichever meets the contrast rule, crossfading as it darkens; height's landmarks
+   continue to the Kármán line; every mode has its own options box (height its own landmarks switch, the
+   tree its view as a segmented control).
+
+**Tests:** the ported checker (every built-in recipe valid, every reference and slot resolved, the 49
+features); its negative safety cases (script in a name, unknown placeholders, `url()` colours, outside slot
+defaults, event-handler fields, unknown piece types, formulas, too many layers, particle floods, path
+traversal, oversized images, over-long replays) all rejected; a failing recipe falls back to digits; every
+built-in recipe within its mode's budgets; every mode's frames still exact.
+
+**Safety overview:** recipes as an input: what the schema refuses, the runtime limits, and what happens with
+a failing recipe.
+
+**Records:** built-in recipes keep their fixed rates and comparable records; anything user-made is
+"mode-only", its depth, height or distance records labelled with that mode and never counted for
+competitions.
+
+### 2.8 Interstellar, as a recipe, behind the test-modes switch
+
+**Builds:** interstellar directly as a recipe (docs/recipes/recipes/interstellar.json) on the piece library:
+light-speed travel per session from Earth's orbit; the true-scale camera (the Sun near the bottom-left, the
+traveller heading −28° on the timer and −17° on results, pixels per AU = usable path ÷ max(distance, 1.6)),
+rings for the planets' orbits and, dashed, the Kuiper belt edge and the heliopause, fading below about 6 px;
+landmark dots on the travel line; while paused, the map and time blurred with the star field sharp, the
+distance line, random comets with tails pointing away from the Sun, and the sky turning once in about 6
+minutes from a strip drawn once from the HYG database (stars to magnitude 5, under CC BY-SA, credited, its
+derived data in its own folder with its licence file); the journey replay pulling the camera back; its tile.
+No Oort cloud or Proxima Centauri until Release 4. One build for everyone: opening the site once with
 `?test=interstellar` shows a "test modes" switch in advanced settings (the Release 2 advanced frame), off by
 default; switching it on adds interstellar to the mode tiles ("interstellar appears only while test modes
 are on."). The switch, once shown, stays shown on that device; turning it off while interstellar is chosen
 falls back to digits.
 
-**Tests:** distance after a given focused time; the map's radii (unit tests against the formula); the
-star projection; the running and results frames; the advanced frame; the switch hidden until the address
-asks for it, off by default, and interstellar hidden unless it is on.
+**Tests:** distance after a given focused time; the camera's scale and the rings' fading (unit tests); every
+dot on the line within 1 px; the comets' tails away from the Sun; the running, paused and results frames;
+the advanced frame; the switch hidden until the address asks for it, off by default, and interstellar hidden
+unless it is on.
 
-**Safety overview:** the star catalog's source and licence; what the address parameter can do (show one
-switch, nothing else; any other `test` value is ignored).
+**Safety overview:** the star catalog's source and licence (HYG, CC BY-SA); what the address parameter can do
+(show one switch, nothing else; any other `test` value is ignored).
 
-### 2.8 Layout editor and background images
+### 2.9 Layout editor, background images, and each mode's replaceable art
 
 **Builds:** the customize mode, entered from settings or with a long press on phones; every layer
 (background, display mode, buttons, icons) moved, rotated, stretched, resized, hidden and reordered as
@@ -216,11 +261,14 @@ data; layouts saved per display mode and per screen size (desktop and phone, the
 for the phone), versioned, with reset to default; "time size" and the editor change the same value; each
 mode reports its rendered bounds (for Release 4's no-widget zones). The free-form editor is built in full
 and tested, but switched on only when the unlock arrives in Release 3; until then everyone places layers in
-preset positions, and the test-modes switch (round 2.7) turns free-form editing on for testing. Background
+preset positions, and the test-modes switch (round 2.8) turns free-form editing on for testing. Background
 images, one per display mode, imported from the device: JPEG, PNG, WebP or AVIF, detected from their
 contents (never the file name), at most 20 MB and 50 megapixels, re-encoded at the screen's size (which
 strips location and camera metadata), SVG refused, kept in the `MediaStore` on the device, never uploaded or
-synced (and left out of the settings file); safe mode turns layouts and backgrounds off.
+synced (and left out of the settings file); safe mode turns layouts and backgrounds off. The user-facing part
+of slots: each mode's options box lists its replaceable images, each with "replace", "reset to default" and
+"download template", through the same local image import; the tree's "your art" choice uses its four-frame
+season strip slot. No recipe editor yet (a later release).
 
 **Tests:** layout data round-trips, migrations and reset; preset positions for everyone, free-form only
 behind the test-modes switch; the editor's moves by pointer, touch and keyboard; layouts and backgrounds
@@ -233,7 +281,7 @@ the editor.
 files), storage keys, abuse cases (decompression bombs, malformed images, layouts that hide every control
 with safe mode as the way back), tests.
 
-### 2.9 Picture-in-picture, wake lock, the check-ins switch
+### 2.10 Picture-in-picture, wake lock, the check-ins switch
 
 **Builds:**
 
@@ -260,7 +308,7 @@ due and the pause limit still applies; the timer and display frames; settings mi
 **Safety overview:** permissions used (none new in the Permissions-Policy; `screen-wake-lock` is allowed by
 default for the site's own pages), data (the switches are settings on the device), abuse cases.
 
-### 2.10 Hardening and the release review
+### 2.11 Hardening and the release review
 
 **Builds:** the accessibility pass for every new mode and the editor (WCAG 2.2 AA, axe-core, keyboard and
 screen readers, 44 px targets, reduced motion and low power), the performance pass (budgets, a long
@@ -270,7 +318,7 @@ sign-off.
 
 ## The owner's answers
 
-1. **Free-form layout before payments exist:** the free-form editor is built in full in round 2.8 but
+1. **Free-form layout before payments exist:** the free-form editor is built in full in round 2.9 but
    switched on only when the unlock arrives in Release 3; until then everyone gets preset positions. It is
    testable behind the test-modes switch.
 2. **The interstellar test flag:** opening the site once with `?test=interstellar` shows a "test modes"
@@ -279,7 +327,7 @@ sign-off.
 3. **Picture-in-picture:** a display setting, off by default, as drawn. When on, it adds a button to the
    timer's top-right icons (Tabler's picture-in-picture icon, the same size and colour as the other corner
    icons, left of settings) that opens the floating timer. The setting and the button appear only where
-   the browser offers a window for a page, and are hidden elsewhere. Built in round 2.9.
+   the browser offers a window for a page, and are hidden elsewhere. Built in round 2.10.
 4. **Background images:** JPEG, PNG, WebP or AVIF, detected from their contents, at most 20 MB and 50
    megapixels, re-encoded at screen size; SVG refused. They stay on the device, never uploaded or synced.
    One per display mode.
@@ -288,14 +336,15 @@ sign-off.
    separate from the GPL code.
 
 Also from the owner's review: the analog hand glides continuously (round 2.2), and the Permissions-Policy
-is confirmed not to block the wake lock (round 2.9).
+is confirmed not to block the wake lock (round 2.10).
 
 ## Open points
 
 - **The ring tile's preview icon.** The Release 2 display frame draws the ring tile as a plain arc; the
   Release 1 display frame, which is built, draws the ring's fading tail. Round 2.2 keeps the built icon
   unless the owner says otherwise.
-- **Options without a frame.** The tree's view (side or isometric) and height's "results landmarks" are
-  mode options the plan names, but only the ocean depth options are drawn. They are built the same way (a
-  "tree options" or "height options" group under the tiles, shown while that mode is chosen), and the
-  round that adds each stops for the owner's look.
+- **Options boxes** (answered, changes 3): every mode with options has its own box under the tiles, as the
+  ocean depth options box is drawn: height's with its own landmarks switch, the tree's with its view as a
+  segmented control (round 2.7, decision 328).
+- **The contrast switch's crossfade** and **ocean life's arrival numbers** (round 2.7, decisions 327 and 323):
+  questions for the owner in `docs/questions-overnight.md`.

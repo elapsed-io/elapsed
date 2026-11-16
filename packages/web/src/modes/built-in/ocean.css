@@ -1,0 +1,54 @@
+/*
+ * Ocean depth's own colours (the ocean frames): the time, the icons and the buttons over the water, the results
+ * card's text in the light, and the colours of the things that pass on it.
+ */
+@layer mode {
+  .screen[data-mode="ocean"] > :is(.mode-root, .controls),
+  .screen[data-mode="ocean"]:has(> .mode-root:not([hidden])) > .corner {
+    --color-foreground: var(--ocean-text);
+    --color-muted: var(--ocean-icon);
+    --color-accent: var(--ocean-accent);
+    --color-end: var(--ocean-end);
+    --color-pause: var(--ocean-pause);
+    color: var(--color-foreground);
+  }
+
+  /* The screen is the water's stacking context, so the water sits over its background and under its content. */
+  .results[data-replay="ocean"] {
+    --color-foreground: var(--profile-card-text);
+    --color-muted: var(--profile-card-muted);
+    color: var(--color-foreground);
+  }
+
+  .results[data-replay="ocean"] .lit__art [data-tone="silhouette"] {
+    fill: var(--passing-silhouette);
+  }
+
+  .results[data-replay="ocean"] .lit__art [data-tone="deep"] {
+    fill: var(--passing-deep);
+  }
+
+  .results[data-replay="ocean"] .lit__art [data-tone="jelly"] {
+    fill: var(--passing-jelly);
+  }
+
+  .results[data-replay="ocean"] .lit__art [data-tone="jelly-line"] {
+    fill: none;
+    stroke: var(--passing-jelly-line);
+  }
+
+  .results[data-replay="ocean"] .lit__art [data-tone="glow"] {
+    fill: var(--passing-glow);
+  }
+
+  /*
+   * The contrast switch (recipe-mode.ts, recipe/contrast.ts): over a bright surface, the time, the icons and the
+   * labels take the recipe's dark colour until the water darkens (the buttons keep theirs).
+   */
+  .screen[data-mode="ocean"][data-contrast="dark"] > .mode-root,
+  .screen[data-mode="ocean"][data-contrast="dark"]:has(> .mode-root:not([hidden])) > .corner,
+  .screen[data-mode="ocean"][data-contrast="dark"] > .mode-root > * {
+    --color-foreground: var(--contrast-dark);
+    --color-muted: var(--contrast-dark);
+  }
+}

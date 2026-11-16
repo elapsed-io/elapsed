@@ -1,0 +1,179 @@
+{
+  "recipe": 1,
+  "id": "tree",
+  "name": "tree",
+  "icon": "tree",
+  "measure": {
+    "unit": "years",
+    "perMinute": 0.016666666666666666,
+    "records": "mode-only"
+  },
+  "cycles": [
+    {
+      "id": "year",
+      "minutes": 60,
+      "phases": [
+        [
+          "spring",
+          0,
+          0.25
+        ],
+        [
+          "summer",
+          0.25,
+          0.5
+        ],
+        [
+          "autumn",
+          0.5,
+          0.75
+        ],
+        [
+          "winter",
+          0.75,
+          1
+        ]
+      ]
+    }
+  ],
+  "environment": {
+    "type": "theme"
+  },
+  "layers": [
+    {
+      "type": "tree",
+      "id": "tree-side",
+      "view": "side",
+      "year": "year",
+      "variantOf": {
+        "option": "tree-view",
+        "value": "side"
+      },
+      "growth": {
+        "by": "measure",
+        "stops": [
+          [
+            0,
+            0.45
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "ease": "linear"
+      },
+      "leaves": {
+        "clusters": 70,
+        "offsetMax": 0.25,
+        "spring": [
+          "#C2DE8E",
+          "#86C060"
+        ],
+        "summer": [
+          "#3E8B47"
+        ],
+        "autumn": [
+          "#D9822F",
+          "#A9502A"
+        ],
+        "fallBy": "autumn-end"
+      },
+      "snow": {
+        "phase": "winter",
+        "branches": true,
+        "ground": true
+      },
+      "trunk": "#6E4636",
+      "ground": "line"
+    },
+    {
+      "type": "tree",
+      "id": "tree-isometric",
+      "view": "isometric",
+      "year": "year",
+      "variantOf": {
+        "option": "tree-view",
+        "value": "isometric"
+      },
+      "growth": {
+        "by": "measure",
+        "stops": [
+          [
+            0,
+            0.45
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "ease": "linear"
+      },
+      "leaves": {
+        "clusters": 45,
+        "offsetMax": 0.25,
+        "spring": [
+          "#C2DE8E",
+          "#86C060"
+        ],
+        "summer": [
+          "#3E8B47"
+        ],
+        "autumn": [
+          "#D9822F",
+          "#A9502A"
+        ],
+        "fallBy": "autumn-end"
+      },
+      "snow": {
+        "phase": "winter",
+        "branches": true,
+        "ground": true
+      },
+      "trunk": "#6E4636",
+      "ground": "field"
+    },
+    {
+      "type": "time",
+      "id": "time",
+      "size": 30,
+      "position": "bottom",
+      "seconds": "setting"
+    }
+  ],
+  "states": {
+    "paused": {
+      "blur": "display"
+    },
+    "checkin": {
+      "blur": "display"
+    }
+  },
+  "results": {
+    "replay": {
+      "seconds": 3,
+      "easing": "gentle",
+      "longSessionExtra": true
+    },
+    "view": {
+      "type": "scene",
+      "layers": [
+        "tree-side"
+      ],
+      "camera": false
+    }
+  },
+  "options": [
+    {
+      "id": "tree-view",
+      "label": "tree view",
+      "kind": "segmented",
+      "choices": [
+        "side",
+        "isometric"
+      ],
+      "default": "side"
+    }
+  ]
+}

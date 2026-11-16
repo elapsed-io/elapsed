@@ -115,12 +115,22 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   // Low power: the setting, or the system's reduced-motion preference (plan, Loading and performance).
   const lowPower = (): boolean => settings.current.lowPower || reducedMotion();
   // The site owns this object; a changed setting updates it and redraws (modes/contract.ts).
-  const modeOptions = (): ModeOptions => ({ oceanLife: settings.current.oceanLife, resultsLandmarks: settings.current.resultsLandmarks, treeView: settings.current.treeView });
-  const context: { seconds: SecondsDisplay; reducedMotion: boolean; lowPower: boolean; options: ModeOptions } = {
+  /** A mode's options (its recipe's), as the settings that hold them say (modes/manifests.ts). */
+  const modeOptions = (id: string = registered.manifest.id): ModeOptions => {
+    const manifest = findMode(id)?.manifest;
+    return Object.fromEntries(Object.entries(manifest?.options ?? {}).map(([option, key]) => [option, settings.current[key]]));
+  };
+  const context: { seconds: SecondsDisplay; reducedMotion: boolean; lowPower: boolean; options: ModeOptions; chrome: (share: number, dark: string) => void } = {
     seconds: settings.current.seconds,
     reducedMotion: reducedMotion(),
     lowPower: lowPower(),
-    options: modeOptions(),
+    options: modeOptions(settings.current.mode),
+    // The contrast switch: the time, the icons and the labels in the mode's dark colour, or its own.
+    chrome: (share, dark) => {
+      if (share <= 0) delete screenElement.dataset['contrast'];
+      else screenElement.dataset['contrast'] = 'dark';
+      screenElement.style.setProperty('--contrast-dark', dark);
+    },
   };
   const showLowPower = (): void => {
     doc.documentElement.toggleAttribute('data-low-power', context.lowPower);
@@ -143,6 +153,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   let mode: DisplayMode = (await registered.load())();
   usedMode(registered);
   screenElement.dataset['mode'] = registered.manifest.id;
+  context.options = modeOptions();
   mode.mount(modeRoot, context);
 
   const announcer = new Announcer(screenElement);
@@ -284,7 +295,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     current = 'results';
     modeRoot.hidden = true;
     controlsRoot.hidden = true;
-    await results.show(session, drawing, { start, reducedMotion: reducedMotion() }, modeOptions());
+    await results.show(session, drawing, { start, reducedMotion: reducedMotion() }, modeOptions(drawing.id));
     if (showing !== session) return;
     // The corner icons return with the results: their fade-in is set, so they stay unseen until it starts.
     screenElement.classList.remove('screen--bare');
@@ -442,6 +453,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       registered = next;
       mode = factory();
       screenElement.dataset['mode'] = next.manifest.id;
+      context.options = modeOptions();
       mode.mount(modeRoot, context);
       render(engine.view);
     }, report);

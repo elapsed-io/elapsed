@@ -187,23 +187,41 @@ test.describe('the panel matches its frames', () => {
     });
   }
 
-  test('the options box shows only while a mode with options is chosen, and its switch keeps results landmarks', async ({ page }) => {
+  test('each mode with options has its own box, shown only while it is chosen; height keeps its own landmarks switch', async ({ page }) => {
     await openApp(page, { width: 1280, height: 800 });
     await openPanel(page);
     await openCategory(page, 'display');
-    const options = page.getByRole('group', { name: 'ocean depth options' });
-    await expect(page.locator('.mode-options')).toBeHidden();
+    const visibleBoxes = page.locator('.mode-options:visible');
+    await expect(visibleBoxes).toHaveCount(0);
     await page.getByRole('radio', { name: 'ocean depth' }).click();
-    await expect(options).toBeVisible();
-    const landmarks = page.getByRole('switch', { name: 'results landmarks' });
+    const ocean = page.getByRole('group', { name: 'ocean depth options' });
+    await expect(ocean).toBeVisible();
+    await expect(visibleBoxes).toHaveCount(1);
+    const landmarks = ocean.getByRole('switch', { name: 'results landmarks' });
     await expect(landmarks).toHaveAttribute('aria-checked', 'true');
     await landmarks.click();
     await expect(landmarks).toHaveAttribute('aria-checked', 'false');
-    expect(await page.evaluate(() => (JSON.parse(localStorage.getItem('settings') ?? '{}') as { resultsLandmarks?: boolean }).resultsLandmarks)).toBe(false);
+    const stored = (): Promise<{ resultsLandmarks?: boolean; heightLandmarks?: boolean; treeView?: string }> => page.evaluate(() => JSON.parse(localStorage.getItem('settings') ?? '{}') as { resultsLandmarks?: boolean; heightLandmarks?: boolean; treeView?: string });
+    expect((await stored()).resultsLandmarks).toBe(false);
+    // Height's box has its own switch, still on.
+    await page.getByRole('radio', { name: 'height' }).click();
+    const height = page.getByRole('group', { name: 'height options' });
+    await expect(height).toBeVisible();
+    await expect(visibleBoxes).toHaveCount(1);
+    await expect(height.getByRole('switch', { name: 'results landmarks' })).toHaveAttribute('aria-checked', 'true');
+    await expect(height).toContainText('up to two per 10 km on the results');
+    // The tree's view, a segmented control.
+    await page.getByRole('radio', { name: 'tree' }).click();
+    const tree = page.getByRole('group', { name: 'tree options' });
+    await expect(tree).toBeVisible();
+    await tree.getByRole('radio', { name: 'isometric' }).click();
+    expect((await stored()).treeView).toBe('isometric');
     await page.getByRole('radio', { name: 'analog' }).click();
-    await expect(page.locator('.mode-options')).toBeHidden();
-    // Search finds it by its own words, under display.
+    await expect(visibleBoxes).toHaveCount(0);
+    // Search finds them by their own words, under display.
     await page.getByRole('searchbox', { name: 'search settings' }).fill('landmarks');
+    await expect(page.locator('.settings__row:visible')).toHaveText(['display']);
+    await page.getByRole('searchbox', { name: 'search settings' }).fill('isometric');
     await expect(page.locator('.settings__row:visible')).toHaveText(['display']);
   });
 

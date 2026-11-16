@@ -1,0 +1,25 @@
+/* The starfield piece (starfield.ts): the field over the environment, in its art's tones (height's stars). */
+@layer mode {
+  .starfield {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+  }
+
+  .starfield .starfield__art {
+    width: 100%;
+    height: 100%;
+  }
+
+  .starfield .art [data-tone="star-faint"] {
+    fill: var(--height-star-faint);
+  }
+
+  .starfield .art [data-tone="star-white"] {
+    fill: var(--height-star-white);
+  }
+
+  .starfield .art [data-tone="star-warm"] {
+    fill: var(--height-star-warm);
+  }
+}

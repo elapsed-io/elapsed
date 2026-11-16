@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { CONFIG } from '../config.ts';
 import { parseHexColour } from './light.ts';
-import { grassColour, grassWeights, leafColour, leafScale, leafState, seasonPhase, shares, stackedColour, treeGrowth, weather, yearPhase } from './tree.ts';
+import { grassColour, grassWeights, leafColour, leafScale, leafState, seasonPhase, shares, stackedColour, weather, yearPhase } from './tree.ts';
+import TREE_RECIPE from '../../../../docs/recipes/recipes/tree.json' with { type: 'json' };
+import { checkRecipe } from '../recipes/load.ts';
+import { bindingAt, measureAt } from '../recipes/measure.ts';
 
 const MINUTE = 60_000;
 const TREE = CONFIG.modes.tree;
@@ -124,7 +127,12 @@ describe('tree', () => {
     expect(weather(3.4).snow).toBe(1);
   });
 
-  it('grows the results tree from 45 % to full size at 60 focused minutes', () => {
+  it('grows the results tree from 45 % to full size at 60 focused minutes (its recipe\'s growth binding)', () => {
+    const result = checkRecipe(TREE_RECIPE, { builtIn: true });
+    if (!result.ok) throw new Error(result.problems.join('; '));
+    const recipe = result.recipe;
+    const growth = recipe.layers.find((layer) => layer.type === 'tree')?.growth ?? 1;
+    const treeGrowth = (focusedMs: number): number => bindingAt(growth, { measure: measureAt(recipe.measure, focusedMs) });
     expect(treeGrowth(0)).toBe(0.45);
     expect(treeGrowth(30 * MINUTE)).toBeCloseTo(0.725, 12);
     expect(treeGrowth(60 * MINUTE)).toBe(1);

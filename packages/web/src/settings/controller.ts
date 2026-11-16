@@ -243,7 +243,7 @@ export class SettingsController {
     if (next.mode !== previous.mode) this.#effects.mode(next.mode);
     if (next.clockFormat !== previous.clockFormat) this.#effects.clockFormat(next.clockFormat);
     if (next.lowPower !== previous.lowPower) this.#effects.lowPower(next.lowPower);
-    if (next.oceanLife !== previous.oceanLife || next.resultsLandmarks !== previous.resultsLandmarks || next.treeView !== previous.treeView) this.#effects.modeOptions();
+    if (next.oceanLife !== previous.oceanLife || next.resultsLandmarks !== previous.resultsLandmarks || next.heightLandmarks !== previous.heightLandmarks || next.treeView !== previous.treeView) this.#effects.modeOptions();
     this.#applyAppearance();
     if (next.font !== previous.font) void this.#applyFont();
     for (const listener of this.#listeners) listener(next);
