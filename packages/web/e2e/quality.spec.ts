@@ -5,6 +5,7 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { untilEndNowAccepts } from './helpers.ts';
 
 test('nothing shifts the layout unexpectedly, on load or while using the controls', async ({ page }) => {
   await page.addInitScript(() => {
@@ -43,7 +44,7 @@ test('stores only the open session, then the finished one in tab storage, and se
   await page.waitForTimeout(1200);
   expect(await stored()).toEqual({ local: ['timer.active', 'timer.heartbeat'], session: [], databases: [], caches: [] });
   await page.keyboard.press('e');
-  await page.waitForTimeout(350);
+  await untilEndNowAccepts(page);
   await page.keyboard.press('e');
   await page.locator('.results').waitFor();
   // The finished session moves to this tab's storage (plan, Guest storage).
