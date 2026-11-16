@@ -74,6 +74,15 @@ async function showLikeFrame(page: Page, name: SettingsFrameName): Promise<void>
     await page.getByRole('button', { name: 'reset all settings' }).click();
   }
   await page.evaluate(() => document.fonts.ready);
+  // The appearance frame's panel runs past its 1040 px (the frame clips its footer's links there); the
+  // site's panel would scroll instead, and Chromium draws a scrolling panel's tiles a few levels differently.
+  // A window exactly as tall as the panel's content lays it out the same without scrolling, before the fresh
+  // paint below; comparisons stay clipped to the frame's height.
+  const needed = await panel(page).evaluate((element) => element.scrollHeight);
+  if (needed > SETTINGS_FRAME_HEIGHT[name]) {
+    await page.setViewportSize({ width: 1280, height: needed });
+    await expect(panel(page)).not.toHaveAttribute('data-overflow');
+  }
   await page.evaluate(() => {
     (document.activeElement as HTMLElement | null)?.blur();
     const saved = document.querySelector<HTMLElement>('.settings__saved');
@@ -94,16 +103,6 @@ test.describe('the panel matches its frames', () => {
     test(`with ${name} open`, async ({ page, browser, browserName }) => {
       await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT[name] });
       await showLikeFrame(page, name);
-      // The appearance frame's panel runs past its 1040 px (the frame clips its footer's links there); the
-      // site's panel scrolls instead, and Chromium draws a scrolling panel's tiles a few levels differently.
-      // A window exactly as tall as the panel's content lays it out the same without scrolling; the
-      // comparison stays clipped to the frame's height.
-      const needed = await panel(page).evaluate((element) => element.scrollHeight);
-      if (needed > SETTINGS_FRAME_HEIGHT[name]) {
-        await page.setViewportSize({ width: 1280, height: needed });
-        await expect(panel(page)).not.toHaveAttribute('data-overflow');
-        await page.waitForTimeout(100);
-      }
       const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: SETTINGS_FRAME_HEIGHT[name] } });
       const reference = await frameReference(browser, name, GRAPHITE);
       const diff = await diffPngs(page, site, reference);

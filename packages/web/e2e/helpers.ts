@@ -58,24 +58,21 @@ export async function settle(page: Page): Promise<void> {
 }
 
 /**
- * Freezes every animation on the page at an exact moment, as static style, so a screenshot shows that
- * moment whatever the real time and however late the browser draws. Playwright's clock moves timers but
- * not animations, so each animation's own time is set:
+ * Freezes every animation on the page at an exact moment, so a screenshot shows that moment whatever the
+ * real time. Playwright's clock moves timers but not animations, so each animation's own time is set, once
+ * it is ready (a pending animation would otherwise take its own start time afterwards):
  * - `css`: CSS animations (the seconds blur-away, pinned to focused time) at this many milliseconds;
  * - `at`: animations of elements matching a selector at that many milliseconds (the countdown's fill);
  * - every other animation (interface motion, transitions) at its end.
- * Each is then written into its element's style (CSSOM, which the CSP allows) and removed, so nothing
- * moves on the compositor; animations of pseudo-elements, which cannot be written, stay paused.
+ * Each is then held paused, which is static: nothing moves between this and the screenshot.
  */
 export async function freezeAnimations(page: Page, moments: { readonly css?: number; readonly at?: Readonly<Record<string, number>> } = {}): Promise<void> {
   await page.evaluate(
     async ({ css, at }) => {
       const animations = document.getAnimations();
-      // A pending animation would take its own start time once ready, undoing what is set here.
       await Promise.all(animations.map((animation) => animation.ready.catch(() => undefined)));
       for (const animation of animations) {
-        const effect = animation.effect instanceof KeyframeEffect ? animation.effect : null;
-        const target = effect?.target ?? null;
+        const target = animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
         const selector = target === null ? undefined : Object.keys(at).find((key) => target.matches(key));
         animation.pause();
         if (selector !== undefined) animation.currentTime = at[selector] ?? 0;
@@ -87,17 +84,12 @@ export async function freezeAnimations(page: Page, moments: { readonly css?: num
             // An endless animation has no end: it stays paused where it is.
           }
         }
-        if (effect?.pseudoElement !== null && effect?.pseudoElement !== undefined) continue;
-        try {
-          animation.commitStyles();
-          animation.cancel();
-        } catch {
-          // Not rendered (display: none): nothing to draw, so it stays paused.
-        }
       }
     },
     { css: moments.css ?? null, at: moments.at ?? {} },
   );
+  // Let the browser draw the held moment (the page's own clock is held, so this waits in real time).
+  await page.waitForTimeout(100);
 }
 
 /** Holds every CSS animation at a moment of focused time, so a screenshot shows exactly that moment. */
