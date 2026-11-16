@@ -458,3 +458,87 @@ test('the ocean palette keeps its text and buttons readable over the water', asy
   });
   expect(colours).toEqual({ time: 'rgb(220, 232, 238)', icon: 'rgb(158, 195, 214)' });
 });
+
+/** The life chunks the page fetched (art/ocean/life-<zone>). */
+function lifeRequests(page: Page): string[] {
+  const fetched: string[] = [];
+  page.on('request', (request) => {
+    const match = /\/life-([a-z]+)-[\w-]+\.js$/.exec(new URL(request.url()).pathname);
+    if (match?.[1] !== undefined) fetched.push(match[1]);
+  });
+  return fetched;
+}
+
+test('ocean life drifts in while paused, from the zone the dive is in, and leaves when the timer resumes', async ({ page }) => {
+  const fetched = lifeRequests(page);
+  await openApp(page, { mode: 'ocean' });
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(6 * MINUTE);
+  await expect(page.locator('.life')).toHaveCount(0);
+  await page.locator('.button--primary').click();
+  const life = page.locator('.life--in');
+  await life.waitFor({ state: 'attached' });
+  // 90 m: the sunlight zone's catalog, and only it.
+  await expect(page.locator('.life')).toHaveAttribute('data-zone', 'sunlight');
+  expect(fetched.filter((zone) => zone !== 'placeholder')).toEqual(['sunlight']);
+  const keys = await page.locator('.life [data-art]').evaluateAll((art) => [...new Set(art.map((element) => element.getAttribute('data-art')))].sort());
+  expect(keys).toEqual(['sunlight/bubble', 'sunlight/fish-far', 'sunlight/fish-mid', 'sunlight/fish-near']);
+  // Twenty fish at three distances and seven bubbles, moved by CSS animations alone.
+  await expect(page.locator('.life__fish')).toHaveCount(20);
+  await expect(page.locator('.life__bubble')).toHaveCount(7);
+  const kinds = await page.locator('.life').evaluate((layer) => [...new Set(layer.getAnimations({ subtree: true }).map((animation) => animation.constructor.name))]);
+  expect(kinds).toEqual(['CSSAnimation']);
+  await page.locator('.button--primary').click();
+  await expect(page.locator('.life')).toHaveCount(0);
+});
+
+test('deeper, ocean life comes from that zone only', async ({ page }) => {
+  const fetched = lifeRequests(page);
+  await openApp(page, { mode: 'ocean' });
+  await page.locator('.button--primary').click();
+  // 20 minutes: 300 m, in the twilight zone.
+  await page.clock.runFor(20 * MINUTE);
+  await page.locator('.button--primary').click();
+  await page.locator('.life--in').waitFor({ state: 'attached' });
+  await expect(page.locator('.life')).toHaveAttribute('data-zone', 'twilight');
+  expect(fetched.filter((zone) => zone !== 'placeholder')).toEqual(['twilight']);
+});
+
+for (const [how, prepare] of [
+  ['the option off', async (page: Page) => openApp(page, { mode: 'ocean', settings: { oceanLife: false } })],
+  ['low power', async (page: Page) => openApp(page, { mode: 'ocean', settings: { lowPower: true } })],
+  [
+    'reduced motion',
+    async (page: Page) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await openApp(page, { mode: 'ocean' });
+    },
+  ],
+] as const) {
+  test(`with ${how}, no ocean life comes while paused`, async ({ page }) => {
+    const fetched = lifeRequests(page);
+    await prepare(page);
+    await page.locator('.button--primary').click();
+    await page.clock.runFor(6 * MINUTE);
+    await page.locator('.button--primary').click();
+    await page.clock.runFor(MINUTE);
+    await settle(page);
+    await expect(page.locator('.life')).toHaveCount(0);
+    expect(fetched).toEqual([]);
+  });
+}
+
+test('turning ocean life on while paused brings it in; off takes it away', async ({ page }) => {
+  await openApp(page, { mode: 'ocean', width: 1280, height: 800, settings: { oceanLife: false } });
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(6 * MINUTE);
+  await page.locator('.button--primary').click();
+  await page.keyboard.press(',');
+  await page.locator('.settings__row', { hasText: /^display$/ }).click();
+  const option = page.getByRole('switch', { name: 'ocean life' });
+  await expect(option).toHaveAttribute('aria-checked', 'false');
+  await option.click();
+  await page.locator('.life--in').waitFor({ state: 'attached' });
+  await option.click();
+  await expect(page.locator('.life')).toHaveCount(0);
+});

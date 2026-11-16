@@ -35,8 +35,11 @@ export const MODE_MANIFESTS: readonly ModeManifest[] = [
     tier: 'on-choice',
     budget,
     source: 'src/modes/ocean/ocean.ts',
-    // The things that pass on its results (art/ocean/passing.ts).
-    art: CONFIG.modes.ocean.results.passing.things.map((thing) => thing.key),
+    // The things that pass on its results (art/ocean/passing.ts), and each zone's life while paused (life-<zone>.ts).
+    art: [
+      ...CONFIG.modes.ocean.results.passing.things.map((thing) => thing.key),
+      ...(['sunlight', 'twilight', 'midnight', 'abyssal', 'hadal'] as const).flatMap((zone) => ['fish-far', 'fish-mid', 'fish-near', 'bubble'].map((name) => `${zone}/${name}`)),
+    ],
   },
 ];
 

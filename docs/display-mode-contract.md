@@ -28,6 +28,7 @@ The code is the reference: `packages/web/src/modes/contract.ts` (what a mode rec
   - `reducedMotion`: the system asks for reduced motion;
   - `lowPower`: low power is on (by hand, or because of reduced motion): ambient animation stops and only
     the time shows; anything that moves with time steps once a minute instead of gliding.
+  - `options`: the modes' own options as they are now (ocean life, results landmarks).
   When a value changes the site calls `render` again (or `relayout` when the font changed).
 - **`render(view)`**: the timer's state (core, `engine/view.ts`), called only when the visible value
   changes: `status` (idle, running, paused, ended), `focusedMs` and `shownMs` (what the time shows, at

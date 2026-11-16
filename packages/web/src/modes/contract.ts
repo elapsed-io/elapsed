@@ -22,13 +22,18 @@ export interface DisplayContext {
    * moves with time steps once a minute instead of gliding.
    */
   readonly lowPower: boolean;
+  /** The modes' own options (Settings > Display), as they are now. */
+  readonly options: ModeOptions;
 }
 
 /**
  * A mode's own options (plan, Interface: "each display mode's options live in the display mode section"),
- * as the site's settings hold them. Release 2 adds them round by round: results landmarks in 2.3.
+ * as the site's settings hold them. Release 2 adds them round by round: results landmarks in 2.3, ocean life
+ * in 2.4.
  */
 export interface ModeOptions {
+  /** Sea life drifts in while a session is paused (ocean depth). */
+  readonly oceanLife: boolean;
   /** Random landmarks on the results' profile chart (ocean depth, height). */
   readonly resultsLandmarks: boolean;
 }

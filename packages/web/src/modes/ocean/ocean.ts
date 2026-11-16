@@ -18,8 +18,10 @@
 
 import 'virtual:tokens/ocean.css';
 import './ocean.css';
-import { CONFIG, oceanColour, oceanDepth } from '@stopwatch/core';
-import type { Session, TimerView } from '@stopwatch/core';
+import { CONFIG, oceanColour, oceanDepth, oceanZone } from '@stopwatch/core';
+import type { OceanZone, Session, TimerView } from '@stopwatch/core';
+import { ART } from '../../art/registry.ts';
+import type { ArtCatalog } from '../../art/registry.ts';
 import { html } from '../../dom.ts';
 import type { DisplayContext, DisplayMode, ModeOptions, ReplaySurface } from '../contract.ts';
 import { TimeDisplay } from '../shared/time-display.ts';
@@ -73,6 +75,72 @@ export function glideKeyframes(from: number, to: number, top: number, bottom: nu
   return depths.map((depth) => ({ offset: (depth - from) / (to - from), transform: frame(depth) }));
 }
 
+/** Each zone's life catalog, loaded only when a pause there shows it (art/ocean/life-<zone>.ts). */
+const LIFE_CATALOGS: Readonly<Record<OceanZone, () => Promise<{ LIFE: ArtCatalog }>>> = {
+  sunlight: () => import('../../art/ocean/life-sunlight.ts'),
+  twilight: () => import('../../art/ocean/life-twilight.ts'),
+  midnight: () => import('../../art/ocean/life-midnight.ts'),
+  abyssal: () => import('../../art/ocean/life-abyssal.ts'),
+  hadal: () => import('../../art/ocean/life-hadal.ts'),
+};
+
+const LIFE = OCEAN.life;
+
+/** A resolved CSS time ("0.18s", "180ms") in milliseconds; 0 when unreadable. */
+function timeMs(value: string): number {
+  const text = value.trim();
+  const number = Number.parseFloat(text);
+  if (!Number.isFinite(number)) return 0;
+  return text.endsWith('ms') ? number : number * 1000;
+}
+
+/**
+ * Ocean life (the "ocean depth, paused" frame), as the frame places it: bubbles rising and three schools at
+ * three distances, each moved by CSS animations alone (ocean.css), timed from now, so nothing runs per frame.
+ */
+function drawLife(doc: Document, zone: OceanZone): HTMLElement[] {
+  const { frameWidthPx: W, frameHeightPx: H, spanPx, phasePx, wiggleRate, bobRate, bubbleSpanPx, bubbleSwayRate } = LIFE;
+  const fish = LIFE.fish.map(([ox, oy, row, speed, direction, scale, phase]) => {
+    const distance = LIFE.distances[row] ?? 'near';
+    const art = ART.draw(doc, `${zone}/fish-${distance}`, `art life__fish${direction > 0 ? ' life__fish--right' : ''}`);
+    art.setAttribute('width', String(54 * scale));
+    art.setAttribute('height', String(22 * scale));
+    const body = html(doc, 'div', { class: 'life__body' }, [art]);
+    body.style.setProperty('--fish-x', `${String(ox)}px`);
+    body.style.setProperty('--fish-y', `${String(oy - 11 * scale)}px`);
+    const bob = html(doc, 'div', { class: 'life__bob' }, [body]);
+    bob.style.setProperty('--sine-amp', `${String(LIFE.bobPx)}px`);
+    bob.style.setProperty('--sine-period', `${String((2 * Math.PI) / bobRate)}s`);
+    bob.style.setProperty('--sine-delay', `${String(-(2 * phase) / bobRate)}s`);
+    const wiggle = html(doc, 'div', { class: 'life__wiggle' }, [bob]);
+    wiggle.style.setProperty('--sine-amp', `${String(LIFE.wigglePx)}px`);
+    wiggle.style.setProperty('--sine-period', `${String((2 * Math.PI) / wiggleRate)}s`);
+    wiggle.style.setProperty('--sine-delay', `${String(-phase / wiggleRate)}s`);
+    const travel = html(doc, 'div', { class: direction > 0 ? 'life__travel life__travel--right' : 'life__travel life__travel--left' }, [wiggle]);
+    travel.style.setProperty('--life-row', String(row / H));
+    travel.style.setProperty('--travel-period', `${String(spanPx / speed)}s`);
+    travel.style.setProperty('--travel-delay', `${String(-((phase * phasePx) % spanPx) / speed)}s`);
+    return travel;
+  });
+  const bubbles = LIFE.bubbles.map(([x, radius, speed, phase], index) => {
+    const art = ART.draw(doc, `${zone}/bubble`, 'art life__bubble');
+    art.setAttribute('width', String(2 * radius));
+    art.setAttribute('height', String(2 * radius));
+    const ball = html(doc, 'div', { class: 'life__ball' }, [art]);
+    ball.style.setProperty('--bubble-r', `${String(radius)}px`);
+    const sway = html(doc, 'div', { class: 'life__wiggle' }, [ball]);
+    sway.style.setProperty('--sine-amp', `${String(LIFE.bubbleSwayPx)}px`);
+    sway.style.setProperty('--sine-period', `${String((2 * Math.PI) / bubbleSwayRate)}s`);
+    sway.style.setProperty('--sine-delay', `${String(-index / bubbleSwayRate)}s`);
+    const rise = html(doc, 'div', { class: 'life__rise' }, [sway]);
+    rise.style.setProperty('--life-x', String(x / W));
+    rise.style.setProperty('--rise-period', `${String(bubbleSpanPx / speed)}s`);
+    rise.style.setProperty('--rise-delay', `${String(-phase / speed)}s`);
+    return rise;
+  });
+  return [...bubbles, ...fish];
+}
+
 export function createOceanMode(): DisplayMode {
   let root: HTMLElement | null = null;
   let display: TimeDisplay | null = null;
@@ -81,6 +149,39 @@ export function createOceanMode(): DisplayMode {
   let glide: Animation | null = null;
   let glidingMinute: number | null = null;
   let still = '';
+  let water: HTMLDivElement | null = null;
+  let life: HTMLDivElement | null = null;
+
+  /** While paused, life drifts in, unless the option is off or low power (or reduced motion) is on. */
+  const showLife = (paused: boolean, depth: number): void => {
+    const wanted = paused && context !== null && context.options.oceanLife && !context.lowPower;
+    if (wanted && life === null && water !== null) {
+      const doc = water.ownerDocument;
+      const layer = html(doc, 'div', { class: 'life', attrs: { 'data-zone': oceanZone(depth) } });
+      life = layer;
+      water.append(layer);
+      const zone = oceanZone(depth);
+      void LIFE_CATALOGS[zone]().then(({ LIFE: catalog }) => {
+        if (life !== layer) return;
+        if (!catalog.entries.every((entry) => ART.has(entry.key))) ART.register(catalog);
+        layer.replaceChildren(...drawLife(doc, zone));
+        layer.classList.add('life--in');
+      });
+    } else if (!wanted && life !== null) {
+      // It leaves when the timer resumes.
+      const leaving = life;
+      life = null;
+      const fade = leaving.animate([{ opacity: getComputedStyle(leaving).opacity }, { opacity: 0 }], { duration: timeMs(getComputedStyle(leaving).getPropertyValue('--motion-fade')), easing: 'ease-out', fill: 'forwards' });
+      void fade.finished.then(
+        () => {
+          leaving.remove();
+        },
+        () => {
+          leaving.remove();
+        },
+      );
+    }
+  };
 
   /** Draws the strip from depth `top` to depth `bottom`, the screen showing 12 m of it (2 × the half span). */
   const drawStrip = (top: number, bottom: number): void => {
@@ -148,7 +249,8 @@ export function createOceanMode(): DisplayMode {
       still = '';
       const doc = element.ownerDocument;
       strip = html(doc, 'div', { class: 'ocean__strip ocean__strip--still' });
-      const water = html(doc, 'div', { class: 'ocean__water', attrs: { 'aria-hidden': 'true' } }, [strip]);
+      water = html(doc, 'div', { class: 'ocean__water', attrs: { 'aria-hidden': 'true' } }, [strip]);
+      life = null;
       display = new TimeDisplay(doc, displayContext);
       element.replaceChildren(water, display.element);
       void doc.fonts.ready.then(() => display?.measure());
@@ -157,6 +259,7 @@ export function createOceanMode(): DisplayMode {
       display?.render(view);
       const state: State = view.status === 'idle' || view.status === 'ended' ? 'idle' : view.status === 'running' && view.checkInDueAt === null ? 'running' : 'held';
       place(view.focusedMs, state);
+      showLife(view.status === 'paused', oceanDepth(view.focusedMs));
     },
     async replay(surface: ReplaySurface, session: Session, options?: ModeOptions) {
       // The dive profile loads with the results, not with the timer.
@@ -173,6 +276,8 @@ export function createOceanMode(): DisplayMode {
       display = null;
       context = null;
       strip = null;
+      water = null;
+      life = null;
       glide = null;
       glidingMinute = null;
     },

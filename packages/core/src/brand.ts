@@ -205,6 +205,7 @@ export const BRAND = {
       mode: { label: 'display mode' },
       /** Each mode's options, under the tiles while that mode is chosen (the Release 2 display frame). */
       modeOptions: { ocean: 'ocean depth options' },
+      oceanLife: { label: 'ocean life', help: 'sea life drifts in while you’re paused' },
       resultsLandmarks: { label: 'results landmarks', help: { ocean: 'up to two per 1,000 m on the results' } },
       theme: { label: 'theme' },
       colors: { label: 'theme colors', background: 'background', foreground: 'foreground', accent: 'accent', hex: '{name} hex code' },

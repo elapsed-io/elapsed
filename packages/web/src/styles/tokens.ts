@@ -520,7 +520,40 @@ function oceanTokens(): string {
     '--passing-jelly-line': passing.colours.jellyLine,
     '--passing-glow': passing.colours.glow,
   };
-  return `${block('[data-mode="ocean"]', properties)}\n${block(':root', profile)}`;
+  return `${block('[data-mode="ocean"]', properties)}\n${block(':root', profile)}\n${lifeTokens()}`;
+}
+
+/** Ocean life's colours and motions (the "ocean depth, paused" frame), from CONFIG.modes.ocean.life. */
+function lifeTokens(): string {
+  const life = CONFIG.modes.ocean.life;
+  const share = (px: number, of: number): string => `${String((px / of) * 100)}%`;
+  const sine = (axis: 'X' | 'Y'): string => {
+    const steps = 24;
+    const frames = Array.from({ length: steps + 1 }, (_, i) => `    ${String((i / steps) * 100)}% { transform: translate${axis}(calc(var(--sine-amp) * ${String(Math.round(Math.sin((2 * Math.PI * i) / steps) * 1e6) / 1e6)})); }`);
+    return `  @keyframes life-sine-${axis.toLowerCase()} {\n${frames.join('\n')}\n  }`;
+  };
+  const colours = block('[data-mode="ocean"]', {
+    '--life-enter': ms(life.enterMs),
+    '--life-far': life.colours.far,
+    '--life-mid': life.colours.mid,
+    '--life-near': life.colours.near,
+    '--life-bubble': life.colours.bubble,
+    '--life-bubble-opacity': String(life.colours.bubbleOpacity),
+    '--life-bubble-stroke': px(life.bubbleStrokePx),
+  });
+  const from = share(life.fromPx, life.frameWidthPx);
+  const to = share(life.fromPx + life.spanPx, life.frameWidthPx);
+  const riseFrom = share(life.bubbleFromPx, life.frameHeightPx);
+  const riseTo = share(life.bubbleFromPx - life.bubbleSpanPx, life.frameHeightPx);
+  return [
+    colours,
+    `  @keyframes life-enter {\n    from { opacity: 0; }\n    to { opacity: 1; }\n  }`,
+    `  @keyframes life-travel-right {\n    from { transform: translateX(${from}); }\n    to { transform: translateX(${to}); }\n  }`,
+    `  @keyframes life-travel-left {\n    from { transform: translateX(${to}); }\n    to { transform: translateX(${from}); }\n  }`,
+    `  @keyframes life-rise {\n    from { transform: translateY(${riseFrom}); }\n    to { transform: translateY(${riseTo}); }\n  }`,
+    sine('X'),
+    sine('Y'),
+  ].join('\n');
 }
 
 const MODE_TOKENS: Readonly<Record<ModeTokenId, () => string>> = { ring: ringTokens, timeline: timelineTokens, analog: analogTokens, ocean: oceanTokens };

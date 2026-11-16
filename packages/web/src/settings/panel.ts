@@ -494,29 +494,40 @@ export class SettingsPanel {
   /**
    * The chosen mode's own options, in a box under the tiles, as the Release 2 display frame draws "ocean
    * depth options"; shown only while a mode that has options is chosen (plan, Interface: "each display mode's
-   * options live in the display mode section"). Round 2.3 adds results landmarks; 2.4 adds ocean life.
+   * options live in the display mode section"): ocean life (round 2.4) and results landmarks (2.3).
    */
   #modeOptions(): Item {
     const doc = this.#doc;
     const text = copy.resultsLandmarks;
     const title = html(doc, 'div', { class: 'mode-options__title' });
+    const row = (label: string, control: HTMLElement, help: HTMLElement): HTMLDivElement =>
+      html(doc, 'div', { class: 'setting' }, [html(doc, 'div', { class: 'setting__row' }, [html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [label]), control]), help]);
+    const lifeControl = toggle(doc, copy.oceanLife.label, (on) => {
+      this.#set('oceanLife', on);
+    });
+    const life = row(copy.oceanLife.label, lifeControl.element, html(doc, 'div', { class: 'setting__help' }, [copy.oceanLife.help]));
     const control = toggle(doc, text.label, (on) => {
       this.#set('resultsLandmarks', on);
     });
     const help = html(doc, 'div', { class: 'setting__help' });
-    const landmarks = html(doc, 'div', { class: 'setting' }, [html(doc, 'div', { class: 'setting__row' }, [html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [text.label]), control.element]), help]);
-    const group = html(doc, 'div', { class: 'mode-options', attrs: { role: 'group' } }, [title, landmarks]);
+    const landmarks = row(text.label, control.element, help);
+    const group = html(doc, 'div', { class: 'mode-options', attrs: { role: 'group' } }, [title, life, landmarks]);
     this.#updates.push((settings) => {
       const mode = settings.mode;
-      const options = mode === 'ocean' ? { title: copy.modeOptions.ocean, help: text.help.ocean } : null;
+      const options = mode === 'ocean' ? { title: copy.modeOptions.ocean, help: text.help.ocean, life: true } : null;
       group.hidden = options === null;
       if (options === null) return;
       title.textContent = options.title;
       group.setAttribute('aria-label', options.title);
+      life.hidden = !options.life;
       help.textContent = options.help;
+      lifeControl.update(settings.oceanLife);
       control.update(settings.resultsLandmarks);
     });
-    return { element: html(doc, 'div', { class: 'settings__item-contents' }, [group]), search: searchText(copy.modeOptions.ocean, text.label, text.help.ocean) };
+    return {
+      element: html(doc, 'div', { class: 'settings__item-contents' }, [group]),
+      search: searchText(copy.modeOptions.ocean, copy.oceanLife.label, copy.oceanLife.help, text.label, text.help.ocean),
+    };
   }
 
   /**

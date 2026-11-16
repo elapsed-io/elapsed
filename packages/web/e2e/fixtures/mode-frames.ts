@@ -181,3 +181,52 @@ export function oceanFrame(depth: number, minutes: number): string {
 <div style="display: flex; gap: 14px"><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${c.text}; background: ${c.gray}">pause</button><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${c.text}; background: ${c.end}">end</button></div>
 </div>`);
 }
+
+/**
+ * The "ocean depth, paused" frame at `t` seconds into the pause (canvas version 1794830661-c660): the water at
+ * 90 m, the frame's placeholder fish and bubbles where its own formulas put them at that moment, and the time
+ * held behind the blur with "paused for" `pausedFor` (hh:mm:ss).
+ */
+export function oceanPausedFrame(t: number, pausedFor: string): string {
+  const c = { icon: '#9EC3D6', text: '#DCE8EE', accent: '#35764E', end: '#A8403D' };
+  const sm = (x: number): number => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+  const bx = [120, 190, 560, 610, 330, 420, 250];
+  const sp = [26, 34, 22, 30, 28, 38, 24];
+  const ph = [0, 180, 90, 300, 400, 260, 140];
+  const radii = [5, 3.5, 6, 3, 4.5, 2.5, 4];
+  const bubbles = bx
+    .map((x, k) => `<circle cx="${(x + 6 * Math.sin(t * 1.4 + k)).toFixed(1)}" cy="${(470 - ((t * (sp[k] ?? 0) + (ph[k] ?? 0)) % 520)).toFixed(1)}" r="${String(radii[k])}" fill="none" stroke="#7FB3CC" stroke-width="1.2" opacity="0.5"></circle>`)
+    .join('');
+  const fish = [
+    [17.2, 13.5, 150, 7, 1, 0.3, 4.77], [61.9, 13.4, 150, 7, 1, 0.3, 5.53], [-65.9, -1.9, 150, 7, 1, 0.3, 5.66], [20.9, 22.5, 150, 7, 1, 0.3, 0.68], [-4.3, -14.2, 150, 7, 1, 0.3, 3.26], [10.4, -27.3, 150, 7, 1, 0.3, 1.3], [-30.9, 23.3, 150, 7, 1, 0.3, 4.59], [-47.7, 16.6, 150, 7, 1, 0.3, 0.83], [16.4, -20.9, 150, 7, 1, 0.3, 0.01], [52.0, -16.3, 150, 7, 1, 0.3, 1.29], [67.5, 20.9, 150, 7, 1, 0.3, 1.74],
+    [64.6, 2.2, 300, 13, -1, 0.55, 4.07], [-41.3, 24.7, 300, 13, -1, 0.55, 4.14], [65.3, 22.0, 300, 13, -1, 0.55, 1.79], [-19.4, -18.7, 300, 13, -1, 0.55, 0.87], [-60.9, -11.1, 300, 13, -1, 0.55, 3.62], [-69.5, 10.0, 300, 13, -1, 0.55, 2.03], [-26.6, 17.8, 300, 13, -1, 0.55, 2.88],
+    [0, 0, 390, 26, 1, 1.25, 1.89], [150, 18, 390, 26, 1, 1.25, 2.89],
+  ] as const;
+  const colour = (y: number): string => (y === 150 ? '#0B2A63' : y === 300 ? '#1B4C82' : '#3D7EA6');
+  const fishes = fish
+    .map(([ox, oy, y, speed, direction, scale, phase]) => {
+      let cx = (t * speed + phase * 40) % 1000;
+      cx = direction > 0 ? cx - 140 : 860 - cx;
+      const x = cx + ox + 4 * Math.sin(t * 1.1 + phase);
+      const yy = y + oy + 3 * Math.sin(t * 0.9 + phase * 2);
+      return `<g transform="translate(${x.toFixed(1)} ${yy.toFixed(1)}) scale(${String(direction > 0 ? -scale : scale)} ${String(scale)})"><path d="M0 0 C10 -11 30 -11 42 0 C30 11 10 11 0 0 Z M40 0 L54 -9 L52 0 L54 9 Z" fill="${colour(y)}"></path></g>`;
+    })
+    .join('');
+  const [h, m, s] = pausedFor.split(':');
+  const colon = '<span style="margin: 0 -0.05em; position: relative; top: -0.06em">:</span>';
+  return frameDocument(`<div style="width: 720px; height: 450px; box-sizing: border-box; background: ${oceanWaterAt(90)}; color: #DCE8EE; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px">
+<svg aria-hidden="true" width="720" height="450" viewBox="0 0 720 450" style="position: absolute; top: 0; left: 0"><g opacity="${sm(t / 6).toFixed(2)}">${bubbles}${fishes}</g></svg>
+<div style="position: absolute; top: 14px; right: 14px; display: flex; gap: 4px"><button aria-label="settings" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${c.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><circle cx="12" cy="12" r="3"></circle></svg></button><button aria-label="account" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${c.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"></circle><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path></svg></button></div>
+<div style="position: relative; display: flex; align-items: center; justify-content: center">
+<div aria-hidden="true" style="font-family: Archivo, system-ui, sans-serif; font-weight: 300; font-stretch: 92%; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; white-space: nowrap; text-align: center; font-size: 104px; filter: blur(10px); opacity: 0.4">00${colon}06</div>
+<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="position: relative; font-family: Archivo, system-ui, sans-serif; font-weight: 300; font-stretch: 92%; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; white-space: nowrap; text-align: center; font-size: 44px">${h ?? ''}${colon}${m ?? ''}${colon}${s ?? ''}<div style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; font-size: 12px; font-weight: 400; font-stretch: 100%; color: #9EC3D6; letter-spacing: 0.14em">paused for</div></div></div>
+</div>
+<div style="position: relative"><div style="display: flex; gap: 14px"><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${c.text}; background: ${c.accent}">resume</button><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${c.text}; background: ${c.end}">end</button></div>
+</div>
+</div>`);
+}
+
+/** The ocean frames' water at `depth`: their own light model, as oceanWater() draws it. */
+function oceanWaterAt(depth: number): string {
+  return oceanWater(depth);
+}

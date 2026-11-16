@@ -13,7 +13,7 @@
  * notifications, privacy and data. Advanced arrives in round 7.
  *
  * Schema 2 (Release 2, round 2.1) adds animation speed and low power, and the
- * mode options (round 2.3 on: results landmarks for ocean depth and height). Older
+ * mode options (round 2.3 on: results landmarks for ocean depth and height; 2.4: ocean life). Older
  * settings migrate field by field: what they lack takes its default.
  */
 
@@ -79,6 +79,8 @@ export interface Settings {
   readonly pauseLimit: number;
   // Display
   readonly mode: ModeChoice;
+  /** Mode option (ocean depth): sea life drifts in while a session is paused. */
+  readonly oceanLife: boolean;
   /** Mode option (ocean depth and height): random landmarks on the results' profile. */
   readonly resultsLandmarks: boolean;
   // Appearance
@@ -144,6 +146,7 @@ export type SettingDeclaration =
   | RangeSetting<'checkInInterval'>
   | RangeSetting<'pauseLimit'>
   | ChoiceSetting<'mode'>
+  | SwitchSetting<'oceanLife'>
   | SwitchSetting<'resultsLandmarks'>
   | ChoiceSetting<'theme'>
   | ColorsSetting<'colors'>
@@ -184,6 +187,7 @@ export const SETTINGS: readonly SettingDeclaration[] = [
     target: { engine: 'pauseLimit' },
   },
   { key: 'mode', kind: 'choice', category: 'display', options: MODE_CHOICES, default: 'digits', target: { site: 'mode' } },
+  { key: 'oceanLife', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
   { key: 'resultsLandmarks', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
   { key: 'theme', kind: 'choice', category: 'appearance', options: THEME_IDS, default: 'graphite', target: { theme: 'preset' } },
   { key: 'colors', kind: 'colors', category: 'appearance', default: null, target: { theme: 'colors' } },

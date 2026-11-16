@@ -17,7 +17,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { GRAPHITE, PAPER, checkInFrame, idleFrame, inPalette, limitFrame, pausedFrame, pausedMissedFrame, runningFrame } from './fixtures/frames.ts';
-import { modeFrame, oceanFrame } from './fixtures/mode-frames.ts';
+import { modeFrame, oceanFrame, oceanPausedFrame } from './fixtures/mode-frames.ts';
 import { createSession, pauseSession, resumeSession, serializeActiveState, startState } from '@stopwatch/core';
 import { MINUTE, SECOND, compareWithReference, freezeAnimations, holdAnimationsAt, openApp, settle } from './helpers.ts';
 import { SMOOTHED_LIMIT, expectLikeFrame } from './pixels.ts';
@@ -139,6 +139,14 @@ for (const [name, mode, focus, paused, limit] of [
 const ANALOG_LIMIT = 300;
 /** The most any ocean pixel may differ from its frame: the frames' two-stop water against the site's every metre. */
 const OCEAN_LEVELS = 10;
+/**
+ * Ocean life's fish and bubbles: the frame rounds each position to 0.1 px where the site moves them exactly,
+ * so their anti-aliased edges differ by a few levels. Measured in the reference image: 2,905 pixels past
+ * 8 levels in Chromium, smoothed at most 33.2 in any browser; a second off differs by 5,342 to 19,465 pixels,
+ * smoothed 124 (the control below).
+ */
+const OCEAN_LIFE_LIMIT = 4000;
+const OCEAN_LIFE_SMOOTHED = 40;
 /** At 5 m that difference passes the 8 levels the pixel check counts as visible, over a band of the screen (45,913 measured). */
 const OCEAN_SURFACE_LIMIT = 50_000;
 
@@ -172,6 +180,28 @@ for (const [frame, focus, depth, minutes, into, limit] of [
     });
   });
 }
+
+test('ocean depth matches the "ocean depth, paused" frame, its life where the frame puts it', async ({ page, browser, browserName }) => {
+  await sessionAt(page, 'ocean', 6 * MINUTE, 2 * MINUTE + 10 * SECOND);
+  await page.locator('.life--in').waitFor({ state: 'attached' });
+  // Ten seconds into the pause: the life has faded in, and every fish and bubble is where the frame's own
+  // formulas put it then.
+  await freezeAnimations(page, { css: 10 * SECOND });
+  const diff = await compareWithReference(page, browser, oceanPausedFrame(10, '00:02:10'));
+  // Its own limits in every browser (see OCEAN_LIFE_LIMIT): the control below differs by far more.
+  expect(diff.smoothedMaxDelta, JSON.stringify(diff)).toBeLessThanOrEqual(OCEAN_LIFE_SMOOTHED);
+  if (browserName === 'chromium' && process.env['PIXEL_REFERENCE'] === '1') expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(OCEAN_LIFE_LIMIT);
+});
+
+test('control: ocean life a second off fails the paused frame by far', async ({ page, browser, browserName }) => {
+  test.skip(browserName !== 'chromium' || process.env['PIXEL_REFERENCE'] !== '1', 'exact pixel rules hold only in the reference environment');
+  await sessionAt(page, 'ocean', 6 * MINUTE, 2 * MINUTE + 10 * SECOND);
+  await page.locator('.life--in').waitFor({ state: 'attached' });
+  await freezeAnimations(page, { css: 11 * SECOND });
+  const diff = await compareWithReference(page, browser, oceanPausedFrame(10, '00:02:10'));
+  expect(diff.visible).toBeGreaterThan(OCEAN_LIFE_LIMIT);
+  expect(diff.smoothedMaxDelta).toBeGreaterThan(OCEAN_LIFE_SMOOTHED);
+});
 
 test('control: ocean water 15 m off fails the running frame by far', async ({ page, browser, browserName }) => {
   test.skip(browserName !== 'chromium' || process.env['PIXEL_REFERENCE'] !== '1', 'exact pixel rules hold only in the reference environment');

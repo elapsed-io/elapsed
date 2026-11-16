@@ -11,3 +11,4 @@ art that replaces them, file for file, comes with its own terms recorded here.
 | File | What | Source |
 | --- | --- | --- |
 | `passing.ts` | The things that pass on the results: a fish school, a sea turtle, a whale, a jellyfish and a squid's lights | The design canvas, version 1794830661-c660 |
+| `life-placeholder.ts`, `life-<zone>.ts` | Ocean life while paused: the canvas's fish at three distances and a bubble, one catalog per depth zone | The design canvas ("ocean depth, paused"), version 1794830661-c660 |

@@ -12,7 +12,7 @@ import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, localDa
 import type { SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
 import { CountClient } from './counts/client.ts';
 import { CrashReporter } from './crash/reporter.ts';
-import type { DisplayMode } from './modes/contract.ts';
+import type { DisplayMode, ModeOptions } from './modes/contract.ts';
 import { DEFAULT_MODE_ID } from './modes/manifests.ts';
 import { findMode } from './modes/registry.ts';
 import type { RegisteredMode } from './modes/registry.ts';
@@ -71,6 +71,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     clockFormat: () => undefined,
     lowPower: () => undefined,
     font: () => undefined,
+    modeOptions: () => undefined,
   };
   const settingsStore = new LocalSettingsStore(browserLocalStorage(win), report);
   const customCssStore = new LocalCustomCssStore(browserLocalStorage(win), report);
@@ -100,6 +101,9 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       font: () => {
         effects.font();
       },
+      modeOptions: () => {
+        effects.modeOptions();
+      },
     },
     onError: report,
   });
@@ -111,10 +115,12 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   // Low power: the setting, or the system's reduced-motion preference (plan, Loading and performance).
   const lowPower = (): boolean => settings.current.lowPower || reducedMotion();
   // The site owns this object; a changed setting updates it and redraws (modes/contract.ts).
-  const context: { seconds: SecondsDisplay; reducedMotion: boolean; lowPower: boolean } = {
+  const modeOptions = (): ModeOptions => ({ oceanLife: settings.current.oceanLife, resultsLandmarks: settings.current.resultsLandmarks });
+  const context: { seconds: SecondsDisplay; reducedMotion: boolean; lowPower: boolean; options: ModeOptions } = {
     seconds: settings.current.seconds,
     reducedMotion: reducedMotion(),
     lowPower: lowPower(),
+    options: modeOptions(),
   };
   const showLowPower = (): void => {
     doc.documentElement.toggleAttribute('data-low-power', context.lowPower);
@@ -278,7 +284,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     current = 'results';
     modeRoot.hidden = true;
     controlsRoot.hidden = true;
-    await results.show(session, drawing, { start, reducedMotion: reducedMotion() }, { resultsLandmarks: settings.current.resultsLandmarks });
+    await results.show(session, drawing, { start, reducedMotion: reducedMotion() }, modeOptions());
     if (showing !== session) return;
     // The corner icons return with the results: their fade-in is set, so they stay unseen until it starts.
     screenElement.classList.remove('screen--bare');
@@ -417,6 +423,10 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   motionQuery.addEventListener('change', motionChanged);
   effects.font = () => {
     mode.relayout?.();
+  };
+  effects.modeOptions = () => {
+    context.options = modeOptions();
+    render(engine.view);
   };
   let modeRequest = 0;
   effects.mode = (id) => {

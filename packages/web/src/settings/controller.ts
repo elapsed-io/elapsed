@@ -30,6 +30,8 @@ export interface SettingsEffects {
   lowPower(on: boolean): void;
   /** The font in use changed (after it loaded). */
   font(): void;
+  /** A display mode's option changed (ocean life, results landmarks). */
+  modeOptions(): void;
 }
 
 export type OwnFontResult = 'loaded' | 'too-large' | 'not-a-font' | 'unusable';
@@ -241,6 +243,7 @@ export class SettingsController {
     if (next.mode !== previous.mode) this.#effects.mode(next.mode);
     if (next.clockFormat !== previous.clockFormat) this.#effects.clockFormat(next.clockFormat);
     if (next.lowPower !== previous.lowPower) this.#effects.lowPower(next.lowPower);
+    if (next.oceanLife !== previous.oceanLife || next.resultsLandmarks !== previous.resultsLandmarks) this.#effects.modeOptions();
     this.#applyAppearance();
     if (next.font !== previous.font) void this.#applyFont();
     for (const listener of this.#listeners) listener(next);
