@@ -73,7 +73,7 @@ test('the ending countdown matches its frame, with no corner icons', async ({ pa
   await expect(page.locator('.corner')).toBeHidden();
   const diff = await compareWithReference(page, browser, endingFrame(190));
   // The moving bar is drawn on its own layer, which shifts anti-aliasing at its edge.
-  expect(diff.visible).toBeLessThanOrEqual(20);
+  expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(20);
 });
 
 test('results for digits match the "results: digits and timeline" frame exactly', async ({ page, browser }) => {

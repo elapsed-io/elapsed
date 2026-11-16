@@ -80,7 +80,7 @@ test.describe('the panel matches its frames', () => {
       await showLikeFrame(page, name);
       const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: SETTINGS_FRAME_HEIGHT[name] } });
       const diff = await diffPngs(page, site, await frameReference(browser, name, GRAPHITE));
-      expect(diff).toMatchObject({ differing: 0 });
+      expect(diff.differing, JSON.stringify(diff)).toBe(0);
     });
   }
 
@@ -96,7 +96,7 @@ test.describe('the panel matches its frames', () => {
     await expect(page.locator('.setting__value')).toHaveText('your font · 23 KB');
     const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: 800 } });
     const diff = await diffPngs(page, site, await frameReference(browser, 'privacy', GRAPHITE, 'your font · 23 KB'));
-    expect(diff).toMatchObject({ differing: 0 });
+    expect(diff.differing, JSON.stringify(diff)).toBe(0);
   });
 });
 
@@ -387,17 +387,51 @@ test.describe('privacy and data', () => {
 });
 
 test.describe('notifications', () => {
-  test('ask for permission only when switched on, and stay off if refused', async ({ page, context }) => {
+  /** The browser's permission prompt, answered as `answer` (browsers differ in what a test may grant). */
+  async function promptAnswers(page: Page, answer: NotificationPermission): Promise<void> {
+    await page.addInitScript((value) => {
+      let permission: NotificationPermission = 'default';
+      const asked: string[] = [];
+      Object.defineProperty(window, '__asked', { value: asked });
+      const fake = {
+        get permission(): NotificationPermission {
+          return permission;
+        },
+        requestPermission(): Promise<NotificationPermission> {
+          asked.push('asked');
+          permission = value;
+          return Promise.resolve(value);
+        },
+      };
+      Object.defineProperty(window, 'Notification', { value: fake, configurable: true });
+    }, answer);
+  }
+  const asked = (page: Page) => page.evaluate(() => (window as unknown as { __asked: string[] }).__asked.length);
+
+  test('ask for permission only when switched on', async ({ page }) => {
+    await promptAnswers(page, 'granted');
     await openApp(page, { width: 1280, height: 800 });
     await openPanel(page);
     await openCategory(page, 'notifications');
+    expect(await asked(page)).toBe(0);
     const checkIns = page.getByRole('switch', { name: 'check-in notifications' });
     await expect(checkIns).toHaveAttribute('aria-checked', 'false');
-    await context.grantPermissions(['notifications']);
     await checkIns.click();
     await expect(checkIns).toHaveAttribute('aria-checked', 'true');
+    expect(await asked(page)).toBe(1);
     await checkIns.click();
     await expect(checkIns).toHaveAttribute('aria-checked', 'false');
+  });
+
+  test('stay off, and say so, if refused', async ({ page }) => {
+    await promptAnswers(page, 'denied');
+    await openApp(page, { width: 1280, height: 800 });
+    await openPanel(page);
+    await openCategory(page, 'notifications');
+    const pauseLimit = page.getByRole('switch', { name: 'pause limit notifications' });
+    await pauseLimit.click();
+    await expect(page.getByText('notifications are blocked for this site in the browser’s settings')).toBeVisible();
+    await expect(pauseLimit).toHaveAttribute('aria-checked', 'false');
   });
 });
 
