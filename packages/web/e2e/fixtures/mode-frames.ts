@@ -150,3 +150,34 @@ export function modeFrame(name: ModeFrameName, palette: FramePalette): string {
   if (frame === undefined) throw new Error(`no frame ${name}`);
   return frameDocument(frame(palette));
 }
+
+/** The ocean frames' own light model (the canvas's ocean(d)), independent of the site's code. */
+function oceanWater(depth: number): string {
+  const surface = [0.0232, 0.212, 0.392];
+  const attenuation = [0.3, 0.06, 0.023];
+  const colour = (z: number): string =>
+    `#${surface
+      .map((value, i) => {
+        let x = value * Math.exp(-(attenuation[i] ?? 0) * Math.min(z, 10935));
+        x = x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+        return Math.round(Math.max(0, Math.min(1, x)) * 255)
+          .toString(16)
+          .padStart(2, '0');
+      })
+      .join('')}`;
+  return `linear-gradient(180deg, ${colour(Math.max(0, depth - 6))} 0%, ${colour(depth + 6)} 100%)`;
+}
+
+/**
+ * The "ocean depth, running" frame (90 m, 00:06) and the "ocean depth, 0 to 20 m" frame at any moment: the
+ * frames' own markup at `depth` metres, showing `minutes` focused minutes (canvas version 1794829025-58a4).
+ */
+export function oceanFrame(depth: number, minutes: number): string {
+  const c = { icon: '#9EC3D6', text: '#DCE8EE', end: '#A8403D', gray: '#1E3E57' };
+  const mm = String(minutes).padStart(2, '0');
+  return frameDocument(`<div style="width: 720px; height: 450px; box-sizing: border-box; background: ${oceanWater(depth)}; color: #DCE8EE; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px">
+<div style="position: absolute; top: 14px; right: 14px; display: flex; gap: 4px"><button aria-label="settings" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${c.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><circle cx="12" cy="12" r="3"></circle></svg></button><button aria-label="account" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${c.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"></circle><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path></svg></button></div>
+<div style="font-family: Archivo, system-ui, sans-serif; font-weight: 300; font-stretch: 92%; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; white-space: nowrap; text-align: center; font-size: 104px">00<span style="margin: 0 -0.05em; position: relative; top: -0.06em">:</span>${mm}</div>
+<div style="display: flex; gap: 14px"><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${c.text}; background: ${c.gray}">pause</button><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${c.text}; background: ${c.end}">end</button></div>
+</div>`);
+}

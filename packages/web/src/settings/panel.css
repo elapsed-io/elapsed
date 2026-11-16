@@ -511,6 +511,25 @@
     stroke: var(--color-muted);
   }
 
+  /* The chosen mode's options: a box on the page colour under the tiles (the Release 2 display frame). */
+  .mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mode-options-gap);
+    padding: var(--mode-options-padding);
+    border-radius: var(--mode-options-radius);
+    background: var(--color-background);
+  }
+
+  .mode-options[hidden] {
+    display: none;
+  }
+
+  .mode-options__title {
+    font-size: var(--mode-options-title);
+    color: var(--color-muted);
+  }
+
   /* ---- Theme cards ----------------------------------------------------- */
 
   .theme-cards {

@@ -92,7 +92,7 @@ describe('plan audit: performance', () => {
       '--replay-progress': /packages\/web\/src\/results\/results\.ts$/,
     };
     // Keyframes built away from the call are checked in these files as a whole.
-    const BUILT_ELSEWHERE = ['packages/web/src/results/results.ts'];
+    const BUILT_ELSEWHERE = ['packages/web/src/results/results.ts', 'packages/web/src/modes/ocean/ocean.ts'];
     const allowed = (property: string, path: string): boolean =>
       property === 'transform' || property === 'opacity' || property === 'offset' || (EXCEPTIONS[property]?.test(path) ?? false);
     for (const path of SITE_SOURCE) {

@@ -278,7 +278,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     current = 'results';
     modeRoot.hidden = true;
     controlsRoot.hidden = true;
-    await results.show(session, drawing, { start, reducedMotion: reducedMotion() });
+    await results.show(session, drawing, { start, reducedMotion: reducedMotion() }, { resultsLandmarks: settings.current.resultsLandmarks });
     if (showing !== session) return;
     // The corner icons return with the results: their fade-in is set, so they stay unseen until it starts.
     screenElement.classList.remove('screen--bare');

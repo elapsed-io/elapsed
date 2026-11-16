@@ -29,6 +29,15 @@ export const MODE_MANIFESTS: readonly ModeManifest[] = [
   { id: 'ring', name: BRAND.copy.modes.ring, tier: 'on-choice', budget, source: 'src/modes/ring/ring.ts', art: [] },
   { id: 'timeline', name: BRAND.copy.modes.timeline, tier: 'on-choice', budget, source: 'src/modes/timeline/timeline.ts', art: [] },
   { id: 'analog', name: BRAND.copy.modes.analog, tier: 'on-choice', budget, source: 'src/modes/analog/analog.ts', art: [] },
+  {
+    id: 'ocean',
+    name: BRAND.copy.modes.ocean,
+    tier: 'on-choice',
+    budget,
+    source: 'src/modes/ocean/ocean.ts',
+    // The things that pass on its results (art/ocean/passing.ts).
+    art: CONFIG.modes.ocean.results.passing.things.map((thing) => thing.key),
+  },
 ];
 
 export const DEFAULT_MODE_ID = 'digits';

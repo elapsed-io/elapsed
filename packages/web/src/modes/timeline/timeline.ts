@@ -23,7 +23,7 @@ import { CONFIG } from '@stopwatch/core';
 import type { Session, TimerView } from '@stopwatch/core';
 import { html, svg } from '../../dom.ts';
 import { timelineStripMinutes } from './strip.ts';
-import type { DisplayContext, DisplayMode } from '../contract.ts';
+import type { DisplayContext, DisplayMode, ReplaySurface } from '../contract.ts';
 import { TimeDisplay } from '../shared/time-display.ts';
 
 const T = CONFIG.modes.timeline;
@@ -178,10 +178,10 @@ export function createTimelineMode(): DisplayMode {
       display?.render(view);
       place(view.focusedMs, view.status === 'idle' || view.status === 'ended' ? 'idle' : view.status === 'running' && view.checkInDueAt === null ? 'running' : 'held');
     },
-    async replay(target: HTMLElement, session: Session) {
+    async replay(surface: ReplaySurface, session: Session) {
       // The focus strip loads with the results, not with the timer.
       const { drawStrip } = await import('../shared/strip-replay.ts');
-      drawStrip(target, session);
+      drawStrip(surface.graphic, session);
     },
     relayout() {
       display?.measure();

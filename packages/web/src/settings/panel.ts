@@ -424,7 +424,7 @@ export class SettingsPanel {
       case 'timer':
         return [this.#seconds(), this.#rangeItem('checkInInterval', copy.checkIn, formatHoursMinutes), this.#rangeItem('pauseLimit', copy.pauseLimit, formatMinutes), this.#shortcuts()];
       case 'display':
-        return [this.#modes(), this.#downloads()];
+        return [this.#modes(), this.#modeOptions(), this.#downloads()];
       case 'appearance':
         return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat(), this.#animationSpeed(), this.#lowPower()];
       case 'notifications':
@@ -489,6 +489,34 @@ export class SettingsPanel {
       update(settings.mode);
     });
     return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.mode.label]), [grid]), search: searchText(copy.mode.label, ...MODE_CHOICES.map((value) => BRAND.copy.modes[value])) };
+  }
+
+  /**
+   * The chosen mode's own options, in a box under the tiles, as the Release 2 display frame draws "ocean
+   * depth options"; shown only while a mode that has options is chosen (plan, Interface: "each display mode's
+   * options live in the display mode section"). Round 2.3 adds results landmarks; 2.4 adds ocean life.
+   */
+  #modeOptions(): Item {
+    const doc = this.#doc;
+    const text = copy.resultsLandmarks;
+    const title = html(doc, 'div', { class: 'mode-options__title' });
+    const control = toggle(doc, text.label, (on) => {
+      this.#set('resultsLandmarks', on);
+    });
+    const help = html(doc, 'div', { class: 'setting__help' });
+    const landmarks = html(doc, 'div', { class: 'setting' }, [html(doc, 'div', { class: 'setting__row' }, [html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [text.label]), control.element]), help]);
+    const group = html(doc, 'div', { class: 'mode-options', attrs: { role: 'group' } }, [title, landmarks]);
+    this.#updates.push((settings) => {
+      const mode = settings.mode;
+      const options = mode === 'ocean' ? { title: copy.modeOptions.ocean, help: text.help.ocean } : null;
+      group.hidden = options === null;
+      if (options === null) return;
+      title.textContent = options.title;
+      group.setAttribute('aria-label', options.title);
+      help.textContent = options.help;
+      control.update(settings.resultsLandmarks);
+    });
+    return { element: html(doc, 'div', { class: 'settings__item-contents' }, [group]), search: searchText(copy.modeOptions.ocean, text.label, text.help.ocean) };
   }
 
   /**
@@ -1024,6 +1052,20 @@ function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
       ...ANALOG_TILE_TICKS.map(([x1, y1, x2, y2]) => svg(doc, 'line', { class: 'mode-tile__muted', x1, y1, x2, y2, 'stroke-width': 1.2 })),
       svg(doc, 'line', { class: 'mode-tile__accent', x1: 28, y1: 16, x2: 35, y2: 10, 'stroke-width': 2 }),
       svg(doc, 'circle', { class: 'mode-tile__head', cx: 28, cy: 16, r: 1.6 }),
+    );
+  } else if (mode === 'ocean') {
+    // The Release 2 display frame's ocean depth tile: water darkening downward, a wave and two bubbles, in
+    // the frame's own colours whatever the theme.
+    const { top, bottom, wave } = CONFIG.modes.ocean.tile;
+    const id = uniqueId('ocean-tile');
+    root.append(
+      svg(doc, 'defs', {}, [
+        svg(doc, 'linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, [svg(doc, 'stop', { offset: 0, 'stop-color': top }), svg(doc, 'stop', { offset: 1, 'stop-color': bottom })]),
+      ]),
+      svg(doc, 'rect', { x: 10, y: 6, width: 36, height: 22, rx: 4, fill: `url(#${id})` }),
+      svg(doc, 'path', { d: 'M10 10 q4.5 -3 9 0 t9 0 t9 0 t9 0', stroke: wave, 'stroke-width': 1.5 }),
+      svg(doc, 'circle', { cx: 24, cy: 20, r: 1.4, fill: wave }),
+      svg(doc, 'circle', { cx: 30, cy: 23, r: 1, fill: wave }),
     );
   } else {
     root.append(

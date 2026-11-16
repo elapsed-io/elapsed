@@ -31,6 +31,7 @@ interface ManifestChunk {
   readonly file: string;
   readonly src?: string;
   readonly imports?: readonly string[];
+  readonly dynamicImports?: readonly string[];
   readonly css?: readonly string[];
   readonly assets?: readonly string[];
 }
@@ -90,6 +91,8 @@ export function coreFiles(distDir: string): CoreFile[] {
 }
 
 const ART = /\.(?:svg|png|webp|avif|jpe?g|gif)$/;
+/** An art catalog (data drawn through the asset registry), in its own folder apart from the code: art too. */
+const CATALOG = /^src\/art\/[a-z0-9-]+\//;
 
 export interface ChunkSize {
   readonly codeBytes: number;
@@ -100,7 +103,8 @@ export interface ChunkSize {
 /**
  * What one lazily loaded package (a display mode, later a widget) adds on top
  * of the core: its own chunk, its stylesheets, its art, and any chunk it
- * imports that the core does not already load.
+ * imports, now or later (its results replay and art catalogs load when used),
+ * that the core does not already load. Images and art catalogs count as art.
  */
 export function packageSize(distDir: string, source: string): ChunkSize {
   const manifest = JSON.parse(readFileSync(join(distDir, '.vite', 'manifest.json'), 'utf8')) as Manifest;
@@ -108,11 +112,13 @@ export function packageSize(distDir: string, source: string): ChunkSize {
   if (entry === undefined) throw new Error(`${source} is not in the build`);
   const core = new Set(coreFiles(distDir).map((file) => file.path));
   const files = new Set<string>();
+  const catalogs = new Set<string>();
   const visit = (chunk: ManifestChunk): void => {
     if (core.has(chunk.file) || files.has(chunk.file)) return;
     files.add(chunk.file);
+    if (chunk.src !== undefined && CATALOG.test(chunk.src)) catalogs.add(chunk.file);
     for (const path of [...(chunk.css ?? []), ...(chunk.assets ?? [])]) if (!core.has(path)) files.add(path);
-    for (const imported of chunk.imports ?? []) {
+    for (const imported of [...(chunk.imports ?? []), ...(chunk.dynamicImports ?? [])]) {
       const next = manifest[imported];
       if (next !== undefined) visit(next);
     }
@@ -122,7 +128,7 @@ export function packageSize(distDir: string, source: string): ChunkSize {
   let artBytes = 0;
   for (const path of files) {
     const bytes = compressedSize(path, readFileSync(join(distDir, path)));
-    if (ART.test(path)) artBytes += bytes;
+    if (ART.test(path) || catalogs.has(path)) artBytes += bytes;
     else codeBytes += bytes;
   }
   return { codeBytes, artBytes, files: [...files].sort() };

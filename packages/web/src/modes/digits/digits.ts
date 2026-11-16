@@ -2,7 +2,7 @@ import { CONFIG } from '@stopwatch/core';
 /** Digits: the time on its own (the idle, running and paused frames). Core tier. */
 
 import type { Session, TimerView } from '@stopwatch/core';
-import type { DisplayContext, DisplayMode } from '../contract.ts';
+import type { DisplayContext, DisplayMode, ReplaySurface } from '../contract.ts';
 import { TimeDisplay } from '../shared/time-display.ts';
 
 export function createDigitsMode(): DisplayMode {
@@ -20,10 +20,10 @@ export function createDigitsMode(): DisplayMode {
     render(view: TimerView) {
       display?.render(view);
     },
-    async replay(target: HTMLElement, session: Session) {
+    async replay(surface: ReplaySurface, session: Session) {
       // The focus strip loads with the results, not with the timer.
       const { drawStrip } = await import('../shared/strip-replay.ts');
-      drawStrip(target, session);
+      drawStrip(surface.graphic, session);
     },
     relayout() {
       display?.measure();

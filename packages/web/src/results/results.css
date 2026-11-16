@@ -38,6 +38,18 @@
     align-items: center;
     justify-content: center;
     gap: var(--results-gap);
+    /* Its own stacking context, so the backdrop sits behind the card's content and over nothing else. */
+    isolation: isolate;
+  }
+
+  /* Behind the whole card, for a replay that lights it or passes things across it (contract, ReplaySurface). */
+  .results__backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    container-type: size;
   }
 
   .results[hidden] {
@@ -48,7 +60,9 @@
     visibility: hidden;
   }
 
-  .results--ring {
+  /* The ring layout and the profile chart are 16 px apart (their frames); the strip 22 px. */
+  .results--ring,
+  .results--chart {
     gap: var(--results-ring-gap);
   }
 

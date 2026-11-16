@@ -312,6 +312,10 @@ export function settingsCustomProperties(): CustomProperties {
     '--shortcuts-size': px(p.shortcuts.textPx),
     '--shortcuts-gap': px(p.shortcuts.gapPx),
     '--tiles-columns': String(p.tiles.columns),
+    '--mode-options-padding': px(p.modeOptions.paddingPx),
+    '--mode-options-gap': px(p.modeOptions.gapPx),
+    '--mode-options-radius': px(p.modeOptions.radiusPx),
+    '--mode-options-title': px(p.modeOptions.titlePx),
     '--tiles-gap': px(p.tiles.gapPx),
     '--tile-padding-top': px(p.tiles.paddingTopPx),
     '--tile-padding-bottom': px(p.tiles.paddingBottomPx),
@@ -377,7 +381,7 @@ export function renderSettingsTokensCss(): string {
   return `/* Generated from packages/core/src/config.ts at build time. */\n@layer base {\n${block(':root', settingsCustomProperties())}\n}\n`;
 }
 
-export const MODE_TOKEN_IDS = ['ring', 'timeline', 'analog'] as const;
+export const MODE_TOKEN_IDS = ['ring', 'timeline', 'analog', 'ocean'] as const;
 export type ModeTokenId = (typeof MODE_TOKEN_IDS)[number];
 
 export function isModeTokenId(value: string): value is ModeTokenId {
@@ -452,8 +456,77 @@ function analogTokens(): string {
   return block('[data-mode="analog"]', properties);
 }
 
+function oceanTokens(): string {
+  const ocean = CONFIG.modes.ocean;
+  const properties: CustomProperties = {
+    '--mode-time-size': String(ocean.timePx),
+    '--mode-gap': String(ocean.gapPx),
+    '--ocean-text': ocean.palette.text,
+    '--ocean-icon': ocean.palette.icon,
+    '--ocean-accent': ocean.palette.accent,
+    '--ocean-end': ocean.palette.end,
+    '--ocean-pause': ocean.palette.pause,
+  };
+  // The dive profile and the lit card, on :root: a session's replay may be drawn while another mode shows.
+  const chart = ocean.results;
+  const mark = chart.landmark;
+  const { pings, passing } = chart;
+  const profile: CustomProperties = {
+    '--profile-aspect': `${String(chart.widthPx)} / ${String(chart.heightPx)}`,
+    '--profile-min-scale': String(chart.minScaleMetres),
+    '--profile-headroom': String(chart.scaleHeadroom),
+    '--profile-line': chart.colours.line,
+    '--profile-card-text': chart.colours.text,
+    '--profile-card-muted': chart.colours.muted,
+    '--profile-depth-size': px(chart.depthPx),
+    '--profile-zone-size': px(chart.zonePx),
+    '--profile-zone-opacity': String(chart.zoneOpacity),
+    '--profile-inset': px(chart.textInsetPx),
+    '--profile-times-size': px(chart.timesPx),
+    '--profile-times-gap': px(chart.timesGapPx),
+    '--profile-zone-line-opacity': String(chart.zoneLines.opacity),
+    '--profile-zone-line-share': String(chart.zoneLines.scaleShare),
+    '--profile-zone-line-min-y': String(chart.zoneLines.minYPx),
+    '--profile-height': String(chart.heightPx),
+    '--landmark-dot': px(mark.dotPx),
+    '--landmark-ring': px(mark.ringPx),
+    '--landmark-gap': px(mark.gapPx),
+    '--landmark-inset': px(mark.insetPx),
+    '--landmark-size': px(mark.textPx),
+    '--landmark-pad-y': px(mark.paddingYPx),
+    '--landmark-pad-x': px(mark.paddingXPx),
+    '--landmark-radius': px(mark.radiusPx),
+    '--landmark-border': px(mark.borderPx),
+    '--landmark-pop-metres': String(mark.popMetres),
+    '--landmark-pop-from': String(mark.popFrom),
+    '--landmark-fade-metres': String(mark.fadeMetres),
+    '--landmark-rest-delay': ms(mark.restDelayMs),
+    '--landmark-rest-fade': ms(mark.restFadeMs),
+    '--landmark-dot-colour': mark.colours.dot,
+    '--landmark-dot-ring': mark.colours.dotRing,
+    '--landmark-text-colour': mark.colours.text,
+    '--landmark-fill': mark.colours.fill,
+    '--landmark-edge': mark.colours.border,
+    '--ping-size': px(2 * pings.toRadiusPx),
+    '--ping-colour': pings.colour,
+    '--lit-above': String(chart.lit.aboveMetres),
+    '--lit-below': String(chart.lit.belowMetres),
+    '--lit-black-from': String(chart.lit.blackFromMetres),
+    '--passing-from': String(passing.fromPx / passing.cardHeightPx),
+    '--passing-travel': String(passing.travelPx / passing.cardHeightPx),
+    '--passing-silhouette': passing.colours.silhouette,
+    '--passing-deep': passing.colours.deep,
+    '--passing-jelly': passing.colours.jelly,
+    '--passing-jelly-line': passing.colours.jellyLine,
+    '--passing-glow': passing.colours.glow,
+  };
+  return `${block('[data-mode="ocean"]', properties)}\n${block(':root', profile)}`;
+}
+
+const MODE_TOKENS: Readonly<Record<ModeTokenId, () => string>> = { ring: ringTokens, timeline: timelineTokens, analog: analogTokens, ocean: oceanTokens };
+
 /** One display mode's tokens, in the `mode` layer. */
 export function renderModeTokensCss(mode: ModeTokenId): string {
-  const body = mode === 'ring' ? ringTokens() : mode === 'analog' ? analogTokens() : timelineTokens();
+  const body = MODE_TOKENS[mode]();
   return `/* Generated from packages/core/src/config.ts at build time. */\n@layer mode {\n${body}\n}\n`;
 }

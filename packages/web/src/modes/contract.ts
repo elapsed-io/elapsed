@@ -24,6 +24,32 @@ export interface DisplayContext {
   readonly lowPower: boolean;
 }
 
+/**
+ * A mode's own options (plan, Interface: "each display mode's options live in the display mode section"),
+ * as the site's settings hold them. Release 2 adds them round by round: results landmarks in 2.3.
+ */
+export interface ModeOptions {
+  /** Random landmarks on the results' profile chart (ocean depth, height). */
+  readonly resultsLandmarks: boolean;
+}
+
+/**
+ * Where a results replay draws (decision 291): `graphic`, the replay's own place on the results card (the
+ * strip, the rings, the profile chart), and `backdrop`, an empty layer behind the whole card, for a replay
+ * that lights the card or passes things across it. `lengthMs` is how long the replay runs and `scale` the
+ * animation speed's multiplier, both already applied: a replay that animates anything besides what
+ * --replay-progress drives creates its animations with no start time, timed from the replay's start, and the
+ * results screen starts them with the replay (or finishes them at once). The results element carries
+ * `data-replay` with the mode's id, so the replay's stylesheet may set the card's text colours
+ * (--color-foreground, --color-muted) there.
+ */
+export interface ReplaySurface {
+  readonly graphic: HTMLElement;
+  readonly backdrop: HTMLElement;
+  readonly lengthMs: number;
+  readonly scale: number;
+}
+
 /** Events a mode may react to. Release 3 adds record.passed; round 4 adds checkin.due. */
 export type ModeEvent = { readonly type: 'milestone.hour'; readonly payload: TimerEvents['milestone.hour'] };
 
@@ -41,11 +67,12 @@ export interface DisplayMode {
   onEvent?(event: ModeEvent): void;
   /**
    * The results animation for this mode (round 5): draws the finished
-   * session into `root` and creates its animations with the replay timing
-   * (shared/replay-timing.ts) and no delay. The results screen sets when they
-   * start, or finishes them at once. May load its drawing code first.
+   * session into its surface, everything that moves derived from
+   * --replay-progress. May load its drawing code first. `options` are the
+   * mode's options at the moment the results appear (the mode drawing them
+   * may never have been mounted).
    */
-  replay(root: HTMLElement, session: Session): void | Promise<void>;
+  replay(surface: ReplaySurface, session: Session, options?: ModeOptions): void | Promise<void>;
   /** The font changed: measure anything that depends on it (the blur-away widths). */
   relayout?(): void;
   unmount(): void;

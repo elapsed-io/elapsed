@@ -1,0 +1,419 @@
+/*
+ * The dive profile and the lit card: ocean depth's results replay (the "results: ocean depth (build this one)"
+ * frame). Sizes and colours are the ocean tokens (config.ts, CONFIG.modes.ocean.results).
+ *
+ * On the chart and the card's light, depth-profile.ts sets --pd (the depth reached so far, an expression of
+ * --replay-progress), --pd-final and --pd-scale-final. Everything below that moves is derived from them while
+ * the replay runs (.results:not([data-replayed])); once it has landed, nothing is transformed and every
+ * opacity is the final one the script computed, as the frame draws it.
+ */
+@layer mode {
+  /* The card's text in the light (the frame: near-white, and its muted at 74 %). */
+  .results[data-replay="ocean"] {
+    --color-foreground: var(--profile-card-text);
+    --color-muted: var(--profile-card-muted);
+    color: var(--color-foreground);
+  }
+
+  .profile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--profile-times-gap);
+    width: 100%;
+  }
+
+  /* The chart shrinks to fit a narrower window: its shapes shrink with it, its text keeps the frame's size. */
+  .profile__chart {
+    position: relative;
+    width: 100%;
+    aspect-ratio: var(--profile-aspect);
+    container-type: size;
+  }
+
+  .profile__chart:focus-visible {
+    outline: var(--focus-ring) solid var(--color-foreground);
+    outline-offset: var(--focus-offset);
+  }
+
+  .profile__svg,
+  .profile__text,
+  .profile__reveal,
+  .profile__reveal-inner,
+  .profile__landmark {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .profile__svg,
+  .profile__text {
+    overflow: visible;
+  }
+
+  /* The line is clipped only while it is revealed; at rest its round ends show whole, as the frame draws them. */
+  .results:not([data-replayed]) .profile__reveal {
+    overflow: hidden;
+  }
+
+  .profile__zone-line {
+    fill: none;
+    stroke: var(--profile-line);
+    opacity: var(--zone-final);
+  }
+
+  .profile__zone-label {
+    font-size: var(--profile-zone-size);
+    fill: var(--profile-line);
+    opacity: var(--zone-final);
+  }
+
+  .profile__line {
+    fill: none;
+    stroke: var(--profile-line);
+  }
+
+  .profile__head {
+    fill: var(--profile-line);
+  }
+
+  .profile__depth {
+    font-size: var(--profile-depth-size);
+    font-weight: var(--font-weight-time);
+    fill: var(--profile-line);
+  }
+
+  /* The final zone's name; the others show only while the replay passes through them. */
+  .profile__zone {
+    font-size: var(--profile-zone-size);
+    fill: var(--profile-line);
+    opacity: 0;
+  }
+
+  .profile__zone--final {
+    opacity: var(--profile-zone-opacity);
+  }
+
+  /* A landmark: a dot exactly on the path, and its label beside it, kept inside the chart. */
+  .profile__landmark {
+    pointer-events: none;
+  }
+
+  .profile__landmark-dot {
+    position: absolute;
+    left: var(--landmark-x);
+    top: calc(var(--landmark-share) * 100%);
+    width: var(--landmark-dot);
+    height: var(--landmark-dot);
+    margin: calc(var(--landmark-dot) / -2) 0 0 calc(var(--landmark-dot) / -2);
+    border-radius: 50%;
+    background: var(--landmark-dot-colour);
+    box-shadow: 0 0 0 var(--landmark-ring) var(--landmark-dot-ring);
+    opacity: var(--landmark-final);
+    pointer-events: auto;
+  }
+
+  /* At rest the labels are put away a second after the replay, leaving the dots; after that they come and go
+     promptly (.profile__chart--rested). */
+  .profile__landmark-tag {
+    position: absolute;
+    left: calc(var(--landmark-x) + var(--landmark-gap));
+    top: clamp(var(--landmark-inset), calc(var(--landmark-share) * 100%), calc(100% - var(--landmark-inset)));
+    transform: translateY(-50%);
+    transform-origin: 0 50%;
+    white-space: nowrap;
+    opacity: 0;
+    /* Hidden once faded, so a put-away label is not drawn at all. */
+    visibility: hidden;
+    transition:
+      opacity calc(var(--landmark-rest-fade) * var(--motion-scale)) var(--ease-smoothstep) calc(var(--landmark-rest-delay) * var(--motion-scale)),
+      visibility 0s linear calc((var(--landmark-rest-delay) + var(--landmark-rest-fade)) * var(--motion-scale));
+  }
+
+  .profile__landmark-tag--left {
+    left: calc(var(--landmark-x) - var(--landmark-gap));
+    transform: translate(-100%, -50%);
+    transform-origin: 100% 50%;
+  }
+
+  .profile__landmark-label {
+    font-size: var(--landmark-size);
+    color: var(--landmark-text-colour);
+    background: var(--landmark-fill);
+    border: var(--landmark-border) solid var(--landmark-edge);
+    border-radius: var(--landmark-radius);
+    padding: var(--landmark-pad-y) var(--landmark-pad-x);
+  }
+
+  .profile__chart--rested .profile__landmark-tag {
+    transition:
+      opacity var(--motion-fade) var(--ease-standard),
+      visibility 0s linear var(--motion-fade);
+  }
+
+  /* Hovering, focusing or tapping the chart brings every label back; hovering a dot shows only its own. */
+  .results[data-replayed] .profile__chart:is(:hover, :focus-visible, .profile__chart--labels) .profile__landmark-tag {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--motion-fade) var(--ease-standard);
+  }
+
+  .results[data-replayed] .profile__chart:has(.profile__landmark-dot:hover) .profile__landmark-tag {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--motion-fade) var(--ease-standard),
+      visibility 0s linear var(--motion-fade);
+  }
+
+  .results[data-replayed] .profile__chart .profile__landmark:has(.profile__landmark-dot:hover) .profile__landmark-tag {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--motion-fade) var(--ease-standard);
+  }
+
+  /* The sonar pings: rings from the deepest point (their animations: depth-profile.ts). */
+  .profile__ping {
+    position: absolute;
+    left: var(--ping-x);
+    top: var(--ping-y);
+    width: var(--ping-size);
+    height: var(--ping-size);
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .profile__ping-ring {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .profile__ping-ring circle {
+    fill: none;
+    stroke: var(--ping-colour);
+  }
+
+  /* The depth counting up during the replay, where the final depth stands (depth-profile.ts). */
+  .profile__count {
+    position: absolute;
+    top: 0;
+    right: var(--profile-inset);
+    font-size: var(--profile-depth-size);
+    font-weight: var(--font-weight-time);
+    color: var(--profile-line);
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(var(--profile-count-shift, 0));
+  }
+
+  .profile__baseline {
+    display: inline-block;
+    width: 0;
+    height: 0;
+  }
+
+  .profile__digits {
+    display: inline-grid;
+    justify-items: end;
+  }
+
+  .profile__digits > * {
+    grid-area: 1 / 1;
+  }
+
+  .profile__times {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--profile-times-size);
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- The replay ----------------------------------------------------------------------------------- */
+
+  /* The scale so far: 15 % past the depth reached, at least 200 m; the drawing's zoom against its final one. */
+  .results:not([data-replayed]) .profile__chart {
+    --pd-ymax: max(var(--profile-min-scale), var(--profile-headroom) * var(--pd));
+    --pd-k: calc(var(--pd-scale-final) / var(--pd-ymax));
+    --profile-large: clamp(0, (var(--pd) - 1000) * 1000000000 + 1, 1);
+  }
+
+  .results:not([data-replayed]) .profile__reveal {
+    transform: translateX(calc((var(--replay-progress) - 1) * 100%));
+  }
+
+  .results:not([data-replayed]) .profile__reveal-inner {
+    transform: translateX(calc((1 - var(--replay-progress)) * 100%));
+  }
+
+  /* The path and the zone lines zoom with the scale; their strokes keep their width (non-scaling). */
+  .results:not([data-replayed]) .profile__zoom {
+    transform-box: view-box;
+    transform-origin: 0 0;
+    transform: scale(1, var(--pd-k));
+  }
+
+  .results:not([data-replayed]) .profile__head-layer {
+    transform: translate(calc((var(--replay-progress) - 1) * 100%), calc((var(--pd) / var(--pd-ymax) - var(--head-share)) * 100%));
+  }
+
+  /* A zone's line and name show once the scale has room for them, as the frame shows them. */
+  .results:not([data-replayed]) :is(.profile__zone-line, .profile__zone-label) {
+    opacity: calc(
+      var(--profile-zone-line-opacity) * clamp(0, (var(--profile-zone-line-share) * var(--pd-ymax) - var(--zone-start)) * 1000000, 1) *
+        clamp(0, (var(--zone-start) / var(--pd-ymax) * var(--profile-height) - var(--profile-zone-line-min-y)) * 1000000, 1)
+    );
+  }
+
+  .results:not([data-replayed]) .profile__zone-label {
+    transform-box: view-box;
+    transform: translateY(calc((var(--pd-k) - 1) * var(--zone-share) * 100%));
+  }
+
+  /* Each landmark as the dive passes it: its dot fades in on the zooming path; its label pops in beside it. */
+  .results:not([data-replayed]) .profile__landmark {
+    --landmark-t: clamp(0, (var(--pd) - var(--landmark-depth)) / var(--landmark-fade-metres), 1);
+    --landmark-pop: clamp(0, (var(--pd) - var(--landmark-depth)) / var(--landmark-pop-metres), 1);
+    --landmark-scale: calc(
+      var(--landmark-pop-from) + (1 - var(--landmark-pop-from)) *
+        (1 + 2.70158 * (var(--landmark-pop) - 1) * (var(--landmark-pop) - 1) * (var(--landmark-pop) - 1) + 1.70158 * (var(--landmark-pop) - 1) * (var(--landmark-pop) - 1))
+    );
+    --landmark-shift: calc(
+      clamp(var(--landmark-inset), var(--pd-k) * var(--landmark-share) * 100cqh, 100cqh - var(--landmark-inset)) -
+        clamp(var(--landmark-inset), var(--landmark-share) * 100cqh, 100cqh - var(--landmark-inset))
+    );
+  }
+
+  .results:not([data-replayed]) .profile__landmark-dot {
+    opacity: calc(var(--landmark-t) * var(--landmark-t) * (3 - 2 * var(--landmark-t)));
+    transform: translateY(calc((var(--pd-k) - 1) * var(--landmark-share) * 100cqh));
+  }
+
+  .results:not([data-replayed]) .profile__landmark-tag {
+    visibility: visible;
+    opacity: calc(var(--landmark-t) * var(--landmark-t) * (3 - 2 * var(--landmark-t)));
+    transform: translateY(calc(-50% + var(--landmark-shift))) scale(var(--landmark-scale));
+    transition: none;
+  }
+
+  .results:not([data-replayed]) .profile__landmark-tag--left {
+    transform: translate(-100%, calc(-50% + var(--landmark-shift))) scale(var(--landmark-scale));
+  }
+
+  .results:not([data-replayed]) .profile--counting .profile__depth {
+    opacity: 0;
+  }
+
+  .results:not([data-replayed]) .profile--counting .profile__count {
+    opacity: 1;
+  }
+
+  /* The count: below 1,000 m as it is; from 1,000 m with the thousands grouped, as the final depth reads. */
+  .profile__digits-small {
+    counter-reset: profile-all calc(round(down, var(--pd), 1));
+    opacity: calc(1 - var(--profile-large));
+  }
+
+  .profile__digits-small::before {
+    content: counter(profile-all);
+  }
+
+  .profile__digits-large {
+    counter-reset:
+      profile-k calc(round(down, var(--pd) / 1000, 1))
+      profile-h calc(mod(round(down, var(--pd) / 100, 1), 10))
+      profile-t calc(mod(round(down, var(--pd) / 10, 1), 10))
+      profile-o calc(mod(round(down, var(--pd), 1), 10));
+    opacity: var(--profile-large);
+  }
+
+  .profile__digits-large::before {
+    content: counter(profile-k) "," counter(profile-h) counter(profile-t) counter(profile-o);
+  }
+
+  /* The zone the dive is in so far: --zone-from up to --zone-to (depth-profile.ts). */
+  .results:not([data-replayed]) .profile--counting .profile__zone {
+    opacity: calc(
+      var(--profile-zone-opacity) *
+        min(clamp(0, (var(--pd) - var(--zone-from)) * 1000000000 + 1, 1), clamp(0, (var(--zone-to) - var(--pd)) * 1000000000, 1))
+    );
+  }
+
+  /* ---- The card's light, and the things that pass ---------------------------------------------------- */
+
+  .lit {
+    position: absolute;
+    inset: 0;
+  }
+
+  .results:not([data-replayed]) .lit {
+    --lit-top: clamp(0, var(--pd) - var(--lit-above), var(--lit-black-from));
+    --lit-size: min(var(--lit-above) + var(--lit-below), var(--pd) + var(--lit-below));
+    --lit-k: calc((var(--lit-above) + var(--lit-below)) / var(--lit-size));
+  }
+
+  /* The light from the surface to where it is black, the window at the depth so far filling the card. */
+  .lit__strip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    transform-origin: top;
+    transform: translateY(calc(var(--lit-shift-final) * -100%)) scaleY(var(--lit-k-final));
+  }
+
+  .results:not([data-replayed]) .lit__strip {
+    transform: translateY(calc(var(--lit-k) * var(--lit-top) / var(--lit-bottom) * -100%)) scaleY(var(--lit-k));
+  }
+
+  /* The colour the session ended in, until the replay begins (its fade: depth-profile.ts). */
+  .lit__end {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+  }
+
+  /* Each thing rises past the card while the dive crosses its depths, most visible halfway. */
+  .lit__thing {
+    position: absolute;
+    top: 0;
+    left: calc(50% + var(--thing-left));
+    transform: translateY(calc(var(--thing-y-final) * 100cqh));
+    opacity: var(--thing-opacity-final);
+  }
+
+  .results:not([data-replayed]) .lit__thing {
+    --thing-p: clamp(0, (var(--pd) - var(--thing-from)) / var(--thing-span), 1);
+
+    transform: translateY(calc((var(--passing-from) - var(--thing-p) * var(--passing-travel)) * 100cqh));
+    opacity: calc(var(--thing-peak) * sin(calc(var(--thing-p) * pi)));
+  }
+
+  .lit .lit__art {
+    display: block;
+  }
+
+  .lit .lit__art [data-tone="silhouette"] {
+    fill: var(--passing-silhouette);
+  }
+
+  .lit .lit__art [data-tone="deep"] {
+    fill: var(--passing-deep);
+  }
+
+  .lit .lit__art [data-tone="jelly"] {
+    fill: var(--passing-jelly);
+  }
+
+  .lit .lit__art [data-tone="jelly-line"] {
+    fill: none;
+    stroke: var(--passing-jelly-line);
+  }
+
+  .lit .lit__art [data-tone="glow"] {
+    fill: var(--passing-glow);
+  }
+}

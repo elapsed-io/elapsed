@@ -17,7 +17,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { GRAPHITE, PAPER, checkInFrame, idleFrame, inPalette, limitFrame, pausedFrame, pausedMissedFrame, runningFrame } from './fixtures/frames.ts';
-import { modeFrame } from './fixtures/mode-frames.ts';
+import { modeFrame, oceanFrame } from './fixtures/mode-frames.ts';
 import { createSession, pauseSession, resumeSession, serializeActiveState, startState } from '@stopwatch/core';
 import { MINUTE, SECOND, compareWithReference, freezeAnimations, holdAnimationsAt, openApp, settle } from './helpers.ts';
 import { SMOOTHED_LIMIT, expectLikeFrame } from './pixels.ts';
@@ -133,6 +133,10 @@ for (const [name, mode, focus, paused, limit] of [
 // anti-aliased edges differ by a few levels along its length (262 pixels measured, smoothed 10). A hand 3° off
 // differs by 724 (smoothed 68), as the control below checks.
 const ANALOG_LIMIT = 300;
+/** The most any ocean pixel may differ from its frame: the frames' two-stop water against the site's every metre. */
+const OCEAN_LEVELS = 10;
+/** At 5 m that difference passes the 8 levels the pixel check counts as visible, over a band of the screen (45,913 measured). */
+const OCEAN_SURFACE_LIMIT = 50_000;
 
 test('analog matches the "analog stopwatch" frame', async ({ page, browser, browserName }) => {
   await sessionAt(page, 'analog', 84 * MINUTE);
@@ -142,6 +146,35 @@ test('analog matches the "analog stopwatch" frame', async ({ page, browser, brow
     expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(ANALOG_LIMIT);
     expect(diff.smoothedMaxDelta, JSON.stringify(diff)).toBeLessThanOrEqual(SMOOTHED_LIMIT);
   });
+});
+
+// Ocean depth: the frames draw the water as one gradient between the colours 6 m above and 6 m below; the site
+// draws a stop every metre, so it follows the light model's curve as it glides (decision 295). Measured: 2
+// levels at 90 m, 3 at 20 m, 8 at 10 m and 10 at 5 m, where the light changes fastest. Text, icons and
+// buttons match exactly.
+for (const [frame, focus, depth, minutes, into, limit] of [
+  ['ocean depth, running', 6 * MINUTE, 90, 6, 0, 0],
+  ['ocean depth, 0 to 20 m (at 5 m)', 20 * SECOND, 5, 0, 20 * SECOND, OCEAN_SURFACE_LIMIT],
+  ['ocean depth, 0 to 20 m (at 10 m)', 40 * SECOND, 10, 0, 40 * SECOND, 0],
+  ['ocean depth, 0 to 20 m (at 20 m)', 80 * SECOND, 20, 1, 20 * SECOND, 0],
+] as const) {
+  test(`ocean depth matches the "${frame}" frame`, async ({ page, browser, browserName }) => {
+    await sessionAt(page, 'ocean', focus);
+    await freezeAnimations(page, { at: { '.ocean__strip': into } });
+    const diff = await compareWithReference(page, browser, oceanFrame(depth, minutes));
+    expectLikeFrame(diff, browserName, () => {
+      expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(limit);
+      expect(diff.maxChannelDelta, JSON.stringify(diff)).toBeLessThanOrEqual(OCEAN_LEVELS);
+    });
+  });
+}
+
+test('control: ocean water 15 m off fails the running frame by far', async ({ page, browser, browserName }) => {
+  test.skip(browserName !== 'chromium' || process.env['PIXEL_REFERENCE'] !== '1', 'exact pixel rules hold only in the reference environment');
+  await sessionAt(page, 'ocean', 5 * MINUTE);
+  await freezeAnimations(page, { at: { '.ocean__strip': 0 } });
+  const diff = await compareWithReference(page, browser, oceanFrame(90, 5));
+  expect(diff.maxChannelDelta).toBeGreaterThan(OCEAN_LEVELS);
 });
 
 test('control: analog hands 3° from the frame fail the analog frame by far', async ({ page, browser, browserName }) => {

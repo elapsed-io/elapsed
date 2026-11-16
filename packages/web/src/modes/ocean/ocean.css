@@ -1,0 +1,46 @@
+/*
+ * Ocean depth, drawn as the ocean frames: water behind the whole screen, and the frames' own colours for the
+ * time, the corner icons and the buttons over it. The results and the ending keep the theme's colours, the
+ * corner icons too, as the results frame draws them: the corner takes the water's only while the timer shows.
+ */
+@layer mode {
+  .screen[data-mode="ocean"] > :is(.mode-root, .controls),
+  .screen[data-mode="ocean"]:has(> .mode-root:not([hidden])) > .corner {
+    --color-foreground: var(--ocean-text);
+    --color-muted: var(--ocean-icon);
+    --color-accent: var(--ocean-accent);
+    --color-end: var(--ocean-end);
+    --color-pause: var(--ocean-pause);
+    color: var(--color-foreground);
+  }
+
+  /* The screen is the water's stacking context, so the water sits over its background and under its content. */
+  .screen[data-mode="ocean"] {
+    isolation: isolate;
+  }
+
+  /* Behind everything on the screen; inside the mode's root, so it hides with the timer. */
+  .ocean__water {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+  }
+
+  /*
+   * The minute's water, moved up the screen by a linear transform while a session runs; in the first 6 m it is
+   * also stretched from the surface down, so the screen never shows above the surface (ocean.ts).
+   */
+  .ocean__strip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    transform-origin: top;
+    will-change: transform;
+  }
+
+  .ocean__strip--still {
+    will-change: auto;
+  }
+}

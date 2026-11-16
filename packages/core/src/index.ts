@@ -98,3 +98,8 @@ export type { BrowserFamily, CrashReport } from './crash.ts';
 export { utf8Bytes } from './utf8.ts';
 export { longSessionReplayExtraMs, replayLengthMs } from './replay.ts';
 export type { ReplayTiming } from './replay.ts';
+
+export { attenuated, contrast, hex, luminance, parseHexColour, srgbChannel } from './modes/light.ts';
+export type { LinearRgb } from './modes/light.ts';
+export { OCEAN_LANDMARKS, oceanColour, oceanDepth, oceanLitColour, oceanZone, pickLandmarks, spreadLandmarks } from './modes/ocean.ts';
+export type { Landmark, LandmarkId, OceanZone } from './modes/ocean.ts';

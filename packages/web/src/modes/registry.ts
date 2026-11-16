@@ -14,6 +14,7 @@ const LOADERS: Readonly<Record<string, () => Promise<DisplayModeFactory>>> = {
   ring: async () => (await import('./ring/ring.ts')).createRingMode,
   timeline: async () => (await import('./timeline/timeline.ts')).createTimelineMode,
   analog: async () => (await import('./analog/analog.ts')).createAnalogMode,
+  ocean: async () => (await import('./ocean/ocean.ts')).createOceanMode,
 };
 
 export interface RegisteredMode {

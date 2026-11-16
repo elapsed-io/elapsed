@@ -19,7 +19,7 @@ import './analog.css';
 import { BRAND, CONFIG } from '@stopwatch/core';
 import type { Session, TimerView } from '@stopwatch/core';
 import { html, svg } from '../../dom.ts';
-import type { DisplayContext, DisplayMode } from '../contract.ts';
+import type { DisplayContext, DisplayMode, ReplaySurface } from '../contract.ts';
 import { drawRings } from '../ring/ring-replay.ts';
 import { TimeDisplay } from '../shared/time-display.ts';
 
@@ -171,8 +171,8 @@ export function createAnalogMode(): DisplayMode {
       const state: State = view.status === 'idle' || view.status === 'ended' ? 'idle' : view.status === 'running' && view.checkInDueAt === null ? 'running' : 'held';
       place(view.focusedMs, state);
     },
-    replay(target: HTMLElement, session: Session) {
-      drawRings(target, session);
+    replay(surface: ReplaySurface, session: Session) {
+      drawRings(surface.graphic, session);
     },
     relayout() {
       display?.measure();

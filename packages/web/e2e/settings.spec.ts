@@ -35,7 +35,7 @@ function choiceFont(id: string, name = `${id}.name.woff2`): Buffer {
 
 type Clip = { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
 
-async function frameReference(browser: Browser, name: SettingsFrameName, palette: Palette, storage?: string, clip?: Clip): Promise<Buffer> {
+async function frameReference(browser: Browser, name: SettingsFrameName, palette: Palette, storage?: string, clip?: Clip, variant?: 'ocean'): Promise<Buffer> {
   const height = SETTINGS_FRAME_HEIGHT[name];
   const reference = await browser.newPage({ viewport: { width: 1280, height } });
   await reference.route('http://frame.test/**', (route) => {
@@ -45,7 +45,7 @@ async function frameReference(browser: Browser, name: SettingsFrameName, palette
     if (preview !== undefined && Object.values(FRAME_FONTS).includes(preview)) return route.fulfill({ body: choiceFont(preview), contentType: 'font/woff2' });
     const full = /\/full\/([a-z-]+)-(\d+)\.woff2$/.exec(url);
     if (full?.[1] !== undefined && Object.values(FRAME_FONTS).includes(full[1])) return route.fulfill({ body: choiceFont(full[1], `${full[1]}-${full[2] ?? ''}.woff2`), contentType: 'font/woff2' });
-    return route.fulfill({ body: settingsFrame(name, palette, storage), contentType: 'text/html' });
+    return route.fulfill({ body: settingsFrame(name, palette, storage, variant), contentType: 'text/html' });
   });
   await reference.goto('http://frame.test/');
   await reference.evaluate(() => document.fonts.ready);
@@ -149,6 +149,63 @@ test.describe('the panel matches its frames', () => {
       });
     });
   }
+
+  for (const [theme, palette] of [
+    ['graphite', GRAPHITE],
+    ['paper', PAPER],
+  ] as const) {
+    test(`the ocean depth tile matches the Release 2 display frame's, in ${theme}`, async ({ page, browser, browserName }) => {
+      await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT.display, settings: { theme } });
+      await showLikeFrame(page, 'display');
+      const box = await page.getByRole('radio', { name: 'ocean depth' }).boundingBox();
+      if (box === null) throw new Error('no ocean depth tile');
+      const clip = { x: Math.floor(box.x), y: Math.floor(box.y), width: Math.ceil(box.width), height: Math.ceil(box.height) };
+      const site = await page.screenshot({ clip });
+      const diff = await diffPngs(page, site, await frameReference(browser, 'display', palette, undefined, clip));
+      expectLikeFrame(diff, browserName, () => {
+        expect(diff.differing, JSON.stringify(diff)).toBe(0);
+      });
+    });
+
+    test(`with ocean depth chosen, its options box matches the Release 2 display frame's, in ${theme}`, async ({ page, browser, browserName }) => {
+      await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT.display, settings: { theme, mode: 'ocean' } });
+      await showLikeFrame(page, 'display');
+      await page.mouse.move(0, 0);
+      const options = page.getByRole('group', { name: 'ocean depth options' });
+      await expect(options).toBeVisible();
+      const box = await options.boundingBox();
+      if (box === null) throw new Error('no options box');
+      // The tiles and the box below them, as the frame draws them with ocean depth chosen.
+      const tiles = await page.locator('.mode-tiles').boundingBox();
+      if (tiles === null) throw new Error('no tiles');
+      const clip = { x: Math.floor(tiles.x), y: Math.floor(tiles.y), width: Math.ceil(tiles.width), height: Math.ceil(box.y + box.height - tiles.y) };
+      const site = await page.screenshot({ clip });
+      const diff = await diffPngs(page, site, await frameReference(browser, 'display', palette, undefined, clip, 'ocean'));
+      expectLikeFrame(diff, browserName, () => {
+        expect(diff.differing, JSON.stringify(diff)).toBe(0);
+      });
+    });
+  }
+
+  test('the options box shows only while a mode with options is chosen, and its switch keeps results landmarks', async ({ page }) => {
+    await openApp(page, { width: 1280, height: 800 });
+    await openPanel(page);
+    await openCategory(page, 'display');
+    const options = page.getByRole('group', { name: 'ocean depth options' });
+    await expect(page.locator('.mode-options')).toBeHidden();
+    await page.getByRole('radio', { name: 'ocean depth' }).click();
+    await expect(options).toBeVisible();
+    const landmarks = page.getByRole('switch', { name: 'results landmarks' });
+    await expect(landmarks).toHaveAttribute('aria-checked', 'true');
+    await landmarks.click();
+    await expect(landmarks).toHaveAttribute('aria-checked', 'false');
+    expect(await page.evaluate(() => (JSON.parse(localStorage.getItem('settings') ?? '{}') as { resultsLandmarks?: boolean }).resultsLandmarks)).toBe(false);
+    await page.getByRole('radio', { name: 'analog' }).click();
+    await expect(page.locator('.mode-options')).toBeHidden();
+    // Search finds it by its own words, under display.
+    await page.getByRole('searchbox', { name: 'search settings' }).fill('landmarks');
+    await expect(page.locator('.settings__row:visible')).toHaveText(['display']);
+  });
 
   test('with privacy and data open, a font file stored', async ({ page, browser, browserName }) => {
     await openApp(page, { width: 1280, height: 800 });

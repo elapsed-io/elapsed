@@ -12,7 +12,8 @@
  * Release 1 categories (owner changes, item 5): timer, display, appearance,
  * notifications, privacy and data. Advanced arrives in round 7.
  *
- * Schema 2 (Release 2, round 2.1) adds animation speed and low power. Older
+ * Schema 2 (Release 2, round 2.1) adds animation speed and low power, and the
+ * mode options (round 2.3 on: results landmarks for ocean depth and height). Older
  * settings migrate field by field: what they lack takes its default.
  */
 
@@ -27,7 +28,7 @@ export const SETTINGS_CATEGORIES = ['timer', 'display', 'appearance', 'notificat
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
 /** The display modes, in the tiles' order (Release 2 adds each in its round: analog in 2.2). */
-export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog'] as const;
+export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean'] as const;
 export type ModeChoice = (typeof MODE_CHOICES)[number];
 
 /** The preset themes, in the frames' order (Design system > Color). */
@@ -78,6 +79,8 @@ export interface Settings {
   readonly pauseLimit: number;
   // Display
   readonly mode: ModeChoice;
+  /** Mode option (ocean depth and height): random landmarks on the results' profile. */
+  readonly resultsLandmarks: boolean;
   // Appearance
   readonly theme: ThemeId;
   /** The theme's colours when the user has changed them; null means the preset's own. */
@@ -107,7 +110,7 @@ export type SettingTarget =
   | { readonly css: `--${string}` }
   | { readonly theme: 'preset' | 'colors' }
   | { readonly engine: 'secondsDisplay' | 'checkInInterval' | 'pauseLimit' }
-  | { readonly site: 'mode' | 'clockFormat' | 'lowPower' | 'notifications' | 'usageCounts' | 'crashReports' };
+  | { readonly site: 'mode' | 'modeOptions' | 'clockFormat' | 'lowPower' | 'notifications' | 'usageCounts' | 'crashReports' };
 
 interface Declared<K extends SettingKey> {
   readonly key: K;
@@ -141,6 +144,7 @@ export type SettingDeclaration =
   | RangeSetting<'checkInInterval'>
   | RangeSetting<'pauseLimit'>
   | ChoiceSetting<'mode'>
+  | SwitchSetting<'resultsLandmarks'>
   | ChoiceSetting<'theme'>
   | ColorsSetting<'colors'>
   | ChoiceSetting<'font'>
@@ -180,6 +184,7 @@ export const SETTINGS: readonly SettingDeclaration[] = [
     target: { engine: 'pauseLimit' },
   },
   { key: 'mode', kind: 'choice', category: 'display', options: MODE_CHOICES, default: 'digits', target: { site: 'mode' } },
+  { key: 'resultsLandmarks', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
   { key: 'theme', kind: 'choice', category: 'appearance', options: THEME_IDS, default: 'graphite', target: { theme: 'preset' } },
   { key: 'colors', kind: 'colors', category: 'appearance', default: null, target: { theme: 'colors' } },
   { key: 'font', kind: 'choice', category: 'appearance', options: FONT_CHOICES, default: 'archivo', target: { css: '--font-family' } },

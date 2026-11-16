@@ -52,11 +52,18 @@ export async function openApp(
  */
 export async function settle(page: Page): Promise<void> {
   await page.evaluate(async () => {
-    const running = document
-      .getAnimations()
-      .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
-      .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand') === true));
-    await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
+    // A short real-time wait: the tests' clock holds timers and animation frames, but not animations.
+    const frames = (): Promise<unknown> => document.documentElement.animate([], { duration: 40 }).finished;
+    // Until a few frames pass with nothing left running: a busy browser can start a transition a frame late.
+    for (let round = 0; round < 10; round += 1) {
+      const running = document
+        .getAnimations()
+        .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .ocean__strip') === true));
+      if (running.length === 0 && round > 0) return;
+      await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
+      await frames();
+    }
   });
 }
 
@@ -65,21 +72,32 @@ export async function settle(page: Page): Promise<void> {
  * real time. Playwright's clock moves timers but not animations, so each animation's own time is set, once
  * it is ready (a pending animation would otherwise take its own start time afterwards):
  * - `css`: CSS animations (the seconds blur-away, pinned to focused time) at this many milliseconds;
- * - `at`: animations of elements matching a selector at that many milliseconds (the countdown's fill);
+ * - `at`: animations of elements matching a selector at that many milliseconds (the countdown's fill, the
+ *   glides); in Chromium then written into the element's style and cancelled, as its compositor can keep
+ *   drawing a paused animation where it was before it was moved (decision 294);
  * - every other animation (interface motion, transitions) at its end.
- * Each is then held paused, which is static: nothing moves between this and the screenshot.
+ * Each is then held, which is static: nothing moves between this and the screenshot.
  */
 export async function freezeAnimations(page: Page, moments: { readonly css?: number; readonly at?: Readonly<Record<string, number>> } = {}): Promise<void> {
+  // Only Chromium's compositor keeps drawing a paused, seeked animation where it was; WebKit draws a
+  // committed and cancelled one wrongly, so elsewhere a held animation stays paused where it was set.
+  const commit = page.context().browser()?.browserType().name() === 'chromium';
   await page.evaluate(
-    async ({ css, at }) => {
+    async ({ css, at, commit }) => {
       const animations = document.getAnimations();
       await Promise.all(animations.map((animation) => animation.ready.catch(() => undefined)));
       for (const animation of animations) {
         const target = animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
         const selector = target === null ? undefined : Object.keys(at).find((key) => target.matches(key));
         animation.pause();
-        if (selector !== undefined) animation.currentTime = at[selector] ?? 0;
-        else if (css !== null && animation instanceof CSSAnimation) animation.currentTime = css;
+        if (selector !== undefined) {
+          animation.currentTime = at[selector] ?? 0;
+          if (commit) {
+            // Held as static style: Chromium's compositor can keep drawing a paused, seeked animation where it was.
+            animation.commitStyles();
+            animation.cancel();
+          }
+        } else if (css !== null && animation instanceof CSSAnimation) animation.currentTime = css;
         else {
           try {
             animation.finish();
@@ -89,7 +107,7 @@ export async function freezeAnimations(page: Page, moments: { readonly css?: num
         }
       }
     },
-    { css: moments.css ?? null, at: moments.at ?? {} },
+    { css: moments.css ?? null, at: moments.at ?? {}, commit },
   );
   // Let the browser draw the held moment (the page's own clock is held, so this waits in real time).
   await page.waitForTimeout(100);
@@ -164,7 +182,7 @@ export async function finishResults(page: Page): Promise<void> {
       const running = document
         .getAnimations()
         .filter((animation) => !(animation instanceof CSSAnimation))
-        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand') === true));
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .ocean__strip') === true));
       for (const animation of running) animation.finish();
       // Let finish handlers (which cancel spent animations and remove masks) run. The page's timers
       // may be held by the test clock, so only promises are awaited.
