@@ -1,4 +1,4 @@
-// The Worker and its bindings (not deployed yet; see README.md).
+// The Worker and its bindings (not deployed yet; see README.md and docs/test-run.md).
 {
   "name": "elapsed",
   "main": "src/worker.ts",
@@ -24,5 +24,25 @@
   "observability": { "enabled": false },
   // The site will live on its own domain (elapsed.io, attached at launch), never on workers.dev.
   "workers_dev": false,
-  "preview_urls": false
+  "preview_urls": false,
+  "env": {
+    // The private test run (docs/test-run.md): its own Worker on a workers.dev address, behind
+    // Cloudflare Access, with its own database, so nothing it counts mixes with the real site's.
+    // Deploy with `npm run deploy:test`; the production settings above are unchanged.
+    "test": {
+      "name": "elapsed-test",
+      "workers_dev": true,
+      "preview_urls": false,
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "elapsed-test",
+          // Filled in when the test database is created (docs/test-run.md, step 2).
+          "database_id": "00000000-0000-0000-0000-000000000000",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "triggers": { "crons": ["17 4 * * *"] }
+    }
+  }
 }

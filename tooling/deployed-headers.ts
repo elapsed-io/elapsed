@@ -57,10 +57,18 @@ export interface LiveResponse {
 export const ACCESS_COOKIE = 'CF_Authorization';
 
 /** What is wrong with a live response, as sentences; empty when it is right. */
-export function judge(response: LiveResponse, expected: Headers, options: { readonly status: number; readonly behindAccess: boolean }): string[] {
+export function judge(
+  response: LiveResponse,
+  expected: Headers,
+  options: { readonly status: number; readonly behindAccess: boolean; readonly open?: boolean },
+): string[] {
   const problems: string[] = [];
   if (response.location !== null && /cloudflareaccess\.com/.test(response.location)) {
-    return [`${response.path}: Cloudflare Access asked for a sign-in; set CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET to a service token`];
+    return [
+      options.open === true
+        ? `${response.path}: Cloudflare Access asked for a sign-in, but this path must answer without one (docs/test-run.md: the bypass rules)`
+        : `${response.path}: Cloudflare Access asked for a sign-in; set CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET to a service token`,
+    ];
   }
   if (response.status !== options.status) problems.push(`${response.path}: status ${String(response.status)}, expected ${String(options.status)}`);
   for (const [name, value] of Object.entries(expected)) {

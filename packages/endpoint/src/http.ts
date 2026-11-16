@@ -3,15 +3,9 @@
  * reading a size-capped body, and the UTC day.
  */
 
-/** Headers on every endpoint response. Static files get theirs from _headers; Worker responses need their own. */
-export const RESPONSE_HEADERS: Readonly<Record<string, string>> = {
-  'Cache-Control': 'no-store',
-  'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
-  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-  'X-Content-Type-Options': 'nosniff',
-  'Referrer-Policy': 'no-referrer',
-  'Cross-Origin-Resource-Policy': 'same-origin',
-};
+import { RESPONSE_HEADERS } from './headers.ts';
+
+export { RESPONSE_HEADERS };
 
 export function respond(status: number, extra: Readonly<Record<string, string>> = {}): Response {
   return new Response(null, { status, headers: { ...RESPONSE_HEADERS, ...extra } });

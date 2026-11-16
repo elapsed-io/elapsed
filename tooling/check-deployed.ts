@@ -14,7 +14,7 @@
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { RESPONSE_HEADERS } from '../packages/endpoint/src/http.ts';
+import { RESPONSE_HEADERS } from '../packages/endpoint/src/headers.ts';
 import { expectedFor, judge, parseHeadersFile } from './deployed-headers.ts';
 import type { Headers, LiveResponse } from './deployed-headers.ts';
 
@@ -29,8 +29,9 @@ const secret = process.env['CF_ACCESS_CLIENT_SECRET'];
 const behindAccess = id !== undefined && secret !== undefined;
 const sent: Record<string, string> = behindAccess ? { 'CF-Access-Client-Id': id, 'CF-Access-Client-Secret': secret } : {};
 
-async function fetchLive(path: string): Promise<LiveResponse & { readonly text: string }> {
-  const response = await fetch(new URL(path, origin), { headers: sent, redirect: 'manual' });
+/** `open`: a path that must answer without Access's sign-in (docs/test-run.md: the bypass rules). */
+async function fetchLive(path: string, open = false): Promise<LiveResponse & { readonly text: string }> {
+  const response = await fetch(new URL(path, origin), { headers: open ? {} : sent, redirect: 'manual' });
   const headers: Record<string, string> = {};
   response.headers.forEach((value, name) => {
     headers[name.toLowerCase()] = value;
@@ -44,9 +45,9 @@ const file = (relative: string): string => readFileSync(fileURLToPath(new URL(re
 
 const problems: string[] = [];
 let checked = 0;
-async function check(path: string, expected: Headers, status: number): Promise<string> {
-  const live = await fetchLive(path);
-  const found = judge(live, expected, { status, behindAccess });
+async function check(path: string, expected: Headers, status: number, open = false): Promise<string> {
+  const live = await fetchLive(path, open);
+  const found = judge(live, expected, { status, behindAccess, open });
   problems.push(...found);
   checked += 1;
   console.log(`${found.length === 0 ? 'ok  ' : 'FAIL'} ${String(live.status)} ${path}`);
@@ -62,9 +63,12 @@ if (target === 'app') {
   const stylesheet = assets.find((path) => path.endsWith('.css'));
   if (script === undefined || stylesheet === undefined) problems.push('/: the page names no /assets/ script or stylesheet');
   for (const path of [script, stylesheet]) if (path !== undefined) await check(path, expectedFor(rules, path), 200);
-  for (const path of ['/sw.js', '/sw-control.json', '/manifest.webmanifest', '/icons/icon.svg']) await check(path, expectedFor(rules, path), 200);
+  for (const path of ['/sw.js', '/sw-control.json']) await check(path, expectedFor(rules, path), 200);
+  // Browsers fetch these without cookies (the manifest and its icons) or the site sends them without
+  // (counts and crash reports), so behind Access they must answer without its sign-in.
+  for (const path of ['/manifest.webmanifest', '/icons/icon.svg']) await check(path, expectedFor(rules, path), 200, true);
   // The Worker: an unknown /api/ path answers 404 with the endpoint's own headers, and counts nothing.
-  await check('/api/not-a-route', lower(RESPONSE_HEADERS), 404);
+  await check('/api/not-a-route', lower(RESPONSE_HEADERS), 404, true);
 } else {
   const rules = parseHeadersFile(file('../packages/soon/public/_headers'));
   // Any other path shows the page too.

@@ -73,6 +73,11 @@ engine) on Linux; these checks cover what that cannot.
 15. With the text size at its largest (Settings → Display & Brightness → Text Size):
     - [ ] Nothing overlaps or is cut off in the timer, the results or the settings panel.
 
+### Responsiveness
+
+16. Tap start, pause, resume and end, several times each.
+    - [ ] Each tap shows its change at once; the first pause blurs the display without a stutter.
+
 ## Safari on a Mac
 
 The two service worker tests that Playwright cannot run in WebKit (decision 224), on the production
@@ -86,18 +91,21 @@ npm run build -w @stopwatch/web
 npm run preview -w @stopwatch/web
 ```
 
-16. Open `http://localhost:4173` in a new private Safari window with Web Inspector's Network tab open.
+17. Open `http://localhost:4173` in a new private Safari window with Web Inspector's Network tab open.
     - [ ] The default font (`timer-sans-….woff2`) is transferred once; a second line for it, if shown,
       says it came from the memory cache (decision 229).
     Then reload once and open Storage.
     - [ ] A service worker is registered and the cache holds the site's files.
-17. Network tab: press Space to start a session.
+18. Network tab: press Space to start a session.
     - [ ] One `POST /api/count` goes to the network (it fails locally with no endpoint, which is fine),
       and Storage → Cache Storage has no entry under `/api/`.
-18. Kill switch: edit `packages/web/dist/sw-control.json` to `{"serviceWorker":"off"}` and reload twice.
+19. Kill switch: edit `packages/web/dist/sw-control.json` to `{"serviceWorker":"off"}` and reload twice.
     - [ ] Storage shows no service worker and no caches. Undo the edit afterwards (a new build also
       rewrites it).
-19. Settings → notifications in Safari on macOS: switch on, allow, start a session, switch to another app.
+20. Develop → Show Web Inspector → Timelines, record, then click start, pause, resume and pause again.
+    - [ ] Each click is followed by a painted frame within 100 ms, the first pause included (decision 234:
+      Playwright's WebKit on CI, drawing in software, took up to 117 ms for the first pause).
+21. Settings → notifications in Safari on macOS: switch on, allow, start a session, switch to another app.
     - [ ] The check-in notification arrives.
 
 ## A low-end Android phone (Chrome)
@@ -106,32 +114,32 @@ The plan asks for a low-end Android phone: for example one with 2 to 3 GB of mem
 processor (an Android Go phone, or a budget model a few years old). Measure with Chrome's own tools
 only, over USB (chrome://inspect on a computer); no third-party monitoring.
 
-20. First visit on a slow connection (DevTools → Network → Fast 4G, cache disabled).
+22. First visit on a slow connection (DevTools → Network → Fast 4G, cache disabled).
     - [ ] The idle screen appears drawn as the frame, with the time in its font, without a jump when the
       font arrives.
     - [ ] Start responds to the first tap at once.
-21. DevTools → Performance: record starting, pausing, resuming and ending a session.
+23. DevTools → Performance: record starting, pausing, resuming and ending a session.
     - [ ] Each tap is followed by a painted frame within 100 ms, and no task takes 50 ms or more.
-22. Performance monitor during a running session, in each display mode, after the first minute:
+24. Performance monitor during a running session, in each display mode, after the first minute:
     - [ ] CPU stays near 0 % between the once-a-minute updates; nothing redraws every frame.
-23. The results replay, after a session of at least an hour in ring mode.
+25. The results replay, after a session of at least an hour in ring mode.
     - [ ] It runs smoothly, with the arcs revealed behind the hand and never ahead of it.
-24. Settings: open the panel, switch categories, choose another font, open advanced (the editor loads).
+26. Settings: open the panel, switch categories, choose another font, open advanced (the editor loads).
     - [ ] Each opens without a visible stall.
-25. Put Chrome in the background for 30 minutes during a session, then return.
+27. Put Chrome in the background for 30 minutes during a session, then return.
     - [ ] The time is right at once, and the session was not marked as abandoned.
-26. Install to the home screen (Chrome menu → Add to Home screen or Install app) and repeat steps 3 and 4.
+28. Install to the home screen (Chrome menu → Add to Home screen or Install app) and repeat steps 3 and 4.
     - [ ] Same results as on the iPhone.
-27. Notifications: switch on, allow, set the shortest check-in interval, switch to another app.
+29. Notifications: switch on, allow, set the shortest check-in interval, switch to another app.
     - [ ] The notification arrives at the check-in, or record how late (Chrome may freeze a page left in the
       background, the same limit as step 8).
-28. A one-hour session with the screen on, in digits mode.
+30. A one-hour session with the screen on, in digits mode.
     - [ ] The phone does not get warm, and the battery use shown for Chrome is no more than for an
       ordinary web page left open.
 
 ## Other desktop browsers
 
-29. Firefox and Edge (latest), on any computer: one session from start to results in each display mode,
+31. Firefox and Edge (latest), on any computer: one session from start to results in each display mode,
     and every settings category.
     - [ ] Everything looks as in Chrome, and nothing reports an error in the console.
 

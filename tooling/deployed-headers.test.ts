@@ -58,5 +58,7 @@ describe('deployed headers', () => {
   it('says so when Cloudflare Access stops the check at its sign-in', () => {
     const response = live('/', {}, { status: 302, location: 'https://team.cloudflareaccess.com/cdn-cgi/access/login' });
     expect(judge(response, expectedFor(app, '/'), { status: 200, behindAccess: false })[0]).toMatch(/service token/);
+    // The counting endpoint and the manifest are fetched without cookies, so Access must let them through.
+    expect(judge({ ...response, path: '/api/not-a-route' }, {}, { status: 404, behindAccess: true, open: true })[0]).toMatch(/must answer without one/);
   });
 });

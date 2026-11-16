@@ -62,11 +62,19 @@ npm run icons -w @stopwatch/web
 
 ## Deployment
 
-Nothing is deployed yet. The plan is one Cloudflare Worker (`packages/endpoint/wrangler.jsonc`) on the
-site's own domain: it serves the build output (`packages/web/dist`, with its security headers in
-`dist/_headers`) as static assets and runs only for `/api/`. The first deploy creates the D1 database,
-puts its id in `wrangler.jsonc` and applies `packages/endpoint/migrations/`. To turn offline support off
-for everyone, publish `packages/web/public/sw-control.json` as `{"serviceWorker":"off"}`.
+The owner runs every deploy; nothing deploys from CI. The app is one Cloudflare Worker
+(`packages/endpoint/wrangler.jsonc`): it serves the build output (`packages/web/dist`, with its security
+headers in `dist/_headers`) as static assets and runs only for `/api/`.
+
+- **Private test run:** `npm run deploy:test` deploys the `test` environment, its own Worker and D1
+  database on a workers.dev address behind Cloudflare Access. Every step is in `docs/test-run.md`.
+- **Launch:** the production Worker takes elapsed.io from the soon page (`packages/soon`). Its first deploy
+  creates the D1 database, puts its id in `wrangler.jsonc` and applies `packages/endpoint/migrations/`.
+- **After every deploy:** `npm run check:deployed -- app|soon <address>` checks status codes, security
+  headers and cookies against the build.
+- **Undoing a deploy:** `docs/rollback.md`. To turn offline support off for everyone, publish
+  `packages/web/public/sw-control.json` as `{"serviceWorker":"off"}`.
+- **Before release:** `docs/device-checks.md` (real devices) and `docs/known-issues.md`.
 
 ## Licences
 

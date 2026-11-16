@@ -29,7 +29,9 @@
     "test:e2e": "npm run test:e2e -w @stopwatch/web",
     "check:contrast": "node packages/web/scripts/check-contrast.ts",
     "check:size": "node packages/web/scripts/check-size.ts",
-    "check": "npm run typecheck && npm run lint && npm test && npm run check:contrast && npm run build && npm run check:size"
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:contrast && npm run build && npm run check:size",
+    "check:deployed": "node tooling/check-deployed.ts",
+    "deploy:test": "npm run build && npx --yes wrangler@4.162.0 deploy --config packages/endpoint/wrangler.jsonc --env test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

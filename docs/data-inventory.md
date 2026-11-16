@@ -5,7 +5,8 @@ updates it in the same change (plan, Privacy > Living inventory).
 
 ## What the site does today
 
-As of Release 1, round 7 (Custom CSS).
+As of Release 1, round 8 (Hardening). `e2e/privacy.spec.ts` checks a live session against this table in
+Chromium, Firefox and WebKit: every request, request body, stored key and cookie.
 
 | | Current state |
 | --- | --- |
@@ -24,6 +25,16 @@ As of Release 1, round 7 (Custom CSS).
 | Cookies | None. Lint bans `document.cookie`. |
 | Server data | Cloudflare D1 (one database, `elapsed`). Table `daily_counts`: one row per UTC day and event (`visit`, `session`) holding a total; kept as long as the site runs; totals describe no one. Table `crash_reports`: per report, the UTC day, the build, the browser family and major version, the scrubbed message and stack; deleted 14 days later (on every new report and by a daily schedule). Nothing else. |
 | Logs | The Worker writes none (`observability` off). Cloudflare's platform keeps its own standard request logs for the site. |
+
+## The private test run
+
+Only while the test run lasts, and only on its workers.dev address (`docs/test-run.md`); the public site
+has none of this.
+
+| | During the test run |
+| --- | --- |
+| Cloudflare Access | Testers' email addresses on the invite list; a one-time sign-in code emailed to them; Cloudflare's log of each sign-in (email, time, address); a sign-in cookie, `CF_Authorization`, on the test address for up to a week. Removed with the Access applications when the run ends; Cloudflare keeps its sign-in logs for its own retention period. Testers are told this in their invitation. |
+| Database | A separate D1 database, `elapsed-test`, holding the same daily totals and opt-in crash reports as above; deleted when the run ends. |
 
 ## Planned inventory
 
