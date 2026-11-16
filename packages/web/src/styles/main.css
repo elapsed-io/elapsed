@@ -9,11 +9,29 @@
  * the frame's 26 px, so controls keep their spacing on phones.
  */
 
+/*
+ * The view's size, registered as lengths so each is worked out once, in pixels. Unregistered, Firefox
+ * folds "100vw / 720" into one tiny viewport length and rounds it down to its 1/60 px unit, which made
+ * every scaled size 1.5 % too small on a 390 px phone.
+ */
+@property --view-width {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --view-height {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0;
+}
+
 @layer base {
   :root {
     /* The width the timer has: the window, less the settings panel while it is open beside it. */
     --view-width: 100vw;
-    --u: min(calc(var(--view-width) / var(--reference-width)), calc(100dvh / var(--reference-height)));
+    --view-height: 100dvh;
+    --u: min(calc(var(--view-width) / var(--reference-width)), calc(var(--view-height) / var(--reference-height)));
     color-scheme: var(--color-scheme);
   }
 

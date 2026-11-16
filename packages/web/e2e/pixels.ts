@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 export interface PixelDiff {
@@ -13,6 +13,27 @@ export interface PixelDiff {
   readonly box: readonly [number, number, number, number] | null;
   /** Up to 12 differing pixels as "x,y:delta", for reading a failure in a log. */
   readonly sample: readonly string[];
+  /**
+   * The largest channel difference once every pixel is averaged with its eight neighbours in both
+   * images: what is left when glyph edges placed a fraction of a pixel apart are set aside.
+   */
+  readonly smoothedMaxDelta: number;
+}
+
+/**
+ * Outside Chromium, the most a smoothed channel may differ. Matching frames measured at most 24 in
+ * Firefox and WebKit; a frame of the wrong moment differs by over 200 (decision 226).
+ */
+export const SMOOTHED_LIMIT = 32;
+
+/**
+ * The frames were matched in Chromium, where `chromium` applies the test's own rule. Firefox and WebKit
+ * place text a fraction of a pixel differently in a layer than in the static frame, so there the images
+ * must agree once that is set aside.
+ */
+export function expectLikeFrame(diff: PixelDiff, browserName: string, chromium: (diff: PixelDiff) => void): void {
+  if (browserName === 'chromium') chromium(diff);
+  else expect(diff.smoothedMaxDelta, JSON.stringify(diff)).toBeLessThanOrEqual(SMOOTHED_LIMIT);
 }
 
 const VISIBLE_DELTA = 8;
@@ -70,7 +91,30 @@ export async function diffPngs(page: Page, a: Buffer, b: Buffer): Promise<PixelD
         if (pixelDelta > threshold) visible += 1;
         maxChannelDelta = Math.max(maxChannelDelta, pixelDelta);
       }
-      return { total: x.width * x.height, differing, visible, maxChannelDelta, box, sample };
+      // A 3 × 3 average of each image (edges clamped), done as two passes of three.
+      const smooth = (image: ImageData): Float32Array => {
+        const { width, height, data } = image;
+        const across = new Float32Array(data.length);
+        const out = new Float32Array(data.length);
+        const at = (px: number, py: number): number => (Math.min(height - 1, Math.max(0, py)) * width + Math.min(width - 1, Math.max(0, px))) * 4;
+        for (let py = 0; py < height; py += 1) {
+          for (let px = 0; px < width; px += 1) {
+            for (let c = 0; c < 4; c += 1) across[at(px, py) + c] = ((data[at(px - 1, py) + c] ?? 0) + (data[at(px, py) + c] ?? 0) + (data[at(px + 1, py) + c] ?? 0)) / 3;
+          }
+        }
+        for (let py = 0; py < height; py += 1) {
+          for (let px = 0; px < width; px += 1) {
+            for (let c = 0; c < 4; c += 1) out[at(px, py) + c] = ((across[at(px, py - 1) + c] ?? 0) + (across[at(px, py) + c] ?? 0) + (across[at(px, py + 1) + c] ?? 0)) / 3;
+          }
+        }
+        return out;
+      };
+      let smoothedMaxDelta = 0;
+      if (differing > 0) {
+        const [sx, sy] = [smooth(x), smooth(y)];
+        for (let i = 0; i < sx.length; i += 1) smoothedMaxDelta = Math.max(smoothedMaxDelta, Math.abs((sx[i] ?? 0) - (sy[i] ?? 0)));
+      }
+      return { total: x.width * x.height, differing, visible, maxChannelDelta, box, sample, smoothedMaxDelta: Math.round(smoothedMaxDelta * 10) / 10 };
     },
     [a.toString('base64'), b.toString('base64'), VISIBLE_DELTA] as const,
   );

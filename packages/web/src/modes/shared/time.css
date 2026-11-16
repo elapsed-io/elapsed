@@ -76,11 +76,13 @@
     }
   }
 
-  /* Paused or waiting for a check-in: the whole display (time and graphics) is held behind a blur. */
+  /*
+   * Paused or waiting for a check-in: the whole display (time and graphics) is held behind a blur. The
+   * blur itself never animates (plan, Performance: the seconds blur-away is the only animated blur); it
+   * applies at once and the fade carries the change.
+   */
   .time-stack__body {
-    transition:
-      filter var(--motion-morph) var(--ease-standard),
-      opacity var(--motion-morph) var(--ease-standard);
+    transition: opacity var(--motion-morph) var(--ease-standard);
   }
 
   .time-stack__body--held {
@@ -145,12 +147,5 @@
     font-variant-numeric: normal;
     color: var(--color-muted);
     white-space: nowrap;
-  }
-
-  /* Reduced motion: no blur animates; the pause still crossfades. */
-  @media (prefers-reduced-motion: reduce) {
-    .time-stack__body {
-      transition: opacity var(--motion-morph) var(--ease-standard);
-    }
   }
 }

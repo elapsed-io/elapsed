@@ -63,6 +63,18 @@ describe('plan audit: performance', () => {
     }
   });
 
+  it('animates a blur only in the seconds blur-away', () => {
+    // Performance requirements: "the seconds blur-away is the only animated blur".
+    for (const css of ALL_CSS) {
+      for (const block of css.match(/@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g) ?? []) {
+        if (/\bfilter\s*:/.test(block)) expect(block).toMatch(/^@keyframes time-blur-away-blur\b/);
+      }
+      for (const [, value = ''] of css.matchAll(/transition\s*:\s*([^;]+);/g)) {
+        expect(value, 'a transition of filter').not.toMatch(/(?:^|,)\s*(?:filter|all)\b/);
+      }
+    }
+  });
+
   it('animates from script only with transform and opacity, apart from the one replay exception', () => {
     // Plan, Principles: "There is exactly one exception: a results replay is driven by a single animated
     // custom property holding its progress, from which its SVG stroke offsets, the clock hand's rotation

@@ -9,7 +9,9 @@
  * layer (see fixtures/frames.ts), so they compare geometry rather than
  * rasteriser details. The seconds blur-away compares against the frame's own
  * markup and allows a few dozen pixels of edge noise. A misplaced element by
- * even one pixel differs in hundreds of pixels.
+ * even one pixel differs in hundreds of pixels. In Firefox and WebKit, where
+ * glyphs in a layer land a fraction of a pixel from the static frame's, the
+ * blur-away is compared once that is averaged away (pixels.ts).
  */
 
 import { expect, test } from '@playwright/test';
@@ -17,24 +19,37 @@ import type { Page } from '@playwright/test';
 import { GRAPHITE, PAPER, checkInFrame, idleFrame, inPalette, limitFrame, pausedFrame, pausedMissedFrame, runningFrame } from './fixtures/frames.ts';
 import { modeFrame } from './fixtures/mode-frames.ts';
 import { createSession, pauseSession, resumeSession, serializeActiveState, startState } from '@stopwatch/core';
-import { writeFileSync } from 'node:fs';
-import { MINUTE, SECOND, compareWithReference, holdAnimationsAt, openApp, screenshotReference, settle } from './helpers.ts';
+import { MINUTE, SECOND, compareWithReference, holdAnimationsAt, openApp, settle } from './helpers.ts';
+import { SMOOTHED_LIMIT, expectLikeFrame } from './pixels.ts';
 
 /** Moments across both blur-away windows, including their ends. */
 const RUNNING_MOMENTS = [0.5, 3, 7.5, 9.9, 12, 35, 47.5, 59.5];
 
 for (const seconds of RUNNING_MOMENTS) {
-  test(`running at ${String(seconds)} s matches the running frame as the seconds blur away`, async ({ page, browser }) => {
+  test(`running at ${String(seconds)} s matches the running frame as the seconds blur away`, async ({ page, browser, browserName }) => {
     await openApp(page);
     await page.locator('.button--primary').click();
     await page.clock.runFor(seconds * SECOND);
     await settle(page);
     await holdAnimationsAt(page, seconds * SECOND);
     const diff = await compareWithReference(page, browser, runningFrame(seconds));
-    expect(diff.visible).toBeLessThanOrEqual(60);
-    expect(diff.maxChannelDelta).toBeLessThanOrEqual(64);
+    expectLikeFrame(diff, browserName, () => {
+      expect(diff.visible).toBeLessThanOrEqual(60);
+      expect(diff.maxChannelDelta).toBeLessThanOrEqual(64);
+    });
   });
 }
+
+test('the comparison tells the blur-away apart from a moment 4.5 s away (a control check)', async ({ page, browser }) => {
+  await openApp(page);
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(3 * SECOND);
+  await settle(page);
+  await holdAnimationsAt(page, 3 * SECOND);
+  const diff = await compareWithReference(page, browser, runningFrame(7.5));
+  expect(diff.smoothedMaxDelta).toBeGreaterThan(4 * SMOOTHED_LIMIT);
+  expect(diff.visible).toBeGreaterThan(60);
+});
 
 test('running after a minute shows hh:mm exactly as the running frame', async ({ page, browser }) => {
   await openApp(page);
@@ -92,10 +107,6 @@ for (const [name, mode, focus, paused, limit] of [
 ] as const) {
   test(`${mode} matches the "${name}" frame`, async ({ page, browser }) => {
     await sessionAt(page, mode, focus, paused);
-    if (process.env['DEBUG_FRAMES'] !== undefined) {
-      writeFileSync(`${process.env['DEBUG_FRAMES']}/${name}-site.png`, await page.screenshot());
-      writeFileSync(`${process.env['DEBUG_FRAMES']}/${name}-frame.png`, await screenshotReference(browser, modeFrame(name, GRAPHITE)));
-    }
     const diff = await compareWithReference(page, browser, modeFrame(name, GRAPHITE));
     expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(limit);
   });

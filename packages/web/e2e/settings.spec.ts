@@ -5,7 +5,7 @@
  * follow their switches.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
@@ -13,7 +13,7 @@ import { FONT, MINUTE, SECOND, endThroughCountdown, finishResults, openApp, seed
 import { FRAME_FONTS, SETTINGS_FRAME_HEIGHT, settingsFrame } from './fixtures/settings-frames.ts';
 import type { Palette, SettingsFrameName } from './fixtures/settings-frames.ts';
 import { GRAPHITE } from './fixtures/frames.ts';
-import { diffPngs } from './pixels.ts';
+import { diffPngs, expectLikeFrame } from './pixels.ts';
 
 const PANEL = { x: 840, width: 440 };
 const primary = (page: Page) => page.locator('.button--primary');
@@ -91,22 +91,19 @@ async function showLikeFrame(page: Page, name: SettingsFrameName): Promise<void>
 
 test.describe('the panel matches its frames', () => {
   for (const name of ['timer', 'display', 'notifications', 'appearance', 'advanced'] as const) {
-    test(`with ${name} open`, async ({ page, browser }) => {
+    test(`with ${name} open`, async ({ page, browser, browserName }) => {
       await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT[name] });
       await showLikeFrame(page, name);
       const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: SETTINGS_FRAME_HEIGHT[name] } });
       const reference = await frameReference(browser, name, GRAPHITE);
-      // DEBUG_FRAMES=<folder> keeps both images, to see where they differ.
-      if (process.env['DEBUG_FRAMES'] !== undefined) {
-        writeFileSync(`${process.env['DEBUG_FRAMES']}/${name}-site.png`, site);
-        writeFileSync(`${process.env['DEBUG_FRAMES']}/${name}-frame.png`, reference);
-      }
       const diff = await diffPngs(page, site, reference);
-      expect(diff.differing, JSON.stringify(diff)).toBe(0);
+      expectLikeFrame(diff, browserName, () => {
+        expect(diff.differing, JSON.stringify(diff)).toBe(0);
+      });
     });
   }
 
-  test('with privacy and data open, a font file stored', async ({ page, browser }) => {
+  test('with privacy and data open, a font file stored', async ({ page, browser, browserName }) => {
     await openApp(page, { width: 1280, height: 800 });
     await openPanel(page);
     await openCategory(page, 'appearance');
@@ -118,7 +115,9 @@ test.describe('the panel matches its frames', () => {
     await expect(page.locator('.setting__value')).toHaveText('your font · 23 KB');
     const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: 800 } });
     const diff = await diffPngs(page, site, await frameReference(browser, 'privacy', GRAPHITE, 'your font · 23 KB'));
-    expect(diff.differing, JSON.stringify(diff)).toBe(0);
+    expectLikeFrame(diff, browserName, () => {
+      expect(diff.differing, JSON.stringify(diff)).toBe(0);
+    });
   });
 });
 
