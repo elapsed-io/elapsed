@@ -107,8 +107,8 @@ export class EndingCountdown {
   }
 
   #stop(): void {
-    const countdown = this.#countdown;
     this.#countdown = null;
-    countdown?.cancel();
+    // Also the last countdown, finished by end now and held at its end: nothing is left on the bar.
+    for (const animation of this.#fill.getAnimations()) animation.cancel();
   }
 }
