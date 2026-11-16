@@ -12,9 +12,9 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "elapsed",
+      "database_name": "elapsed_test",
       // Filled in when the database is created, at the first deploy.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "c04f4f16-f2bc-48a2-8779-f727ea98d3ed",
       "migrations_dir": "migrations"
     }
   ],
@@ -38,7 +38,7 @@
           "binding": "DB",
           "database_name": "elapsed-test",
           // Filled in when the test database is created (docs/deploy.md, part 2, step 2).
-          "database_id": "00000000-0000-0000-0000-000000000000",
+          "database_id": "c04f4f16-f2bc-48a2-8779-f727ea98d3ed",
           "migrations_dir": "migrations"
         }
       ],
