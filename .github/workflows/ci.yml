@@ -51,6 +51,28 @@ jobs:
       - name: Size budget
         run: npm run check:size
 
+  # Both Workers started in Cloudflare's own runtime (workerd, through the pinned wrangler dev) and sent real
+  # requests, so an error a Worker shows only on Cloudflare (10021, "Disallowed operation called within
+  # global scope", which stopped a deploy) fails here first. Local only: no account, no secrets.
+  workers:
+    name: workers in Cloudflare's runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.1
+          cache: npm
+      - name: Install (lockfile only, no install scripts)
+        run: npm ci --ignore-scripts
+      - name: Build (the app's Worker serves the build)
+        run: npm run build
+      - name: Start each Worker and send it requests (tooling/worker-runtime.ts)
+        run: npm run check:workers
+
   e2e:
     name: end-to-end (${{ matrix.browser }})
     runs-on: ubuntu-24.04

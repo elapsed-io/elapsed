@@ -84,6 +84,8 @@ headers in `dist/_headers`) as static assets and runs only for `/api/`.
 - **The soon page:** `npm run deploy:soon` deploys `packages/soon` to elapsed.io.
 - **Launch:** the production Worker takes elapsed.io from the soon page (`packages/soon`). Its first deploy
   creates the D1 database, puts its id in `wrangler.jsonc` and applies `packages/endpoint/migrations/`.
+- **Before every deploy:** both deploy scripts first start the Worker in Cloudflare's own runtime and send it
+  requests (`npm run check:workers`, also in CI), so a Worker that would fail on Cloudflare is never deployed.
 - **After every deploy:** `npm run check:deployed -- app|soon <address>` checks status codes, security
   headers and cookies against the build.
 - **Undoing a deploy:** `docs/rollback.md`. To turn offline support off for everyone, publish

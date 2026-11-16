@@ -43,6 +43,12 @@ describe('plan audit: performance', () => {
     expect(timers.map(rel)).toEqual(['packages/web/src/time/system-clock.ts']);
   });
 
+  it('keeps no timer in the endpoint: the rate limiter forgets on arrival (Cloudflare also refuses one at startup)', () => {
+    const endpoint = files(join(root, 'packages/endpoint/src'), /\.ts$/).filter((path) => !path.endsWith('.test.ts'));
+    expect(endpoint.length).toBeGreaterThan(0);
+    expect(endpoint.filter((path) => /\bset(?:Timeout|Interval)\s*\(/.test(withoutComments(readFileSync(path, 'utf8')))).map(rel)).toEqual([]);
+  });
+
   it('animates and transitions only transform, opacity and filter', () => {
     for (const css of ALL_CSS) {
       for (const block of css.match(/@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g) ?? []) {

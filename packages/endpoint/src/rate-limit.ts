@@ -3,10 +3,17 @@
  * changes, item 8), with the address held only briefly in memory.
  *
  * The address is never kept as given: it is hashed with a random salt made
- * when the Worker starts, and the hash is forgotten once its minute has
- * passed. Nothing is written anywhere. Each Worker instance counts on its own,
- * so the limit is a best effort, which is enough to stop one page flooding
- * the table.
+ * on this instance's first crash report, and the hash is forgotten once its
+ * minute has passed: expired entries are dropped whenever a request arrives,
+ * so nothing runs on a timer (plan: no timers outside the one scheduler), and
+ * an entry outlives its minute only until the next request or the end of the
+ * Worker instance. Nothing is written anywhere. Each Worker instance counts on
+ * its own, so the limit is a best effort, which is enough to stop one page
+ * flooding the table.
+ *
+ * Cloudflare refuses random values, timers and I/O at a Worker's global scope
+ * (error 10021, "Disallowed operation called within global scope"), so
+ * constructing a limiter does none of them: the salt is made inside a request.
  */
 
 import { CONFIG } from '@stopwatch/core';
@@ -20,14 +27,15 @@ export class RateLimiter {
   readonly #limit: number;
   readonly #window: number;
   readonly #seen = new Map<string, Window>();
-  readonly #salt = crypto.getRandomValues(new Uint8Array(16));
+  /** Made on first use, inside a request, never at construction. */
+  #salt: Uint8Array | null = null;
 
   constructor(limit: number = CONFIG.crashReports.perAddress, window: number = CONFIG.crashReports.rateWindow) {
     this.#limit = limit;
     this.#window = window;
   }
 
-  /** Whether one more request from `address` is allowed at `now`. */
+  /** Whether one more request from `address` is allowed at `now`. Forgets every address whose minute has passed first. */
   async allow(address: string, now: number): Promise<boolean> {
     this.#forget(now);
     const key = await this.#key(address);
@@ -51,10 +59,12 @@ export class RateLimiter {
   }
 
   async #key(address: string): Promise<string> {
+    this.#salt ??= crypto.getRandomValues(new Uint8Array(16));
+    const salt = this.#salt;
     const bytes = new TextEncoder().encode(address);
-    const salted = new Uint8Array(this.#salt.length + bytes.length);
-    salted.set(this.#salt);
-    salted.set(bytes, this.#salt.length);
+    const salted = new Uint8Array(salt.length + bytes.length);
+    salted.set(salt);
+    salted.set(bytes, salt.length);
     const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', salted));
     return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
   }

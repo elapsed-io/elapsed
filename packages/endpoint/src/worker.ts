@@ -22,13 +22,22 @@ export interface Env {
   readonly ASSETS: AssetsBinding;
 }
 
-/** One per Worker instance; it remembers addresses (hashed) for a minute only. */
-const limiter = new RateLimiter();
+/**
+ * One per Worker instance; it remembers addresses (hashed) for a minute only. Created on the first request
+ * that needs it, never at module scope: Cloudflare refuses random values, timers and I/O there (error 10021),
+ * and nothing else here runs at module scope but constants.
+ */
+let limiter: RateLimiter | null = null;
 
-export async function route(request: Request, env: Env, now: number, crashLimiter: RateLimiter = limiter): Promise<Response> {
+function crashLimiter(): RateLimiter {
+  limiter ??= new RateLimiter();
+  return limiter;
+}
+
+export async function route(request: Request, env: Env, now: number, limiterForTests?: RateLimiter): Promise<Response> {
   const { pathname } = new URL(request.url);
   if (pathname === COUNT_PATH) return handleCount(request, env.DB, now);
-  if (pathname === CRASH_PATH) return handleCrash(request, env.DB, crashLimiter, now);
+  if (pathname === CRASH_PATH) return handleCrash(request, env.DB, limiterForTests ?? crashLimiter(), now);
   if (pathname.startsWith('/api/')) return respond(404);
   return env.ASSETS.fetch(request);
 }

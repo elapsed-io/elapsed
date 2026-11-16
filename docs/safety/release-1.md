@@ -145,7 +145,7 @@ Listed in parts C and E.
 | 1.3-7 Blur-away and morph in other engines | Closed: frame tests pass in all three engines (decision 226). |
 | 1.3-8 Unsaved sessions | Closed in round 4. |
 | 1.4-1 "Ended and been saved" | Closed in round 5 (tab storage). |
-| 1.4-2 Not run on Cloudflare | Open until the first deploy: the dry run validates the configuration; the header check and `docs/test-run.md` cover what to confirm. |
+| 1.4-2 Not run on Cloudflare | Narrowed: the dry run validated only the configuration, and the first test deploy failed at startup (error 10021, decision 276). Both Workers now start in Cloudflare's own runtime and answer real requests in CI and before every deploy (`npm run check:workers`); what only Cloudflare's network shows (Access, the custom domain, the deployed headers) stays for the owner's header check after deploying. |
 | 1.4-3 Settings and the privacy policy | Closed: settings in round 6; the privacy page is published. |
 | 1.4-4 Cross-browser check-ins, offline and Safari storage | Closed in CI for check-ins and offline (two offline tests by hand in Safari, decision 224). Safari's removal of a site's storage after seven days without a visit is accepted and listed in `docs/known-issues.md`. |
 | 1.4-5 Lie-fi | Accepted: the cached page is used once the browser gives up. |

@@ -32,8 +32,9 @@
     "check:size": "node packages/web/scripts/check-size.ts",
     "check": "npm run typecheck && npm run lint && npm test && npm run check:contrast && npm run build && npm run check:size",
     "check:deployed": "node tooling/check-deployed.ts",
-    "deploy:test": "npm run build && npx --yes wrangler@4.162.0 deploy --config packages/endpoint/wrangler.jsonc --env test",
-    "deploy:soon": "npx --yes wrangler@4.162.0 deploy --config packages/soon/wrangler.jsonc"
+    "check:workers": "node tooling/worker-runtime.ts",
+    "deploy:test": "npm run build && node tooling/worker-runtime.ts endpoint && npx --yes wrangler@4.162.0 deploy --config packages/endpoint/wrangler.jsonc --env test",
+    "deploy:soon": "node tooling/worker-runtime.ts soon && npx --yes wrangler@4.162.0 deploy --config packages/soon/wrangler.jsonc"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

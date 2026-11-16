@@ -178,9 +178,15 @@ Answer yes when it asks to apply the migrations. It should report both migration
 npm run deploy:test
 ```
 
-This builds the site and deploys the `elapsed-test` Worker: the built site as static files with their
-security headers, and the counting endpoint for `/api/`. At the end Wrangler prints the address,
-`https://elapsed-test.<your subdomain>.workers.dev`.
+This builds the site, then starts the Worker on your computer in Cloudflare's own runtime and sends it a
+few requests (`tooling/worker-runtime.ts`: the page, a usage count, crash reports up to the rate limit, the
+daily schedule), and only if all of that works deploys the `elapsed-test` Worker: the built site as static
+files with their security headers, and the counting endpoint for `/api/`. The local run needs no account and
+sends nothing anywhere; it uses ports 8791 and 8792 for a few seconds. At the end Wrangler prints the
+address, `https://elapsed-test.<your subdomain>.workers.dev`.
+
+If it stops before deploying with "the Workers failed in Cloudflare's runtime", nothing was deployed: send
+the output to the developer. CI runs the same check on every commit (`npm run check:workers`).
 
 **Do not share the address yet.** Until Part 3 is done, anyone who guesses it can open it.
 
@@ -279,8 +285,9 @@ This puts the "soon" page, the privacy page and the terms on elapsed.io. It need
 npm run deploy:soon
 ```
 
-This creates the `elapsed-soon` Worker and attaches elapsed.io to it as a custom domain; Cloudflare creates
-the domain's address records itself. There is no build step and no secret.
+This first starts the soon page on your computer in Cloudflare's own runtime and checks that it answers
+(port 8793, a few seconds), then creates the `elapsed-soon` Worker and attaches elapsed.io to it as a custom
+domain; Cloudflare creates the domain's address records itself. There is no build step and no secret.
 
 If Wrangler reports that a DNS record already exists for elapsed.io (often the parking page of the company
 you bought the domain from), open the dashboard → elapsed.io → **DNS** → **Records**, delete the records
@@ -359,6 +366,16 @@ npx --yes wrangler@4.162.0 rollback --config packages/soon/wrangler.jsonc --mess
 
 `docs/test-run.md`, step 8: delete the four Access applications and any service token, then the test Worker
 and its database.
+
+## If a deploy fails
+
+- **Before deploying, "the Workers failed in Cloudflare's runtime":** the local check caught a Worker that
+  would not start or answer on Cloudflare. Nothing was deployed. Send the output to the developer.
+- **Cloudflare error 10021, "Disallowed operation called within global scope":** a Worker did something at
+  startup that Cloudflare allows only inside a request (a random value, a timer, a request). The local check
+  catches this since 2026-11-16 (it stopped the first test deploy). Nothing was deployed.
+- **A failed deploy changes nothing:** the previous version, if any, keeps serving. Retry the same command
+  once the fix is on the branch and CI is green.
 
 ## What never to do before launch
 
