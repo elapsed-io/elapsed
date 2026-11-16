@@ -26,7 +26,7 @@ tooling         Lint safety rules and repository-wide tests.
 
 ## Commands
 
-Requires Node 22.18 or later (CI uses the version in `.nvmrc`).
+Requires Node 26.13.1, the current LTS, pinned exactly in `.nvmrc`, `package.json` and CI (`npm ci` refuses other versions).
 
 ```bash
 npm ci
@@ -53,6 +53,18 @@ address loads the site once without it.
 The end-to-end tests build the site and serve it with `vite preview`, which sends the same security
 headers as production. To use an already installed Chromium instead of Playwright's download, set
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to its path. The Vite dev server does not send the CSP.
+
+Exact pixel checks against the design frames hold in one reference environment: Chromium inside
+Playwright's official Linux image, which CI also uses. With Docker (Docker Desktop on a Mac), run the
+suite there, in every browser or with Playwright's arguments (`-- --project=chromium`):
+
+```bash
+npm run test:e2e:docker
+```
+
+Run directly (`npm run test:e2e`), frames are compared after setting aside sub-pixel text placement, and
+each such test notes that the exact check runs in Docker. The timing checks (`e2e/timing.spec.ts`) run
+alone after the rest of each browser's suite and are judged on the median after a warm-up.
 
 The placeholder app icons in `packages/web/public/icons/` are drawn by a script; after changing it, run:
 

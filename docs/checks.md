@@ -12,6 +12,10 @@ npm run test:e2e
 ```
 
 ```bash
+npm run test:e2e:docker
+```
+
+```bash
 npm audit --audit-level=moderate
 ```
 
@@ -20,7 +24,8 @@ npm audit signatures
 ```
 
 Then confirm the GitHub Actions run for the pushed commit passed: the checks, and the end-to-end tests
-in Chromium, Firefox and WebKit. When a browser job fails, its screenshots are kept as the run's artifact.
+in Chromium, Firefox and WebKit, which CI runs through `tooling/e2e-docker.sh` (Playwright's image, the
+reference for exact pixel checks; Node pinned to the version in `.nvmrc`). When a browser job fails, its screenshots are kept as the run's artifact.
 Real devices are checked by hand (`docs/device-checks.md`) before a release ships.
 
 | Area | What is checked | Where |
@@ -29,13 +34,15 @@ Real devices are checked by hand (`docs/device-checks.md`) before a release ship
 | | No animation loops or polling intervals; timers only through the one scheduler | `tooling/plan-audit.test.ts` |
 | | Animations and transitions only on transform, opacity and filter (CSS and script); no animated blur but the seconds blur-away | `tooling/plan-audit.test.ts` |
 | | The engine wakes only for visible changes (exact wake counts) | `packages/core/src/engine/*.test.ts` |
-| | Controls respond within 100 ms, also on a processor four times slower; no unexpected layout shift; no main-thread task of 50 ms or more | `packages/web/e2e/quality.spec.ts` |
-| | A two-hour session: one pending timer, nothing drawn while hidden, at most two wakes a minute, memory and element count flat | `packages/web/e2e/performance.spec.ts` |
+| | Controls respond within 100 ms (median after a warm-up, run alone), and the first taps also on a processor four times slower; no main-thread task of 50 ms or more | `packages/web/e2e/timing.spec.ts` (the `-timing` projects) |
+| | No unexpected layout shift | `packages/web/e2e/quality.spec.ts` |
+| | A two-hour session: one pending timer, nothing drawn while hidden, only the 30-second heartbeat wakes (the title follows in it), memory and element count flat | `packages/web/e2e/performance.spec.ts`, `packages/core/src/engine/engine.test.ts` |
 | Security | Dependency advisories and registry signatures | `npm audit`, `npm audit signatures` |
 | | Exact CSP and headers; Trusted Types and inline styles blocked; no CSP violations; no third-party requests | `packages/web/e2e/idle.spec.ts` |
 | | No markup from strings; storage only through adapters; nothing loaded from another origin | lint, `tooling/plan-audit.test.ts` |
 | | Only the stored data `docs/data-inventory.md` lists, and nothing once a session ends; a live session using every feature sends and stores only what the inventory lists | `packages/web/e2e/quality.spec.ts`, `persistence.spec.ts`, `privacy.spec.ts` |
-| | No keys, tokens or credentials in any file; local secret files ignored | `tooling/repository-text.test.ts` |
+| | No keys, tokens or credentials in any file; local secret files ignored; one Node version everywhere; the reference image at the pinned Playwright version, by digest | `tooling/repository-text.test.ts` |
+| | Endpoint SQL: plain placeholders, exactly as many values as placeholders; a hidden database error fails the test | `packages/endpoint/src/endpoint.test.ts` |
 | | The deployed build's headers, status codes and cookies match the build (run by the owner after each deploy) | `npm run check:deployed`, `tooling/deployed-headers.test.ts` |
 | | Stored data read back as untrusted input; forged or broken data is discarded | `packages/web/src/storage/*.test.ts`, `e2e/persistence.spec.ts` |
 | | The counting endpoint refuses anything but a same-origin, size-capped, exact event; nothing from `/api/` is cached | `packages/endpoint/src/*.test.ts`, `e2e/offline.spec.ts` |

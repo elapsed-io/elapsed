@@ -2,8 +2,12 @@
 
 Date: 2026-11-16. Template: plan, Safety overviews > Release review, preceded by round 8's own overview
 (the round template). Every checklist item is answered below; every open risk from rounds 1 to 8 is
-either closed, accepted with its reason, or listed in part E for the owner's decision. Nothing is
-deployed: the owner runs every deploy (`docs/test-run.md`), and signs off at the end.
+closed, accepted with its reason, or answered by the owner (part E). Part G records the fixes made after
+the owner's review, before the test run.
+
+**Status: ready for the owner's sign-off.** Nothing is deployed: the owner runs every deploy
+(`docs/test-run.md`). Release 1 is frozen once signed off; problems testers find are fixed on this
+branch first, ahead of Release 2.
 
 ## A. Round 8 (Hardening)
 
@@ -106,7 +110,7 @@ Listed in parts C and E.
 | Accessibility checks and performance budgets pass. | Done in CI: WCAG 2.2 A and AA rules, keyboard, screen-reader, touch, reflow and reduced-motion tests; size budgets (core JavaScript 30.5 of 50 KB, core total 58.0 of 150 KB, ring 3.0 KB and timeline 1.7 KB of 30 KB); 100 ms responses; long tasks; layout shift; the two-hour session. What needs a real device is in part F. |
 | From Release 3: auth flows, rate limits, session expiry, export and deletion are reviewed, and no secrets are in the repository. | Not applicable until Release 3, apart from secrets, which are checked now (decision 233). |
 | A rollback plan is written. | Done: `docs/rollback.md` (the app's versions, the offline kill switch, the soon page, the database, the domain at launch). |
-| The owner signs off. | **Waiting for the owner.** |
+| The owner signs off. | **Ready for the owner's sign-off** (part G lists the fixes since the review). |
 
 ## C. Open risks from earlier rounds
 
@@ -115,7 +119,7 @@ Listed in parts C and E.
 | 1.1-1 Muted text contrast | Closed: 4.5:1 against background and panel in every theme (decision 206). |
 | 1.1-2 Start text at 4.50:1 in lilac and mint | Accepted: the contrast check fails any regression. |
 | 1.1-3 Font rounding at width 92 | Accepted (decision 28). |
-| 1.1-4 HSTS preload | Open until launch: submit to the preload list only once elapsed.io and every subdomain serve HTTPS (part E). |
+| 1.1-4 HSTS preload | On the launch checklist (part E). |
 | 1.1-5 Trusted Types for the service worker | Closed in round 4: one named policy that accepts only `/sw.js`. |
 | 1.1-6 Manifest and worker sources | Closed in round 4: `manifest-src 'self'`, `worker-src 'self'`. |
 | 1.1-7 Dependency review needs the graph | Closed: the repository is public. |
@@ -141,28 +145,28 @@ Listed in parts C and E.
 | 1.3-7 Blur-away and morph in other engines | Closed: frame tests pass in all three engines (decision 226). |
 | 1.3-8 Unsaved sessions | Closed in round 4. |
 | 1.4-1 "Ended and been saved" | Closed in round 5 (tab storage). |
-| 1.4-2 Not run on Cloudflare | Open until the first deploy: the dry run validates the configuration; the header check and `docs/test-run.md` cover what to confirm (part E). |
+| 1.4-2 Not run on Cloudflare | Open until the first deploy: the dry run validates the configuration; the header check and `docs/test-run.md` cover what to confirm. |
 | 1.4-3 Settings and the privacy policy | Closed: settings in round 6; the privacy page is published. |
 | 1.4-4 Cross-browser check-ins, offline and Safari storage | Closed in CI for check-ins and offline (two offline tests by hand in Safari, decision 224). Safari's removal of a site's storage after seven days without a visit is accepted and listed in `docs/known-issues.md`. |
 | 1.4-5 Lie-fi | Accepted: the cached page is used once the browser gives up. |
 | 1.4-6 A newer schema's data | Accepted: only schema 1 exists. |
 | 1.4-7 Rare tab races | Accepted. |
 | 1.4-8 Accessibility pass | Closed. |
-| 1.5-1 A refused copy shows nothing | **Owner decision** (part E). |
+| 1.5-1 A refused copy shows nothing | Closed: a small cross and "couldn’t copy" (decision 248). |
 | 1.5-2 Countdown in background tabs | Accepted. |
 | 1.5-3 Masks and count in other engines | Closed: results tests pass in all three; the Firefox ring bug is fixed (decision 225). |
 | 1.5-4 Long-task check under load | Accepted: CI runs it reliably. |
 | 1.5-5 Results in the paper theme | Closed: matched exactly. |
 | 1.5-6 Accessibility pass | Closed: axe-core on the results in four themes. |
-| 1.6-1 Questions: source link, animation speed, clear confirm | Animation speed: ready for Release 2 (decision 215). Clear device data asks first (decision 198). The source code link: **owner decision** (part E). |
-| 1.6-2 Privacy page and terms | Closed for the soon page; **launch blocker**: they must move into the app (part E). |
+| 1.6-1 Questions: source link, animation speed, clear confirm | Closed: animation speed is ready for Release 2 (decision 215); clear device data asks first (decision 198); the source code link stays hidden until the owner says so (decision 250). |
+| 1.6-2 Privacy page and terms | Closed for the soon page and linked from settings; they move into the app before launch (part E's launch checklist). |
 | 1.6-3 Notifications in the background | Accepted as a platform limit; `docs/known-issues.md`; real devices in part F. |
 | 1.6-4 Constructed sheets, fonts from bytes, `indexedDB.databases()`, sliders | Closed: settings tests pass in all three engines. |
 | 1.6-5 Timer size beside the panel | Accepted. |
 | 1.6-6 Rate limit per Worker instance | Accepted: the cap and 14-day deletion bound it. |
 | 1.6-7 Font at first paint | Accepted. |
 | 1.6-8 Accessibility pass | Closed. |
-| 1.7-1 Questions: the reset-all row, import without confirm | **Owner decision** (part E). |
+| 1.7-1 Questions: the reset-all row, import without confirm | Closed (decision 249). |
 | 1.7-2 Custom CSS in other engines | Closed (decision 237). |
 | 1.7-3 Tampered storage | Accepted: needs script access already; the CSP bounds it. |
 | 1.7-4 Keyframe names | Accepted: the timer view only; safe mode undoes it. |
@@ -187,32 +191,37 @@ Listed in parts C and E.
 | The test run | Strangers on the test address | Cloudflare Access by email; bypass only for public endpoints and static files | `docs/test-run.md`, step 4 checks |
 | The soon page | Script injection, tracking | No script at all (`default-src 'none'`), no cookies | `soon.spec.ts` |
 
-## E. For the owner's decision
+## E. The owner's decisions (2026-11-16)
 
-1. **A hidden tab wakes about twice a minute** (decision 222). Round 8 asked that nothing wake while hidden.
-   Nothing is drawn, but the 30-second heartbeat (plan, Persistence) and the once-a-minute tab title still
-   run; without the heartbeat a long background session would look like a sleeping device and lose its
-   time. Accept, or allow a longer heartbeat while hidden (a plan change)?
-2. **WebKit's painted frame is not asserted in CI** (decision 234). Playwright's WebKit took up to 117 ms
-   to paint the first pause, in software on a machine without a GPU; Safari is to be measured by hand.
-   Accept, or require a real-Safari figure before the test run or before launch?
-3. **The pause blur no longer animates** (decision 227), as the plan requires; the display now blurs at
-   once while it fades. Confirm this is the look you want, or change the plan's rule.
-4. **A refused copy shows nothing** (round 5). Accept, or add a "couldn't copy" state (new copy, and a frame)?
-5. **Round 7's questions:** the "reset all settings" row before its confirm step is not drawn (decision
-   198); import replaces custom CSS without its own confirm step (decision 200).
-6. **The settings footer links** are all hidden (decisions 159, 182). The privacy page and terms now exist
-   (at elapsed.io), the repository is public at its final address, and feedback has an address
-   (support@elapsed.io). Show "privacy", "terms", "source code" and "feedback" now? The panel frames would
-   need the footer drawn with them.
-7. **Personal-record colour contrast** fails 4.5:1 in nine presets but nothing shows it until Release 3
-   (decision 207). Accept the deferral?
-8. **Outside Chromium, frames are compared after setting aside sub-pixel glyph placement** (decision 226),
-   with a control test. Accept?
-9. **Before the public launch** (not the test run): the privacy page and terms must be served by the app;
-   submit to the HSTS preload list only once every subdomain serves HTTPS; turn on GitHub's free secret
-   scanning and push protection in the public repository's security settings; run the header
-   check against elapsed.io once the app is on it.
+Each open question went to the owner; the answers are recorded in `docs/decisions.md` and built.
+
+1. **Hidden tab:** accepted, with one timer for both: while hidden, the only wake is the 30-second
+   heartbeat, and the tab title follows in that same wake (decision 246; tested: only heartbeat wakes,
+   at least 29 s apart, over a simulated two hours).
+2. **WebKit timing:** accepted. Safari's painted time is measured by hand (`docs/device-checks.md`, the
+   iPhone responsiveness step and the Mac Web Inspector step).
+3. **Pause look:** the blur stays static, and the blurred state fades in and out over 0.2 s (decision
+   247). The owner will check how it feels.
+4. **Failed copy:** a small cross for 2 seconds, and screen readers hear "couldn’t copy" (decision 248).
+5. **Reset all and import:** "reset all settings" stays a row like "clear device data", as built; an
+   import that would replace different custom CSS asks first with the same confirm step (decision 249).
+6. **Settings footer:** privacy, terms and feedback show, as the settings frames draw them; source code
+   stays hidden until the owner says the repository is public (decision 250). Note: GitHub lists
+   `elapsed-io/elapsed` as public already.
+7. **Record colour:** deferred to Release 3, following the muted rule (decision 251).
+8. **Pixel rule outside the reference environment:** accepted (decisions 226 and 241).
+9. **Launch checklist:** below (decision 252).
+
+### Before the public launch
+
+- [ ] Move the privacy and terms pages into the app (served at `/privacy` and `/terms`), and point the
+      settings footer's links at them.
+- [ ] Run the header check against elapsed.io once the app is on it: `npm run check:deployed -- app https://elapsed.io`.
+- [ ] Turn on GitHub secret scanning and push protection for the repository (the owner is turning them
+      on now, where GitHub offers them).
+- [ ] Submit elapsed.io to the HSTS preload list only once every subdomain serves HTTPS.
+- [ ] Record the real-device checks (`docs/device-checks.md`) and fix what they find, or list it in
+      `docs/known-issues.md` with the owner's decision.
 
 ## F. What needs a real device
 
@@ -228,3 +237,17 @@ Everything in `docs/device-checks.md`, recorded in its table. In short:
   between minute updates, a smooth replay, settings without stalls, a background session, installing,
   notifications, and battery use over an hour.
 - **Firefox and Edge** on a computer: a full session in each display mode and every settings category.
+
+## G. Fixes after the review (before the test run)
+
+| Fix | What changed | Tests |
+| --- | --- | --- |
+| Endpoint tests on older Node | Every query binds exactly as many values as it has placeholders (it always did); the failures on Node 24.3 came from its SQLite refusing numbered placeholders (`?1`), which now are plain `?`. The test database refuses numbered placeholders and wrong counts, and fails the test with SQLite's own message when the endpoint hid an error behind a 503 (decision 239). | `packages/endpoint/src/endpoint.test.ts`, on Node 24.3.0 and 26.13.1 |
+| One Node version | 26.13.1, the current LTS, in `.nvmrc`, "engines" (enforced) and every CI job (decision 238). | `tooling/repository-text.test.ts` |
+| Animations captured mid-way | Frozen exactly at the frame's moment and written as static style, never caught by real time (decision 240): the countdown bar, the seconds blur-away, the timeline's glide. | `e2e/frames.spec.ts`, `e2e/results.spec.ts` |
+| Reproducible pixels | The reference environment is Chromium in Playwright's image (`npm run test:e2e:docker`), which CI also uses; elsewhere, frames are compared after smoothing, with the control test (decision 241). | the whole suite, in CI through the script |
+| The slow click | Not first-use code: under contention, slow clicks fell on every control and nothing loaded during them. The timing tests now run alone after each browser's suite, warm up, and are judged on the median (decision 242). | `e2e/timing.spec.ts` |
+| Timeline | Glides continuously at 10 px a minute on its own layers, anchored once a minute; still while held; steps with reduced motion (decision 243). | `e2e/modes.spec.ts`, timeline frames |
+| Back to the timer | Retry ("back to the timer") and Space on the results return to the idle timer (decision 244). | `e2e/results.spec.ts`, `session.spec.ts`, `persistence.spec.ts`, `quality.spec.ts` |
+| Settings over the results | The corner sits above the results, so the settings icon opens the panel there (decision 245). | `e2e/results.spec.ts` |
+| Part E's answers | Decisions 246 to 252, as listed in part E. | `engine.test.ts`, `performance.spec.ts`, `modes.spec.ts`, `results.spec.ts`, `custom-css.spec.ts`, `settings.spec.ts` |
