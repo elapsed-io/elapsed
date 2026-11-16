@@ -11,7 +11,9 @@
  * - On phones the panel fills the screen and each category is its own page,
  *   with a back button.
  *
- * Loaded on first use (plan, Loading and performance > On first use).
+ * Loaded on first use (plan, Loading and performance > On first use). The
+ * custom CSS editor and its checker load later still, when the advanced
+ * category first opens (On choice).
  */
 
 import {
@@ -28,14 +30,18 @@ import {
   withSetting,
 } from '@stopwatch/core';
 import type { ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId } from '@stopwatch/core';
+import { parseSettingsFile, settingsFile, settingsFileName } from '@stopwatch/core/settings-file';
 import 'virtual:tokens/settings.css';
 import { html, svg } from '../dom.ts';
 import { formatBytes } from '../fonts/font-file.ts';
 import { BUILT_IN_FONTS, OWN_FONT_FAMILY, familyStack, previewFamily } from '../fonts/registry.ts';
 import { iconElement } from '../icons/icon-element.ts';
+import { restartInSafeMode } from '../shell/safe-mode.ts';
 import { getPreset } from '../theme/presets.ts';
 import { presetColors } from './appearance.ts';
 import {
+  actionButton,
+  confirmItem,
   formatHoursMinutes,
   formatMinutes,
   formatPercent,
@@ -49,9 +55,19 @@ import {
   uniqueId,
 } from './controls.ts';
 import type { SettingsController } from './controller.ts';
+import type * as CssEditorModule from './css-editor.ts';
+import type { CssEditor } from './css-editor.ts';
 import './panel.css';
 
 const copy = BRAND.copy.settings;
+
+/** The schema's categories, then advanced, whose custom CSS lives apart from the choices (owner changes, items 5 and 10). */
+type CategoryId = SettingsCategory | 'advanced';
+const CATEGORIES: readonly CategoryId[] = [...SETTINGS_CATEGORIES, 'advanced'];
+
+function isSettingsCategory(id: CategoryId): id is SettingsCategory {
+  return id !== 'advanced';
+}
 
 export type NotificationAccess = 'granted' | 'denied' | 'default' | 'unsupported';
 
@@ -70,12 +86,13 @@ interface Item {
 }
 
 interface Category {
-  readonly id: SettingsCategory;
+  readonly id: CategoryId;
   readonly row: HTMLButtonElement;
   readonly chevron: HTMLSpanElement;
   readonly body: HTMLDivElement;
   readonly items: readonly Item[];
-  readonly reset: HTMLButtonElement;
+  /** Advanced has none: "reset all settings" covers it (owner changes, item 13). */
+  readonly reset: HTMLButtonElement | null;
 }
 
 export class SettingsPanel {
@@ -96,7 +113,18 @@ export class SettingsPanel {
   #fontNote: HTMLDivElement | null = null;
   #storageValue: HTMLDivElement | null = null;
   #blocked: HTMLDivElement | null = null;
-  #open: SettingsCategory | null = 'timer';
+  /** Custom CSS: the editor's place, its note, and the editor once its code has loaded. */
+  #cssSlot: HTMLDivElement | null = null;
+  #cssNote: HTMLDivElement | null = null;
+  #cssId = '';
+  #editorModule: Promise<typeof CssEditorModule> | null = null;
+  #editor: CssEditor | null = null;
+  /** The stored custom CSS the editor last showed: an editor still holding it has no unsaved changes. */
+  #shownCss = '';
+  #fileNote: HTMLDivElement | null = null;
+  /** The last exported file's address, released at the next export. */
+  #exportUrl: string | null = null;
+  #open: CategoryId | null = 'timer';
   #previewsRequested = false;
   #savedAnimation: Animation | null = null;
 
@@ -133,12 +161,14 @@ export class SettingsPanel {
     ]);
 
     const list = html(doc, 'div', { class: 'settings__categories' });
-    for (const id of SETTINGS_CATEGORIES) {
+    for (const id of CATEGORIES) {
       const category = this.#category(id);
       this.#categories.push(category);
       list.append(category.row, category.body);
     }
+    // Shown only while a search finds nothing; hidden, it takes no gap in the panel's column.
     this.#empty = html(doc, 'div', { class: 'settings__empty', attrs: { role: 'status' } });
+    this.#empty.hidden = true;
 
     const footer = html(doc, 'footer', { class: 'settings__footer' }, [html(doc, 'div', { class: 'settings__note' }, [copy.autosaved])]);
     const all: readonly { readonly label: string; readonly href: string | null; readonly shown: boolean }[] = copy.links;
@@ -179,6 +209,11 @@ export class SettingsPanel {
 
     host.controller.subscribe((settings) => {
       this.#show(settings);
+    });
+    host.controller.subscribeCustomCss((css) => {
+      // Another tab saved: shown here too, unless this editor holds unsaved changes.
+      if (this.#editor !== null && this.#editor.value === this.#shownCss) this.#editor.value = css;
+      this.#shownCss = css;
     });
     this.#show(host.controller.current);
     this.#layout();
@@ -256,7 +291,7 @@ export class SettingsPanel {
     panel.toggleAttribute('data-overflow', panel.scrollHeight > panel.clientHeight);
   }
 
-  #toggle(id: SettingsCategory | null): void {
+  #toggle(id: CategoryId | null): void {
     this.#open = id;
     const searching = this.#search.value.trim() !== '';
     const phone = this.#phone.matches;
@@ -282,7 +317,7 @@ export class SettingsPanel {
       if (query === '') {
         delete category.body.dataset['matches'];
         for (const item of category.items) item.element.hidden = false;
-        category.reset.hidden = false;
+        if (category.reset !== null) category.reset.hidden = false;
         continue;
       }
       const whole = BRAND.copy.settings.categories[category.id].name.includes(query);
@@ -292,7 +327,7 @@ export class SettingsPanel {
         item.element.hidden = !hit;
         matches ||= hit;
       }
-      category.reset.hidden = !matches;
+      if (category.reset !== null) category.reset.hidden = !matches;
       category.body.dataset['matches'] = String(matches);
       any ||= matches;
     }
@@ -301,20 +336,21 @@ export class SettingsPanel {
     this.#toggle(this.#open);
   }
 
-  /** What a category shows only once it is open: font previews, the storage list, the font tile. */
+  /** What a category shows only once it is open: font previews, the storage list, the font tile, the CSS editor. */
   #refreshOpenCategory(): void {
     if (this.element.hidden) return;
-    const visible = (id: SettingsCategory): boolean => this.#categories.some((category) => category.id === id && !category.body.hidden);
+    const visible = (id: CategoryId): boolean => this.#categories.some((category) => category.id === id && !category.body.hidden);
     if (visible('appearance')) {
       this.#requestPreviews();
       void this.#refreshOwnTile();
     }
     if (visible('privacy')) void this.#refreshStorage();
+    if (visible('advanced')) void this.#loadEditor().catch(() => undefined);
   }
 
   // ---- Categories --------------------------------------------------------
 
-  #category(id: SettingsCategory): Category {
+  #category(id: CategoryId): Category {
     const doc = this.#doc;
     const names = copy.categories[id];
     const bodyId = uniqueId('settings-category');
@@ -335,19 +371,22 @@ export class SettingsPanel {
       this.#toggle(open ? null : id);
     });
     const items = this.#items(id);
-    const reset = html(doc, 'button', { class: 'settings__reset', attrs: { type: 'button' } }, [names.reset]);
-    reset.addEventListener('click', () => {
-      this.#change(resetCategory(this.#host.controller.current, id));
-    });
+    let reset: HTMLButtonElement | null = null;
+    if (isSettingsCategory(id) && names.reset !== null) {
+      reset = html(doc, 'button', { class: 'settings__reset', attrs: { type: 'button' } }, [names.reset]);
+      reset.addEventListener('click', () => {
+        this.#change(resetCategory(this.#host.controller.current, id));
+      });
+    }
     const body = html(doc, 'div', { class: 'settings__body', attrs: { id: bodyId, role: 'region', 'aria-label': names.name } }, [
       ...items.map((item) => item.element),
-      reset,
+      ...(reset === null ? [] : [reset]),
     ]);
     body.hidden = true;
     return { id, row, chevron, body, items, reset };
   }
 
-  #items(id: SettingsCategory): Item[] {
+  #items(id: CategoryId): Item[] {
     switch (id) {
       case 'timer':
         return [this.#seconds(), this.#rangeItem('checkInInterval', copy.checkIn, formatHoursMinutes), this.#rangeItem('pauseLimit', copy.pauseLimit, formatMinutes), this.#shortcuts()];
@@ -359,6 +398,8 @@ export class SettingsPanel {
         return this.#notifications();
       case 'privacy':
         return this.#privacy();
+      case 'advanced':
+        return this.#advanced();
     }
   }
 
@@ -641,11 +682,10 @@ export class SettingsPanel {
       return { element: settingRow(doc, html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [text.label]), control.element, text.help), search: searchText(text.label, text.help) };
     };
     this.#storageValue = html(doc, 'div', { class: 'setting__value' }, [copy.storage.none]);
-    const clear = html(doc, 'button', { class: 'settings__clear', attrs: { type: 'button' } }, [copy.clear.action]);
-    const clearRow = settingRow(doc, html(doc, 'div', { class: 'setting__label' }, [copy.clear.label]), clear, copy.clear.help);
-    clear.setAttribute('aria-label', copy.clear.label);
-    clear.addEventListener('click', () => {
+    // Asks first, and says plainly that custom CSS, fonts and images go too (owner changes, item 14).
+    const clearRow = confirmItem(doc, { ...copy.clear, cancel: copy.cancel }, () => {
       void this.#host.controller.clearDeviceData().then(() => {
+        this.#cssShows('');
         this.#flashSaved();
         void this.#refreshOwnTile();
         void this.#refreshStorage();
@@ -663,6 +703,153 @@ export class SettingsPanel {
     const usage = await this.#host.controller.usage();
     if (this.#storageValue === null) return;
     this.#storageValue.textContent = usage.font === null ? copy.storage.none : copy.storage.font.replace('{size}', formatBytes(usage.font));
+  }
+
+  // ---- Advanced ----------------------------------------------------------
+
+  #advanced(): Item[] {
+    const doc = this.#doc;
+    const view = doc.defaultView;
+
+    // Custom CSS: the editor and its checker arrive when this category first opens.
+    this.#cssId = uniqueId('settings-css');
+    this.#cssSlot = html(doc, 'div', { class: 'css-editor-slot' });
+    this.#cssNote = html(doc, 'div', { class: 'setting__help', attrs: { 'aria-live': 'polite' } }, [copy.customCss.help]);
+    const save = html(doc, 'button', { class: 'settings__save', attrs: { type: 'button' } }, [copy.customCss.save]);
+    save.addEventListener('click', () => {
+      void this.#saveCss();
+    });
+    const css = settingGroup(doc, label(doc, copy.customCss.label, this.#cssId), [this.#cssSlot, html(doc, 'div', { class: 'setting__row' }, [this.#cssNote, save])]);
+
+    const safe = actionButton(doc, copy.safeMode.action, 'gray', () => {
+      if (view !== null) restartInSafeMode(view);
+    });
+    const safeItem = settingRow(doc, html(doc, 'div', { class: 'setting__label' }, [copy.safeMode.label]), safe, copy.safeMode.help);
+
+    const file = html(doc, 'input', { class: 'settings__file', attrs: { type: 'file', accept: '.json,application/json', tabindex: '-1', 'aria-hidden': 'true' } });
+    file.addEventListener('change', () => {
+      const chosen = file.files?.[0];
+      file.value = '';
+      if (chosen !== undefined) void this.#import(chosen);
+    });
+    const buttons = html(doc, 'div', { class: 'setting__actions' }, [
+      actionButton(doc, copy.settingsFile.export, 'gray', () => {
+        this.#export();
+      }),
+      actionButton(doc, copy.settingsFile.import, 'gray', () => {
+        file.click();
+      }),
+    ]);
+    const fileItem = settingRow(doc, html(doc, 'div', { class: 'setting__label' }, [copy.settingsFile.label]), buttons, copy.settingsFile.help);
+    this.#fileNote = fileItem.querySelector<HTMLDivElement>('.setting__help');
+    this.#fileNote?.setAttribute('aria-live', 'polite');
+    fileItem.append(file);
+
+    const resetAll = confirmItem(doc, { ...copy.resetAll, cancel: copy.cancel, help: null }, () => {
+      this.#host.controller.resetAll();
+      this.#flashSaved();
+    });
+
+    return [
+      { element: css, search: searchText(copy.customCss.label, copy.customCss.help) },
+      { element: safeItem, search: searchText(copy.safeMode.label, copy.safeMode.action, copy.safeMode.help) },
+      { element: fileItem, search: searchText(copy.settingsFile.label, copy.settingsFile.export, copy.settingsFile.import, copy.settingsFile.help) },
+      { element: resetAll, search: searchText(copy.resetAll.label) },
+    ];
+  }
+
+  /** Loads the editor and its checker once, and puts the editor in its place. */
+  #loadEditor(): Promise<typeof CssEditorModule> {
+    this.#editorModule ??= import('./css-editor.ts').then(
+      (module) => {
+        const slot = this.#cssSlot;
+        if (this.#editor === null && slot !== null) {
+          const css = this.#host.controller.customCss;
+          this.#editor = new module.CssEditor(this.#doc, { id: this.#cssId, text: css, fonts: this.#host.controller.fonts });
+          this.#shownCss = css;
+          slot.replaceChildren(this.#editor.element);
+        }
+        return module;
+      },
+      (error: unknown) => {
+        // Offline before the editor was ever fetched: try again next time the category opens.
+        this.#editorModule = null;
+        throw error;
+      },
+    );
+    return this.#editorModule;
+  }
+
+  /** Puts stored CSS in the editor, replacing what it shows (a change made on this page). */
+  #cssShows(css: string): void {
+    this.#shownCss = css;
+    if (this.#editor !== null) this.#editor.value = css;
+  }
+
+  #cssMessage(text: string): void {
+    if (this.#cssNote !== null) this.#cssNote.textContent = text;
+  }
+
+  /** Cleans the CSS as typed, keeps it, applies it and shows what was kept. */
+  async #saveCss(): Promise<void> {
+    const module = await this.#loadEditor();
+    const editor = this.#editor;
+    if (editor === null) return;
+    const result = module.cleanCss(editor.value);
+    if (!result.ok) {
+      this.#cssMessage(copy.customCss.tooLarge.replace('{size}', formatBytes(CONFIG.device.customCssMaxBytes)));
+      return;
+    }
+    this.#host.controller.saveCustomCss(result.css);
+    this.#cssShows(result.css);
+    this.#cssMessage(result.changed ? copy.customCss.removed : copy.customCss.help);
+    this.#flashSaved();
+  }
+
+  /** Downloads a settings file: every choice and the custom CSS. Fonts and images are not in it. */
+  #export(): void {
+    const view = this.#doc.defaultView;
+    if (view === null) return;
+    const controller = this.#host.controller;
+    if (this.#exportUrl !== null) view.URL.revokeObjectURL(this.#exportUrl);
+    this.#exportUrl = view.URL.createObjectURL(new view.Blob([settingsFile(controller.current, controller.customCss)], { type: 'application/json' }));
+    const link = html(this.#doc, 'a', { class: 'settings__file', attrs: { href: this.#exportUrl, download: settingsFileName() } });
+    this.element.append(link);
+    link.click();
+    link.remove();
+  }
+
+  #fileMessage(text: string): void {
+    if (this.#fileNote !== null) this.#fileNote.textContent = text;
+  }
+
+  /** Reads a settings file. Its choices are validated, its CSS cleaned as if typed and saved; nothing changes on a refusal. */
+  async #import(file: File): Promise<void> {
+    const limit = CONFIG.device.settingsFileMaxBytes;
+    const tooLarge = copy.settingsFile.tooLarge.replace('{size}', formatBytes(limit));
+    if (file.size > limit) {
+      this.#fileMessage(tooLarge);
+      return;
+    }
+    const parsed = parseSettingsFile(await file.text());
+    if (parsed === 'too-large' || parsed === 'not-a-settings-file') {
+      this.#fileMessage(parsed === 'too-large' ? tooLarge : copy.settingsFile.notSettings.replace('{name}', BRAND.name));
+      return;
+    }
+    const module = await this.#loadEditor();
+    const cleaned = module.cleanCss(parsed.customCss);
+    if (!cleaned.ok) {
+      this.#fileMessage(tooLarge);
+      return;
+    }
+    const controller = this.#host.controller;
+    // Fonts stay on the device they were loaded on: without one here, the font in use is kept.
+    const settings = parsed.settings.font === 'own' && !(await controller.hasOwnFont()) ? { ...parsed.settings, font: controller.current.font } : parsed.settings;
+    controller.importSettings(settings, cleaned.css);
+    this.#cssShows(cleaned.css);
+    this.#cssMessage(copy.customCss.help);
+    this.#fileMessage(copy.settingsFile.help);
+    this.#flashSaved();
   }
 }
 

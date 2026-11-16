@@ -641,17 +641,158 @@
     display: none;
   }
 
-  /* ---- Privacy and data ------------------------------------------------ */
+  /* ---- Small buttons and the confirm step ------------------------------ */
 
-  .settings__clear {
-    height: var(--clear-height);
-    padding: 0 var(--clear-padding-x);
-    border-radius: var(--clear-radius);
+  .settings__action {
+    height: var(--action-height);
+    padding: 0 var(--action-padding-x);
+    border-radius: var(--action-radius);
     border: 0;
     font-family: inherit;
-    font-size: var(--clear-size);
+    font-size: var(--action-size);
     color: var(--color-foreground);
+    background: var(--color-pause);
+  }
+
+  .settings__action--end {
     background: var(--color-end);
+  }
+
+  .setting__actions {
+    display: flex;
+    gap: var(--action-gap);
+  }
+
+  .settings__file {
+    display: none;
+  }
+
+  .setting-confirm {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Destructive actions ask first, in this box (the advanced frame). */
+  .confirm {
+    display: flex;
+    flex-direction: column;
+    gap: var(--confirm-gap);
+    padding: var(--confirm-padding);
+    border-radius: var(--confirm-radius);
+    border: 1px solid var(--color-end);
+  }
+
+  .confirm__question {
+    font-size: var(--confirm-size);
+    color: var(--color-foreground);
+  }
+
+  .confirm__buttons {
+    display: flex;
+    gap: var(--confirm-button-gap);
+  }
+
+  /* ---- Custom CSS ------------------------------------------------------ */
+
+  /* Holds the editor's place while its code loads. */
+  .css-editor-slot:empty {
+    min-height: calc(var(--editor-min-lines) * var(--editor-size) * var(--editor-line-height) + 2 * var(--editor-padding-y) + 2 * 1px);
+    border-radius: var(--editor-radius);
+    background: var(--color-background);
+  }
+
+  .css-editor {
+    display: flex;
+    min-height: calc(var(--editor-min-lines) * var(--editor-size) * var(--editor-line-height));
+    padding: var(--editor-padding-y) 0;
+    border-radius: var(--editor-radius);
+    border: 1px solid var(--color-faint);
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--editor-font-family);
+    font-size: var(--editor-size);
+    line-height: var(--editor-line-height);
+  }
+
+  /* A scroll container only when the text is taller than its limit or wider than the panel. */
+  .css-editor[data-overflow] {
+    overflow: auto;
+    max-height: calc(var(--editor-max-lines) * var(--editor-size) * var(--editor-line-height));
+  }
+
+  .css-editor:has(.css-editor__input:focus-visible) {
+    outline: var(--settings-focus-ring) solid var(--color-accent);
+  }
+
+  .css-editor__gutter {
+    padding: 0 var(--editor-padding-x);
+    color: var(--color-muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Line numbers stay in view while long lines scroll beneath them. */
+  .css-editor[data-overflow] .css-editor__gutter {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--color-background);
+  }
+
+  .css-editor__code {
+    flex: 1;
+    position: relative;
+    padding-right: var(--editor-padding-x);
+  }
+
+  .css-editor__line {
+    white-space: pre;
+  }
+
+  .css-editor__line:empty::before {
+    content: "\a0";
+  }
+
+  .css-editor__comment {
+    color: var(--color-muted);
+  }
+
+  /* The text itself, transparent over the coloured copy beneath it. */
+  .css-editor__input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0 var(--editor-padding-x) 0 0;
+    border: 0;
+    outline: none;
+    resize: none;
+    overflow: hidden;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--color-foreground);
+    font: inherit;
+    white-space: pre;
+  }
+
+  .css-editor__input::selection {
+    background: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  }
+
+  .settings__save {
+    flex: none;
+    height: var(--button-height);
+    padding: 0 var(--button-padding-x);
+    border-radius: var(--button-radius);
+    border: 0;
+    font-family: inherit;
+    font-size: var(--button-font-size);
+    font-weight: var(--font-weight-button);
+    color: var(--color-foreground);
+    background: var(--color-accent);
   }
 
   /* ---- Footer ---------------------------------------------------------- */

@@ -136,6 +136,8 @@ export const BRAND = {
         appearance: { name: 'appearance', reset: 'reset appearance settings' },
         notifications: { name: 'notifications', reset: 'reset notification settings' },
         privacy: { name: 'privacy and data', reset: 'reset privacy settings' },
+        /** No reset of its own: "reset all settings" covers it (owner changes, item 13). */
+        advanced: { name: 'advanced', reset: null },
       },
       seconds: { label: 'seconds', options: { 'blur-away': 'blur away', always: 'always', never: 'never' } },
       checkIn: { label: 'check-in every', help: 'a quiet prompt to confirm you’re still here' },
@@ -166,7 +168,39 @@ export const BRAND = {
       usageCounts: { label: 'anonymous usage counts', help: 'tells us daily visits and sessions started. nothing that identifies you or this device' },
       crashReports: { label: 'crash reports', help: 'tells us error and browser version only. deleted after 14 days' },
       storage: { label: 'storage on this device', font: 'your font · {size}', none: 'nothing stored' },
-      clear: { label: 'clear device data', action: 'clear', help: 'removes every setting, theme and file stored in this browser' },
+      clear: {
+        label: 'clear device data',
+        action: 'clear',
+        help: 'removes every setting, theme and file stored in this browser',
+        question: 'remove everything stored in this browser, including your custom css, fonts and images?',
+      },
+      customCss: {
+        label: 'custom css',
+        save: 'save',
+        help: 'cleaned when saved: @import, @font-face and outside links are removed. stays on this device.',
+        removed: 'cleaned when saved: what isn’t allowed was removed, and the rest is kept. stays on this device.',
+        tooLarge: 'that is over {size}. it was not saved.',
+      },
+      safeMode: {
+        label: 'safe mode',
+        action: 'restart in safe mode',
+        help: 'loads once without custom css or layouts. adding ?safe to the address does the same.',
+      },
+      settingsFile: {
+        label: 'settings file',
+        export: 'export',
+        import: 'import',
+        help: 'your choices and custom css in one file. fonts and images stay on this device.',
+        tooLarge: 'that file is over {size}. nothing was changed.',
+        notSettings: 'that isn’t an {name} settings file. nothing was changed.',
+      },
+      resetAll: {
+        label: 'reset all settings',
+        action: 'reset all',
+        question: 'put every setting back to its default? your custom css, fonts and images are kept.',
+      },
+      /** The inline confirm step drawn in the advanced frame. */
+      cancel: 'cancel',
       /**
        * Footer links appear only once their page exists and is ready (`shown`). The source code link
        * stays hidden until the owner confirms the repository is public at its final address.

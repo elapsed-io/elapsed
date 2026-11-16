@@ -1,15 +1,16 @@
 /**
- * The five Release 1 settings frames (canvas version 1794789966-7cde), for
- * pixel comparison of the settings panel. Each is the frame's own panel
- * markup; its colours are filled in from a palette computed by the frame's
- * own formulas, and its fonts are mapped to the site's files: "Archivo" to
- * the trimmed default font, and each other family to the site's name preview
- * of that font.
+ * The six Release 1 settings frames (the five of canvas version
+ * 1794789966-7cde, and advanced from the canvas the owner shared before round
+ * 7), for pixel comparison of the settings panel. Each is the frame's own
+ * panel markup; its colours are filled in from a palette computed by the
+ * frame's own formulas, and its fonts are mapped to the site's files:
+ * "Archivo" to the trimmed default font, each other family in the font grid
+ * to the site's name preview of that font, and in the advanced frame "IBM
+ * Plex Mono" (the custom CSS editor) to the site's IBM Plex Mono at 400.
  *
- * Three owner rules make the site differ from the frames, and are applied to
- * the reference: the advanced row is hidden until custom CSS arrives in round
- * 7; footer links appear only once their page exists; Lexend is not offered
- * (no tabular figures).
+ * Two owner rules make the site differ from the frames, and are applied to
+ * the reference: footer links appear only once their page exists; Lexend is
+ * not offered (no tabular figures).
  */
 
 export interface Palette {
@@ -23,11 +24,11 @@ export interface Palette {
   readonly end: string;
 }
 
-export const SETTINGS_FRAME_NAMES = ['timer', 'display', 'appearance', 'notifications', 'privacy'] as const;
+export const SETTINGS_FRAME_NAMES = ['timer', 'display', 'appearance', 'notifications', 'privacy', 'advanced'] as const;
 export type SettingsFrameName = (typeof SETTINGS_FRAME_NAMES)[number];
 
 /** The panel's height in each frame (the appearance frame is taller). */
-export const SETTINGS_FRAME_HEIGHT: Readonly<Record<SettingsFrameName, number>> = { timer: 800, display: 800, appearance: 1040, notifications: 800, privacy: 800 };
+export const SETTINGS_FRAME_HEIGHT: Readonly<Record<SettingsFrameName, number>> = { timer: 800, display: 800, appearance: 1040, notifications: 800, privacy: 800, advanced: 1000 };
 
 /** Font families the frames name, and the site's name preview for each. */
 export const FRAME_FONTS: Readonly<Record<string, string>> = {
@@ -145,17 +146,38 @@ const PANELS: Readonly<Record<SettingsFrameName, Panel>> = {
 </div>
 <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${c.faint}"><div style="font-size: 11px; color: ${c.muted}">changes are autosaved</div><div style="display: flex; gap: 16px; font-size: 11px"><a href="#privacy" style="color: ${c.muted}; text-decoration: none">privacy</a><a href="#terms" style="color: ${c.muted}; text-decoration: none">terms</a><a href="#feedback" style="color: ${c.muted}; text-decoration: none">feedback</a><a href="#source code" style="color: ${c.muted}; text-decoration: none">source code</a></div></div>
 </div>`,
+  advanced: (c) => `<div style="position: absolute; top: 0; right: 0; width: 440px; height: 1000px; box-sizing: border-box; padding: 22px 26px; background: ${c.track}; border-left: 1px solid ${c.faint}; display: flex; flex-direction: column; gap: 14px">
+<div style="flex: none; display: flex; align-items: center; justify-content: space-between"><div style="font-size: 18px">settings</div><div style="display: flex; align-items: center; gap: 6px"><div role="status" style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: ${c.muted}"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"></path></svg>saved</div><button aria-label="close" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${c.muted}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"></path><path d="M6 6l12 12"></path></svg></button></div></div>
+<label style="flex: none; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 8px; background: ${c.bg}; color: ${c.muted}; font-size: 13px"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"></circle><path d="M21 21l-6 -6"></path></svg>search settings</label>
+<div style="flex: none; display: flex; flex-direction: column">
+<button style="display: flex; align-items: center; justify-content: space-between; width: 100%; height: 40px; padding: 0 4px; border: 0; border-bottom: 1px solid ${c.faint}; background: transparent; color: ${c.text}; font-family: Archivo, system-ui, sans-serif; font-size: 14px"><div>timer</div><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"></path></svg></button>
+<button style="display: flex; align-items: center; justify-content: space-between; width: 100%; height: 40px; padding: 0 4px; border: 0; border-bottom: 1px solid ${c.faint}; background: transparent; color: ${c.text}; font-family: Archivo, system-ui, sans-serif; font-size: 14px"><div>display</div><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"></path></svg></button>
+<button style="display: flex; align-items: center; justify-content: space-between; width: 100%; height: 40px; padding: 0 4px; border: 0; border-bottom: 1px solid ${c.faint}; background: transparent; color: ${c.text}; font-family: Archivo, system-ui, sans-serif; font-size: 14px"><div>appearance</div><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"></path></svg></button>
+<button style="display: flex; align-items: center; justify-content: space-between; width: 100%; height: 40px; padding: 0 4px; border: 0; border-bottom: 1px solid ${c.faint}; background: transparent; color: ${c.text}; font-family: Archivo, system-ui, sans-serif; font-size: 14px"><div>notifications</div><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"></path></svg></button>
+<button style="display: flex; align-items: center; justify-content: space-between; width: 100%; height: 40px; padding: 0 4px; border: 0; border-bottom: 1px solid ${c.faint}; background: transparent; color: ${c.text}; font-family: Archivo, system-ui, sans-serif; font-size: 14px"><div>privacy and data</div><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"></path></svg></button>
+<button style="display: flex; align-items: center; justify-content: space-between; width: 100%; height: 40px; padding: 0 4px; border: 0; border-bottom: 1px solid ${c.faint}; background: transparent; color: ${c.text}; font-family: Archivo, system-ui, sans-serif; font-size: 14px"><div>advanced</div><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6l6 -6"></path></svg></button>
+<div style="display: flex; flex-direction: column; gap: 16px; padding: 14px 4px 18px; border-bottom: 1px solid ${c.faint}">
+<div style="display: flex; flex-direction: column; gap: 8px"><label style="font-size: 13px">custom css</label><div style="display: flex; border-radius: 8px; background: ${c.bg}; border: 1px solid ${c.faint}; padding: 10px 0; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.6"><div aria-hidden="true" style="padding: 0 10px; color: ${c.muted}; text-align: right; font-variant-numeric: tabular-nums"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div></div><div style="flex: 1; padding-right: 10px"><div style="color: ${c.muted}; white-space: pre">/* your custom css */</div><div style="color: ${c.text}; white-space: pre">.time {</div><div style="color: ${c.text}; white-space: pre">  letter-spacing: -0.02em;</div><div style="color: ${c.text}; white-space: pre">  color: #f2c46b;</div><div style="color: ${c.text}; white-space: pre">}</div><div>&nbsp;</div><div>&nbsp;</div></div></div><div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><div style="font-size: 11px; color: ${c.muted}">cleaned when saved: @import, @font-face and outside links are removed. stays on this device.</div><button style="flex: none; height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${c.text}; background: ${c.accent}">save</button></div></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><label style="font-size: 13px">safe mode</label><button style="height: 22px; padding: 0 10px; border-radius: 5px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; color: ${c.text}; background: ${c.gray}">restart in safe mode</button></div><div style="font-size: 11px; color: ${c.muted}">loads once without custom css or layouts. adding ?safe to the address does the same.</div></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><div style="display: flex; align-items: center; justify-content: space-between; gap: 12px"><label style="font-size: 13px">settings file</label><div style="display: flex; gap: 8px"><button style="height: 22px; padding: 0 10px; border-radius: 5px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; color: ${c.text}; background: ${c.gray}">export</button><button style="height: 22px; padding: 0 10px; border-radius: 5px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; color: ${c.text}; background: ${c.gray}">import</button></div></div><div style="font-size: 11px; color: ${c.muted}">your choices and custom css in one file. fonts and images stay on this device.</div></div>
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 8px; border: 1px solid ${c.end}"><div style="display: flex; align-items: center; justify-content: space-between"><label style="font-size: 13px">reset all settings</label></div><div style="font-size: 12px; color: ${c.text}">put every setting back to its default? your custom css, fonts and images are kept.</div><div style="display: flex; gap: 14px"><button style="height: 22px; padding: 0 10px; border-radius: 5px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; color: ${c.text}; background: ${c.gray}">cancel</button><button style="height: 22px; padding: 0 10px; border-radius: 5px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; color: ${c.text}; background: ${c.end}">reset all</button></div></div>
+</div>
+</div>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${c.faint}"><div style="font-size: 11px; color: ${c.muted}">changes are autosaved</div><div style="display: flex; gap: 16px; font-size: 11px"><a href="#privacy" style="color: ${c.muted}; text-decoration: none">privacy</a><a href="#terms" style="color: ${c.muted}; text-decoration: none">terms</a><a href="#feedback" style="color: ${c.muted}; text-decoration: none">feedback</a><a href="#source code" style="color: ${c.muted}; text-decoration: none">source code</a></div></div>
+</div>`,
 };
 
 /** A frame's panel as the site shows it (the owner's rules applied), in a page of the frame's size. */
 export function settingsFrame(name: SettingsFrameName, c: Palette, storage?: string): string {
   let panel = PANELS[name](c)
     .replace(/<button aria-pressed="false"[^>]*font-family: Lexend[^>]*>lexend<\/button>/, '')
-    .replace(/<button style="[^"]*"><div>advanced<\/div><svg[^]*?<\/svg><\/button>/, '')
     .replace(/<div style="display: flex; gap: 16px; font-size: 11px">[^]*?<\/a><\/div>/, '');
   if (storage !== undefined) panel = panel.replace('your font · 184 KB', storage);
   const faces = Object.entries(FRAME_FONTS)
-    .map(([family, id]) => `@font-face{font-family:'${family}';src:url(/preview/${id}.woff2) format("woff2");font-weight:400;font-display:block}`)
+    .map(([family, id]) => {
+      const file = name === 'advanced' && id === 'ibm-plex-mono' ? `/full/${id}-400.woff2` : `/preview/${id}.woff2`;
+      return `@font-face{font-family:'${family}';src:url(${file}) format("woff2");font-weight:400;font-display:block}`;
+    })
     .join('\n');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>frame</title><style>
 @font-face{font-family:Archivo;src:url(/font.woff2) format("woff2");font-weight:300 500;font-stretch:92%;font-style:normal;font-display:block}

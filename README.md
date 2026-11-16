@@ -46,8 +46,9 @@ npm run check
 npm run test:e2e
 ```
 
-Until round 6 adds a display mode setting, add `?mode=ring` or `?mode=timeline` to the address to see the
-other Release 1 modes.
+Display modes, themes and fonts are chosen in settings (the settings icon, or the comma key). Custom CSS is
+under settings → advanced; its class names and variables are in `docs/custom-css.md`, and `?safe` in the
+address loads the site once without it.
 
 The end-to-end tests build the site and serve it with `vite preview`, which sends the same security
 headers as production. To use an already installed Chromium instead of Playwright's download, set

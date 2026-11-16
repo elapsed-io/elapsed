@@ -30,10 +30,12 @@ import { Controls } from './shell/controls.ts';
 import { EndingCountdown } from './shell/ending.ts';
 import { MaximumNotice } from './shell/notice.ts';
 import { Notifier } from './shell/notifier.ts';
+import { takeSafeMode } from './shell/safe-mode.ts';
 import { ICON_FILES } from './icons/app-icons.ts';
 import { shortcutFor } from './shell/shortcuts.ts';
 import { titleFor } from './shell/title.ts';
 import { FinishedStore, browserSessionStorage } from './storage/finished-store.ts';
+import { LocalCustomCssStore, watchCustomCss } from './storage/custom-css-store.ts';
 import { IndexedDbMediaStore, browserIndexedDb } from './storage/media-store.ts';
 import { LocalSessionStore, browserLocalStorage, watchLocalStorage } from './storage/session-store.ts';
 import { LocalSettingsStore, watchSettings } from './storage/settings-store.ts';
@@ -68,10 +70,13 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     font: () => undefined,
   };
   const settingsStore = new LocalSettingsStore(browserLocalStorage(win), report);
+  const customCssStore = new LocalCustomCssStore(browserLocalStorage(win), report);
   const settings = new SettingsController({
     doc,
     store: settingsStore,
     media: new IndexedDbMediaStore(browserIndexedDb(win)),
+    customCss: customCssStore,
+    safe: takeSafeMode(win),
     effects: {
       seconds: (display) => {
         effects.seconds(display);
@@ -391,6 +396,9 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   // Another tab's change applies here too, without being saved again.
   watchSettings(win, settingsStore, (next) => {
     settings.external(next);
+  });
+  watchCustomCss(win, customCssStore, (css) => {
+    settings.externalCustomCss(css);
   });
   // The chosen font may arrive after the first drawing; the blur-away widths follow it.
   void fontReady.then(() => mode.relayout?.());

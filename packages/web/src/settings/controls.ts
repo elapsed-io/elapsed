@@ -173,3 +173,61 @@ export function formatMinutes(ms: number): string {
 export function formatPercent(value: number): string {
   return `${String(value)}%`;
 }
+
+/** One of the panel's small buttons: grey, or the end colour for a destructive action. */
+export function actionButton(doc: Document, text: string, tone: 'gray' | 'end', onClick: () => void): HTMLButtonElement {
+  const button = html(doc, 'button', { class: tone === 'end' ? 'settings__action settings__action--end' : 'settings__action', attrs: { type: 'button' } }, [text]);
+  button.addEventListener('click', onClick);
+  return button;
+}
+
+export interface ConfirmText {
+  readonly label: string;
+  /** The button that asks first, and the button that then confirms. */
+  readonly action: string;
+  readonly question: string;
+  readonly cancel: string;
+  readonly help: string | null;
+}
+
+/**
+ * A destructive action with the inline confirm step drawn in the advanced
+ * frame (owner changes, item 14): its button turns the row into a bordered
+ * box that asks the question, with "cancel" and the action itself. Escape or
+ * cancel returns to the row; focus moves into the step and back.
+ */
+export function confirmItem(doc: Document, text: ConfirmText, onConfirm: () => void): HTMLDivElement {
+  const ask = html(doc, 'button', { class: 'settings__action settings__action--end', attrs: { type: 'button', 'aria-label': text.label } }, [text.action]);
+  const cancel = html(doc, 'button', { class: 'settings__action', attrs: { type: 'button' } }, [text.cancel]);
+  const confirm = html(doc, 'button', { class: 'settings__action settings__action--end', attrs: { type: 'button' } }, [text.action]);
+  const row = settingRow(doc, html(doc, 'div', { class: 'setting__label' }, [text.label]), ask, text.help);
+  const questionId = uniqueId('settings-confirm');
+  const step = html(doc, 'div', { class: 'confirm', attrs: { role: 'group', 'aria-label': text.label, 'aria-describedby': questionId } }, [
+    html(doc, 'div', { class: 'setting__row' }, [html(doc, 'div', { class: 'setting__label' }, [text.label])]),
+    html(doc, 'div', { class: 'confirm__question', attrs: { id: questionId } }, [text.question]),
+    html(doc, 'div', { class: 'confirm__buttons' }, [cancel, confirm]),
+  ]);
+  const show = (asking: boolean): void => {
+    row.hidden = asking;
+    step.hidden = !asking;
+    (asking ? cancel : ask).focus();
+  };
+  ask.addEventListener('click', () => {
+    show(true);
+  });
+  cancel.addEventListener('click', () => {
+    show(false);
+  });
+  confirm.addEventListener('click', () => {
+    show(false);
+    onConfirm();
+  });
+  step.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    show(false);
+  });
+  step.hidden = true;
+  return html(doc, 'div', { class: 'setting-confirm' }, [row, step]);
+}

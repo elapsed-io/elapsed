@@ -12,6 +12,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./custom-css": "./src/custom-css.ts",
+    "./settings-file": "./src/settings/file.ts",
     "./testing": "./src/testing/index.ts"
   }
 }

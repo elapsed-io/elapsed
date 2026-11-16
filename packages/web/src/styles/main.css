@@ -41,12 +41,35 @@
     font-stretch: var(--font-stretch);
   }
 
+  /*
+   * The timer view and all it holds form one stacking context, so nothing
+   * custom CSS does inside it (a z-index, position: fixed, display: contents)
+   * can lift anything over the settings panel, which comes after it in the
+   * page. Custom CSS is scoped to this wrapper (`:scope`); these declarations
+   * are important in the base layer, which beats important ones in the user
+   * layer, so custom CSS cannot undo them.
+   */
+  .view {
+    display: block !important;
+    isolation: isolate !important;
+    z-index: 0 !important;
+  }
+
+  /*
+   * The timer view reads the theme and font variables itself (rather than
+   * inheriting them already computed from body), so custom CSS can set them
+   * on the view (:scope) and restyle everything in it.
+   */
   .screen {
     position: relative;
     box-sizing: border-box;
     width: var(--view-width);
     height: 100dvh;
     overflow: hidden;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-family);
+    font-stretch: var(--font-stretch);
     display: flex;
     flex-direction: column;
     align-items: center;

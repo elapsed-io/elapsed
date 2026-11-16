@@ -357,7 +357,14 @@ export const CONFIG = {
       focusRingPx: 2,
       focusOffsetPx: 2,
       resetPx: 12,
-      clearButton: { heightPx: 22, paddingXPx: 10, radiusPx: 5, textPx: 12 },
+      /** The panel's small buttons: clear, safe mode, export, import, and the confirm step's. */
+      actionButton: { heightPx: 22, paddingXPx: 10, radiusPx: 5, textPx: 12 },
+      /** Between buttons side by side: export and import (8), cancel and confirm (14). */
+      actionGapPx: 8,
+      /** The custom CSS editor (advanced frame): IBM Plex Mono with line numbers. */
+      editor: { radiusPx: 8, paddingYPx: 10, paddingXPx: 10, textPx: 12, lineHeight: 1.6, minLines: 7, maxLines: 24 },
+      /** The inline confirm step for destructive actions (advanced frame). */
+      confirm: { gapPx: 10, paddingPx: 12, radiusPx: 8, textPx: 12, buttonGapPx: 14 },
       footer: { gapPx: 8, paddingTopPx: 10, textPx: 11, linkGapPx: 16 },
       /** Below this window width the panel fills the screen and each category is its own page. */
       phoneBelowPx: 720,
@@ -470,6 +477,10 @@ export const CONFIG = {
     unusedModeEvictionDays: 30,
     /** Custom CSS over this size is rejected. */
     customCssMaxBytes: 50 * KB,
+    /** The largest data: image custom CSS may keep (decoded); every other url() is removed. */
+    customCssDataImageMaxBytes: 8 * KB,
+    /** A settings file over this size is not read (choices and custom CSS, as JSON). */
+    settingsFileMaxBytes: 256 * KB,
     /** A user's own font file: up to 2 MB. */
     ownFontMaxBytes: 2 * KB * KB,
   },

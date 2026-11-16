@@ -1,11 +1,11 @@
 /**
- * Round 6: the settings panel, against its five frames and in use, under the
+ * Rounds 6 and 7: the settings panel, against its six frames and in use, under the
  * real CSP. Settings apply live, persist, reach other tabs, and stay on the
  * device; fonts load only when needed; notifications and crash reports
  * follow their switches.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
@@ -41,6 +41,8 @@ async function frameReference(browser: Browser, name: SettingsFrameName, palette
     if (url.endsWith('/font.woff2')) return route.fulfill({ body: FONT, contentType: 'font/woff2' });
     const preview = /\/preview\/([a-z-]+)\.woff2$/.exec(url)?.[1];
     if (preview !== undefined && Object.values(FRAME_FONTS).includes(preview)) return route.fulfill({ body: choiceFont(preview), contentType: 'font/woff2' });
+    const full = /\/full\/([a-z-]+)-(\d+)\.woff2$/.exec(url);
+    if (full?.[1] !== undefined && Object.values(FRAME_FONTS).includes(full[1])) return route.fulfill({ body: choiceFont(full[1], `${full[1]}-${full[2] ?? ''}.woff2`), contentType: 'font/woff2' });
     return route.fulfill({ body: settingsFrame(name, palette, storage), contentType: 'text/html' });
   });
   await reference.goto('http://frame.test/');
@@ -50,11 +52,15 @@ async function frameReference(browser: Browser, name: SettingsFrameName, palette
   return image;
 }
 
+/** The custom CSS the advanced frame shows in its editor: five lines, then two empty ones. */
+export const FRAME_CSS = '/* your custom css */\n.time {\n  letter-spacing: -0.02em;\n  color: #f2c46b;\n}\n\n';
+
 /**
  * Shows the panel as the frames draw it: after a change (so "saved" shows),
  * with `name` open. The saved check is held at full opacity, and the panel is
  * painted afresh once: tiles re-rastered piecemeal while it opened can differ
- * from a fresh paint by a few levels of anti-aliasing.
+ * from a fresh paint by a few levels of anti-aliasing. The advanced frame has
+ * custom CSS typed in the editor and the reset-all confirm step open.
  */
 async function showLikeFrame(page: Page, name: SettingsFrameName): Promise<void> {
   await openPanel(page);
@@ -63,6 +69,10 @@ async function showLikeFrame(page: Page, name: SettingsFrameName): Promise<void>
   await page.getByRole('radio', { name: 'blur away' }).click();
   await openCategory(page, name === 'privacy' ? 'privacy and data' : name);
   if (name === 'appearance') await expect(page.locator('.font-tile--loading')).toHaveCount(0);
+  if (name === 'advanced') {
+    await page.getByLabel('custom css').fill(FRAME_CSS);
+    await page.getByRole('button', { name: 'reset all settings' }).click();
+  }
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(() => {
     (document.activeElement as HTMLElement | null)?.blur();
@@ -80,12 +90,18 @@ async function showLikeFrame(page: Page, name: SettingsFrameName): Promise<void>
 }
 
 test.describe('the panel matches its frames', () => {
-  for (const name of ['timer', 'display', 'notifications', 'appearance'] as const) {
+  for (const name of ['timer', 'display', 'notifications', 'appearance', 'advanced'] as const) {
     test(`with ${name} open`, async ({ page, browser }) => {
       await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT[name] });
       await showLikeFrame(page, name);
       const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: SETTINGS_FRAME_HEIGHT[name] } });
-      const diff = await diffPngs(page, site, await frameReference(browser, name, GRAPHITE));
+      const reference = await frameReference(browser, name, GRAPHITE);
+      // DEBUG_FRAMES=<folder> keeps both images, to see where they differ.
+      if (process.env['DEBUG_FRAMES'] !== undefined) {
+        writeFileSync(`${process.env['DEBUG_FRAMES']}/${name}-site.png`, site);
+        writeFileSync(`${process.env['DEBUG_FRAMES']}/${name}-frame.png`, reference);
+      }
+      const diff = await diffPngs(page, site, reference);
       expect(diff.differing, JSON.stringify(diff)).toBe(0);
     });
   }
@@ -199,7 +215,7 @@ test.describe('changes', () => {
     await expect(page.locator('.settings__row:visible')).toHaveCount(0);
     await expect(page.getByText('no settings match')).toBeVisible();
     await page.getByRole('searchbox', { name: 'search settings' }).fill('');
-    await expect(page.locator('.settings__row:visible')).toHaveCount(5);
+    await expect(page.locator('.settings__row:visible')).toHaveCount(6);
   });
 
   test('the display mode switches live, and the session records it', async ({ page }) => {
@@ -342,6 +358,7 @@ test.describe('fonts', () => {
     await openCategory(page, 'privacy and data');
     await expect(page.locator('.setting__value')).toHaveText('your font · 13 KB');
     await page.getByRole('button', { name: 'clear device data' }).click();
+    await page.getByRole('group', { name: 'clear device data' }).getByRole('button', { name: 'clear', exact: true }).click();
     await expect(page.locator('.setting__value')).toHaveText('nothing stored');
     expect(await page.evaluate(() => localStorage.getItem('settings'))).toBeNull();
     await expect.poll(() => page.locator('.time--main').evaluate((element) => getComputedStyle(element).fontFamily)).not.toContain('elapsed-own');
@@ -448,12 +465,12 @@ test.describe('phones', () => {
     await page.goto('/');
     await page.locator('.button--primary').waitFor();
     await page.locator('.icon-button--settings').tap();
-    await expect(page.locator('.settings__row:visible')).toHaveCount(5);
+    await expect(page.locator('.settings__row:visible')).toHaveCount(6);
     await row(page, 'timer').tap();
     await expect(page.locator('.settings__row:visible')).toHaveText(['timer']);
     await expect(page.getByRole('slider', { name: 'pause limit' })).toBeVisible();
     await page.getByRole('button', { name: 'back to settings' }).tap();
-    await expect(page.locator('.settings__row:visible')).toHaveCount(5);
+    await expect(page.locator('.settings__row:visible')).toHaveCount(6);
     const box = await panel(page).boundingBox();
     expect(box?.width).toBe(390);
     // Nothing scrolls sideways.

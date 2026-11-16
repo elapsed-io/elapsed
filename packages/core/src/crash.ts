@@ -12,6 +12,7 @@
  */
 
 import { CONFIG } from './config.ts';
+import { utf8Bytes } from './utf8.ts';
 
 /** Where the site sends crash reports: the Worker on the site's own address. */
 export const CRASH_PATH = '/api/crash';
@@ -68,18 +69,9 @@ export function browserOf(userAgent: string): { readonly browser: BrowserFamily;
 }
 
 /** The length of `text` in UTF-8 bytes (core has no TextEncoder: it runs without a browser or Node). */
-function utf8Length(text: string): number {
-  let bytes = 0;
-  for (const character of text) {
-    const code = character.codePointAt(0) ?? 0;
-    bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
-  }
-  return bytes;
-}
-
 /** The size of a report's request body in bytes. */
 export function crashBodyBytes(report: CrashReport): number {
-  return utf8Length(crashBody(report));
+  return utf8Bytes(crashBody(report));
 }
 
 /** A report from an error, scrubbed and cut until its request body fits the 8 KB limit. */

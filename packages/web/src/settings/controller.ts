@@ -14,6 +14,8 @@ import type { ClockFormat, ModeChoice, RuleSettings, SecondsDisplay, Settings } 
 import { checkFontBytes, checkFontSize } from '../fonts/font-file.ts';
 import { FontLoader } from '../fonts/loader.ts';
 import { OWN_FONT_FAMILY, familyStack, fontEntry } from '../fonts/registry.ts';
+import { CustomCssSheet } from '../custom-css/sheet.ts';
+import type { CustomCssStore } from '../storage/custom-css-store.ts';
 import type { MediaStore, MediaUsage } from '../storage/media-store.ts';
 import type { SettingsStore } from '../storage/settings-store.ts';
 import { AppearanceSheet } from './appearance.ts';
@@ -34,6 +36,9 @@ export interface SettingsControllerOptions {
   readonly doc: Document;
   readonly store: SettingsStore;
   readonly media: MediaStore;
+  readonly customCss: CustomCssStore;
+  /** Safe mode (`?safe` or its button): this page starts without the stored custom CSS. */
+  readonly safe: boolean;
   readonly effects: SettingsEffects;
   readonly onError: (error: unknown) => void;
 }
@@ -48,8 +53,15 @@ export class SettingsController {
   readonly #effects: SettingsEffects;
   readonly #onError: (error: unknown) => void;
   readonly #sheet: AppearanceSheet;
+  readonly #cssStore: CustomCssStore;
+  readonly #cssSheet: CustomCssSheet;
   readonly #listeners = new Set<(settings: Settings) => void>();
+  readonly #cssListeners = new Set<(css: string) => void>();
   #settings: Settings;
+  /** The stored custom CSS, already cleaned. */
+  #css: string;
+  /** Until the user saves custom CSS on this page, safe mode keeps the stored CSS off. */
+  #safe: boolean;
   /** The font stack actually in use: the chosen font once loaded, the default until then. */
   #family = familyStack(fontEntry('archivo').family);
   #stretch = DEFAULT_STRETCH;
@@ -66,6 +78,12 @@ export class SettingsController {
     this.#sheet = new AppearanceSheet(options.doc);
     this.#settings = this.#store.load();
     this.#applyAppearance();
+    // After the appearance sheet, so the user layer's rules come last among equals.
+    this.#cssStore = options.customCss;
+    this.#cssSheet = new CustomCssSheet(options.doc);
+    this.#css = this.#cssStore.load();
+    this.#safe = options.safe;
+    if (!this.#safe) this.#cssSheet.apply(this.#css);
   }
 
   get current(): Settings {
@@ -103,6 +121,55 @@ export class SettingsController {
   /** A change another tab saved: applied only. */
   external(next: Settings): void {
     this.#update(next);
+  }
+
+  /** Every choice back to its default. Custom CSS, fonts and images are kept (owner changes, item 14). */
+  resetAll(): void {
+    this.change(defaultSettings());
+  }
+
+  // ---- Custom CSS ----------------------------------------------------------
+
+  /** The stored custom CSS (cleaned), whether or not safe mode keeps it off this page. */
+  get customCss(): string {
+    return this.#css;
+  }
+
+  /** Whether this page started in safe mode and the stored custom CSS is still off. */
+  get safeMode(): boolean {
+    return this.#safe;
+  }
+
+  /** Listens for the stored custom CSS changing, from this page or another tab. */
+  subscribeCustomCss(listener: (css: string) => void): () => void {
+    this.#cssListeners.add(listener);
+    return () => this.#cssListeners.delete(listener);
+  }
+
+  /** Keeps and applies CSS the checker has cleaned. Saving it is a choice, so it applies even in safe mode. */
+  saveCustomCss(cleaned: string): boolean {
+    this.#safe = false;
+    const saved = this.#cssStore.save(cleaned);
+    this.#setCss(cleaned);
+    return saved;
+  }
+
+  /** Custom CSS another tab saved or cleared: applied unless this page is in safe mode. */
+  externalCustomCss(css: string): void {
+    this.#setCss(css);
+  }
+
+  /** A settings file's choices and its (cleaned) custom CSS replace this device's. Fonts and images stay. */
+  importSettings(settings: Settings, cleanedCss: string): void {
+    this.change(settings);
+    this.saveCustomCss(cleanedCss);
+  }
+
+  #setCss(css: string): void {
+    if (css === this.#css && (this.#safe || this.#cssSheet.css === css)) return;
+    this.#css = css;
+    if (!this.#safe) this.#cssSheet.apply(css);
+    for (const listener of this.#cssListeners) listener(css);
   }
 
   /**
@@ -149,9 +216,11 @@ export class SettingsController {
     }
   }
 
-  /** Removes every setting, theme and file stored in this browser, and returns to the defaults. */
+  /** Removes everything stored in this browser (choices, custom CSS, fonts), and returns to the defaults. */
   async clearDeviceData(): Promise<void> {
     this.#store.clear();
+    this.#cssStore.clear();
+    this.#setCss('');
     try {
       await this.#media.clear();
     } catch (error) {

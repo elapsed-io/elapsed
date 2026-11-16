@@ -14,6 +14,7 @@ export class FontLoader {
   readonly #fonts: FontFaceSet;
   readonly #full = new Map<string, Promise<void>>();
   readonly #previews = new Map<string, Promise<void>>();
+  readonly #faces = new Map<string, Promise<void>>();
   #own: FontFace | null = null;
 
   constructor(doc: Document) {
@@ -30,6 +31,20 @@ export class FontLoader {
       ).then(() => undefined);
       loading.catch(() => this.#full.delete(entry.id));
       this.#full.set(entry.id, loading);
+    }
+    return loading;
+  }
+
+  /** Loads one weight of a built-in font (the custom CSS editor uses IBM Plex Mono at 400 only). */
+  face(entry: FontEntry, weight: string): Promise<void> {
+    const file = entry.faces.find((face) => face.weight === weight);
+    if (file === undefined) return Promise.resolve();
+    const key = `${entry.id}@${weight}`;
+    let loading = this.#faces.get(key);
+    if (loading === undefined) {
+      loading = this.#add(new FontFace(entry.family, `url("${file.url}") format("woff2")`, { weight, style: 'normal' }));
+      loading.catch(() => this.#faces.delete(key));
+      this.#faces.set(key, loading);
     }
     return loading;
   }

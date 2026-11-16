@@ -88,3 +88,9 @@ export type {
 
 export { BROWSER_FAMILIES, CRASH_PATH, browserOf, crashBody, crashBodyBytes, crashReport, parseCrashBody, scrubCrashText } from './crash.ts';
 export type { BrowserFamily, CrashReport } from './crash.ts';
+
+// The custom CSS checker and the settings file are imported by their own paths
+// (`@stopwatch/core/custom-css`, `@stopwatch/core/settings-file`), never through
+// this index, so the first visit never loads them: the checker loads only with
+// the editor (plan, Loading and performance > Custom CSS).
+export { utf8Bytes } from './utf8.ts';

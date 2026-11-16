@@ -8,18 +8,21 @@
     <script type="module" src="/src/main.ts"></script>
   </head>
   <body>
-    <main class="screen" data-mode="digits">
-      <div class="corner">
-        <button type="button" class="icon-button icon-button--settings" aria-label="{{ copy.icons.settings }}">{{ icon.settings }}</button>
-        <button type="button" class="icon-button" aria-label="{{ copy.icons.account }}">{{ icon.account }}</button>
-      </div>
-      <!-- Painted before the script runs; the display mode and controls then replace it with identical markup. -->
-      <div class="mode-root">
-        <div class="time-stack"><div class="time time--main">00<span class="time__colon">:</span>00<span class="time__colon">:</span>00</div></div>
-      </div>
-      <div class="controls">
-        <button type="button" class="button button--primary" aria-label="{{ copy.timer.start }}"><span class="button__face button__face--start button__face--active" aria-hidden="true">{{ copy.timer.start }}</span></button>
-      </div>
-    </main>
+    <!-- The timer view: one stacking context, so custom CSS inside it can never cover the settings panel. -->
+    <div class="view">
+      <main class="screen" data-mode="digits">
+        <div class="corner">
+          <button type="button" class="icon-button icon-button--settings" aria-label="{{ copy.icons.settings }}">{{ icon.settings }}</button>
+          <button type="button" class="icon-button" aria-label="{{ copy.icons.account }}">{{ icon.account }}</button>
+        </div>
+        <!-- Painted before the script runs; the display mode and controls then replace it with identical markup. -->
+        <div class="mode-root">
+          <div class="time-stack"><div class="time time--main">00<span class="time__colon">:</span>00<span class="time__colon">:</span>00</div></div>
+        </div>
+        <div class="controls">
+          <button type="button" class="button button--primary" aria-label="{{ copy.timer.start }}"><span class="button__face button__face--start button__face--active" aria-hidden="true">{{ copy.timer.start }}</span></button>
+        </div>
+      </main>
+    </div>
   </body>
 </html>
