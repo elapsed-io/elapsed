@@ -6,7 +6,8 @@ on its own workers.dev address behind Cloudflare Access, so only invited email a
 elapsed.io keeps showing the "soon" page; the app does not touch the domain until launch.
 
 The owner runs every step that touches Cloudflare. Nothing here is automated, and nothing deploys from CI.
-Commands run from the repository root, on the commit that passed CI.
+Commands run from the repository root, on the commit that passed CI. `docs/deploy.md` walks through every
+Cloudflare step for someone new to Cloudflare; this page is the test run's checklist around it.
 
 Feedback from testers goes to **support@elapsed.io**.
 
@@ -26,84 +27,41 @@ npm run test:e2e
 
 Confirm that the GitHub Actions run for the same commit passed in all three browsers.
 
-Optional: Wrangler sends anonymous usage data to Cloudflare. To turn that off on your machine:
-
-```bash
-npx --yes wrangler@4.162.0 telemetry disable
-```
-
 ## 2. The test database (once)
 
-The test run has its own D1 database, so testers' counts and crash reports never mix with the real site's.
-
-```bash
-npx --yes wrangler@4.162.0 d1 create elapsed-test
-```
-
-Put the `database_id` it prints into `packages/endpoint/wrangler.jsonc`, under `env.test` (the production
-database above it stays a placeholder until launch). The id is not a secret. Then create the tables:
-
-```bash
-npx --yes wrangler@4.162.0 d1 migrations apply elapsed-test --remote --env test --config packages/endpoint/wrangler.jsonc
-```
+`docs/deploy.md`, part 2, steps 2 and 3: create `elapsed-test`, put its id under `env.test` in
+`packages/endpoint/wrangler.jsonc`, and create its tables. The test run has its own database, so testers'
+counts and crash reports never mix with the real site's.
 
 ## 3. Deploy
+
+`docs/deploy.md`, part 2, step 4:
 
 ```bash
 npm run deploy:test
 ```
 
-This builds the site and deploys the `elapsed-test` Worker (`env.test` in `packages/endpoint/wrangler.jsonc`):
-the built site as static files with their `_headers`, and the Worker for `/api/` only. Wrangler prints
-the address, `https://elapsed-test.<your subdomain>.workers.dev`. Every later deploy is the same command.
+It deploys the `elapsed-test` Worker (`env.test` in `packages/endpoint/wrangler.jsonc`) to
+`https://elapsed-test.<your subdomain>.workers.dev`. Every later deploy is the same command.
 
 ## 4. Cloudflare Access
 
-Do this straight after the first deploy, before sharing the address.
-
-1. Cloudflare dashboard → Zero Trust → Settings → Authentication: make sure **One-time PIN** is a login
-   method. Testers type their email and receive a code; no account or password is needed.
-2. Zero Trust → Access → Applications → Add an application → Self-hosted. Name it "elapsed test run",
-   with the domain `elapsed-test.<your subdomain>.workers.dev` and no path. Add a policy:
-   - action **Allow**, include **Emails**: each tester's address, and your own;
-   - session duration: 1 week, so testers sign in about once for the whole run.
-3. Add three more self-hosted applications for the same domain, each with a policy of action **Bypass**,
-   include **Everyone**, and these paths:
-   - `api/` (usage counts and crash reports),
-   - `manifest.webmanifest`,
-   - `icons/`.
-
-   The site sends counts and crash reports without cookies, by design, and browsers fetch the manifest
-   and its icons without cookies too; without these rules Access would answer them with its sign-in page,
-   so counts and crash reports would be lost and installing to a home screen would fail. Nothing behind
-   them is private: the counting endpoint is public at launch too, and the manifest and icons are files.
-4. Check from a private window: the address shows Access's sign-in; an uninvited email gets no code;
-   an invited one gets in. Workers & Pages → `elapsed-test` → Settings → Domains & Routes should show the
-   workers.dev address as protected (Cloudflare also offers one-click protection there, which covers the
-   whole Worker; the applications above are used instead because they allow the bypass paths).
+`docs/deploy.md`, part 3, steps 1 to 5, straight after the first deploy and before sharing the address: a
+self-hosted application allowing only the testers' emails (one-time PIN, sessions of a week), and three
+bypass applications for `api/`, `manifest.webmanifest` and `icons/`, which browsers and the site fetch
+without cookies. Check from a private window that only invited emails get in.
 
 ## 5. Check the deployed headers
 
-The plan's release review asks for the CSP and headers to be checked on the deployed build. For a script
-to pass Access, create a service token (Zero Trust → Access → Service credentials → Service Tokens), add a
-policy with action **Service Auth** that includes it to the "elapsed test run" application, and run:
-
-```bash
-npm run build
-```
+`docs/deploy.md`, part 3, step 6, with a service token:
 
 ```bash
 CF_ACCESS_CLIENT_ID=<client id> CF_ACCESS_CLIENT_SECRET=<client secret> npm run check:deployed -- app https://elapsed-test.<your subdomain>.workers.dev
 ```
 
-It checks the page, a script, a stylesheet, the service worker, the kill switch, the manifest, an icon and
-the Worker, against `packages/web/dist/_headers`; it also checks that the bypassed paths answer without
-signing in, and that nothing sets a cookie except Access's own. Delete the service token afterwards (or
-keep it only for the test run). Without a token, the same can be checked by hand: sign in, open the
-browser's developer tools → Network, reload, and compare the page's response headers with
-`packages/web/dist/_headers`.
-
-The soon site is checked the same way, without a token:
+Without a token, the same can be checked by hand: sign in, open the browser's developer tools → Network,
+reload, and compare the page's response headers with `packages/web/dist/_headers`. The soon site is checked
+without a token:
 
 ```bash
 npm run check:deployed -- soon https://elapsed.io

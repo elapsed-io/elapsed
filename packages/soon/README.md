@@ -27,10 +27,11 @@ legal page differs from its source.
 
 ## Deploying (the owner runs this)
 
-From this folder, signed in to the Cloudflare account that holds elapsed.io:
+Step by step, for someone new to Cloudflare: `docs/deploy.md`, part 4. From the repository root, signed in
+to the Cloudflare account that holds elapsed.io:
 
 ```bash
-npx wrangler@4.162.0 deploy
+npm run deploy:soon
 ```
 
 This creates the `elapsed-soon` project and attaches `elapsed.io` to it as a custom domain. There is no

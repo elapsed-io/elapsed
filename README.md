@@ -74,12 +74,14 @@ npm run icons -w @stopwatch/web
 
 ## Deployment
 
-The owner runs every deploy; nothing deploys from CI. The app is one Cloudflare Worker
+The owner runs every deploy; nothing deploys from CI. `docs/deploy.md` is the step-by-step guide (first
+setup, the test build, Cloudflare Access, the soon page, rolling back). The app is one Cloudflare Worker
 (`packages/endpoint/wrangler.jsonc`): it serves the build output (`packages/web/dist`, with its security
 headers in `dist/_headers`) as static assets and runs only for `/api/`.
 
 - **Private test run:** `npm run deploy:test` deploys the `test` environment, its own Worker and D1
-  database on a workers.dev address behind Cloudflare Access. Every step is in `docs/test-run.md`.
+  database on a workers.dev address behind Cloudflare Access (`docs/test-run.md`).
+- **The soon page:** `npm run deploy:soon` deploys `packages/soon` to elapsed.io.
 - **Launch:** the production Worker takes elapsed.io from the soon page (`packages/soon`). Its first deploy
   creates the D1 database, puts its id in `wrangler.jsonc` and applies `packages/endpoint/migrations/`.
 - **After every deploy:** `npm run check:deployed -- app|soon <address>` checks status codes, security

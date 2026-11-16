@@ -1,4 +1,4 @@
-// The Worker and its bindings (not deployed yet; see README.md and docs/test-run.md).
+// The Worker and its bindings (deployed by the owner; see docs/deploy.md and docs/test-run.md).
 {
   "name": "elapsed",
   "main": "src/worker.ts",
@@ -37,7 +37,7 @@
         {
           "binding": "DB",
           "database_name": "elapsed-test",
-          // Filled in when the test database is created (docs/test-run.md, step 2).
+          // Filled in when the test database is created (docs/deploy.md, part 2, step 2).
           "database_id": "00000000-0000-0000-0000-000000000000",
           "migrations_dir": "migrations"
         }

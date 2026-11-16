@@ -1,6 +1,7 @@
 # Rollback plan
 
-How to undo a bad deploy (plan, Release review: "a rollback plan is written"). The owner runs every step.
+How to undo a bad deploy (plan, Release review: "a rollback plan is written"). The owner runs every step;
+`docs/deploy.md`, part 5, is the short version.
 Commands run from the repository root with the pinned Wrangler, `npx --yes wrangler@4.162.0`.
 
 ## What a deploy is
@@ -30,7 +31,7 @@ Commands run from the repository root with the pinned Wrangler, `npx --yes wrang
 
    It takes effect within seconds. Drop `--env test` for the production Worker after launch.
 
-3. Check it: open the site in a private window, then run the header check (`docs/test-run.md`, step 5).
+3. Check it: open the site in a private window, then run the header check (`docs/deploy.md`, part 3, step 6).
 
 4. Fix forward: revert or fix the commit, let CI pass, and deploy again. A rollback is a stopgap, not a
    new state of the repository.
@@ -48,15 +49,11 @@ worker that misbehaves), switch offline support off for everyone:
 ## The soon page
 
 ```bash
-cd packages/soon
+npx --yes wrangler@4.162.0 deployments list --config packages/soon/wrangler.jsonc
 ```
 
 ```bash
-npx --yes wrangler@4.162.0 deployments list
-```
-
-```bash
-npx --yes wrangler@4.162.0 rollback --message "why"
+npx --yes wrangler@4.162.0 rollback --config packages/soon/wrangler.jsonc --message "why"
 ```
 
 ## The database
@@ -77,5 +74,5 @@ counts and crash reports are the only data it holds, and neither describes anyon
 At launch, elapsed.io moves from the soon page's Worker to the app's. If the launch has to be undone,
 attach elapsed.io to `elapsed-soon` again (Workers & Pages → `elapsed-soon` → Settings → Domains & Routes →
 Add → Custom domain), which takes the domain back from the app. The soon page's own configuration
-(`packages/soon/wrangler.jsonc`) still names elapsed.io, so `npx --yes wrangler@4.162.0 deploy` from
-`packages/soon` does the same (Wrangler asks before moving a domain from another Worker).
+(`packages/soon/wrangler.jsonc`) still names elapsed.io, so `npm run deploy:soon` does the same (Wrangler
+asks before moving a domain from another Worker).
