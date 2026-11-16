@@ -135,6 +135,19 @@ test.describe('the panel matches its frames', () => {
         expect(diff.differing, JSON.stringify(diff)).toBe(0);
       });
     });
+
+    test(`the analog tile matches the Release 2 display frame's, in ${theme}`, async ({ page, browser, browserName }) => {
+      await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT.display, settings: { theme } });
+      await showLikeFrame(page, 'display');
+      const box = await page.getByRole('radio', { name: 'analog' }).boundingBox();
+      if (box === null) throw new Error('no analog tile');
+      const clip = { x: Math.floor(box.x), y: Math.floor(box.y), width: Math.ceil(box.width), height: Math.ceil(box.height) };
+      const site = await page.screenshot({ clip });
+      const diff = await diffPngs(page, site, await frameReference(browser, 'display', palette, undefined, clip));
+      expectLikeFrame(diff, browserName, () => {
+        expect(diff.differing, JSON.stringify(diff)).toBe(0);
+      });
+    });
   }
 
   test('with privacy and data open, a font file stored', async ({ page, browser, browserName }) => {

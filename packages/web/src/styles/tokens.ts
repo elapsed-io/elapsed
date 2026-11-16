@@ -353,7 +353,7 @@ export function renderSettingsTokensCss(): string {
   return `/* Generated from packages/core/src/config.ts at build time. */\n@layer base {\n${block(':root', settingsCustomProperties())}\n}\n`;
 }
 
-export const MODE_TOKEN_IDS = ['ring', 'timeline'] as const;
+export const MODE_TOKEN_IDS = ['ring', 'timeline', 'analog'] as const;
 export type ModeTokenId = (typeof MODE_TOKEN_IDS)[number];
 
 export function isModeTokenId(value: string): value is ModeTokenId {
@@ -398,8 +398,38 @@ function timelineTokens(): string {
   return block('[data-mode="timeline"]', properties);
 }
 
+function analogTokens(): string {
+  const analog = CONFIG.modes.analog;
+  // The frame draws a viewBox of 300 × 310 units into 290 × 300 px: one unit is 290/300 px (the smaller scale),
+  // and the drawing sits half of the spare height below the top.
+  const viewBox = { width: 300, height: 310 };
+  const unit = Math.min(analog.widthPx / viewBox.width, analog.heightPx / viewBox.height);
+  // The drawing's own y runs from −10; the box's top is at y = −10.
+  const top = (y: number): string => String(y + 10);
+  const { centre, subdial, pinRadius } = analog;
+  const properties: CustomProperties = {
+    '--mode-time-size': String(CONFIG.design.type.ringTimePx),
+    '--mode-gap': String(analog.gapPx),
+    '--analog-width': String(analog.widthPx),
+    '--analog-height': String(analog.heightPx),
+    '--analog-unit': String(unit),
+    '--analog-top': String((analog.heightPx - viewBox.height * unit) / 2),
+    // The hands turn about these points (the drawing's units, measured from the box's top).
+    '--analog-centre-x': String(centre.x),
+    '--analog-centre-y': top(centre.y),
+    '--analog-subdial-x': String(subdial.x),
+    '--analog-subdial-y': top(subdial.y),
+    '--analog-pin-left': String(centre.x - pinRadius),
+    '--analog-pin-top': top(centre.y - pinRadius),
+    '--analog-pin-size': String(2 * pinRadius),
+    '--analog-label-size': px(analog.labelPx),
+    '--analog-hours-label-size': px(analog.hoursLabelPx),
+  };
+  return block('[data-mode="analog"]', properties);
+}
+
 /** One display mode's tokens, in the `mode` layer. */
 export function renderModeTokensCss(mode: ModeTokenId): string {
-  const body = mode === 'ring' ? ringTokens() : timelineTokens();
+  const body = mode === 'ring' ? ringTokens() : mode === 'analog' ? analogTokens() : timelineTokens();
   return `/* Generated from packages/core/src/config.ts at build time. */\n@layer mode {\n${body}\n}\n`;
 }

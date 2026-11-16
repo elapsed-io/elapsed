@@ -128,6 +128,31 @@ for (const [name, mode, focus, paused, limit] of [
   });
 }
 
+// The analog frame at 1 h 24 min. Its hands are the frame's own lines, each in a drawing that CSS turns (so the
+// compositor can glide it), where the frame turns the line itself: the long diagonal minute hand's
+// anti-aliased edges differ by a few levels along its length (262 pixels measured, smoothed 10). A hand 3° off
+// differs by 724 (smoothed 68), as the control below checks.
+const ANALOG_LIMIT = 300;
+
+test('analog matches the "analog stopwatch" frame', async ({ page, browser, browserName }) => {
+  await sessionAt(page, 'analog', 84 * MINUTE);
+  await freezeAnimations(page, { at: { '.analog__hand': 0 } });
+  const diff = await compareWithReference(page, browser, modeFrame('analog', GRAPHITE));
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(ANALOG_LIMIT);
+    expect(diff.smoothedMaxDelta, JSON.stringify(diff)).toBeLessThanOrEqual(SMOOTHED_LIMIT);
+  });
+});
+
+test('control: analog hands 3° from the frame fail the analog frame by far', async ({ page, browser, browserName }) => {
+  test.skip(browserName !== 'chromium' || process.env['PIXEL_REFERENCE'] !== '1', 'exact pixel rules hold only in the reference environment');
+  await sessionAt(page, 'analog', 84 * MINUTE);
+  await freezeAnimations(page, { at: { '.analog__hand': 30 * SECOND } });
+  const diff = await compareWithReference(page, browser, modeFrame('analog', GRAPHITE));
+  expect(diff.visible).toBeGreaterThan(ANALOG_LIMIT);
+  expect(diff.smoothedMaxDelta).toBeGreaterThan(SMOOTHED_LIMIT);
+});
+
 test('control: a gliding ring 3° from the frame fails the ring frame by far', async ({ page, browser, browserName }) => {
   test.skip(browserName !== 'chromium' || process.env['PIXEL_REFERENCE'] !== '1', 'exact pixel rules hold only in the reference environment');
   await sessionAt(page, 'ring', 84 * MINUTE);

@@ -55,7 +55,7 @@ export async function settle(page: Page): Promise<void> {
     const running = document
       .getAnimations()
       .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
-      .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor') === true));
+      .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand') === true));
     await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
   });
 }
@@ -160,7 +160,7 @@ export async function finishResults(page: Page): Promise<void> {
       const running = document
         .getAnimations()
         .filter((animation) => !(animation instanceof CSSAnimation))
-        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor') === true));
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand') === true));
       for (const animation of running) animation.finish();
       // Let finish handlers (which cancel spent animations and remove masks) run. The page's timers
       // may be held by the test clock, so only promises are awaited.

@@ -13,7 +13,11 @@ when the run stops; questions for the owner are collected below as they come up.
   its placeholder), force-pushed with a lease; that commit merged into `claude/release-2`. Deleting the merged
   `claude/release-2-plan` and `claude/release-2.1` was refused by this session's GitHub connection; the owner
   deletes them.
+- Round 2.1 follow-up: the seconds' slide never jumps when settings open (plan v5; decision 277).
+- Round 2.2: the analog stopwatch (decisions 278, 279).
 
 ## Questions for the owner
 
-(none yet)
+1. **The analog hours hand (round 2.2).** The analog frame draws the hours subdial's hand at the whole hour
+   (30° at 1 h 24 min). The plan's rule that anything moving with time glides puts it at 42°, which is what
+   is built (decision 278). Keep the glide, or should the hours hand point at whole hours as drawn?

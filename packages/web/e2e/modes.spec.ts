@@ -16,7 +16,7 @@ test('loads ring and timeline only when asked for', async ({ page }) => {
   expect(scripts.some((path) => path.includes('/assets/timeline-'))).toBe(false);
 });
 
-for (const value of ['Ring', 'analog', 'ocean', '../ring', '', 42]) {
+for (const value of ['Ring', 'Analog', 'sundial', '../ring', '', 42]) {
   test(`shows digits for a stored mode of ${JSON.stringify(value)}`, async ({ page }) => {
     await openApp(page, { settings: { mode: value } });
     await expect(page.locator('.screen')).toHaveAttribute('data-mode', 'digits');
@@ -113,6 +113,90 @@ for (const [how, prepare] of [
     expect(await ringRotor(page)).toMatchObject({ rest: 'rotate(60deg)', glide: null, tail: '55deg' });
   });
 }
+
+/** Each analog hand's resting turn and its glide, if any. */
+interface AnalogHand {
+  rest: string;
+  glide: { from: string; to: string; easing: string; duration: number; state: string; at: number } | null;
+  layer: string;
+}
+
+function analogHands(page: Page): Promise<{ minute: AnalogHand; hours: AnalogHand }> {
+  return page.locator('.analog').evaluate((analog) => {
+    const read = (element: Element | null) => {
+      if (element === null) throw new Error('no hand');
+      const animation = element.getAnimations()[0];
+      const effect = animation?.effect instanceof KeyframeEffect ? animation.effect : null;
+      const frames = effect?.getKeyframes() ?? [];
+      return {
+        rest: (element as HTMLElement).style.transform,
+        glide:
+          animation === undefined || effect === null
+            ? null
+            : { from: String(frames[0]?.['transform']), to: String(frames.at(-1)?.['transform']), easing: String(effect.getTiming().easing), duration: Number(effect.getTiming().duration), state: animation.playState, at: Math.round(Number(animation.currentTime)) },
+        layer: getComputedStyle(element).willChange,
+      };
+    };
+    return { minute: read(analog.querySelector('.analog__hand--minute')), hours: read(analog.querySelector('.analog__hand--hours')) };
+  });
+}
+
+test('the analog hands glide on their own layers, 6° and 0.5° a minute, anchored once a minute', async ({ page }) => {
+  await openApp(page, { mode: 'analog' });
+  expect(await analogHands(page)).toMatchObject({ minute: { rest: 'rotate(0deg)', glide: null, layer: 'auto' }, hours: { rest: 'rotate(0deg)', glide: null } });
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(30 * SECOND);
+  expect(await analogHands(page)).toMatchObject({
+    minute: { glide: { from: 'rotate(0deg)', to: 'rotate(6deg)', easing: 'linear', duration: 60_000, state: 'running' }, layer: 'transform' },
+    hours: { glide: { from: 'rotate(0deg)', to: 'rotate(0.5deg)', easing: 'linear', duration: 60_000, state: 'running' } },
+  });
+  expect((await analogHands(page)).minute.glide?.at).toBeCloseTo(30_000, -3);
+  await page.clock.runFor(84 * MINUTE - 30 * SECOND);
+  expect(await analogHands(page)).toMatchObject({ minute: { glide: { from: 'rotate(504deg)', to: 'rotate(510deg)' } }, hours: { glide: { from: 'rotate(42deg)', to: 'rotate(42.5deg)' } } });
+});
+
+test('the analog hands hold where they reached while paused, and glide on from there', async ({ page }) => {
+  await openApp(page, { mode: 'analog' });
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(3 * MINUTE + 30 * SECOND);
+  await page.locator('.button--primary').click();
+  expect(await analogHands(page)).toMatchObject({ minute: { rest: 'rotate(21deg)', glide: null, layer: 'auto' }, hours: { rest: 'rotate(1.75deg)', glide: null } });
+  await page.clock.runFor(10 * MINUTE);
+  expect((await analogHands(page)).minute).toMatchObject({ rest: 'rotate(21deg)', glide: null });
+  await page.locator('.button--primary').click();
+  expect((await analogHands(page)).minute.glide).toMatchObject({ from: 'rotate(18deg)', to: 'rotate(24deg)', state: 'running' });
+});
+
+for (const [how, prepare] of [
+  ['low power', async (page: Page) => openApp(page, { mode: 'analog', settings: { lowPower: true } })],
+  [
+    'reduced motion',
+    async (page: Page) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await openApp(page, { mode: 'analog' });
+    },
+  ],
+] as const) {
+  test(`with ${how}, the analog hands step once a minute instead of gliding`, async ({ page }) => {
+    await prepare(page);
+    await page.locator('.button--primary').click();
+    await page.clock.runFor(59 * SECOND);
+    expect(await analogHands(page)).toMatchObject({ minute: { rest: 'rotate(0deg)', glide: null }, hours: { rest: 'rotate(0deg)', glide: null } });
+    await page.clock.runFor(SECOND);
+    expect(await analogHands(page)).toMatchObject({ minute: { rest: 'rotate(6deg)', glide: null }, hours: { rest: 'rotate(0.5deg)', glide: null } });
+  });
+}
+
+test('analog keeps the time readable on request, and shows no digits', async ({ page }) => {
+  await openApp(page, { mode: 'analog' });
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(84 * MINUTE);
+  const time = page.locator('.analog-stack .time--main');
+  await expect(time).toHaveAttribute('role', 'timer');
+  await expect(time).toHaveAccessibleName('1 hour 24 minutes focused');
+  expect(await time.evaluate((element) => element.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
+  await expect(page.locator('.analog')).toHaveAttribute('aria-hidden', 'true');
+});
 
 /** Each timeline layer's resting transform and its glide, if any. */
 function timelineLayers(page: Page): Promise<{ rest: string; glide: { from: string; to: string; easing: string; duration: number; state: string } | null; layer: string }[]> {

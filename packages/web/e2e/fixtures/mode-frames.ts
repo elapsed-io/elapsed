@@ -5,6 +5,10 @@
  * filled in. One owner rule makes the site differ from them and is applied
  * here: the personal record marker arrives with records in Release 3.
  *
+ * Release 2 adds the "analog stopwatch" frame (canvas version 1794819772-c22a), with the plan's rule
+ * applied to it: the hours hand glides (plan v5, "anything that moves with time glides"), so at 1 h 24 min
+ * it points at 42°, where the frame draws the whole hour, 30° (a question for the owner, decision 278).
+ *
  * Generated from the canvas files; regenerate rather than edit by hand.
  */
 
@@ -97,9 +101,48 @@ const FRAMES: Readonly<Record<string, Frame>> = {
 </div><div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="position: relative; font-family: Archivo, system-ui, sans-serif; font-weight: 300; font-stretch: 92%; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; white-space: nowrap; text-align: center; font-size: 44px">00<span style="margin: 0 -0.05em; position: relative; top: -0.06em">:</span>04<span style="margin: 0 -0.05em; position: relative; top: -0.06em">:</span>12<div style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; font-size: 12px; font-weight: 400; color: ${c.muted}; letter-spacing: 0.14em; white-space: nowrap">paused for</div></div></div></div>
 <div style="display: flex; gap: 14px"><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${c.text}; background: ${c.accent}">resume</button><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${c.text}; background: ${c.end}">end</button></div>
 </div>`,
+  analog: (c) => `<div style="width: 720px; height: 450px; box-sizing: border-box; background: ${c.bg}; color: ${c.text}; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px">
+<div style="position: absolute; top: 14px; right: 14px; display: flex; gap: 4px"><button aria-label="settings" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${c.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><circle cx="12" cy="12" r="3"></circle></svg></button><button aria-label="account" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${c.icon}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"></circle><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path></svg></button></div>
+<svg role="img" aria-label="analog stopwatch at 1 hour 24 minutes; one revolution is one hour" width="290" height="300" viewBox="0 -10 300 310">
+<rect x="138" y="-8" width="24" height="12" rx="3" fill="${c.faint}"></rect>
+<circle cx="150" cy="150" r="138" fill="${c.track}" stroke="${c.faint}" stroke-width="2"></circle>
+<circle cx="150" cy="150" r="124" fill="none" stroke="${c.faint}" stroke-width="6" stroke-dasharray="1 11.985" transform="rotate(-90.23 150 150)"></circle>
+<circle cx="150" cy="150" r="123" fill="none" stroke="${c.muted}" stroke-width="10" stroke-dasharray="2 62.926" transform="rotate(-90.46 150 150)"></circle>
+<text x="150.0" y="48.0" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">0</text>
+<text x="201.0" y="61.7" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">5</text>
+<text x="238.3" y="99.0" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">10</text>
+<text x="252.0" y="150.0" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">15</text>
+<text x="238.3" y="201.0" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">20</text>
+<text x="201.0" y="238.3" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">25</text>
+<text x="150.0" y="252.0" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">30</text>
+<text x="99.0" y="238.3" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">35</text>
+<text x="61.7" y="201.0" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">40</text>
+<text x="48.0" y="150.0" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">45</text>
+<text x="61.7" y="99.0" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">50</text>
+<text x="99.0" y="61.7" text-anchor="middle" dominant-baseline="central" font-family="Archivo, system-ui, sans-serif" font-size="12" fill="${c.muted}">55</text>
+<circle cx="150" cy="200" r="22" fill="none" stroke="${c.faint}" stroke-width="1.5"></circle>
+<line x1="150.0" y1="182.0" x2="150.0" y2="179.0" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="159.0" y1="184.4" x2="160.5" y2="181.8" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="165.6" y1="191.0" x2="168.2" y2="189.5" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="168.0" y1="200.0" x2="171.0" y2="200.0" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="165.6" y1="209.0" x2="168.2" y2="210.5" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="159.0" y1="215.6" x2="160.5" y2="218.2" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="150.0" y1="218.0" x2="150.0" y2="221.0" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="141.0" y1="215.6" x2="139.5" y2="218.2" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="134.4" y1="209.0" x2="131.8" y2="210.5" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="132.0" y1="200.0" x2="129.0" y2="200.0" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="134.4" y1="191.0" x2="131.8" y2="189.5" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="141.0" y1="184.4" x2="139.5" y2="181.8" stroke="${c.muted}" stroke-width="1"></line>
+<line x1="150" y1="200" x2="150" y2="184" stroke="${c.text}" stroke-width="2" stroke-linecap="round" transform="rotate(42 150 200)"></line>
+<text x="150" y="232" text-anchor="middle" font-family="Archivo, system-ui, sans-serif" font-size="10" fill="${c.muted}">hours</text>
+<line x1="150" y1="168" x2="150" y2="36" stroke="${c.accent}" stroke-width="2.5" stroke-linecap="round" transform="rotate(144 150 150)"></line>
+<circle cx="150" cy="150" r="5" fill="${c.accent}"></circle>
+</svg>
+<div style="display: flex; gap: 14px"><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${c.text}; background: ${c.gray}">pause</button><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${c.text}; background: ${c.end}">end</button></div>
+</div>`,
 };
 
-export type ModeFrameName = 'ring' | 'ringStart' | 'ringPaused' | 'timeline' | 'timelineStart' | 'timelinePaused';
+export type ModeFrameName = 'ring' | 'ringStart' | 'ringPaused' | 'timeline' | 'timelineStart' | 'timelinePaused' | 'analog';
 
 /** A revised mode frame as a whole page, in `palette`. */
 export function modeFrame(name: ModeFrameName, palette: FramePalette): string {

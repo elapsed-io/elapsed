@@ -7,7 +7,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { renderModeTokensCss, renderSettingsTokensCss, renderTokensCss } from '../packages/web/src/styles/tokens.ts';
+import { MODE_TOKEN_IDS, renderModeTokensCss, renderSettingsTokensCss, renderTokensCss } from '../packages/web/src/styles/tokens.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
@@ -24,7 +24,7 @@ const withoutComments = (code: string): string => code.replace(/\/\*[\s\S]*?\*\/
 const SITE_SOURCE = files(join(root, 'packages/web/src'), /\.ts$/).filter((path) => !path.endsWith('.test.ts'));
 const CORE_SOURCE = files(join(root, 'packages/core/src'), /\.ts$/).filter((path) => !path.endsWith('.test.ts') && !path.includes('/testing/'));
 const STYLESHEETS = files(join(root, 'packages/web/src'), /\.css$/);
-const ALL_CSS = [...STYLESHEETS.map((path) => readFileSync(path, 'utf8')), renderTokensCss(), renderModeTokensCss('ring'), renderModeTokensCss('timeline'), renderSettingsTokensCss()];
+const ALL_CSS = [...STYLESHEETS.map((path) => readFileSync(path, 'utf8')), renderTokensCss(), ...MODE_TOKEN_IDS.map((mode) => renderModeTokensCss(mode)), renderSettingsTokensCss()];
 
 /** Principles > Appealing and fast: animations use only transform, opacity and filter. */
 const ANIMATABLE = new Set(['transform', 'translate', 'rotate', 'scale', 'opacity', 'filter']);

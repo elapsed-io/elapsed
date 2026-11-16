@@ -26,8 +26,8 @@ export const SETTINGS_SCHEMA = 2;
 export const SETTINGS_CATEGORIES = ['timer', 'display', 'appearance', 'notifications', 'privacy'] as const;
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
-/** The Release 1 display modes. */
-export const MODE_CHOICES = ['digits', 'ring', 'timeline'] as const;
+/** The display modes, in the tiles' order (Release 2 adds each in its round: analog in 2.2). */
+export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog'] as const;
 export type ModeChoice = (typeof MODE_CHOICES)[number];
 
 /** The preset themes, in the frames' order (Design system > Color). */

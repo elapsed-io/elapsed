@@ -364,7 +364,7 @@ export const CONFIG = {
       slider: { widthPx: 150, heightPx: 4, radiusPx: 2, thumbPx: 16, endPx: 11, valuePx: 13, valueWidthPx: 40, gapPx: 10 },
       toggle: { widthPx: 32, heightPx: 18, knobPx: 14, insetPx: 2 },
       shortcuts: { textPx: 12, gapPx: 4 },
-      tiles: { columns: 3, gapPx: 8, paddingTopPx: 10, paddingBottomPx: 8, radiusPx: 8, innerGapPx: 6, textPx: 12, previewWidthPx: 56, previewHeightPx: 32, previewDigitsPx: 15 },
+      tiles: { columns: 4, gapPx: 8, paddingTopPx: 10, paddingBottomPx: 8, radiusPx: 8, innerGapPx: 6, textPx: 12, previewWidthPx: 56, previewHeightPx: 32, previewDigitsPx: 15 },
       themes: { columns: 5, gapPx: 8, swatchHeightPx: 42, radiusPx: 6, samplePx: 11, barWidthPx: 26, barHeightPx: 3, barRadiusPx: 2, namePx: 10, innerGapPx: 4, outlinePx: 2, outlineOffsetPx: 2 },
       colors: { labelWidthPx: 74, swatchPx: 18, swatchRadiusPx: 4, textPx: 12, gapPx: 8 },
       fonts: { columns: 3, gapPx: 6, heightPx: 32, radiusPx: 6, paddingXPx: 6, textPx: 12 },
@@ -431,7 +431,25 @@ export const CONFIG = {
       /** The ring sits 20 px above the buttons. */
       gapPx: 20,
     },
-    analog: { revolution: 1 * HOUR, labelEveryMinutes: 5 },
+    analog: {
+      revolution: 1 * HOUR,
+      labelEveryMinutes: 5,
+      /** The hours subdial's hand turns once in this long. */
+      hoursRevolution: 12 * HOUR,
+      /** Geometry from the analog frame: a 290 × 300 drawing (its viewBox 0 −10 300 310) 16 px above the buttons. */
+      widthPx: 290,
+      heightPx: 300,
+      gapPx: 16,
+      /** In the drawing's own units: the dial's centre, the minute hand (tip to tail, about the centre), the pin. */
+      centre: { x: 150, y: 150 },
+      minuteHand: { tipY: 36, tailY: 168, width: 2.5 },
+      pinRadius: 5,
+      /** The hours subdial's centre and hand (tip to centre). */
+      subdial: { x: 150, y: 200 },
+      hoursHand: { tipY: 184, width: 2 },
+      labelPx: 12,
+      hoursLabelPx: 10,
+    },
     timeline: {
       minutesPer100Px: 10,
       tickEveryMinutes: 5,

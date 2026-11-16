@@ -988,6 +988,22 @@ const RING_TILE_TAIL: readonly (readonly [string, string])[] = [
   ['M39.05 20.69 A12 12 0 0 1 38.29 22.18', '1.00'],
 ];
 
+/** The analog tile's twelve ticks (the Release 2 display frame's own numbers). */
+const ANALOG_TILE_TICKS: readonly (readonly [number, number, number, number])[] = [
+  [28.0, 5.5, 28.0, 4.0],
+  [33.3, 6.9, 34.0, 5.6],
+  [37.1, 10.8, 38.4, 10.0],
+  [38.5, 16.0, 40.0, 16.0],
+  [37.1, 21.3, 38.4, 22.0],
+  [33.2, 25.1, 34.0, 26.4],
+  [28.0, 26.5, 28.0, 28.0],
+  [22.7, 25.1, 22.0, 26.4],
+  [18.9, 21.2, 17.6, 22.0],
+  [17.5, 16.0, 16.0, 16.0],
+  [18.9, 10.7, 17.6, 10.0],
+  [22.8, 6.9, 22.0, 5.6],
+];
+
 function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
   const { previewWidthPx: width, previewHeightPx: height } = CONFIG.design.settings.tiles;
   const root = svg(doc, 'svg', { class: 'mode-tile__preview', width, height, viewBox: `0 0 ${String(width)} ${String(height)}`, fill: 'none', 'stroke-linecap': 'round', 'aria-hidden': 'true' });
@@ -1000,6 +1016,14 @@ function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
       svg(doc, 'circle', { class: 'mode-tile__faint', cx: 28, cy: 16, r: 12, 'stroke-width': 3 }),
       ...RING_TILE_TAIL.map(([d, opacity]) => svg(doc, 'path', { class: 'mode-tile__accent', d, 'stroke-width': 3, 'stroke-opacity': opacity, 'stroke-linecap': 'butt' })),
       svg(doc, 'circle', { class: 'mode-tile__head', cx: 38.39, cy: 22, r: 2.2 }),
+    );
+  } else if (mode === 'analog') {
+    // The Release 2 display frame's analog tile: a muted dial with twelve ticks, an accent hand and pin.
+    root.append(
+      svg(doc, 'circle', { class: 'mode-tile__muted', cx: 28, cy: 16, r: 12, 'stroke-width': 1.5 }),
+      ...ANALOG_TILE_TICKS.map(([x1, y1, x2, y2]) => svg(doc, 'line', { class: 'mode-tile__muted', x1, y1, x2, y2, 'stroke-width': 1.2 })),
+      svg(doc, 'line', { class: 'mode-tile__accent', x1: 28, y1: 16, x2: 35, y2: 10, 'stroke-width': 2 }),
+      svg(doc, 'circle', { class: 'mode-tile__head', cx: 28, cy: 16, r: 1.6 }),
     );
   } else {
     root.append(

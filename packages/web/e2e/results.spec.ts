@@ -95,13 +95,15 @@ test('results in the paper theme match the "results, paper theme" frame exactly'
   });
 });
 
-test('results for ring match the "results: analog and ring" frame exactly', async ({ page, browser, browserName }) => {
-  await playSampleSession(page, 'ring');
-  const diff = await compareWithReference(page, browser, resultsRingFrame(SAMPLE));
-  expectLikeFrame(diff, browserName, () => {
-    expect(diff).toMatchObject({ differing: 0 });
+for (const mode of ['ring', 'analog']) {
+  test(`results for ${mode} match the "results: analog and ring" frame exactly`, async ({ page, browser, browserName }) => {
+    await playSampleSession(page, mode);
+    const diff = await compareWithReference(page, browser, resultsRingFrame(SAMPLE));
+    expectLikeFrame(diff, browserName, () => {
+      expect(diff).toMatchObject({ differing: 0 });
+    });
   });
-});
+}
 
 test('timeline replays as the focus strip too', async ({ page }) => {
   await openApp(page, { mode: 'timeline' });

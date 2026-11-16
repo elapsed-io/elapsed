@@ -55,8 +55,8 @@ describe('settings schema', () => {
     expect(range('timeSize')).toMatchObject({ min: 50, max: 150 });
   });
 
-  it('offers the Release 1 modes, the ten presets, and 13 built-in fonts plus your own', () => {
-    expect(MODE_CHOICES).toEqual(['digits', 'ring', 'timeline']);
+  it('offers the modes built so far, the ten presets, and 13 built-in fonts plus your own', () => {
+    expect(MODE_CHOICES).toEqual(['digits', 'ring', 'timeline', 'analog']);
     expect(THEME_IDS).toEqual(Object.keys(BRAND.copy.themes));
     expect(FONT_CHOICES).toHaveLength(14);
     expect(FONT_CHOICES).not.toContain('lexend');

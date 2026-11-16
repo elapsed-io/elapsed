@@ -92,12 +92,13 @@ describe('clock times', () => {
 });
 
 describe('mode manifests', () => {
-  it('lists the three Release 1 modes, digits in the core tier, matching the settings schema', () => {
+  it('lists the modes built so far, digits in the core tier, matching the settings schema', () => {
     expect(MODE_MANIFESTS.map((m) => m.id)).toEqual([...MODE_CHOICES]);
     expect(MODE_MANIFESTS.map((m) => [m.id, m.tier])).toEqual([
       ['digits', 'core'],
       ['ring', 'on-choice'],
       ['timeline', 'on-choice'],
+      ['analog', 'on-choice'],
     ]);
     for (const manifest of MODE_MANIFESTS) {
       expect(manifest.name).toBe(manifest.name.toLowerCase());

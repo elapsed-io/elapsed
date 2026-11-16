@@ -104,6 +104,11 @@ export const BRAND = {
       digits: 'digits',
       ring: 'ring',
       timeline: 'timeline',
+      analog: 'analog',
+    },
+    analog: {
+      /** Under the hours subdial (the analog frame). */
+      hours: 'hours',
     },
     themes: {
       graphite: 'graphite',
