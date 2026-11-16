@@ -564,10 +564,15 @@ export class TimerEngine {
       this.#heartbeatScheduled = false;
     } else if (!this.#heartbeatScheduled) {
       this.#heartbeatScheduled = true;
-      this.#scheduler.set(HEARTBEAT_TASK, CONFIG.session.heartbeatInterval, () => {
-        this.#heartbeatScheduled = false;
-        this.#wake();
-      });
+      this.#scheduler.set(
+        HEARTBEAT_TASK,
+        CONFIG.session.heartbeatInterval,
+        () => {
+          this.#heartbeatScheduled = false;
+          this.#wake();
+        },
+        CONFIG.session.heartbeatSlack,
+      );
     }
   }
 }

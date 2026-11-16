@@ -306,12 +306,20 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
 
   // An ended session shows the idle screen behind the results.
   const shown = (view: TimerView): TimerView => (view.status === 'ended' ? computeView(null, view.at, context.seconds) : view);
+  // In a hidden tab nothing is drawn (plan, Loading and performance > Rendering): only the tab title, which is
+  // what a background tab shows, keeps up. The display catches up the moment the tab is seen again.
+  let behind = false;
   const render = (view: TimerView): void => {
     const visible = shown(view);
-    mode.render(visible);
-    controls.update(visible.status === 'running' || visible.status === 'paused' ? visible.status : 'idle');
     const title = titleFor(visible);
     if (doc.title !== title) doc.title = title;
+    if (doc.visibilityState === 'hidden') {
+      behind = true;
+      return;
+    }
+    behind = false;
+    mode.render(visible);
+    controls.update(visible.status === 'running' || visible.status === 'paused' ? visible.status : 'idle');
   };
 
   bus.on('view.changed', ({ view }) => {
@@ -530,7 +538,9 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     engine.sync();
   };
   doc.addEventListener('visibilitychange', () => {
-    if (doc.visibilityState === 'visible') refresh();
+    if (doc.visibilityState !== 'visible') return;
+    refresh();
+    if (behind) render(engine.view);
   });
   win.addEventListener('pageshow', refresh);
   win.addEventListener('focus', refresh);

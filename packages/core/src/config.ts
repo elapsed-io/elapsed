@@ -43,6 +43,8 @@ export const CONFIG = {
     minSaved: 1 * MINUTE,
     /** The engine writes a heartbeat timestamp this often. */
     heartbeatInterval: 30 * SECOND,
+    /** A heartbeat may wait this much longer, to share a wake that happens anyway (a background tab wakes less). */
+    heartbeatSlack: 5 * SECOND,
     /** A heartbeat older than this records a gap. */
     gapThreshold: 5 * MINUTE,
     /** The local day ends at 04:00, so late-night sessions count toward the previous day. */

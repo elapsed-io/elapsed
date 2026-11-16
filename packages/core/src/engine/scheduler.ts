@@ -15,6 +15,10 @@ import type { Clock, TimerHandle } from '../time/clock.ts';
 
 interface Task {
   readonly due: number;
+  /** A task with slack runs at any wake from here (a little early), rather than waking on its own. */
+  readonly earliest: number;
+  /** ... or waits until here, if another task falls due by then, to share its wake. */
+  readonly latest: number;
   readonly order: number;
   readonly run: () => void;
 }
@@ -37,11 +41,18 @@ export class Scheduler {
     this.#onError = options.onError;
   }
 
-  /** Runs `run` once, `delayMs` from now. A task with the same key is replaced. */
-  set(key: string, delayMs: number, run: () => void): void {
+  /**
+   * Runs `run` once, `delayMs` from now. A task with the same key is replaced.
+   * With `slackMs`, it may run up to that much earlier or later, so it shares
+   * a wake that happens anyway (the heartbeat joins the minute's redraw)
+   * instead of waking the device on its own.
+   */
+  set(key: string, delayMs: number, run: () => void, slackMs = 0): void {
     const delay = Number.isFinite(delayMs) ? Math.max(0, delayMs) : 0;
+    const due = this.#clock.monotonic() + delay;
     this.#order += 1;
-    this.#tasks.set(key, { due: this.#clock.monotonic() + delay, order: this.#order, run });
+    const slack = Math.max(0, slackMs);
+    this.#tasks.set(key, { due, earliest: due - slack, latest: due + slack, order: this.#order, run });
     this.#arm();
   }
 
@@ -60,7 +71,12 @@ export class Scheduler {
 
   #arm(): void {
     let earliest = Number.POSITIVE_INFINITY;
-    for (const task of this.#tasks.values()) earliest = Math.min(earliest, task.due);
+    const tasks = [...this.#tasks.values()];
+    for (const task of tasks) {
+      // A task with slack waits only for a wake that is already coming within its slack; otherwise it runs on time.
+      const joins = tasks.filter((other) => other !== task && other.due > task.due && other.due <= task.latest).map((other) => other.due);
+      earliest = Math.min(earliest, joins.length > 0 ? Math.min(...joins) : task.due);
+    }
     if (earliest === this.#armedFor) return;
     if (this.#timer !== null) {
       this.#clock.clearTimer(this.#timer.handle);
@@ -80,7 +96,7 @@ export class Scheduler {
     this.#armedFor = Number.POSITIVE_INFINITY;
     const now = this.#clock.monotonic() + CONFIG.engine.timerEarlyTolerance;
     const due = [...this.#tasks.entries()]
-      .filter(([, task]) => task.due <= now)
+      .filter(([, task]) => task.earliest <= now)
       .sort(([, a], [, b]) => a.due - b.due || a.order - b.order);
     for (const [key, task] of due) {
       // A task may have been replaced by an earlier one in this loop.

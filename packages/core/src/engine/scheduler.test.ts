@@ -25,6 +25,33 @@ describe('Scheduler', () => {
     expect(clock.firedTimers).toBe(2);
   });
 
+  it('lets a task with slack wait for a wake that happens anyway, and never past its slack', () => {
+    const { clock, scheduler } = setup();
+    const seen: string[] = [];
+    // The heartbeat falls due 15 ms before the minute's redraw: one wake runs both.
+    scheduler.set('heartbeat', 29_985, () => seen.push('heartbeat'), 5000);
+    scheduler.set('minute', 30_000, () => seen.push('minute'));
+    clock.advance(29_985);
+    expect(seen).toEqual([]);
+    clock.advance(15);
+    expect(seen).toEqual(['heartbeat', 'minute']);
+    expect(clock.firedTimers).toBe(1);
+    // A wake that comes a little before it is due takes it along too.
+    scheduler.set('heartbeat', 30_011, () => seen.push('early heartbeat'), 5000);
+    scheduler.set('minute', 30_000, () => seen.push('next minute'));
+    clock.advance(30_000);
+    expect(seen.slice(-2)).toEqual(['next minute', 'early heartbeat']);
+    expect(clock.firedTimers).toBe(2);
+    // With nothing else coming within its slack, it runs on time.
+    scheduler.set('heartbeat', 30_000, () => seen.push('heartbeat again'), 5000);
+    scheduler.set('later', 40_000, () => seen.push('later'));
+    const count = seen.length;
+    clock.advance(29_999);
+    expect(seen).toHaveLength(count);
+    clock.advance(1);
+    expect(seen.at(-1)).toBe('heartbeat again');
+  });
+
   it('replaces a task with the same key and cancels by key', () => {
     const { clock, scheduler } = setup();
     const seen: string[] = [];
