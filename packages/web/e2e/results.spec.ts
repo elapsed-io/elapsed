@@ -9,7 +9,7 @@ import type { Page } from '@playwright/test';
 import { BRAND } from '@stopwatch/core';
 import { PAPER, endingFrame, inPalette, resultsRingFrame, resultsStripFrame } from './fixtures/frames.ts';
 import type { ResultsData } from './fixtures/frames.ts';
-import { MINUTE, SECOND, TIMER_END, compareWithReference, endThroughCountdown, finishResults, freezeAnimations, openApp, settle } from './helpers.ts';
+import { MINUTE, SECOND, TIMER_END, compareWithReference, endThroughCountdown, finishResults, freezeAnimations, openApp, settle, untilEndNowAccepts } from './helpers.ts';
 import { expectLikeFrame } from './pixels.ts';
 
 // Clock times as in the frames: a 24-hour region, in UTC.
@@ -122,7 +122,7 @@ test('the session ends where end was pressed; cancel loses nothing', async ({ pa
   await page.clock.runFor(MINUTE - 4 * SECOND);
   await page.locator(TIMER_END).click();
   await page.clock.runFor(4 * SECOND);
-  await page.waitForTimeout(350);
+  await untilEndNowAccepts(page);
   await page.getByRole('button', { name: 'end now' }).click();
   await finishResults(page);
   await expect(page.locator('.results .visually-hidden')).toHaveText('00:11:00');
