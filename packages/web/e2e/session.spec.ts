@@ -3,7 +3,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { BRAND } from '@stopwatch/core';
-import { MINUTE, SECOND, TIMER_END, endThroughCountdown, openApp, settle } from './helpers.ts';
+import { MINUTE, SECOND, TIMER_END, endThroughCountdown, openApp, settle, untilEndNowAccepts } from './helpers.ts';
 
 const NAME = BRAND.name;
 
@@ -90,7 +90,8 @@ test('space starts, pauses and resumes; E ends', async ({ page }) => {
   await page.keyboard.press('e');
   await page.keyboard.press('e');
   await expect(page.locator('.ending')).toBeVisible();
-  await page.waitForTimeout(350);
+  // End now ignores its first 300 ms, counted on the countdown's own animation, which a slow browser starts late.
+  await untilEndNowAccepts(page);
   await page.keyboard.press('e');
   await expect(page.locator('.results')).toBeVisible();
   // Space on the results goes back to the timer; Space there starts the next session.

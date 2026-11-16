@@ -197,8 +197,12 @@
     border-radius: var(--button-radius);
     white-space: nowrap;
     opacity: 0;
+    /* Hidden once faded out, so only the active face's label is visible text (axe's label-in-name rule). */
+    visibility: hidden;
     pointer-events: none;
-    transition: opacity var(--motion-morph) var(--ease-standard);
+    transition:
+      opacity var(--motion-morph) var(--ease-standard),
+      visibility 0s linear var(--motion-morph);
   }
 
   .button__face--active {
@@ -206,6 +210,8 @@
     left: auto;
     translate: none;
     opacity: 1;
+    visibility: visible;
+    transition: opacity var(--motion-morph) var(--ease-standard);
   }
 
   .button__face--start,

@@ -10,7 +10,7 @@
 
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { seedSettings } from './helpers.ts';
+import { seedSettings, untilEndNowAccepts } from './helpers.ts';
 
 /** Clicks the primary button and measures script time and time to the next painted frame. */
 function clickTimed(page: Page): Promise<{ handled: number; painted: number }> {
@@ -35,8 +35,7 @@ function clickTimed(page: Page): Promise<{ handled: number; painted: number }> {
 async function endAndReturn(page: Page): Promise<void> {
   await page.locator('body').focus();
   await page.keyboard.press('e');
-  await page.locator('.ending').waitFor();
-  await page.waitForTimeout(350);
+  await untilEndNowAccepts(page);
   await page.keyboard.press('e');
   await page.locator('.results').waitFor();
   await page.getByRole('button', { name: 'back to the timer' }).click();
