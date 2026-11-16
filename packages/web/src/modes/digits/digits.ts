@@ -1,3 +1,4 @@
+import { CONFIG } from '@stopwatch/core';
 /** Digits: the time on its own (the idle, running and paused frames). Core tier. */
 
 import type { Session, TimerView } from '@stopwatch/core';
@@ -9,6 +10,7 @@ export function createDigitsMode(): DisplayMode {
   let display: TimeDisplay | null = null;
   return {
     id: 'digits',
+    replayTiming: CONFIG.modes.digits.replay,
     mount(element: HTMLElement, context: DisplayContext) {
       root = element;
       display = new TimeDisplay(element.ownerDocument, context);

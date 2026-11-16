@@ -438,7 +438,7 @@
     height: var(--toggle-knob);
     border-radius: calc(var(--toggle-knob) / 2);
     background: var(--color-muted);
-    transition: transform var(--motion-morph) var(--ease-standard);
+    transition: transform var(--motion-control) var(--ease-standard);
   }
 
   .toggle[aria-checked="true"] {

@@ -146,8 +146,17 @@ export const CONFIG = {
 
   /** Motion (Design system > Motion). */
   motion: {
-    /** Start morphs into pause and end fades in. */
-    startMorph: 200,
+    /**
+     * Interface motion is fast, snappy and fluid (plan, Product principles): every transition lasts 120 to
+     * 220 ms with one fast ease-out. Start morphs into pause and end fades in over 160 ms, with a slight
+     * spring; fades (the end button leaving, the paused and check-in text, the pause blur, notices) take
+     * 180 ms; small controls (the switch's knob) 120 ms.
+     */
+    startMorph: 160,
+    fade: 180,
+    control: 120,
+    /** The slight spring of the start morph: a damped spring drawn through CSS linear() at this many points. */
+    spring: { dampingRatio: 0.75, settle: 5, points: 24 },
     /** Seconds blur-away: the ones digit clears over 0 to 10 s, the tens digit and colon over 10 to 60 s. */
     onesBlurWindow: { start: 0, end: 10 * SECOND },
     tensBlurWindow: { start: 10 * SECOND, end: 60 * SECOND },
@@ -160,17 +169,21 @@ export const CONFIG = {
     /** Check-in and pause: time blurred 10 px at 40 % opacity. */
     heldBlurPx: 10,
     heldOpacity: 0.4,
-    /** Results: tabulating holds 0.5 s then fades out over 0.4 s. */
-    tabulatingHold: 500,
-    tabulatingFadeOut: 400,
-    /** Results fade in over 0.5 s from 0.5 s, rising 8 px. */
-    resultsFadeInDelay: 500,
-    resultsFadeIn: 500,
-    resultsRisePx: 8,
-    /** The replay starts at 0.8 s and runs 2.4 s, starting quickly and settling gently. */
-    replayDelay: 800,
-    replayDuration: 2400,
-    replayEasing: [0.25, 1, 0.5, 1],
+    /** The seconds blur-away's last fade, as the running frame draws it (not an interface transition). */
+    blurAwayFade: 200,
+    /** Results: tabulating holds 0.3 s then fades out over 0.25 s. */
+    tabulatingHold: 300,
+    tabulatingFadeOut: 250,
+    /** Results fade in over 0.3 s from 0.3 s, rising 6 px. */
+    resultsFadeInDelay: 300,
+    resultsFadeIn: 300,
+    resultsRisePx: 6,
+    /**
+     * The replay starts at 0.5 s; its length and curve are each mode's own (CONFIG.modes.*.replay). Sessions
+     * over 2 hours replay longer: 0.5 s more for each doubling past 2 hours, at most 1.5 s more.
+     */
+    replayDelay: 500,
+    replayLongSession: { fromHours: 2, perDoubling: 500, max: 1500 },
     /**
      * Every interface animation's duration is multiplied by this ("normal"
      * timing). Release 2's animation speed setting changes it, through the
@@ -185,8 +198,8 @@ export const CONFIG = {
     speeds: { slower: 1.5, normal: 1, faster: 2 / 3 },
     /** After copying the share text, the share icon shows a check for this long (owner decision, 2026-11-15). */
     copiedConfirmation: 2000,
-    /** Easing for interface motion (start morph, fades): cubic-bezier control points. */
-    standardEasing: [0.2, 0, 0, 1],
+    /** The fast ease-out of every interface transition: cubic-bezier control points. */
+    standardEasing: [0.16, 1, 0.3, 1],
   },
 
   /** Sizes at the design canvas's reference frames (Design system > Type, Controls and icons, Screens). */
@@ -414,7 +427,14 @@ export const CONFIG = {
 
   /** Display modes (Design system > Display modes; Decisions already made). */
   modes: {
+    /**
+     * Each mode's results replay: its length and curve (plan, Design system > Motion). Digits 1.4 s; ring,
+     * timeline, analog and interstellar 2.0 s; ocean depth, height and tree, whose visuals are the point,
+     * 3.0 s on a gentler ease-out.
+     */
+    digits: { replay: { durationMs: 1400, easing: [0.16, 1, 0.3, 1] as const } },
     ring: {
+      replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const },
       revolution: 1 * HOUR,
       trackPx: 8,
       /** The tail: up to 55° long, one smooth conic gradient fading from the accent at the head to nothing. */
@@ -432,6 +452,7 @@ export const CONFIG = {
       gapPx: 20,
     },
     analog: {
+      replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const },
       revolution: 1 * HOUR,
       labelEveryMinutes: 5,
       /** The hours subdial's hand turns once in this long. */
@@ -451,6 +472,7 @@ export const CONFIG = {
       hoursLabelPx: 10,
     },
     timeline: {
+      replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const },
       minutesPer100Px: 10,
       tickEveryMinutes: 5,
       labelEveryMinutes: 10,
@@ -477,6 +499,7 @@ export const CONFIG = {
       gapPx: 30,
     },
     ocean: {
+      replay: { durationMs: 3000, easing: [0.33, 1, 0.68, 1] as const },
       metresPerFocusedMinute: 15,
       maxDepthMetres: 10_935,
       surfaceLinearRgb: [0.0232, 0.212, 0.392],
@@ -486,6 +509,7 @@ export const CONFIG = {
       landmarkBandMetres: 1000,
     },
     height: {
+      replay: { durationMs: 3000, easing: [0.33, 1, 0.68, 1] as const },
       metresPerFocusedMinute: 140,
       maxHeightMetres: 100_000,
       groundLinearRgb: [0.078, 0.275, 0.597],
@@ -497,6 +521,7 @@ export const CONFIG = {
       landmarkBandMetres: 10_000,
     },
     tree: {
+      replay: { durationMs: 3000, easing: [0.33, 1, 0.68, 1] as const },
       yearPerFocused: 1 * HOUR,
       season: 15 * MINUTE,
       /** Each leaf cluster is offset by up to a quarter season. */
@@ -505,6 +530,7 @@ export const CONFIG = {
       fullSizeFocus: 60 * MINUTE,
     },
     interstellar: {
+      replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const },
       /** Map radius at reference: 26 + 30·log10(AU / 0.3) px. */
       mapRadiusBasePx: 26,
       mapRadiusPerDecadePx: 30,

@@ -201,7 +201,7 @@
     visibility: hidden;
     pointer-events: none;
     transition:
-      opacity var(--motion-morph) var(--ease-standard),
+      opacity var(--motion-morph) var(--ease-spring),
       visibility 0s linear var(--motion-morph);
   }
 
@@ -211,7 +211,7 @@
     translate: none;
     opacity: 1;
     visibility: visible;
-    transition: opacity var(--motion-morph) var(--ease-standard);
+    transition: opacity var(--motion-morph) var(--ease-spring);
   }
 
   .button__face--start,
@@ -246,7 +246,7 @@
     max-width: 100%;
     padding-inline: var(--icon-inset);
     text-align: center;
-    animation: notice-in var(--motion-morph) var(--ease-standard);
+    animation: notice-in var(--motion-fade) var(--ease-standard);
   }
 
   /* Hidden while the notice, the countdown or the results take their place. */

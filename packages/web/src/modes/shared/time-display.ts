@@ -144,7 +144,7 @@ export class TimeDisplay {
 
   /**
    * Holds or releases the display. At rest, held is the frame's look: the display itself blurred 10 px
-   * (static) at 40 %. The blurred state fades in and out over the interface's 0.2 s without the blur ever
+   * (static) at 40 %. The blurred state fades in and out over the interface's 180 ms fade without the blur ever
    * changing: for the fade, a veil blurs what is under it at the same fixed radius and only its opacity
    * moves (while the display fades between full and 40 %); when the fade ends, the display's own blur
    * takes over, which looks the same. The first render, and a display not yet in the page, take the
@@ -169,7 +169,7 @@ export class TimeDisplay {
     veil.classList.add('time-stack__veil--on');
     const style = getComputedStyle(this.element);
     const fade = veil.animate([{ opacity: from }, { opacity: held ? 1 : 0 }], {
-      duration: durationMs(style.getPropertyValue('--motion-morph')),
+      duration: durationMs(style.getPropertyValue('--motion-fade')),
       easing: style.getPropertyValue('--ease-standard').trim() || 'ease',
       fill: 'forwards',
     });

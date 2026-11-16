@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderModeTokensCss, renderTokensCss } from './tokens.ts';
+import { renderModeTokensCss, renderTokensCss, springEasing } from './tokens.ts';
 
 describe('generated tokens', () => {
   const css = renderTokensCss();
@@ -51,9 +51,25 @@ describe('generated tokens', () => {
   it('scales every interface duration by one multiplier, and registers them as times', () => {
     const css = renderTokensCss();
     expect(css).toContain('--motion-scale: 1;');
-    expect(css).toContain('--replay-duration: calc(2400ms * var(--motion-scale));');
-    expect(css).toContain('--motion-morph: calc(200ms * var(--motion-scale));');
-    expect(css).toContain('@property --replay-duration {');
-    expect(css).toContain('--ease-replay: cubic-bezier(0.25, 1, 0.5, 1);');
+    expect(css).toContain('--replay-delay: calc(500ms * var(--motion-scale));');
+    expect(css).toContain('--tabulating-hold: calc(300ms * var(--motion-scale));');
+    expect(css).toContain('--motion-morph: calc(160ms * var(--motion-scale));');
+    expect(css).toContain('--motion-fade: calc(180ms * var(--motion-scale));');
+    expect(css).toContain('--motion-control: calc(120ms * var(--motion-scale));');
+    expect(css).toContain('--ease-standard: cubic-bezier(0.16, 1, 0.3, 1);');
+    expect(css).toMatch(/@supports \(transition-timing-function: linear\(0, 1\)\) \{\s*:root \{\s*--ease-spring: linear\(0, /);
+    expect(css).toContain('@property --motion-fade {');
+    // Each mode keeps its own replay length and curve (CONFIG.modes.*.replay), so there is no shared one.
+    expect(css).not.toContain('--replay-duration');
+  });
+
+  it('draws the start morph\'s slight spring: from 0, a little past 1, and settled on 1 by the end', () => {
+    const points = /^linear\((.*)\)$/.exec(springEasing())?.[1]?.split(', ').map(Number) ?? [];
+    expect(points.length).toBe(25);
+    expect(points[0]).toBe(0);
+    expect(points.at(-1)).toBe(1);
+    expect(Math.max(...points)).toBeGreaterThan(1.01);
+    expect(Math.max(...points)).toBeLessThan(1.05);
+    expect(Math.abs((points.at(-2) ?? 0) - 1)).toBeLessThan(0.015);
   });
 });

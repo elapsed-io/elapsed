@@ -139,6 +139,7 @@ export function createAnalogMode(): DisplayMode {
 
   return {
     id: 'analog',
+    replayTiming: ANALOG.replay,
     mount(element: HTMLElement, displayContext: DisplayContext) {
       root = element;
       context = displayContext;

@@ -22,7 +22,7 @@ for (const speed of ['slower', 'faster'] as const) {
     const scale = CONFIG.motion.speeds[speed];
     await openApp(page, { settings: { animationSpeed: speed } });
     expect(Number(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--motion-scale')))).toBeCloseTo(scale);
-    // The morph: end slides in beside pause over the scaled 0.2 s.
+    // The morph: end slides in beside pause over the scaled 160 ms.
     await primary(page).click();
     expect(await durations(page, TIMER_END)).toContain(Math.round(CONFIG.motion.startMorph * scale));
     await settle(page);
@@ -35,13 +35,14 @@ for (const speed of ['slower', 'faster'] as const) {
         .filter((animation) => animation.effect instanceof KeyframeEffect && animation.effect.getKeyframes().some((frame) => '--replay-progress' in frame))
         .map((animation) => Math.round(Number(animation.effect?.getTiming().duration))),
     );
-    expect(replay).toEqual([Math.round(CONFIG.motion.replayDuration * scale)]);
+    // Digits replays for its own 1.4 s (a 5-minute session adds nothing), scaled.
+    expect(replay).toEqual([Math.round(CONFIG.modes.digits.replay.durationMs * scale)]);
   });
 }
 
 test('normal is the Design system timing', async ({ page }) => {
   await openApp(page);
-  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--motion-morph').trim())).toBe('0.2s');
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--motion-morph').trim())).toBe('0.16s');
   await primary(page).click();
   expect(await durations(page, TIMER_END)).toContain(CONFIG.motion.startMorph);
 });
