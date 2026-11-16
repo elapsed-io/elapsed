@@ -102,6 +102,8 @@ export function drawRings(root: HTMLElement, session: Session): void {
   const focus = paths.map((d, hour) =>
     svg(doc, 'path', { class: 'rings__focus', d: d === '' ? 'M0 0' : d.trim(), 'stroke-width': fixed(geometry.strokeWidth), mask: `url(#${MASK_PREFIX}${String(hour)})` }),
   );
+  // Once the replay has finished, every hour's focus is one path, as the frame draws it.
+  const allFocus = svg(doc, 'path', { class: 'rings__focus', d: paths.join('').trim() || 'M0 0', 'stroke-width': fixed(geometry.strokeWidth), visibility: 'hidden' });
   // Where the hands end: the minute hand turns once per hour of the session; the hour hand as on a 12-hour dial.
   const minuteAngle = (minutes % 60) * 6;
   const hourAngle = (minutes / 720) * 360;
@@ -130,6 +132,7 @@ export function drawRings(root: HTMLElement, session: Session): void {
     svg(doc, 'defs', {}, masks),
     ...tracks,
     ...focus,
+    allFocus,
     svg(doc, 'circle', {
       class: 'rings__ticks',
       cx: C,
@@ -157,23 +160,25 @@ export function drawRings(root: HTMLElement, session: Session): void {
   // The replay: each hour's ring fills while the replay's time passes through that hour.
   const timing = replayTiming(doc);
   const total = Math.max(minutes, 1 / 60);
-  masks.forEach((mask, hour) => {
+  const reveals = masks.flatMap((mask, hour) => {
     const reveal = mask.firstElementChild;
-    if (!(reveal instanceof SVGElement)) return;
-    const path = focus[hour];
+    if (!(reveal instanceof SVGElement)) return [];
     const from = Math.min(1, (hour * 60) / total);
     const to = Math.min(1, ((hour + 1) * 60) / total);
     const keyframes: Keyframe[] = [{ strokeDashoffset: '1', offset: 0 }];
     if (from > 0) keyframes.push({ strokeDashoffset: '1', offset: from });
     keyframes.push({ strokeDashoffset: '0', offset: to });
     if (to < 1) keyframes.push({ strokeDashoffset: '0', offset: 1 });
-    const animation = reveal.animate(keyframes, timing);
-    // Fully revealed, the ring needs its mask no more.
-    void animation.finished.then(
-      () => path?.removeAttribute('mask'),
-      () => undefined,
-    );
+    return [reveal.animate(keyframes, timing).finished];
   });
+  void Promise.all(reveals).then(
+    () => {
+      for (const path of focus) path.remove();
+      for (const mask of masks) mask.remove();
+      allFocus.removeAttribute('visibility');
+    },
+    () => undefined,
+  );
   // The hands turn from 12 o'clock to where they end; the minute hand goes round once per hour.
   minuteHand.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${fixed(minutes * 6)}deg)` }], timing);
   hourHand.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${fixed(hourAngle)}deg)` }], timing);

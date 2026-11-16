@@ -15,7 +15,7 @@
  */
 
 import './results.css';
-import { BRAND, CONFIG, durationParts, focusedMs, summarise } from '@stopwatch/core';
+import { BRAND, CONFIG, durationParts, summarise } from '@stopwatch/core';
 import type { Session, SessionSummary } from '@stopwatch/core';
 import { html } from '../dom.ts';
 import { iconElement } from '../icons/icon-element.ts';
@@ -49,6 +49,13 @@ function canCount(): boolean {
   return typeof CSS.registerProperty === 'function' && CSS.supports('width', 'calc(mod(7px, 3px) + round(down, 7px, 2px))');
 }
 
+/** Focused time from the start of a finished session up to `at`. */
+function focusBefore(session: Session, at: number): number {
+  let total = 0;
+  for (const { start, end } of session.segments) total += Math.max(0, Math.min(end ?? start, at) - start);
+  return total;
+}
+
 /** The headline's keyframes: focused seconds as the replay's time sweeps the session. */
 export function countKeyframes(session: Session, summary: SessionSummary): Keyframe[] {
   const total = Math.max(1, summary.elapsedMs);
@@ -56,7 +63,7 @@ export function countKeyframes(session: Session, summary: SessionSummary): Keyfr
   for (const { start, end } of session.segments) {
     for (const at of [start, end ?? start]) {
       const offset = Math.min(1, (at - summary.startedAt) / total);
-      const value = String(Math.floor(focusedMs(session, at) / 1000));
+      const value = String(Math.floor(focusBefore(session, at) / 1000));
       const last = frames.at(-1);
       if (last !== undefined && last.offset === offset) last['--results-focused'] = value;
       else frames.push({ '--results-focused': value, offset });

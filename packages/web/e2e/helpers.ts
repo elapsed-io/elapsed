@@ -48,8 +48,8 @@ export async function holdAnimationsAt(page: Page, focusedMs: number): Promise<v
 }
 
 /** Renders reference HTML outside the site's CSP and screenshots it. */
-export async function screenshotReference(browser: Browser, markup: string): Promise<Buffer> {
-  const reference = await browser.newPage({ viewport: { width: 720, height: 450 } });
+export async function screenshotReference(browser: Browser, markup: string, viewport = { width: 720, height: 450 }): Promise<Buffer> {
+  const reference = await browser.newPage({ viewport });
   await reference.route('http://frame.test/**', (route) => {
     const isFont = route.request().url().endsWith('/font.woff2');
     return route.fulfill({ body: isFont ? FONT : markup, contentType: isFont ? 'font/woff2' : 'text/html' });
@@ -63,7 +63,7 @@ export async function screenshotReference(browser: Browser, markup: string): Pro
 
 export async function compareWithReference(page: Page, browser: Browser, markup: string): Promise<PixelDiff> {
   const site = await page.screenshot();
-  const reference = await screenshotReference(browser, markup);
+  const reference = await screenshotReference(browser, markup, page.viewportSize() ?? undefined);
   const scratch = await browser.newPage();
   const diff = await diffPngs(scratch, site, reference);
   await scratch.close();

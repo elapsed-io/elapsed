@@ -19,7 +19,7 @@ const C = {
   icon: '#888785',
   muted: '#888785',
   faint: '#323233',
-  track: '#202123',
+  track: '#222324',
   gray: '#3a3b3b',
   end: '#A8403D',
 };
