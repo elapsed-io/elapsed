@@ -141,8 +141,8 @@ export class SettingsPanel {
     this.#empty = html(doc, 'div', { class: 'settings__empty', attrs: { role: 'status' } });
 
     const footer = html(doc, 'footer', { class: 'settings__footer' }, [html(doc, 'div', { class: 'settings__note' }, [copy.autosaved])]);
-    const all: readonly { readonly label: string; readonly href: string | null }[] = copy.links;
-    const links = all.filter((link): link is { readonly label: string; readonly href: string } => link.href !== null);
+    const all: readonly { readonly label: string; readonly href: string | null; readonly shown: boolean }[] = copy.links;
+    const links = all.filter((link): link is { readonly label: string; readonly href: string; readonly shown: true } => link.shown && link.href !== null);
     if (links.length > 0) {
       footer.append(html(doc, 'nav', { class: 'settings__links' }, links.map((link) => html(doc, 'a', { class: 'settings__link', attrs: { href: link.href } }, [link.label]))));
     }

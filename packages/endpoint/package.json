@@ -4,6 +4,11 @@
   "private": true,
   "description": "The site's one small endpoint: a Cloudflare Worker that keeps anonymous daily usage counts and opt-in crash reports in D1.",
   "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elapsed-io/elapsed.git",
+    "directory": "packages/endpoint"
+  },
   "type": "module",
   "dependencies": {
     "@stopwatch/core": "0.0.0"

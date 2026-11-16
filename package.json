@@ -1,8 +1,16 @@
 {
-  "name": "stopwatch",
+  "name": "elapsed",
   "private": true,
   "description": "A website that opens directly on a stopwatch for tracking focused work.",
   "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elapsed-io/elapsed.git"
+  },
+  "homepage": "https://elapsed.io",
+  "bugs": {
+    "url": "https://github.com/elapsed-io/elapsed/issues"
+  },
   "type": "module",
   "workspaces": [
     "packages/*"

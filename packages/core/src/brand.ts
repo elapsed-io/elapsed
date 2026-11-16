@@ -11,6 +11,9 @@
  * check every copy string.
  */
 
+/** The public source repository (owner changes, 2026-11-16). */
+const REPOSITORY = 'https://github.com/elapsed-io/elapsed';
+
 export const BRAND = {
   /** The product name, always lowercase. */
   name: 'elapsed',
@@ -20,6 +23,7 @@ export const BRAND = {
     name: 'humanbn',
     url: 'https://humanbn.com',
   },
+  repository: REPOSITORY,
   copy: {
     meta: {
       description: 'a stopwatch for focused work',
@@ -163,14 +167,17 @@ export const BRAND = {
       crashReports: { label: 'crash reports', help: 'tells us error and browser version only. deleted after 14 days' },
       storage: { label: 'storage on this device', font: 'your font · {size}', none: 'nothing stored' },
       clear: { label: 'clear device data', action: 'clear', help: 'removes every setting, theme and file stored in this browser' },
-      /** Footer links appear only once their page exists (href set); none exists yet. */
+      /**
+       * Footer links appear only once their page exists and is ready (`shown`). The source code link
+       * stays hidden until the owner confirms the repository is public at its final address.
+       */
       links: [
-        { label: 'about', href: null },
-        { label: 'privacy', href: null },
-        { label: 'terms', href: null },
-        { label: 'feedback', href: null },
-        { label: 'source code', href: null },
-        { label: 'donate', href: null },
+        { label: 'about', href: null, shown: false },
+        { label: 'privacy', href: null, shown: false },
+        { label: 'terms', href: null, shown: false },
+        { label: 'feedback', href: null, shown: false },
+        { label: 'source code', href: REPOSITORY, shown: false },
+        { label: 'donate', href: null, shown: false },
       ],
     },
     /** System notifications, when switched on. */

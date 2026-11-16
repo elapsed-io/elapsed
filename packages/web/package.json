@@ -4,6 +4,11 @@
   "private": true,
   "description": "The site: UI shell, display modes, themes, settings and storage adapters.",
   "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elapsed-io/elapsed.git",
+    "directory": "packages/web"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
