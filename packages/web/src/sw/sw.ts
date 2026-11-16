@@ -92,6 +92,19 @@ async function cacheFirst(request: Request): Promise<Response> {
   return cached ?? fromNetwork(request, request);
 }
 
+// A notification (check-in or pause limit) brings the site's tab forward, or opens one.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
+      if (open !== undefined) await open.focus();
+      else await self.clients.openWindow('/');
+    })(),
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   if (switchedOff) return;
   const { request } = event;

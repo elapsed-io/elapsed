@@ -11,13 +11,15 @@
   },
   "d1_databases": [
     {
-      "binding": "COUNTS",
+      "binding": "DB",
       "database_name": "elapsed",
       // Filled in when the database is created, at the first deploy.
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations"
     }
   ],
+  // Daily, deletes crash reports older than 14 days (src/crash.ts).
+  "triggers": { "crons": ["17 4 * * *"] },
   // No request logs: the endpoint keeps nothing about a request (plan, Privacy).
   "observability": { "enabled": false },
   // The site will live on its own domain (elapsed.io, attached at launch), never on workers.dev.

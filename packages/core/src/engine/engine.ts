@@ -97,6 +97,8 @@ export class TimerEngine {
   #viewKey: string;
   #hoursReached = 0;
   #announcedCheckIn: number | null = null;
+  /** The pause (by when it began) whose coming end was announced. */
+  #announcedPauseEnd: number | null = null;
   #dirty = false;
   #disposed = false;
 
@@ -172,6 +174,7 @@ export class TimerEngine {
     this.#announcedCheckIn = null;
     this.#dirty = true;
     this.#events.emit('session.paused', { at, session: this.#state.session, reason: 'user' });
+    this.#announcePauseEnding(now);
     this.#afterChange(now);
     return true;
   }
@@ -430,6 +433,7 @@ export class TimerEngine {
     this.#applyRules(now);
     this.#emitMilestones(now);
     this.#announceCheckIn(now);
+    this.#announcePauseEnding(now);
     this.#afterChange(now);
   }
 
@@ -493,6 +497,26 @@ export class TimerEngine {
     }
   }
 
+  /** When the open pause will end the session, and when to say so; null when no pause limit applies. */
+  #pauseEnding(): { readonly pausedAt: number; readonly warnAt: number; readonly endsAt: number } | null {
+    const state = this.#state;
+    if (state === null || this.#rules === null || state.missedCheckInAt !== null) return null;
+    if (sessionStatus(state.session) !== 'paused') return null;
+    const last = lastSegment(state.session);
+    const pausedAt = last.end ?? last.start;
+    const endsAt = pausedAt + (state.pauseLimitMs ?? this.#rules.pauseLimit);
+    return { pausedAt, endsAt, warnAt: Math.max(pausedAt, endsAt - CONFIG.notifications.pauseLimitWarning) };
+  }
+
+  #announcePauseEnding(now: number): void {
+    const ending = this.#pauseEnding();
+    const state = this.#state;
+    if (ending === null || state === null || now < ending.warnAt || now >= ending.endsAt) return;
+    if (this.#announcedPauseEnd === ending.pausedAt) return;
+    this.#announcedPauseEnd = ending.pausedAt;
+    this.#events.emit('pause.ending', { at: ending.warnAt, endsAt: ending.endsAt, session: state.session });
+  }
+
   /** Saves state if it changed, recomputes the view, emits it if it looks different, and schedules wakes. */
   #afterChange(now: number): void {
     if (this.#dirty) {
@@ -526,7 +550,9 @@ export class TimerEngine {
     const rules = this.#rules;
     const due = state === null || rules === null ? null : checkInDueAt(state, rules);
     const trigger = state === null || rules === null ? null : nextTrigger(state, rules);
-    const times = [trigger?.decidedAt, due !== null && due > now ? due : undefined].filter((time): time is number => time !== undefined);
+    const ending = this.#pauseEnding();
+    const warnAt = ending !== null && ending.warnAt > now && this.#announcedPauseEnd !== ending.pausedAt ? ending.warnAt : undefined;
+    const times = [trigger?.decidedAt, due !== null && due > now ? due : undefined, warnAt].filter((time): time is number => time !== undefined);
     if (times.length === 0) this.#scheduler.clear(RULES_TASK);
     else
       this.#scheduler.set(RULES_TASK, Math.max(0, Math.min(...times) - now), () => {

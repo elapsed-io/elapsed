@@ -5,7 +5,7 @@
  *
  * Release 3 adds `record.passed`. Additions to the plan's list:
  * `mode.switched` and `clock.jumped` (both change the stored session),
- * `checkin.answered`, `heartbeat` and `state.changed`, which storage and
+ * `checkin.answered`, `pause.ending` (for notifications), `heartbeat` and `state.changed`, which storage and
  * other tabs use to keep the saved state current.
  */
 
@@ -34,6 +34,12 @@ export interface TimerEvents {
   'milestone.hour': SessionEvent & { readonly hours: number };
   /** A check-in fell due and waits for any key, click or tap. */
   'checkin.due': SessionEvent;
+  /**
+   * The pause will end the session at `endsAt` unless the user resumes: sent
+   * once per pause, 5 minutes before (or at once when the limit is that short).
+   * Never for the wait after a missed check-in, which has no pause limit.
+   */
+  'pause.ending': SessionEvent & { readonly endsAt: number };
   'checkin.answered': SessionEvent;
   /** The device slept or the tab was closed for longer than the gap threshold. Informational. */
   'gap.detected': SessionEvent & { readonly gap: Gap };

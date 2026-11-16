@@ -134,6 +134,51 @@ describe('pause limit', () => {
   });
 });
 
+describe('the pause limit warning', () => {
+  it('comes once, 5 minutes before a pause would end the session', () => {
+    const h = harness({ rules });
+    h.engine.start('digits');
+    h.clock.advance(10 * MINUTE);
+    h.engine.pause();
+    h.take();
+    h.clock.advance(25 * MINUTE - SECOND);
+    expect(of(h.take(), 'pause.ending')).toEqual([]);
+    h.clock.advance(SECOND);
+    const [warning, ...more] = of(h.take(), 'pause.ending');
+    expect(more).toEqual([]);
+    expect(warning?.payload).toMatchObject({ at: T0 + 35 * MINUTE, endsAt: T0 + 40 * MINUTE });
+    h.clock.advance(4 * MINUTE);
+    expect(of(h.take(), 'pause.ending')).toEqual([]);
+  });
+
+  it('comes at once when the limit is 5 minutes', () => {
+    const h = harness({ rules: { ...rules, pauseLimit: 5 * MINUTE } });
+    h.engine.start('digits');
+    h.clock.advance(MINUTE);
+    h.take();
+    h.engine.pause();
+    expect(of(h.take(), 'pause.ending').map((e) => e.payload.endsAt)).toEqual([T0 + 6 * MINUTE]);
+  });
+
+  it('comes again for the next pause, and never for the wait after a missed check-in', () => {
+    const h = harness({ rules });
+    h.engine.start('digits');
+    h.engine.pause();
+    h.clock.advance(26 * MINUTE);
+    h.engine.resume();
+    h.engine.pause();
+    h.clock.advance(26 * MINUTE);
+    expect(of(h.take(), 'pause.ending')).toHaveLength(2);
+    h.engine.resume();
+    // Missed check-in: 2 h to the check-in, 1 h to respond, then a wait of up to 12 h.
+    h.clock.advance(5 * HOUR);
+    expect(h.engine.view.missedCheckInAt).not.toBeNull();
+    h.take();
+    h.clock.advance(11 * HOUR);
+    expect(of(h.take(), 'pause.ending')).toEqual([]);
+  });
+});
+
 describe('session maximum', () => {
   it('ends at exactly 16 hours of focus', () => {
     const h = harness({ rules, seconds: 'never' });

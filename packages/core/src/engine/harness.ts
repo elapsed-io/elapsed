@@ -16,6 +16,7 @@ export const EVENT_TYPES = [
   'clock.jumped',
   'view.changed',
   'milestone.hour',
+  'pause.ending',
   'checkin.due',
   'checkin.answered',
   'gap.detected',

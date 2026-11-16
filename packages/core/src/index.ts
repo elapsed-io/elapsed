@@ -85,3 +85,6 @@ export type {
   ThemeColors,
   ThemeId,
 } from './settings/schema.ts';
+
+export { BROWSER_FAMILIES, CRASH_PATH, browserOf, crashBody, crashBodyBytes, crashReport, parseCrashBody, scrubCrashText } from './crash.ts';
+export type { BrowserFamily, CrashReport } from './crash.ts';

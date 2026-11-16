@@ -9,14 +9,10 @@ import { BRAND } from '@stopwatch/core';
 import type { HtmlTagDescriptor, Plugin } from 'vite';
 import { deriveTheme } from '../src/theme/derive.ts';
 import { DEFAULT_PRESET_ID, getPreset } from '../src/theme/presets.ts';
+import { ICON_FILES } from '../src/icons/app-icons.ts';
 
 export const MANIFEST_FILE = 'manifest.webmanifest';
-export const ICON_FILES = {
-  svg: 'icons/icon.svg',
-  png192: 'icons/icon-192.png',
-  png512: 'icons/icon-512.png',
-  appleTouch: 'icons/apple-touch-icon.png',
-} as const;
+export { ICON_FILES };
 
 export function webAppManifest(): string {
   const theme = deriveTheme(getPreset(DEFAULT_PRESET_ID));

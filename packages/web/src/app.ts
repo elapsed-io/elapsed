@@ -11,6 +11,7 @@
 import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, rulesFrom, summarise } from '@stopwatch/core';
 import type { SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
 import { CountClient } from './counts/client.ts';
+import { CrashReporter } from './crash/reporter.ts';
 import type { DisplayMode } from './modes/contract.ts';
 import { DEFAULT_MODE_ID } from './modes/manifests.ts';
 import { findMode } from './modes/registry.ts';
@@ -28,6 +29,8 @@ import { answersCheckIn } from './shell/check-in.ts';
 import { Controls } from './shell/controls.ts';
 import { EndingCountdown } from './shell/ending.ts';
 import { MaximumNotice } from './shell/notice.ts';
+import { Notifier } from './shell/notifier.ts';
+import { ICON_FILES } from './icons/app-icons.ts';
 import { shortcutFor } from './shell/shortcuts.ts';
 import { titleFor } from './shell/title.ts';
 import { FinishedStore, browserSessionStorage } from './storage/finished-store.ts';
@@ -98,6 +101,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
 
   const counts = new CountClient(win, () => settings.current.usageCounts);
   counts.visit();
+  new CrashReporter(win, () => settings.current.crashReports).attach();
 
   const store = new LocalSessionStore(browserLocalStorage(win), report);
   const finished = new FinishedStore(browserSessionStorage(win), report);
@@ -337,8 +341,13 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     // Ended through the countdown, or on its own: sessions that end automatically skip the countdown.
     else void showResults(session, 'animate');
   });
-  bus.on('checkin.due', () => {
+  const notifier = new Notifier({ win, icon: `/${ICON_FILES.png192}`, onError: report });
+  bus.on('checkin.due', ({ at, session }) => {
     announcer.say(BRAND.copy.timer.checkIn);
+    if (settings.current.notifyCheckIns) notifier.checkIn(session.id, at);
+  });
+  bus.on('pause.ending', ({ endsAt, session }) => {
+    if (settings.current.notifyPauseLimit) notifier.pauseEnding(session.id, endsAt);
   });
   bus.on('session.paused', ({ reason, at }) => {
     if (reason === 'checkin_missed') announcer.say(BRAND.copy.timer.missedCheckIn.replace('{time}', formatClockTime(at)));
