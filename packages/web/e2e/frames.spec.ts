@@ -19,7 +19,7 @@ import type { Page } from '@playwright/test';
 import { GRAPHITE, PAPER, checkInFrame, idleFrame, inPalette, limitFrame, pausedFrame, pausedMissedFrame, runningFrame } from './fixtures/frames.ts';
 import { modeFrame } from './fixtures/mode-frames.ts';
 import { createSession, pauseSession, resumeSession, serializeActiveState, startState } from '@stopwatch/core';
-import { MINUTE, SECOND, compareWithReference, holdAnimationsAt, openApp, settle } from './helpers.ts';
+import { MINUTE, SECOND, compareWithReference, freezeAnimations, holdAnimationsAt, openApp, settle } from './helpers.ts';
 import { SMOOTHED_LIMIT, expectLikeFrame } from './pixels.ts';
 
 /** Moments across both blur-away windows, including their ends. */
@@ -51,28 +51,34 @@ test('the comparison tells the blur-away apart from a moment 4.5 s away (a contr
   expect(diff.visible).toBeGreaterThan(60);
 });
 
-test('running after a minute shows hh:mm exactly as the running frame', async ({ page, browser }) => {
+test('running after a minute shows hh:mm exactly as the running frame', async ({ page, browser, browserName }) => {
   await openApp(page);
   await page.locator('.button--primary').click();
   await page.clock.runFor(75 * SECOND);
   await settle(page);
   const diff = await compareWithReference(page, browser, runningFrame(75));
-  expect(diff).toMatchObject({ differing: 0 });
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff).toMatchObject({ differing: 0 });
+  });
 });
 
-test('idle in the paper theme matches the "idle, paper theme" frame exactly', async ({ page, browser }) => {
+test('idle in the paper theme matches the "idle, paper theme" frame exactly', async ({ page, browser, browserName }) => {
   await openApp(page, { settings: { theme: 'paper' } });
   const diff = await compareWithReference(page, browser, inPalette(PAPER, idleFrame));
-  expect(diff).toMatchObject({ differing: 0 });
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff).toMatchObject({ differing: 0 });
+  });
 });
 
-test('the idle frame reconstruction matches the graphite idle screen too', async ({ page, browser }) => {
+test('the idle frame reconstruction matches the graphite idle screen too', async ({ page, browser, browserName }) => {
   await openApp(page);
   const diff = await compareWithReference(page, browser, idleFrame());
-  expect(diff).toMatchObject({ differing: 0 });
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff).toMatchObject({ differing: 0 });
+  });
 });
 
-test('paused matches the paused frame exactly', async ({ page, browser }) => {
+test('paused matches the paused frame exactly', async ({ page, browser, browserName }) => {
   await openApp(page);
   await page.locator('.button--primary').click();
   await page.clock.runFor(84 * MINUTE);
@@ -80,7 +86,9 @@ test('paused matches the paused frame exactly', async ({ page, browser }) => {
   await page.clock.runFor(4 * MINUTE + 12 * SECOND);
   await settle(page);
   const diff = await compareWithReference(page, browser, pausedFrame());
-  expect(diff).toMatchObject({ differing: 0 });
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff).toMatchObject({ differing: 0 });
+  });
 });
 
 /** Runs a session in `mode` to `focus`, then optionally pauses it for `paused`. */
@@ -97,6 +105,7 @@ async function sessionAt(page: Page, mode: string, focus: number, paused = 0): P
 
 // The revised ring and timeline frames. The ring turns as a whole by a transform, so its edges are
 // resampled by the browser where the frame draws them in place: a few pixels of anti-aliasing differ.
+// Each frame shows a whole minute, so the timeline's glide is frozen at the start of its minute.
 for (const [name, mode, focus, paused, limit] of [
   ['ring', 'ring', 84 * MINUTE, 0, 40],
   ['ringStart', 'ring', 1 * MINUTE, 0, 40],
@@ -105,39 +114,46 @@ for (const [name, mode, focus, paused, limit] of [
   ['timelineStart', 'timeline', 4 * MINUTE, 0, 0],
   ['timelinePaused', 'timeline', 84 * MINUTE, 4 * MINUTE + 12 * SECOND, 0],
 ] as const) {
-  test(`${mode} matches the "${name}" frame`, async ({ page, browser }) => {
+  test(`${mode} matches the "${name}" frame`, async ({ page, browser, browserName }) => {
     await sessionAt(page, mode, focus, paused);
+    await freezeAnimations(page, { at: { '.timeline__glide': 0 } });
     const diff = await compareWithReference(page, browser, modeFrame(name, GRAPHITE));
-    expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(limit);
+    expectLikeFrame(diff, browserName, () => {
+      expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(limit);
+    });
   });
 }
 
-test('a check-in waiting matches the check-in frame exactly', async ({ page, browser }) => {
+test('a check-in waiting matches the check-in frame exactly', async ({ page, browser, browserName }) => {
   await openApp(page);
   await page.locator('.button--primary').click();
   await page.clock.runFor(120 * MINUTE);
   await page.mouse.move(0, 0);
   await settle(page);
   const diff = await compareWithReference(page, browser, checkInFrame());
-  expect(diff).toMatchObject({ differing: 0 });
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff).toMatchObject({ differing: 0 });
+  });
 });
 
 test.describe('paused after a missed check-in', () => {
   // The check-in falls due at 16:00:30 UTC: 2:00 pm two hours west of UTC, as in the frame.
   test.use({ locale: 'en-US', timezoneId: 'Etc/GMT+2' });
 
-  test('matches its frame exactly', async ({ page, browser }) => {
+  test('matches its frame exactly', async ({ page, browser, browserName }) => {
     await openApp(page);
     await page.locator('.button--primary').click();
     await page.clock.runFor(120 * MINUTE + 72 * MINUTE + 40 * SECOND);
     await page.mouse.move(0, 0);
     await settle(page);
     const diff = await compareWithReference(page, browser, pausedMissedFrame());
-    expect(diff).toMatchObject({ differing: 0 });
+    expectLikeFrame(diff, browserName, () => {
+      expect(diff).toMatchObject({ differing: 0 });
+    });
   });
 });
 
-test('the session maximum matches its frame exactly', async ({ page, browser }) => {
+test('the session maximum matches its frame exactly', async ({ page, browser, browserName }) => {
   const HOUR = 60 * MINUTE;
   const T0 = Date.UTC(2026, 10, 16, 14, 0, 0);
   let session = createSession({ id: '3f2c8a4e-9b1d-4c7a-8e5f-1a2b3c4d5e6f', mode: 'digits', at: T0 - 16 * HOUR - 10 * MINUTE, timeZone: 'UTC' });
@@ -158,5 +174,7 @@ test('the session maximum matches its frame exactly', async ({ page, browser }) 
   });
   await settle(page);
   const diff = await compareWithReference(page, browser, limitFrame());
-  expect(diff).toMatchObject({ differing: 0 });
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff).toMatchObject({ differing: 0 });
+  });
 });

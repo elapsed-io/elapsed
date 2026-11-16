@@ -70,7 +70,10 @@ describe('plan audit: performance', () => {
         if (/\bfilter\s*:/.test(block)) expect(block).toMatch(/^@keyframes time-blur-away-blur\b/);
       }
       for (const [, value = ''] of css.matchAll(/transition\s*:\s*([^;]+);/g)) {
-        expect(value, 'a transition of filter').not.toMatch(/(?:^|,)\s*(?:filter|all)\b/);
+        for (const part of value.split(',')) {
+          const property = part.trim().split(/\s+/)[0] ?? '';
+          if (property === 'all' || /filter$/.test(property)) expect.fail(`a transition of ${property}: ${part.trim()}`);
+        }
       }
     }
   });
@@ -160,7 +163,8 @@ describe('plan audit: design', () => {
       const phrases = [...text.matchAll(/(class: )?['"`]([a-z]+(?: [a-z]+){1,})['"`]/g)]
         .filter((match) => match[1] === undefined)
         .map((match) => match[2] ?? '');
-      const allowed = ['prefers-reduced-motion: reduce', 'no display modes are registered', 'the page is missing'];
+      // Not copy: a media query, error messages for developers, and the link relation for pages opened in a new tab.
+      const allowed = ['prefers-reduced-motion: reduce', 'no display modes are registered', 'the page is missing', 'noopener noreferrer'];
       expect(
         phrases.filter((phrase) => !allowed.some((ok) => phrase.startsWith(ok)) && !/^(not|no|the|a|an) /.test(phrase)),
         rel(path),

@@ -92,6 +92,7 @@ export class TimerEngine {
   #ended: Session | null = null;
   #heartbeatAt: number | null = null;
   #heartbeatScheduled = false;
+  #background = false;
   #reference: ClockReference | null = null;
   #view: TimerView;
   #viewKey: string;
@@ -364,6 +365,19 @@ export class TimerEngine {
     this.sync();
   }
 
+  /**
+   * In the background (a hidden tab), the engine wakes only for the heartbeat, every 30 s while a session
+   * is open, and brings everything up to date in that wake: the view (so the tab title follows), the rules
+   * (a check-in or the pause limit is applied at most 30 s late, dated as it fell due) and other tabs'
+   * changes. Back in the foreground it catches up at once and wakes for visible changes again (plan,
+   * Performance requirements > One scheduler).
+   */
+  setBackground(background: boolean): void {
+    if (this.#background === background) return;
+    this.#background = background;
+    if (!this.#disposed) this.sync();
+  }
+
   /** Stops all timers. The engine emits nothing afterwards. */
   dispose(): void {
     this.#disposed = true;
@@ -539,7 +553,7 @@ export class TimerEngine {
   }
 
   #schedule(view: TimerView, now: number): void {
-    const delay = msUntilNextChange(view);
+    const delay = this.#background ? null : msUntilNextChange(view);
     if (delay === null) this.#scheduler.clear(VIEW_TASK);
     else
       this.#scheduler.set(VIEW_TASK, delay, () => {
@@ -552,7 +566,7 @@ export class TimerEngine {
     const trigger = state === null || rules === null ? null : nextTrigger(state, rules);
     const ending = this.#pauseEnding();
     const warnAt = ending !== null && ending.warnAt > now && this.#announcedPauseEnd !== ending.pausedAt ? ending.warnAt : undefined;
-    const times = [trigger?.decidedAt, due !== null && due > now ? due : undefined, warnAt].filter((time): time is number => time !== undefined);
+    const times = this.#background ? [] : [trigger?.decidedAt, due !== null && due > now ? due : undefined, warnAt].filter((time): time is number => time !== undefined);
     if (times.length === 0) this.#scheduler.clear(RULES_TASK);
     else
       this.#scheduler.set(RULES_TASK, Math.max(0, Math.min(...times) - now), () => {

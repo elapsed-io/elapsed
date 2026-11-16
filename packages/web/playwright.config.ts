@@ -1,8 +1,24 @@
 import { defineConfig, devices } from '@playwright/test';
+import type { PlaywrightTestConfig } from '@playwright/test';
 
 const inCi = process.env['CI'] === 'true';
 // Lets a machine with a preinstalled Chromium use it instead of downloading one.
 const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE'];
+
+/** Chromium everywhere; Firefox and WebKit too in CI or with ALL_BROWSERS=1 (Release 1's cross-browser pass). */
+function browsers(): { name: string; use: NonNullable<PlaywrightTestConfig['use']> }[] {
+  const chromium = {
+    name: 'chromium',
+    use: {
+      ...devices['Desktop Chrome'],
+      // The full Chromium in headless mode, not Playwright's stripped headless shell: it is the browser
+      // people use, and it draws the frames the same way on every run (decision 184).
+      ...(executablePath === undefined ? { channel: 'chromium' } : { launchOptions: { executablePath } }),
+    },
+  };
+  if (!inCi && process.env['ALL_BROWSERS'] !== '1') return [chromium];
+  return [chromium, { name: 'firefox', use: { ...devices['Desktop Firefox'] } }, { name: 'webkit', use: { ...devices['Desktop Safari'] } }];
+}
 
 export default defineConfig({
   testDir: './e2e',
@@ -15,25 +31,12 @@ export default defineConfig({
     // The service worker would answer requests out of reach of page.route; offline tests turn it on.
     serviceWorkers: 'block',
   },
-  projects: [
-    {
-      name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        // The full Chromium in headless mode, not Playwright's stripped headless shell: it is the browser
-        // people use, and it draws the frames the same way on every run (decision 184).
-        ...(executablePath === undefined ? { channel: 'chromium' } : { launchOptions: { executablePath } }),
-      },
-    },
-    // Release 1's cross-browser pass (plan, round 8): every test in Firefox and in WebKit (Safari's engine) too.
-    // CI runs each in its own job; locally they run with ALL_BROWSERS=1, once those browsers are installed.
-    ...(inCi || process.env['ALL_BROWSERS'] === '1'
-      ? [
-          { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-          { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-        ]
-      : []),
-  ],
+  // Each browser runs the suite, then its timing tests alone (one worker, after everything else in that
+  // browser has finished), so nothing competes with them for the processor (e2e/timing.spec.ts).
+  projects: browsers().flatMap(({ name, use }) => [
+    { name, use, testIgnore: /timing\.spec\.ts$/ },
+    { name: `${name}-timing`, use, testMatch: /timing\.spec\.ts$/, workers: 1, dependencies: [name] },
+  ]),
   // Production build behind `vite preview`, which sends the same headers as Cloudflare.
   webServer: {
     command: 'npm run build && npm run preview',

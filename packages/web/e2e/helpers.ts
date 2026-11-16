@@ -43,24 +43,66 @@ export async function openApp(
   await page.clock.pauseAt(T_READY);
 }
 
-/** Lets every interface transition (200 ms crossfades and slides) finish in real time. */
+/**
+ * Lets every interface transition (200 ms crossfades and slides) finish in real time. The timeline's glide,
+ * which runs a minute at a time and holds while paused, is ambient motion, not a transition: tests freeze it.
+ */
 export async function settle(page: Page): Promise<void> {
   await page.evaluate(async () => {
-    const running = document.getAnimations().filter((animation) => !(animation instanceof CSSAnimation));
+    const running = document
+      .getAnimations()
+      .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
+      .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide') === true));
     await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
   });
 }
 
+/**
+ * Freezes every animation on the page at an exact moment, as static style, so a screenshot shows that
+ * moment whatever the real time and however late the browser draws. Playwright's clock moves timers but
+ * not animations, so each animation's own time is set:
+ * - `css`: CSS animations (the seconds blur-away, pinned to focused time) at this many milliseconds;
+ * - `at`: animations of elements matching a selector at that many milliseconds (the countdown's fill);
+ * - every other animation (interface motion, transitions) at its end.
+ * Each is then written into its element's style (CSSOM, which the CSP allows) and removed, so nothing
+ * moves on the compositor; animations of pseudo-elements, which cannot be written, stay paused.
+ */
+export async function freezeAnimations(page: Page, moments: { readonly css?: number; readonly at?: Readonly<Record<string, number>> } = {}): Promise<void> {
+  await page.evaluate(
+    async ({ css, at }) => {
+      const animations = document.getAnimations();
+      // A pending animation would take its own start time once ready, undoing what is set here.
+      await Promise.all(animations.map((animation) => animation.ready.catch(() => undefined)));
+      for (const animation of animations) {
+        const effect = animation.effect instanceof KeyframeEffect ? animation.effect : null;
+        const target = effect?.target ?? null;
+        const selector = target === null ? undefined : Object.keys(at).find((key) => target.matches(key));
+        animation.pause();
+        if (selector !== undefined) animation.currentTime = at[selector] ?? 0;
+        else if (css !== null && animation instanceof CSSAnimation) animation.currentTime = css;
+        else {
+          try {
+            animation.finish();
+          } catch {
+            // An endless animation has no end: it stays paused where it is.
+          }
+        }
+        if (effect?.pseudoElement !== null && effect?.pseudoElement !== undefined) continue;
+        try {
+          animation.commitStyles();
+          animation.cancel();
+        } catch {
+          // Not rendered (display: none): nothing to draw, so it stays paused.
+        }
+      }
+    },
+    { css: moments.css ?? null, at: moments.at ?? {} },
+  );
+}
+
 /** Holds every CSS animation at a moment of focused time, so a screenshot shows exactly that moment. */
 export async function holdAnimationsAt(page: Page, focusedMs: number): Promise<void> {
-  await page.evaluate((at) => {
-    for (const animation of document.getAnimations()) {
-      if (animation instanceof CSSAnimation) {
-        animation.pause();
-        animation.currentTime = at;
-      }
-    }
-  }, focusedMs);
+  await freezeAnimations(page, { css: focusedMs });
 }
 
 /**
@@ -110,7 +152,10 @@ export async function finishResults(page: Page): Promise<void> {
   await page.locator('.results[data-ready]').waitFor();
   await page.evaluate(async () => {
     for (let round = 0; round < 3; round += 1) {
-      const running = document.getAnimations().filter((animation) => !(animation instanceof CSSAnimation));
+      const running = document
+        .getAnimations()
+        .filter((animation) => !(animation instanceof CSSAnimation))
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide') === true));
       for (const animation of running) animation.finish();
       // Let finish handlers (which cancel spent animations and remove masks) run. The page's timers
       // may be held by the test clock, so only promises are awaited.

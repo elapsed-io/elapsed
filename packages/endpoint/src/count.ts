@@ -17,7 +17,7 @@ import type { D1Database } from './d1.ts';
 import { declaredWithin, isJson, readCapped, respond, sameOrigin, utcDay } from './http.ts';
 
 const UPSERT =
-  'INSERT INTO daily_counts (day, event, count) VALUES (?1, ?2, 1) ON CONFLICT (day, event) DO UPDATE SET count = count + 1';
+  'INSERT INTO daily_counts (day, event, count) VALUES (?, ?, 1) ON CONFLICT (day, event) DO UPDATE SET count = count + 1';
 
 export async function handleCount(request: Request, db: D1Database, now: number): Promise<Response> {
   if (request.method !== 'POST') return respond(405, { Allow: 'POST' });

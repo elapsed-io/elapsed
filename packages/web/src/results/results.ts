@@ -3,8 +3,9 @@
  * results frames). Loaded the first time a session ends ("on first use").
  *
  * Focused time is the headline, with all session data beneath and the
- * replay drawn by the mode the session was shown in longest. Retry starts a
- * new session; share shares or copies a line of text. The guest invite is
+ * replay drawn by the mode the session was shown in longest. The retry icon
+ * ("back to the timer") returns to the idle timer, where the next session
+ * starts; share shares or copies a line of text. The guest invite is
  * hidden until accounts exist (owner decision, 2026-11-15).
  *
  * Timing, from the moment the tabulating screen is complete: results fade in
@@ -137,15 +138,19 @@ export class ResultsScreen {
     const retry = html(doc, 'button', { class: 'action', attrs: { type: 'button', 'aria-label': copy.retry } }, [iconElement(doc, 'retry')]);
     const shareIcon = iconElement(doc, 'share', 'action__icon');
     const check = iconElement(doc, 'check', 'action__check');
-    const share = html(doc, 'button', { class: 'action', attrs: { type: 'button', 'aria-label': copy.share } }, [shareIcon, check]);
+    const cross = iconElement(doc, 'close', 'action__cross');
+    const share = html(doc, 'button', { class: 'action', attrs: { type: 'button', 'aria-label': copy.share } }, [shareIcon, check, cross]);
     retry.addEventListener('click', this.#options.retry);
     share.addEventListener('click', () => {
       void shareResult(doc.defaultView ?? window, summary.focusedMs).then((outcome) => {
-        if (outcome !== 'copied') return;
-        this.#options.announce(copy.copied);
+        // Copied: a check mark for 2 seconds. Refused by the browser: a small cross for as long (plan,
+        // Decisions > Controls). A share sheet answers for itself, and a cancelled one needs nothing.
+        if (outcome !== 'copied' && outcome !== 'failed') return;
+        this.#options.announce(outcome === 'copied' ? copy.copied : copy.copyFailed);
+        const mark = outcome === 'copied' ? check : cross;
         const duration = CONFIG.motion.copiedConfirmation;
         const hold = { duration, fill: 'none' as const };
-        check.animate([{ opacity: 1 }, { opacity: 1, offset: 0.999 }, { opacity: 0 }], hold);
+        mark.animate([{ opacity: 1 }, { opacity: 1, offset: 0.999 }, { opacity: 0 }], hold);
         shareIcon.animate([{ opacity: 0 }, { opacity: 0, offset: 0.999 }, { opacity: 1 }], hold);
       });
     });

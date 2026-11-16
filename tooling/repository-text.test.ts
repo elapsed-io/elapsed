@@ -63,6 +63,23 @@ describe('repository text', () => {
     for (const [name, pattern] of SECRET_PATTERNS) expect(containing(pattern), name).toEqual([]);
   });
 
+  it('pins one Node version, the same in .nvmrc, package.json and every CI job', () => {
+    const pinned = readFileSync(join(root, '.nvmrc'), 'utf8').trim();
+    expect(pinned).toMatch(/^\d+\.\d+\.\d+$/);
+    expect((JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { engines: { node: string } }).engines.node).toBe(pinned);
+    const workflow = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8');
+    const versions = [...workflow.matchAll(/node-version:\s*(\S+)/g)].map((match) => match[1]);
+    expect(versions.length).toBeGreaterThan(0);
+    expect(new Set(versions)).toEqual(new Set([pinned]));
+    expect(workflow).not.toMatch(/node-version-file/);
+  });
+
+  it('runs the reference end-to-end image at the pinned Playwright version, pinned by digest', () => {
+    const script = readFileSync(join(root, 'tooling/e2e-docker.sh'), 'utf8');
+    const playwright = (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { devDependencies: Record<string, string> }).devDependencies['@playwright/test'];
+    expect(script).toMatch(new RegExp(`image="mcr\\.microsoft\\.com/playwright:v${String(playwright).replaceAll('.', '\\.')}-noble@sha256:[0-9a-f]{64}"`));
+  });
+
   it('keeps local secret files out of git', () => {
     const ignored = readFileSync(join(root, '.gitignore'), 'utf8').split('\n');
     for (const entry of ['.env', '.env.*', '.dev.vars*', '.wrangler/']) expect(ignored, entry).toContain(entry);

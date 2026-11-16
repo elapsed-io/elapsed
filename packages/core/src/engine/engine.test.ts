@@ -50,6 +50,39 @@ describe('waking only for visible changes', () => {
     expect(h.clock.pendingTimers).toBe(1);
   });
 
+  it('in the background: only the heartbeat wakes, every 30 s, and the view follows in the same wake', () => {
+    const h = harness({ seconds: 'always', heartbeat: true });
+    h.engine.start('digits');
+    h.engine.setBackground(true);
+    h.take();
+    const fired = h.clock.firedTimers;
+    h.clock.advance(10 * MINUTE);
+    // Twenty heartbeats in ten minutes, and no other wake even with seconds shown.
+    expect(h.clock.firedTimers - fired).toBe(20);
+    expect(h.clock.pendingTimers).toBe(1);
+    const events = h.take();
+    // Each wake (a heartbeat) brings the view up to date, so the tab title can follow.
+    expect(h.views(events).at(-1)?.focusedMs).toBe(10 * MINUTE);
+    // Back in the foreground: up to date at once, and waking for visible changes again.
+    h.clock.advance(15 * SECOND);
+    h.engine.setBackground(false);
+    expect(h.views(h.take()).at(-1)?.focusedMs).toBe(10 * MINUTE + 15 * SECOND);
+    h.clock.advance(SECOND);
+    expect(h.views(h.take()).at(-1)?.focusedMs).toBe(10 * MINUTE + 16 * SECOND);
+  });
+
+  it('in the background, a check-in falls due at the next heartbeat, dated when it fell due', () => {
+    const h = harness({ heartbeat: true, rules: { checkInInterval: CONFIG.session.checkInInterval.default, pauseLimit: CONFIG.session.pauseLimit.default } });
+    h.engine.start('digits');
+    h.engine.setBackground(true);
+    h.take();
+    const interval = CONFIG.session.checkInInterval.default;
+    h.clock.advance(interval + 20 * SECOND);
+    const due = h.take().filter((event) => event.type === 'checkin.due');
+    expect(due).toHaveLength(1);
+    expect(due[0]?.payload).toMatchObject({ at: T0 + interval });
+  });
+
   it('with seconds always shown: every second', () => {
     const h = harness({ seconds: 'always' });
     h.engine.start('digits');

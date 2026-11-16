@@ -180,7 +180,7 @@ test.describe('check-ins', () => {
     // The check-in fell due at 16:00:30; twelve hours after it, the session ended.
     const later = await reopenLater(context, 14 * HOUR);
     // Sessions that end on their own skip the countdown and show their results.
-    await expect(later.getByRole('button', { name: 'retry' })).toBeVisible();
+    await expect(later.getByRole('button', { name: 'back to the timer' })).toBeVisible();
     await expect(later.locator('.ending__controls')).toBeHidden();
     expect(await storedKeys(later)).toEqual([]);
   });
@@ -194,7 +194,7 @@ test('a pause longer than the limit ends the session', async ({ page }) => {
   await page.clock.runFor(30 * MINUTE - SECOND);
   await expect(primary(page)).toHaveAccessibleName('resume');
   await page.clock.runFor(SECOND);
-  await expect(page.getByRole('button', { name: 'retry' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'back to the timer' })).toBeVisible();
   expect(await page.title()).toBe(NAME);
   expect(await storedKeys(page)).toEqual([]);
   // Dated to when the pause began: five minutes of focus, no pause counted.
@@ -235,7 +235,7 @@ test.describe('the session maximum', () => {
     await expect(page.locator('.results .visually-hidden')).toHaveText('16:00:00');
   });
 
-  test('from the keyboard: the notice’s button, then retry, have focus, and a new session can start right away', async ({ page }) => {
+  test('from the keyboard: the notice’s button, then back to the timer, have focus, and a new session starts from the timer', async ({ page }) => {
     await seed(page, { 'timer.active': serializeActiveState(nearlyMaximum()), 'timer.heartbeat': String(T0) });
     await openApp(page);
     await page.clock.runFor(MINUTE);
@@ -243,7 +243,9 @@ test.describe('the session maximum', () => {
     await expect(page.getByRole('button', { name: 'view results' })).toBeFocused();
     await page.keyboard.press('Space');
     await expect(notice(page)).toBeHidden();
-    await expect(page.getByRole('button', { name: 'retry' })).toBeFocused();
+    await expect(page.getByRole('button', { name: 'back to the timer' })).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(primary(page)).toHaveAccessibleName('start');
     await page.keyboard.press('Space');
     await expect(primary(page)).toHaveAccessibleName('pause');
   });
@@ -291,7 +293,7 @@ test('tabs show one session: started, paused and ended from either', async ({ pa
   await endThroughCountdown(other);
   await expect(primary(page)).toHaveAccessibleName('start');
   await expect(page.locator('.results')).toBeHidden();
-  await expect(other.getByRole('button', { name: 'retry' })).toBeVisible();
+  await expect(other.getByRole('button', { name: 'back to the timer' })).toBeVisible();
   expect(await storedKeys(page)).toEqual([]);
 });
 

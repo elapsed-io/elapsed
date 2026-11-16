@@ -9,8 +9,9 @@
  * Plex Mono" (the custom CSS editor) to the site's IBM Plex Mono at 400.
  *
  * Two owner rules make the site differ from the frames, and are applied to
- * the reference: footer links appear only once their page exists; Lexend is
- * not offered (no tabular figures).
+ * the reference: the footer's source code link stays hidden until the
+ * owner says so (privacy, terms and feedback show); Lexend is not offered
+ * (no tabular figures).
  */
 
 export interface Palette {
@@ -171,7 +172,7 @@ const PANELS: Readonly<Record<SettingsFrameName, Panel>> = {
 export function settingsFrame(name: SettingsFrameName, c: Palette, storage?: string): string {
   let panel = PANELS[name](c)
     .replace(/<button aria-pressed="false"[^>]*font-family: Lexend[^>]*>lexend<\/button>/, '')
-    .replace(/<div style="display: flex; gap: 16px; font-size: 11px">[^]*?<\/a><\/div>/, '');
+    .replace(/<a href="#source code"[^>]*>source code<\/a>/, '');
   if (storage !== undefined) panel = panel.replace('your font · 184 KB', storage);
   const faces = Object.entries(FRAME_FONTS)
     .map(([family, id]) => {

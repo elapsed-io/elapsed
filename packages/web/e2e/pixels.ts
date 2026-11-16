@@ -21,19 +21,34 @@ export interface PixelDiff {
 }
 
 /**
- * Outside Chromium, the most a smoothed channel may differ. Matching frames measured at most 24 in
- * Firefox and WebKit; a frame of the wrong moment differs by over 200 (decision 226).
+ * Outside the reference environment, the most a smoothed channel may differ. Matching frames measured at
+ * most 24 in Firefox and WebKit; a frame of the wrong moment differs by over 200 (decision 226).
  */
 export const SMOOTHED_LIMIT = 32;
 
 /**
- * The frames were matched in Chromium, where `chromium` applies the test's own rule. Firefox and WebKit
- * place text a fraction of a pixel differently in a layer than in the static frame, so there the images
- * must agree once that is set aside.
+ * The reference environment for exact pixel checks: Chromium inside Playwright's official image, which
+ * CI and tooling/e2e-docker.sh both use (it sets PIXEL_REFERENCE). The frames were matched there.
  */
-export function expectLikeFrame(diff: PixelDiff, browserName: string, chromium: (diff: PixelDiff) => void): void {
-  if (browserName === 'chromium') chromium(diff);
-  else expect(diff.smoothedMaxDelta, JSON.stringify(diff)).toBeLessThanOrEqual(SMOOTHED_LIMIT);
+export const PIXEL_REFERENCE = process.env['PIXEL_REFERENCE'] === '1';
+
+/**
+ * Applies a frame test's own rule (exact, or its few pixels of edge noise) in the reference environment.
+ * Anywhere else (Firefox and WebKit, whose glyphs land a fraction of a pixel from the frame's; Chromium
+ * run directly on macOS or another Linux, which draws text differently) the images must agree once each
+ * pixel is averaged with its neighbours, and the test notes where the exact check runs. A control test in
+ * frames.spec.ts shows that a wrong frame still fails by far under that rule.
+ */
+export function expectLikeFrame(diff: PixelDiff, browserName: string, rule: (diff: PixelDiff) => void): void {
+  if (browserName === 'chromium' && PIXEL_REFERENCE) {
+    rule(diff);
+    return;
+  }
+  const info = test.info();
+  if (!info.annotations.some((annotation) => annotation.type === 'pixels')) {
+    info.annotations.push({ type: 'pixels', description: 'compared after smoothing; the exact check runs in Chromium through tooling/e2e-docker.sh (and in CI)' });
+  }
+  expect(diff.smoothedMaxDelta, JSON.stringify(diff)).toBeLessThanOrEqual(SMOOTHED_LIMIT);
 }
 
 const VISIBLE_DELTA = 8;

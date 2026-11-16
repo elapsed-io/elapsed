@@ -198,36 +198,62 @@ export interface ConfirmText {
  */
 export function confirmItem(doc: Document, text: ConfirmText, onConfirm: () => void): HTMLDivElement {
   const ask = html(doc, 'button', { class: 'settings__action settings__action--end', attrs: { type: 'button', 'aria-label': text.label } }, [text.action]);
+  const row = settingRow(doc, html(doc, 'div', { class: 'setting__label' }, [text.label]), ask, text.help);
+  const step = confirmStep(doc, text, row, ask);
+  ask.addEventListener('click', () => {
+    step.ask(onConfirm);
+  });
+  return html(doc, 'div', { class: 'setting-confirm' }, [row, step.element]);
+}
+
+/**
+ * The inline confirm step drawn in the advanced frame, standing in for `row` while it asks: the label,
+ * the question, cancel and the action. Focus moves to cancel; cancel and Escape step back to `back`
+ * without doing anything. Used by every destructive action, and by an import that would replace custom CSS.
+ */
+export function confirmStep(
+  doc: Document,
+  text: Omit<ConfirmText, 'help'>,
+  row: HTMLElement,
+  back: HTMLElement,
+): { readonly element: HTMLDivElement; ask(onConfirm: () => void): void } {
   const cancel = html(doc, 'button', { class: 'settings__action', attrs: { type: 'button' } }, [text.cancel]);
   const confirm = html(doc, 'button', { class: 'settings__action settings__action--end', attrs: { type: 'button' } }, [text.action]);
-  const row = settingRow(doc, html(doc, 'div', { class: 'setting__label' }, [text.label]), ask, text.help);
   const questionId = uniqueId('settings-confirm');
   const step = html(doc, 'div', { class: 'confirm', attrs: { role: 'group', 'aria-label': text.label, 'aria-describedby': questionId } }, [
     html(doc, 'div', { class: 'setting__row' }, [html(doc, 'div', { class: 'setting__label' }, [text.label])]),
     html(doc, 'div', { class: 'confirm__question', attrs: { id: questionId } }, [text.question]),
     html(doc, 'div', { class: 'confirm__buttons' }, [cancel, confirm]),
   ]);
+  let pending: (() => void) | null = null;
   const show = (asking: boolean): void => {
     row.hidden = asking;
     step.hidden = !asking;
-    (asking ? cancel : ask).focus();
+    (asking ? cancel : back).focus();
   };
-  ask.addEventListener('click', () => {
-    show(true);
-  });
   cancel.addEventListener('click', () => {
+    pending = null;
     show(false);
   });
   confirm.addEventListener('click', () => {
+    const act = pending;
+    pending = null;
     show(false);
-    onConfirm();
+    act?.();
   });
   step.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     event.preventDefault();
     event.stopPropagation();
+    pending = null;
     show(false);
   });
   step.hidden = true;
-  return html(doc, 'div', { class: 'setting-confirm' }, [row, step]);
+  return {
+    element: step,
+    ask(onConfirm: () => void): void {
+      pending = onConfirm;
+      show(true);
+    },
+  };
 }

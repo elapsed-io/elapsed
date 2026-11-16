@@ -17,8 +17,8 @@ import { declaredWithin, isJson, readCapped, respond, sameOrigin, utcDay } from 
 import type { RateLimiter } from './rate-limit.ts';
 
 const INSERT =
-  'INSERT INTO crash_reports (day, version, browser, browser_version, message, stack) VALUES (?1, ?2, ?3, ?4, ?5, ?6)';
-const DELETE_OLD = 'DELETE FROM crash_reports WHERE day <= ?1';
+  'INSERT INTO crash_reports (day, version, browser, browser_version, message, stack) VALUES (?, ?, ?, ?, ?, ?)';
+const DELETE_OLD = 'DELETE FROM crash_reports WHERE day <= ?';
 
 const DAY = 24 * 60 * 60 * 1000;
 

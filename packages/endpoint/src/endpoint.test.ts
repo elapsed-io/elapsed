@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 import { crashBody, crashReport } from '@stopwatch/core';
 import { deleteExpiredReports, expiredThrough } from './crash.ts';
 import type { D1Database, D1Statement } from './d1.ts';
@@ -13,18 +13,35 @@ import type { Env } from './worker.ts';
 const SITE = 'https://site.example';
 const NOW = Date.UTC(2026, 10, 16, 23, 59, 59);
 
-/** D1 stands in as SQLite in memory, with the real migration applied. */
-function database(): { db: DatabaseSync; d1: D1Database } {
+/**
+ * D1 stands in as SQLite in memory, with the real migrations applied. It is stricter than either: a
+ * statement must use plain `?` placeholders (Node 24.3's SQLite refused numbered ones, `?1`) and bind
+ * exactly as many values as it has. And it fails loudly: the endpoint answers any database error with
+ * 503 and no details, so the test itself fails with the database's own message.
+ */
+function database(): { db: DatabaseSync; d1: D1Database; errors: string[] } {
   const db = new DatabaseSync(':memory:');
   for (const file of ['0001_daily_counts.sql', '0002_crash_reports.sql']) db.exec(readFileSync(join(import.meta.dirname, '..', 'migrations', file), 'utf8'));
+  const errors: string[] = [];
+  onTestFinished(() => {
+    expect(errors, 'database errors the endpoint answered with 503').toEqual([]);
+  });
   const statement = (sql: string, values: readonly (string | number | null)[]): D1Statement => ({
     bind: (...next) => statement(sql, next),
     run: () => {
-      db.prepare(sql).run(...values);
+      try {
+        if (/\?\d/.test(sql)) throw new Error(`numbered placeholder in: ${sql}`);
+        const placeholders = (sql.match(/\?/g) ?? []).length;
+        if (placeholders !== values.length) throw new Error(`${String(values.length)} values bound for ${String(placeholders)} placeholders in: ${sql}`);
+        db.prepare(sql).run(...values);
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+        return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+      }
       return Promise.resolve({ success: true });
     },
   });
-  return { db, d1: { prepare: (sql) => statement(sql, []) } };
+  return { db, d1: { prepare: (sql) => statement(sql, []) }, errors };
 }
 
 function env(d1: D1Database): Env {
@@ -39,6 +56,17 @@ const post = (body: BodyInit | null, headers: Record<string, string> = {}, path 
   });
 
 const totals = (db: DatabaseSync): unknown[] => db.prepare('SELECT day, event, count FROM daily_counts ORDER BY day, event').all().map((row) => ({ ...row }));
+
+describe('the test database', () => {
+  it('refuses a statement that binds the wrong number of values or numbers its placeholders (a control check)', async () => {
+    const { d1, errors } = database();
+    await expect(d1.prepare('DELETE FROM crash_reports WHERE day <= ?').bind('2026-11-01', 'extra').run()).rejects.toThrow('2 values bound for 1 placeholders');
+    await expect(d1.prepare('DELETE FROM crash_reports WHERE day <= ?1').bind('2026-11-01').run()).rejects.toThrow('numbered placeholder');
+    expect(errors).toHaveLength(2);
+    // Expected here; any other test fails on such an error.
+    errors.length = 0;
+  });
+});
 
 describe('the counting endpoint', () => {
   it('adds one to the day’s total for each event, keeping nothing else', async () => {

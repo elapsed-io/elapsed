@@ -827,8 +827,20 @@
   }
 
   .settings__link {
+    position: relative;
     color: var(--color-muted);
     text-decoration: none;
+  }
+
+  /* An invisible tap area of 44 × 44 px around each small link. */
+  .settings__link::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, var(--tap-target));
+    height: max(100%, var(--tap-target));
+    transform: translate(-50%, -50%);
   }
 
   /*

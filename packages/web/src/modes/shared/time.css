@@ -77,17 +77,34 @@
   }
 
   /*
-   * Paused or waiting for a check-in: the whole display (time and graphics) is held behind a blur. The
-   * blur itself never animates (plan, Performance: the seconds blur-away is the only animated blur); it
-   * applies at once and the fade carries the change.
+   * Paused or waiting for a check-in: the whole display (time and graphics) is held behind a blur, as the
+   * frames draw it: blurred 10 px at 40 %. The blur never animates (plan, Performance: the seconds
+   * blur-away is the only animated blur). The blurred state fades in and out over 0.2 s through a veil
+   * whose own blur is fixed and only whose opacity moves (time-display.ts); at rest, the display carries
+   * the blur itself. The veil reaches well past the display, so the blur's soft edge is never cut.
    */
   .time-stack__body {
     transition: opacity var(--motion-morph) var(--ease-standard);
   }
 
   .time-stack__body--held {
-    filter: blur(var(--held-blur));
     opacity: var(--held-opacity);
+  }
+
+  .time-stack__body--blurred {
+    filter: blur(var(--held-blur));
+  }
+
+  .time-stack__veil {
+    position: absolute;
+    inset: calc(-3 * var(--held-blur));
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  .time-stack__veil--on {
+    -webkit-backdrop-filter: blur(var(--held-blur));
+    backdrop-filter: blur(var(--held-blur));
   }
 
   /* Text centred over the held display: the pause length, or the check-in line. */

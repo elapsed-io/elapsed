@@ -34,6 +34,9 @@ export class TimeDisplay {
   readonly #main: TimeText;
   readonly #pausedFor: TimeText;
   readonly #overlay: HTMLDivElement;
+  readonly #veil: HTMLDivElement;
+  #held: boolean | null = null;
+  #fade: Animation | null = null;
   readonly #missed: HTMLSpanElement;
   readonly #checkIn: HTMLDivElement;
   readonly #context: DisplayContext;
@@ -57,7 +60,9 @@ export class TimeDisplay {
     this.#pausedFor.element.setAttribute('role', 'timer');
     this.#pausedFor.element.tabIndex = -1;
     this.#body = html(doc, 'div', { class: 'time-stack__body' }, [...compose(this.#main.element)]);
-    this.element = html(doc, 'div', { class: 'time-stack' }, [this.#body, this.#overlay, this.#checkIn]);
+    // While the held state fades in or out, a veil blurs what is under it at a fixed radius (time.css).
+    this.#veil = html(doc, 'div', { class: 'time-stack__veil', attrs: { 'aria-hidden': 'true' } });
+    this.element = html(doc, 'div', { class: 'time-stack' }, [this.#body, this.#veil, this.#overlay, this.#checkIn]);
   }
 
   /** Measures the font once it is ready; until then the blur-away cannot re-centre exactly. */
@@ -82,7 +87,7 @@ export class TimeDisplay {
     const paused = status === 'paused';
     const checkIn = status === 'running' && view.checkInDueAt !== null;
     const held = paused || checkIn;
-    this.#body.classList.toggle('time-stack__body--held', held);
+    this.#hold(held);
     // Held, the blurred display is decoration: hidden from screen readers and out of the tab order; the text over it
     // (the pause length, or the check-in line) is what is read.
     this.#body.toggleAttribute('aria-hidden', held);
@@ -98,6 +103,50 @@ export class TimeDisplay {
       const pause = BRAND.copy.timer.spoken.pausedFor.replace('{time}', spokenDuration(view.pausedForShownMs ?? 0, true));
       this.#label(this.#pausedFor.element, [pause, focused, this.#missedText].filter((part) => part !== '').join('. '));
     }
+  }
+
+  /**
+   * Holds or releases the display. At rest, held is the frame's look: the display itself blurred 10 px
+   * (static) at 40 %. The blurred state fades in and out over the interface's 0.2 s without the blur ever
+   * changing: for the fade, a veil blurs what is under it at the same fixed radius and only its opacity
+   * moves (while the display fades between full and 40 %); when the fade ends, the display's own blur
+   * takes over, which looks the same. The first render, and a display not yet in the page, take the
+   * resting state at once.
+   */
+  #hold(held: boolean): void {
+    if (this.#held === held) return;
+    const first = this.#held === null;
+    this.#held = held;
+    const body = this.#body;
+    const veil = this.#veil;
+    const from = this.#fade === null ? (held ? 0 : 1) : Number(getComputedStyle(veil).opacity);
+    this.#fade?.cancel();
+    this.#fade = null;
+    body.classList.toggle('time-stack__body--held', held);
+    body.classList.remove('time-stack__body--blurred');
+    if (first || !veil.isConnected) {
+      veil.classList.remove('time-stack__veil--on');
+      body.classList.toggle('time-stack__body--blurred', held);
+      return;
+    }
+    veil.classList.add('time-stack__veil--on');
+    const style = getComputedStyle(this.element);
+    const fade = veil.animate([{ opacity: from }, { opacity: held ? 1 : 0 }], {
+      duration: durationMs(style.getPropertyValue('--motion-morph')),
+      easing: style.getPropertyValue('--ease-standard').trim() || 'ease',
+      fill: 'forwards',
+    });
+    this.#fade = fade;
+    void fade.finished.then(
+      () => {
+        if (this.#fade !== fade) return;
+        this.#fade = null;
+        body.classList.toggle('time-stack__body--blurred', held);
+        veil.classList.remove('time-stack__veil--on');
+        fade.cancel();
+      },
+      () => undefined,
+    );
   }
 
   /** Labels a time in words when the words change (a timer's label is read on request, never announced). */
@@ -118,4 +167,12 @@ export class TimeDisplay {
     this.#missed.hidden = at === null;
     this.#missed.textContent = text;
   }
+}
+
+/** A CSS time ("200ms", "0.2s") in milliseconds; 0 when it cannot be read. */
+function durationMs(value: string): number {
+  const text = value.trim();
+  const number = Number.parseFloat(text);
+  if (!Number.isFinite(number)) return 0;
+  return text.endsWith('ms') ? number : number * 1000;
 }

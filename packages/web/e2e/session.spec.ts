@@ -65,7 +65,7 @@ test('starts, pauses, resumes and ends with the buttons', async ({ page }) => {
   await expect(primary(page)).toBeFocused();
 
   await endThroughCountdown(page);
-  await expect(page.getByRole('button', { name: 'retry' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'back to the timer' })).toBeVisible();
   await expect(page.locator('.screen > .controls')).toBeHidden();
   expect(await page.title()).toBe(NAME);
 });
@@ -93,11 +93,13 @@ test('space starts, pauses and resumes; E ends', async ({ page }) => {
   await page.waitForTimeout(350);
   await page.keyboard.press('e');
   await expect(page.locator('.results')).toBeVisible();
-  // Space on the results starts the next session.
+  // Space on the results goes back to the timer; Space there starts the next session.
   await page.locator('body').focus();
   await page.keyboard.press('Space');
-  await expect(primary(page)).toHaveAccessibleName('pause');
   await expect(page.locator('.results')).toBeHidden();
+  await expect(primary(page)).toHaveAccessibleName('start');
+  await page.keyboard.press('Space');
+  await expect(primary(page)).toHaveAccessibleName('pause');
 });
 
 test('space on a focused button acts once, not twice', async ({ page }) => {

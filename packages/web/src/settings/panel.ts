@@ -42,6 +42,7 @@ import { presetColors } from './appearance.ts';
 import {
   actionButton,
   confirmItem,
+  confirmStep,
   formatHoursMinutes,
   formatMinutes,
   formatPercent,
@@ -122,6 +123,7 @@ export class SettingsPanel {
   /** The stored custom CSS the editor last showed: an editor still holding it has no unsaved changes. */
   #shownCss = '';
   #fileNote: HTMLDivElement | null = null;
+  #importConfirm: ReturnType<typeof confirmStep> | null = null;
   /** The last exported file's address, released at the next export. */
   #exportUrl: string | null = null;
   #open: CategoryId | null = 'timer';
@@ -174,7 +176,9 @@ export class SettingsPanel {
     const all: readonly { readonly label: string; readonly href: string | null; readonly shown: boolean }[] = copy.links;
     const links = all.filter((link): link is { readonly label: string; readonly href: string; readonly shown: true } => link.shown && link.href !== null);
     if (links.length > 0) {
-      footer.append(html(doc, 'nav', { class: 'settings__links' }, links.map((link) => html(doc, 'a', { class: 'settings__link', attrs: { href: link.href } }, [link.label]))));
+      // Pages open in a new tab, so the timer keeps running in view; mail opens the mail app.
+      const attrs = (href: string): Record<string, string> => (href.startsWith('mailto:') ? { href } : { href, target: '_blank', rel: 'noopener noreferrer' });
+      footer.append(html(doc, 'nav', { class: 'settings__links', attrs: { 'aria-label': copy.linksLabel.replace('{name}', BRAND.name) } }, links.map((link) => html(doc, 'a', { class: 'settings__link', attrs: attrs(link.href) }, [link.label]))));
     }
 
     // A modal dialog: focus stays inside while it is open (WCAG 2.2: keyboard focus never wanders behind it).
@@ -753,18 +757,27 @@ export class SettingsPanel {
       file.value = '';
       if (chosen !== undefined) void this.#import(chosen);
     });
+    const importButton = actionButton(doc, copy.settingsFile.import, 'gray', () => {
+      file.click();
+    });
     const buttons = html(doc, 'div', { class: 'setting__actions' }, [
       actionButton(doc, copy.settingsFile.export, 'gray', () => {
         this.#export();
       }),
-      actionButton(doc, copy.settingsFile.import, 'gray', () => {
-        file.click();
-      }),
+      importButton,
     ]);
-    const fileItem = settingRow(doc, html(doc, 'div', { class: 'setting__label' }, [copy.settingsFile.label]), buttons, copy.settingsFile.help);
-    this.#fileNote = fileItem.querySelector<HTMLDivElement>('.setting__help');
+    const fileRow = settingRow(doc, html(doc, 'div', { class: 'setting__label' }, [copy.settingsFile.label]), buttons, copy.settingsFile.help);
+    this.#fileNote = fileRow.querySelector<HTMLDivElement>('.setting__help');
     this.#fileNote?.setAttribute('aria-live', 'polite');
-    fileItem.append(file);
+    fileRow.append(file);
+    // A file whose custom CSS would replace this device's asks first, with the same confirm step.
+    this.#importConfirm = confirmStep(
+      doc,
+      { label: copy.settingsFile.label, action: copy.settingsFile.replace, question: copy.settingsFile.replaceQuestion, cancel: copy.cancel },
+      fileRow,
+      importButton,
+    );
+    const fileItem = html(doc, 'div', { class: 'setting-confirm' }, [fileRow, this.#importConfirm.element]);
 
     const resetAll = confirmItem(doc, { ...copy.resetAll, cancel: copy.cancel, help: null }, () => {
       this.#host.controller.resetAll();
@@ -866,11 +879,16 @@ export class SettingsPanel {
     const controller = this.#host.controller;
     // Fonts stay on the device they were loaded on: without one here, the font in use is kept.
     const settings = parsed.settings.font === 'own' && !(await controller.hasOwnFont()) ? { ...parsed.settings, font: controller.current.font } : parsed.settings;
-    controller.importSettings(settings, cleaned.css);
-    this.#cssShows(cleaned.css);
-    this.#cssMessage(copy.customCss.help);
-    this.#fileMessage(copy.settingsFile.help);
-    this.#flashSaved();
+    const apply = (): void => {
+      controller.importSettings(settings, cleaned.css);
+      this.#cssShows(cleaned.css);
+      this.#cssMessage(copy.customCss.help);
+      this.#fileMessage(copy.settingsFile.help);
+      this.#flashSaved();
+    };
+    // Choosing the file was the asking, unless it would replace custom CSS this device already has.
+    if (controller.customCss !== '' && controller.customCss !== cleaned.css && this.#importConfirm !== null) this.#importConfirm.ask(apply);
+    else apply();
   }
 }
 

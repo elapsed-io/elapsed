@@ -362,6 +362,30 @@ test.describe('the settings file', () => {
 });
 
 test.describe('destructive actions ask first', () => {
+  test('importing a file whose custom CSS would replace this device’s asks first: cancel changes nothing, replace applies it', async ({ page }) => {
+    await seedSettings(page, { theme: 'graphite' });
+    await seedCustomCss(page, '.time { color: rgb(7, 8, 9) }');
+    await openApp(page, { width: 1280, height: 800 });
+    await openAdvanced(page);
+    const file = page.locator('input.settings__file');
+    const imported = { app: 'elapsed', kind: 'settings', version: 1, settings: { theme: 'sky' }, customCss: '.time { color: rgb(9, 8, 7) }' };
+    const choose = () => file.setInputFiles({ name: 'elapsed-settings.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(imported)) });
+    const step = page.getByRole('group', { name: 'settings file' });
+    await choose();
+    await expect(step).toBeVisible();
+    await expect(step).toContainText('replace your custom css with the file’s?');
+    await expect(step.getByRole('button', { name: 'cancel' })).toBeFocused();
+    await step.getByRole('button', { name: 'cancel' }).click();
+    await expect(step).toBeHidden();
+    await expect(page.getByRole('button', { name: 'import' })).toBeFocused();
+    expect(await storedCss(page)).toBe('.time { color: rgb(7, 8, 9) }');
+    expect(await page.evaluate(() => localStorage.getItem('settings'))).not.toContain('sky');
+    await choose();
+    await step.getByRole('button', { name: 'replace' }).click();
+    await expect.poll(() => storedCss(page)).toBe('.time { color: rgb(9, 8, 7) }');
+    expect(await page.evaluate(() => localStorage.getItem('settings'))).toContain('sky');
+  });
+
   test('reset all settings: cancel keeps everything; confirming restores every choice and keeps custom CSS and fonts', async ({ page }) => {
     await seedSettings(page, { theme: 'sky', seconds: 'always' });
     await seedCustomCss(page, '.time { color: rgb(7, 8, 9) }');

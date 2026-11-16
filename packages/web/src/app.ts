@@ -191,13 +191,16 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     resultsModule ??= import('./results/results.ts');
     return resultsModule;
   };
-  const retry = (): void => {
+  // Back to the timer (the results' retry icon, or Space): the results close and the idle timer shows,
+  // ready for the next session, which starts only from there. The finished session leaves tab storage, so
+  // a reload shows the timer, not the old results. A session another tab started is shown as it is.
+  const backToTimer = (): void => {
     sync.pull();
-    if (engine.status === 'running' || engine.status === 'paused') {
-      leaveToTimer();
-      return;
+    if (engine.status !== 'running' && engine.status !== 'paused') {
+      finished.clear();
+      lastFinished = null;
     }
-    engine.start(registered.manifest.id);
+    leaveToTimer();
     controls.primary.focus({ preventScroll: true });
   };
 
@@ -244,7 +247,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     const [module, drawing] = await Promise.all([loadResults(), replayMode(session)]);
     if (showing !== session) return;
     results ??= new module.ResultsScreen(doc, {
-      retry,
+      retry: backToTimer,
       announce: (text) => {
         announcer.say(text);
       },
@@ -451,6 +454,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
 
   // Restore the session saved on this device (a refresh or reopened tab), replaying the rules up to now.
   sync.attach(engine, saved);
+  engine.setBackground(doc.visibilityState === 'hidden');
   if (engine.state !== null && currentMode(engine.state.session) !== registered.manifest.id) engine.switchMode(registered.manifest.id);
   render(engine.view);
   if (engine.state === null && screenNow() === 'timer') {
@@ -526,7 +530,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     event.preventDefault();
     if (shortcut === 'settings') toggleSettings();
     else if (current === 'results') {
-      if (shortcut === 'toggle') retry();
+      if (shortcut === 'toggle') backToTimer();
     } else if (shortcut === 'toggle') toggle();
     else if (current === 'timer') beginEnding();
   });
@@ -537,8 +541,12 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     sync.pull();
     engine.sync();
   };
+  // Hidden, the engine wakes only for the heartbeat, and the tab title follows in that wake; seen again,
+  // it catches up at once (plan, Performance requirements > One scheduler).
   doc.addEventListener('visibilitychange', () => {
-    if (doc.visibilityState !== 'visible') return;
+    const hidden = doc.visibilityState === 'hidden';
+    engine.setBackground(hidden);
+    if (hidden) return;
     refresh();
     if (behind) render(engine.view);
   });

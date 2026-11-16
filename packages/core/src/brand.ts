@@ -13,6 +13,9 @@
 
 /** The public source repository (owner changes, 2026-11-16). */
 const REPOSITORY = 'https://github.com/elapsed-io/elapsed';
+/** The site's public address, and its public support address (owner, 2026-11-16). */
+const SITE = 'https://elapsed.io';
+const SUPPORT = 'support@elapsed.io';
 
 export const BRAND = {
   /** The product name, always lowercase. */
@@ -74,9 +77,11 @@ export const BRAND = {
       longestStretch: 'longest stretch',
       started: 'started',
       ended: 'ended',
-      retry: 'retry',
+      retry: 'back to the timer',
       share: 'share',
       copied: 'copied',
+      /** When the browser refuses to copy: the icon shows a small cross for 2 seconds. */
+      copyFailed: 'couldn’t copy',
       legendFocus: 'focus',
       legendPause: 'pause',
       ringLabel: 'clock replay: each ring is one hour, outside in, filled where you focused',
@@ -141,6 +146,8 @@ export const BRAND = {
       /** Phones: each category is its own page; this returns to the list. */
       back: 'back to settings',
       autosaved: 'changes are autosaved',
+      /** The footer links' name for screen readers. */
+      linksLabel: 'about {name}',
       /** Release 3, accounts only. */
       synced: 'synced to your account',
       noMatches: 'no settings match',
@@ -207,6 +214,9 @@ export const BRAND = {
         help: 'your choices and custom css in one file. fonts and images stay on this device.',
         tooLarge: 'that file is over {size}. nothing was changed.',
         notSettings: 'that isn’t an {name} settings file. nothing was changed.',
+        /** Asked first when the file's custom css would replace the custom css on this device. */
+        replace: 'replace',
+        replaceQuestion: 'replace your custom css with the file’s? your other choices are replaced too.',
       },
       resetAll: {
         label: 'reset all settings',
@@ -216,14 +226,16 @@ export const BRAND = {
       /** The inline confirm step drawn in the advanced frame. */
       cancel: 'cancel',
       /**
-       * Footer links appear only once their page exists and is ready (`shown`). The source code link
-       * stays hidden until the owner confirms the repository is public at its final address.
+       * Footer links appear only once their page exists and is ready (`shown`), as the settings frames
+       * draw them (owner, 2026-11-16). Privacy and terms are published at elapsed.io with the soon page
+       * (they move into the app at launch); feedback is an email to support. Source code stays hidden
+       * until the owner says the repository is public.
        */
       links: [
         { label: 'about', href: null, shown: false },
-        { label: 'privacy', href: null, shown: false },
-        { label: 'terms', href: null, shown: false },
-        { label: 'feedback', href: null, shown: false },
+        { label: 'privacy', href: `${SITE}/privacy`, shown: true },
+        { label: 'terms', href: `${SITE}/terms`, shown: true },
+        { label: 'feedback', href: `mailto:${SUPPORT}`, shown: true },
         { label: 'source code', href: REPOSITORY, shown: false },
         { label: 'donate', href: null, shown: false },
       ],

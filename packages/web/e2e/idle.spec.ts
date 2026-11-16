@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { corePaths } from './helpers.ts';
-import { diffPngs } from './pixels.ts';
+import { diffPngs, expectLikeFrame } from './pixels.ts';
 
 const FIXTURE = readFileSync(fileURLToPath(new URL('fixtures/idle-frame.html', import.meta.url)));
 const FONT = readFileSync(fileURLToPath(new URL('../src/assets/fonts/timer-sans.woff2', import.meta.url)));
@@ -128,7 +128,7 @@ test('uses the self-hosted trimmed font for the time and the buttons', async ({ 
 /** Screenshots are taken at the device's pixel ratio (2 in the Desktop Safari profile). */
 const pixelsAt = (width: number, height: number): number => width * height * (test.info().project.use.deviceScaleFactor ?? 1) ** 2;
 
-test('matches the idle frame pixel for pixel at 720 × 450', async ({ page, browser }) => {
+test('matches the idle frame pixel for pixel at 720 × 450', async ({ page, browser, browserName }) => {
   await page.setViewportSize({ width: 720, height: 450 });
   await openIdle(page);
   const site = await page.screenshot();
@@ -147,10 +147,13 @@ test('matches the idle frame pixel for pixel at 720 × 450', async ({ page, brow
 
   const diff = await diffPngs(reference, site, frame);
   await reference.close();
-  expect(diff).toMatchObject({ total: pixelsAt(720, 450), differing: 0, visible: 0, maxChannelDelta: 0 });
+  expect(diff.total).toBe(pixelsAt(720, 450));
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff).toMatchObject({ differing: 0, visible: 0, maxChannelDelta: 0 });
+  });
 });
 
-test('paints the same idle frame before the script runs', async ({ browser }) => {
+test('paints the same idle frame before the script runs', async ({ browser, browserName }) => {
   const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 720, height: 450 } });
   const page = await context.newPage();
   // No script can be evaluated in this page (Firefox waits for one forever), so wait for the font to arrive.
@@ -170,7 +173,10 @@ test('paints the same idle frame before the script runs', async ({ browser }) =>
   const diff = await diffPngs(reference, site, frame);
   await reference.close();
   await context.close();
-  expect(diff).toMatchObject({ total: pixelsAt(720, 450), differing: 0, visible: 0, maxChannelDelta: 0 });
+  expect(diff.total).toBe(pixelsAt(720, 450));
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff).toMatchObject({ differing: 0, visible: 0, maxChannelDelta: 0 });
+  });
 });
 
 test.describe('window scaling', () => {

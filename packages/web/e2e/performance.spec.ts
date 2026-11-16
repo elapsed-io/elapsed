@@ -2,8 +2,8 @@
  * Release 1 hardening: performance over a long session (plan, round 8;
  * Infrastructure > Performance requirements). A simulated two-hour session
  * on the test's clock: one scheduler and never more than one pending timer;
- * in a hidden tab nothing is drawn, and the only wake-ups are the heartbeat
- * every 30 s and the tab title once a minute; on return the display catches
+ * in a hidden tab nothing is drawn, and the only wake-up is the heartbeat
+ * every 30 s, which also updates the tab title; on return the display catches
  * up at once; and memory and the page's size stay flat.
  */
 
@@ -88,9 +88,13 @@ test('a two-hour session: one timer at a time, nothing drawn while hidden, the d
     await page.clock.runFor(MINUTE);
     titles.push(await page.title());
   }
-  const hiddenWakes = (await wakes(page)) - before;
-  // A heartbeat every 30 s (plan, Persistence) and the title once a minute, sharing one wake where they meet: two a minute.
-  expect(hiddenWakes).toBeLessThanOrEqual(110 * 2 + 2);
+  // The only wake is the heartbeat, every 30 s (plan, Performance requirements > One scheduler), which also
+  // updates the title: two a minute, never closer together.
+  const times = await page.evaluate((from) => (window as unknown as { __perf: Perf }).__perf.wakes.slice(from), before);
+  expect(times.length).toBeLessThanOrEqual(110 * 2 + 1);
+  expect(times.length).toBeGreaterThanOrEqual(110 * 2 - 1);
+  const gaps = times.slice(1).map((time, index) => time - (times[index] ?? 0));
+  expect(Math.min(...gaps)).toBeGreaterThanOrEqual(29_000);
   expect(await page.evaluate(() => (window as unknown as { __drawn: number }).__drawn)).toBe(0);
   // The title kept up: it is what a background tab shows.
   expect(titles.at(-1)).toBe('01:55 · elapsed');

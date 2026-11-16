@@ -13,7 +13,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { GRAPHITE, PAPER, inPalette, soonFrame } from './fixtures/frames.ts';
 import { screenshotReference } from './helpers.ts';
-import { diffPngs } from './pixels.ts';
+import { diffPngs, expectLikeFrame } from './pixels.ts';
 
 const PUBLIC = fileURLToPath(new URL('../../soon/public/', import.meta.url));
 const SOON = 'https://soon.test';
@@ -69,13 +69,15 @@ for (const [scheme, palette, frame] of [
   ['dark', GRAPHITE, 'soon'],
   ['light', PAPER, 'soon, light'],
 ] as const) {
-  test(`with a ${scheme} system setting it matches the "${frame}" frame exactly`, async ({ page, browser }) => {
+  test(`with a ${scheme} system setting it matches the "${frame}" frame exactly`, async ({ page, browser, browserName }) => {
     await openSoon(page, scheme);
     const site = await page.screenshot();
     const scratch = await browser.newPage();
     const diff = await diffPngs(scratch, site, await screenshotReference(browser, inPalette(palette, soonFrame), undefined, SOON_FONT));
     await scratch.close();
-    expect(diff.differing, JSON.stringify(diff)).toBe(0);
+    expectLikeFrame(diff, browserName, () => {
+      expect(diff.differing, JSON.stringify(diff)).toBe(0);
+    });
   });
 }
 

@@ -98,8 +98,10 @@
     );
   }
 
+  /* Above whatever screen covers the view (the results fill it), so settings opens from every screen. */
   .corner {
     position: absolute;
+    z-index: 1;
     top: var(--icon-inset);
     right: var(--icon-inset);
     display: flex;

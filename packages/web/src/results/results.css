@@ -205,7 +205,9 @@
   }
 
   /* After copying, a check takes the share icon's place for 2 s (owner decision, 2026-11-15). */
-  .action__check {
+  /* Shown for 2 seconds in the share icon's place: a check once copied, a small cross if copying failed. */
+  .action__check,
+  .action__cross {
     position: absolute;
     opacity: 0;
   }

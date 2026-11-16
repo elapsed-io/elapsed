@@ -1,6 +1,6 @@
 /**
  * Round 5: the ending countdown, the results screen and its replays, compared
- * with their frames; retry, share, reload, reduced motion, small windows and
+ * with their frames; back to the timer, share, reload, reduced motion, small windows and
  * sessions that end on their own.
  */
 
@@ -9,7 +9,8 @@ import type { Page } from '@playwright/test';
 import { BRAND } from '@stopwatch/core';
 import { PAPER, endingFrame, inPalette, resultsRingFrame, resultsStripFrame } from './fixtures/frames.ts';
 import type { ResultsData } from './fixtures/frames.ts';
-import { MINUTE, SECOND, TIMER_END, compareWithReference, endThroughCountdown, finishResults, openApp, settle } from './helpers.ts';
+import { MINUTE, SECOND, TIMER_END, compareWithReference, endThroughCountdown, finishResults, freezeAnimations, openApp, settle } from './helpers.ts';
+import { expectLikeFrame } from './pixels.ts';
 
 // Clock times as in the frames: a 24-hour region, in UTC.
 test.use({ locale: 'en-GB', timezoneId: 'UTC' });
@@ -56,47 +57,50 @@ const SAMPLE: ResultsData = {
   ],
 };
 
-test('the ending countdown matches its frame, with no corner icons', async ({ page, browser }) => {
+test('the ending countdown matches its frame, with no corner icons', async ({ page, browser, browserName }) => {
   await openApp(page);
   await primary(page).click();
   await page.clock.runFor(MINUTE);
   await page.locator(TIMER_END).click();
   await page.locator('.ending').waitFor();
   await page.mouse.move(0, 0);
-  // Hold the bar half full: 190 of 380 px at 2.5 s, once its animation exists, then let the browser draw
-  // that moment (the bar moves on the compositor, which a screenshot can otherwise catch a frame early).
+  // Freeze the bar half full, 190 of 380 px at 2.5 s, once its animation exists: frozen as static style, so
+  // the screenshot cannot catch the compositor's bar at another moment (the countdown runs on the browser's
+  // animation clock, which Playwright's clock does not move).
   const fill = page.locator('.ending__fill');
   await expect.poll(() => fill.evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
-  await fill.evaluate((element) => {
-    for (const animation of element.getAnimations()) {
-      animation.pause();
-      animation.currentTime = 2500;
-    }
-  });
-  await page.waitForTimeout(100);
+  await freezeAnimations(page, { at: { '.ending__fill': 2500 } });
   await expect(page.locator('.corner')).toBeHidden();
   const diff = await compareWithReference(page, browser, endingFrame(190));
   // The moving bar is drawn on its own layer, which shifts anti-aliasing at its edge.
-  expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(20);
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(20);
+  });
 });
 
-test('results for digits match the "results: digits and timeline" frame exactly', async ({ page, browser }) => {
+test('results for digits match the "results: digits and timeline" frame exactly', async ({ page, browser, browserName }) => {
   await playSampleSession(page);
   await expect(page.locator('.strip__label').filter({ hasText: '17:00' })).toBeHidden();
   const diff = await compareWithReference(page, browser, resultsStripFrame(SAMPLE));
-  expect(diff).toMatchObject({ differing: 0 });
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff).toMatchObject({ differing: 0 });
+  });
 });
 
-test('results in the paper theme match the "results, paper theme" frame exactly', async ({ page, browser }) => {
+test('results in the paper theme match the "results, paper theme" frame exactly', async ({ page, browser, browserName }) => {
   await playSampleSession(page, undefined, { theme: 'paper' });
   const diff = await compareWithReference(page, browser, inPalette(PAPER, () => resultsStripFrame(SAMPLE)));
-  expect(diff).toMatchObject({ differing: 0 });
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff).toMatchObject({ differing: 0 });
+  });
 });
 
-test('results for ring match the "results: analog and ring" frame exactly', async ({ page, browser }) => {
+test('results for ring match the "results: analog and ring" frame exactly', async ({ page, browser, browserName }) => {
   await playSampleSession(page, 'ring');
   const diff = await compareWithReference(page, browser, resultsRingFrame(SAMPLE));
-  expect(diff).toMatchObject({ differing: 0 });
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff).toMatchObject({ differing: 0 });
+  });
 });
 
 test('timeline replays as the focus strip too', async ({ page }) => {
@@ -209,17 +213,50 @@ test('the ring replay is one progress value: the arcs are revealed exactly behin
   }
 });
 
-test('retry and Space start a new session; the finished one leaves tab storage', async ({ page }) => {
-  await openApp(page);
+for (const how of ['click', 'Space'] as const) {
+  test(`back to the timer (${how}) shows the idle timer, starts nothing, and the finished session leaves tab storage`, async ({ page }) => {
+    await openApp(page);
+    await primary(page).click();
+    await page.clock.runFor(3 * MINUTE);
+    await endThroughCountdown(page);
+    expect(await page.evaluate(() => Object.keys(sessionStorage))).toEqual(['timer.finished']);
+    const back = page.getByRole('button', { name: 'back to the timer' });
+    await expect(back).toBeFocused();
+    if (how === 'click') await back.click();
+    else await page.keyboard.press('Space');
+    await expect(page.locator('.results')).toBeHidden();
+    await expect(primary(page)).toHaveAccessibleName('start');
+    await expect(primary(page)).toBeFocused();
+    expect(await page.evaluate(() => [Object.keys(sessionStorage), localStorage.getItem('timer.active')])).toEqual([[], null]);
+    // A reload shows the timer, not the old results; the next session starts from there.
+    await page.reload();
+    await expect(page.locator('.results')).toBeHidden();
+    await page.keyboard.press('Space');
+    await expect(primary(page)).toHaveAccessibleName('pause');
+  });
+}
+
+test('the settings icon opens the panel over the results, and closing it leaves the results as they were', async ({ page }) => {
+  await openApp(page, { width: 1280, height: 800 });
   await primary(page).click();
-  await page.clock.runFor(3 * MINUTE);
+  await page.clock.runFor(42 * MINUTE + 7 * SECOND);
   await endThroughCountdown(page);
-  expect(await page.evaluate(() => Object.keys(sessionStorage))).toEqual(['timer.finished']);
-  await expect(page.getByRole('button', { name: 'retry' })).toBeFocused();
-  await page.getByRole('button', { name: 'retry' }).click();
-  await expect(primary(page)).toHaveAccessibleName('pause');
-  await expect(page.locator('.results')).toBeHidden();
-  expect(await page.evaluate(() => Object.keys(sessionStorage))).toEqual([]);
+  await finishResults(page);
+  const before = await page.locator('.results').innerText();
+  await page.locator('.icon-button--settings').click();
+  await expect(page.locator('.settings')).toBeVisible();
+  await expect(page.locator('.results')).toBeVisible();
+  await page.getByRole('button', { name: 'close' }).click();
+  await expect(page.locator('.settings')).toBeHidden();
+  await expect(page.locator('.icon-button--settings')).toBeFocused();
+  await expect(page.locator('.results')).toBeVisible();
+  expect(await page.locator('.results').innerText()).toBe(before);
+  await expect(page.locator('.results .visually-hidden')).toHaveText('00:42:07');
+  // The comma shortcut opens it over the results too.
+  await page.keyboard.press(',');
+  await expect(page.locator('.settings')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.results')).toBeVisible();
 });
 
 test('a reload shows the results again, in their final state, without the replay', async ({ page }) => {
@@ -270,6 +307,23 @@ test.describe('share', () => {
     const line = `i studied for 1h 47m on ${BRAND.name} http://localhost:4173/`;
     expect(await page.evaluate(() => (window as unknown as { __written: string[] }).__written)).toEqual([line]);
     if (browserName === 'chromium') expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(line);
+  });
+
+  test('when the browser refuses to copy, shows a small cross for 2 seconds and says so', async ({ page }) => {
+    await page.addInitScript(() => {
+      navigator.clipboard.writeText = () => Promise.reject(new DOMException('refused', 'NotAllowedError'));
+    });
+    await openApp(page);
+    await primary(page).click();
+    await page.clock.runFor(45 * MINUTE);
+    await endThroughCountdown(page);
+    await finishResults(page);
+    await page.getByRole('button', { name: 'share' }).click();
+    await expect(page.locator('[role="status"]')).toHaveText('couldn’t copy');
+    await expect(page.locator('.action__cross')).toHaveCSS('opacity', '1');
+    await expect(page.locator('.action__check')).toHaveCSS('opacity', '0');
+    // Gone after its 2 seconds (the browser's own animation clock).
+    await expect(page.locator('.action__cross')).toHaveCSS('opacity', '0', { timeout: 4000 });
   });
 
   test('opens the share sheet on a touch device', async ({ page }) => {
@@ -345,7 +399,7 @@ test('a pause past the limit skips the countdown and shows the results, in every
   await page.clock.runFor(31 * MINUTE);
   // Both tabs replay 31 minutes of one-second wakes first, which is slow when tests run in parallel.
   for (const tab of [page, other]) {
-    await expect(tab.getByRole('button', { name: 'retry' })).toBeVisible({ timeout: 15_000 });
+    await expect(tab.getByRole('button', { name: 'back to the timer' })).toBeVisible({ timeout: 15_000 });
     await expect(tab.getByRole('button', { name: 'cancel' })).toBeHidden();
   }
   await finishResults(page);
