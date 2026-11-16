@@ -14,7 +14,12 @@ when the run stops; questions for the owner are collected below as they come up.
   `claude/release-2-plan` and `claude/release-2.1` was refused by this session's GitHub connection; the owner
   deletes them.
 - Round 2.1 follow-up: the seconds' slide never jumps when settings open (plan v5; decision 277).
-- Round 2.2: the analog stopwatch (decisions 278, 279).
+- Round 2.2: the analog stopwatch (decisions 278, 279). Two intermittent test failures in the reference image
+  were fixed in the tests, not the product: the 30-day removal test re-created, by opening it to read it, the
+  cache the page had just removed (decision 280; 40 repeats pass where about one in ten failed), and a WebKit
+  test read the CSP reports before the browser had fired them (decision 281). Checks: `npm run check` (541 unit
+  tests) and the end-to-end suite in Chromium, Firefox and WebKit through the reference image (602 passed,
+  10 skipped as declared).
 
 ## Questions for the owner
 

@@ -52,6 +52,10 @@ None new: the mode reads only the session's focused time.
   reduced motion; the time is readable on request and not shown; the analog tile matches the Release 2 display
   frame's in graphite and paper; the display panel with four columns; a stored "analog" now shows analog; the
   seconds' slide with settings open (real time, and frozen across 10 s and 60 s).
+- **Test fix:** the 30-day removal test no longer re-creates, by reading it, the cache the page has just
+  removed (decision 280).
+- **Test fix:** tests that expect a CSP violation report wait for it, as the browser fires it from a queued
+  task (decision 281; WebKit once read before the report arrived).
 - **Firefox and WebKit:** through the reference image.
 
 ## 8. Open risks and follow-ups

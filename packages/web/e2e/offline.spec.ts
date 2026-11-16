@@ -79,6 +79,15 @@ function modeCaches(page: Page): Promise<{ name: string; paths: string[]; lastUs
   });
 }
 
+/**
+ * Only the names of the downloaded modes' caches. A poll that runs while the page is removing a mode must not
+ * open its cache: opening a cache by name creates it, so the poll would put back, empty, the cache the page had
+ * just removed (decision 280).
+ */
+function modeCacheNames(page: Page): Promise<string[]> {
+  return page.evaluate(async () => (await caches.keys()).filter((name) => name.startsWith('timer-offline-mode-')).sort());
+}
+
 /** Shows `mode` (a stored setting, as the panel would store it) and waits until it is kept for offline use. */
 async function useMode(page: Page, mode: string): Promise<void> {
   await page.evaluate((id) => {
@@ -151,7 +160,7 @@ test('a mode unused for 30 days is removed when the page loads, but never the on
   });
   await page.clock.setSystemTime(start + 31 * day);
   await page.goto('/');
-  await expect.poll(async () => (await modeCaches(page)).map(({ name }) => name)).toEqual(['timer-offline-mode-timeline']);
+  await expect.poll(() => modeCacheNames(page)).toEqual(['timer-offline-mode-timeline']);
 
   // Long unused, but the mode about to be shown is kept (and used again).
   await page.evaluate(() => {
@@ -160,6 +169,7 @@ test('a mode unused for 30 days is removed when the page loads, but never the on
   await page.clock.setSystemTime(start + 60 * day);
   await page.goto('/');
   await page.locator('.timeline').waitFor();
+  await expect.poll(() => modeCacheNames(page)).toEqual(['timer-offline-mode-timeline']);
   await expect.poll(async () => (await modeCaches(page)).map(({ name, lastUse }) => [name, (lastUse ?? 0) >= start + 60 * day])).toEqual([['timer-offline-mode-timeline', true]]);
 });
 

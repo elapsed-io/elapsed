@@ -106,9 +106,10 @@ test('the browser enforces Trusted Types and blocks inline styles', async ({ pag
 
   expect(outcome.sink).toBe('TypeError');
   expect(outcome.background).toBe('rgb(14, 15, 17)');
-  const reported = await violations();
-  expect(reported.some((v) => v.startsWith('require-trusted-types-for'))).toBe(true);
-  expect(reported.some((v) => v.startsWith('style-src'))).toBe(true);
+  // Violation events are fired from a queued task (CSP 3, "Report a violation"), so they can arrive after the
+  // call that was blocked returns: wait for them (WebKit was sometimes still to fire one, decision 281).
+  await expect.poll(async () => (await violations()).some((v) => v.startsWith('require-trusted-types-for'))).toBe(true);
+  await expect.poll(async () => (await violations()).some((v) => v.startsWith('style-src'))).toBe(true);
 });
 
 test('uses the self-hosted trimmed font for the time and the buttons', async ({ page }) => {
