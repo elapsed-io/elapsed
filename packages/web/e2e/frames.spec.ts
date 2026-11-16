@@ -64,6 +64,8 @@ test('running after a minute shows hh:mm exactly as the running frame', async ({
 
 test('idle in the paper theme matches the "idle, paper theme" frame exactly', async ({ page, browser, browserName }) => {
   await openApp(page, { settings: { theme: 'paper' } });
+  // Nothing moving, even in a browser busy enough to start a transition late.
+  await settle(page);
   const diff = await compareWithReference(page, browser, inPalette(PAPER, idleFrame));
   expectLikeFrame(diff, browserName, () => {
     expect(diff).toMatchObject({ differing: 0 });
@@ -72,6 +74,8 @@ test('idle in the paper theme matches the "idle, paper theme" frame exactly', as
 
 test('the idle frame reconstruction matches the graphite idle screen too', async ({ page, browser, browserName }) => {
   await openApp(page);
+  // Nothing moving, even in a browser busy enough to start a transition late.
+  await settle(page);
   const diff = await compareWithReference(page, browser, idleFrame());
   expectLikeFrame(diff, browserName, () => {
     expect(diff).toMatchObject({ differing: 0 });
