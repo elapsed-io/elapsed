@@ -15,14 +15,19 @@ export interface ModeManifest {
   readonly budget: { readonly codeBytes: number; readonly artBytes: number };
   /** The module that holds the mode, relative to packages/web; the size check finds its chunk by this. */
   readonly source: string;
+  /**
+   * The art the mode draws, by asset-registry key (art/registry.ts). Each key draws a placeholder until
+   * the mode's catalog registers it; the catalog's bytes count against `budget.artBytes`.
+   */
+  readonly art: readonly string[];
 }
 
 const budget = { codeBytes: CONFIG.budgets.displayMode.codeBytes, artBytes: CONFIG.budgets.displayMode.artBytes };
 
 export const MODE_MANIFESTS: readonly ModeManifest[] = [
-  { id: 'digits', name: BRAND.copy.modes.digits, tier: 'core', budget, source: 'src/modes/digits/digits.ts' },
-  { id: 'ring', name: BRAND.copy.modes.ring, tier: 'on-choice', budget, source: 'src/modes/ring/ring.ts' },
-  { id: 'timeline', name: BRAND.copy.modes.timeline, tier: 'on-choice', budget, source: 'src/modes/timeline/timeline.ts' },
+  { id: 'digits', name: BRAND.copy.modes.digits, tier: 'core', budget, source: 'src/modes/digits/digits.ts', art: [] },
+  { id: 'ring', name: BRAND.copy.modes.ring, tier: 'on-choice', budget, source: 'src/modes/ring/ring.ts', art: [] },
+  { id: 'timeline', name: BRAND.copy.modes.timeline, tier: 'on-choice', budget, source: 'src/modes/timeline/timeline.ts', art: [] },
 ];
 
 export const DEFAULT_MODE_ID = 'digits';
