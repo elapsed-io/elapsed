@@ -88,6 +88,11 @@ export function idleFrame(): string {
   return root(26, `<div style="${TIME_STYLE}; font-size: 104px">00${COLON}00${COLON}00</div><div style="display: flex; gap: 14px">${BUTTON('start', C.accent)}</div>`);
 }
 
+/** The "soon" frame for elapsed.io before launch (graphite; in the paper palette, the light frame). */
+export function soonFrame(): string {
+  return root(14, `<div style="font-size: 13px; color: ${C.muted}; letter-spacing: 0.16em">elapsed</div><div style="${TIME_STYLE}; font-size: 120px">soon</div>`, false);
+}
+
 /** The running frame at `t` seconds of focus, as its renderVals() computes it. */
 export function runningFrame(t: number): string {
   const s = Math.floor(t) % 60;

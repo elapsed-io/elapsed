@@ -1,0 +1,77 @@
+/*
+ * elapsed.io before launch: the "soon" frames (720 × 450). The default theme
+ * follows the system's setting: graphite when dark, paper when light.
+ * Like the timer, only the big word scales with the window, by
+ * min(width ÷ 720, height ÷ 450); the small name stays at its frame size.
+ *
+ * The font is the site's own trimmed Archivo ("Timer Sans", OFL 1.1, see
+ * OFL.txt), cut down to the letters on this page.
+ */
+
+@font-face {
+  font-family: "Timer Sans";
+  src: url("/soon.woff2") format("woff2");
+  font-weight: 300 500;
+  font-stretch: 92%;
+  font-style: normal;
+  font-display: block;
+}
+
+:root {
+  --background: #0e0f11;
+  --foreground: #eceae4;
+  --muted: #888785;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: #f6f5f2;
+    --foreground: #1a1b1e;
+    --muted: #7d7d7d;
+    color-scheme: light;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Timer Sans", system-ui, sans-serif;
+  font-stretch: 92%;
+}
+
+.soon {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.soon__name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0.16em;
+}
+
+.soon__word {
+  margin: 0;
+  font-weight: 300;
+  font-stretch: 92%;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  text-align: center;
+  font-size: calc(120px * min(100vw / 720px, 100dvh / 450px));
+}

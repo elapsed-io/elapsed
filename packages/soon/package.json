@@ -1,0 +1,12 @@
+{
+  "name": "@stopwatch/soon",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The static \"soon\" page elapsed.io shows before launch, deployed on its own.",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elapsed-io/elapsed.git",
+    "directory": "packages/soon"
+  }
+}

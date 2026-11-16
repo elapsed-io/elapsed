@@ -1,0 +1,18 @@
+// The "soon" page for elapsed.io before launch: static files only, no Worker
+// script, deployed separately from the app (plan, Release 1, round 8). The
+// owner deploys it; see README.md.
+{
+  "name": "elapsed-soon",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    // Any path shows the page.
+    "directory": "./public",
+    "not_found_handling": "single-page-application"
+  },
+  // elapsed.io shows this page until launch, when the app's Worker takes the domain over.
+  "routes": [{ "pattern": "elapsed.io", "custom_domain": true }],
+  // Nothing is logged: the page counts nothing.
+  "observability": { "enabled": false },
+  "workers_dev": false,
+  "preview_urls": false
+}
