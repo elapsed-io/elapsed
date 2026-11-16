@@ -1,6 +1,6 @@
 // The Worker and its bindings (not deployed yet; see README.md).
 {
-  "name": "stopwatch",
+  "name": "elapsed",
   "main": "src/worker.ts",
   "compatibility_date": "2026-11-01",
   // Static files: the built site, with its _headers. The Worker runs only for /api/.
@@ -12,7 +12,7 @@
   "d1_databases": [
     {
       "binding": "COUNTS",
-      "database_name": "stopwatch-counts",
+      "database_name": "elapsed",
       // Filled in when the database is created, at the first deploy.
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations"
@@ -20,7 +20,7 @@
   ],
   // No request logs: the endpoint keeps nothing about a request (plan, Privacy).
   "observability": { "enabled": false },
-  // The site lives on its own domain (an open decision: the product name), not on workers.dev.
+  // The site will live on its own domain (elapsed.io, attached at launch), never on workers.dev.
   "workers_dev": false,
   "preview_urls": false
 }

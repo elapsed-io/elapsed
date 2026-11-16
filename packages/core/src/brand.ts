@@ -3,19 +3,19 @@
  * domain and every piece of user-facing copy live here, so a rename touches
  * this file only.
  *
- * The product name is an open decision. Until it is settled the name is the
- * placeholder "[site]", which must not appear anywhere else in the codebase
- * (tooling/brand-placeholder.test.ts enforces this).
+ * The product is "elapsed", always lowercase, at elapsed.io (owner decision,
+ * 2026-11-16). Nothing else in the codebase spells the name out; it is read
+ * from here (tooling/repository-text.test.ts checks the old placeholder is gone).
  *
  * Interface text is lowercase throughout (plan, Product summary); the tests
  * check every copy string.
  */
 
 export const BRAND = {
-  /** Open decision: product name. */
-  name: '[site]',
-  /** Open decision: the product's domain follows from its name. */
-  domain: '[domain]',
+  /** The product name, always lowercase. */
+  name: 'elapsed',
+  /** The product's domain. Not attached to the Worker until launch. */
+  domain: 'elapsed.io',
   owner: {
     name: 'humanbn',
     url: 'https://humanbn.com',

@@ -271,3 +271,14 @@ Owner answers for this round are decisions 123 to 138.
 | --- | --- | --- |
 | 154 | A blur-away animation whose window has passed is held at its end, never played again. `play()` on a finished animation rewinds it, so every 10 s render (which re-pins the animations to focused time) made the ones digit reappear and blur again. A browser test now lets the animations play in real time instead of holding them, and checks that the ones digit stays gone at 25 s. | Bug 1 in the owner's video: "00:00:20" showed every digit. The frame tests held animations at fixed moments, which hid it. |
 | 155 | The results screen is laid out unseen (`visibility: hidden`) until its timing is set, and the corner icons return only then. The replay's drawing code loads between showing the results and timing them, which let one frame of the finished results show before the tabulating screen. A browser test watches every change to the page and fails if the results can be seen before their fade-in. | Bug 2 in the owner's video: a frame of the results at 00:00:25, then the tabulating screen, then the results. |
+
+## Release 1, round 6: Settings and themes (2026-11-16)
+
+### The owner's plan and changes
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| 156 | **owner** `docs/plan.md` is replaced by "elapsed: Build Plan for Claude Code" word for word, with one exception: the repository is public, so the plan's two mentions of the admin address that owns the backend service accounts read "the private admin address" and "a private admin address". A repository test fails if that address appears in any file. | Changes, item 2: the address must never be in code, on the site or in public docs. |
+| 157 | **owner** The product is "elapsed" at elapsed.io, both in the brand module; the tab titles and share text follow from it. The Worker is renamed "elapsed", and its (not yet created) database "elapsed", since it will hold the counts and the crash reports. The custom domain is not attached until launch. The workspace package names (`@stopwatch/*`) are internal and unchanged. | Changes, item 1. |
+| 158 | **owner** The panel is built from the five Release 1 settings frames. Only categories with a setting are shown: timer, display, appearance, notifications, privacy and data. Advanced arrives with custom CSS in round 7, so its row, which the frames draw, is hidden until then. | Changes, items 3 and 5. |
+| 159 | **owner** Nothing in the panel shrinks; the search box keeps its height. The footer reads "changes are autosaved". Footer links are data in the brand module and appear only once their page exists, so none shows yet: there is no about, privacy, terms, feedback or donation page, and the source code link waits for the owner to confirm the repository address the site should name. | Changes, item 4. |

@@ -16,7 +16,7 @@ As of Release 1, round 5 (End screen).
 | Cache Storage | `timer-offline-<version>`: copies of the site's own files (page, script, stylesheet, font, manifest, icon, and display modes once picked). No personal data and nothing from `/api/`. Old versions are removed when a new one takes over; the kill switch empties it. |
 | Service worker | One registration for the site's own scope (`/`). |
 | Session storage (this tab only) | `timer.finished`: the last finished session (the same fields as `timer.active`'s session, with how it ended), from when it ends until a new session starts or the tab closes. Validated whenever read. |
-| Sharing | Only when the user presses share: on a touch device, the device's share sheet receives "i studied for 2h 47m on [name]" and the site's address; on a computer, the same line goes to the clipboard. Nothing else, and nothing to a server. |
+| Sharing | Only when the user presses share: on a touch device, the device's share sheet receives "i studied for 2h 47m on elapsed" and the site's address; on a computer, the same line goes to the clipboard. Nothing else, and nothing to a server. |
 | IndexedDB, cookies | None. Lint bans `document.cookie`. |
 | Server data | Cloudflare D1, table `daily_counts`: one row per UTC day and event (`visit`, `session`) holding a total. Nothing else. Kept as long as the site runs; totals describe no one. |
 | Logs | The Worker writes none (`observability` off). Cloudflare's platform keeps its own standard request logs for the site. |

@@ -1,7 +1,7 @@
-# stopwatch
+# elapsed
 
-A website that opens directly on a stopwatch for tracking focused work. The product name is not yet
-chosen; it lives in `packages/core/src/brand.ts`.
+A website that opens directly on a stopwatch for tracking focused work, at elapsed.io. The name, the
+domain and all user-facing copy live in `packages/core/src/brand.ts`.
 
 The build plan is `docs/plan.md`. It is the source of truth; its Architecture invariants, Principles and
 Working rules apply to every change. The visual source of truth is the design canvas handed over with it.
