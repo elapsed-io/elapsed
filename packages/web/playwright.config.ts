@@ -20,7 +20,9 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        ...(executablePath === undefined ? {} : { launchOptions: { executablePath } }),
+        // The full Chromium in headless mode, not Playwright's stripped headless shell: it is the browser
+        // people use, and it draws the frames the same way on every run (decision 184).
+        ...(executablePath === undefined ? { channel: 'chromium' } : { launchOptions: { executablePath } }),
       },
     },
   ],

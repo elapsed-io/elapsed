@@ -53,8 +53,8 @@ async function frameReference(browser: Browser, name: SettingsFrameName, palette
 /**
  * Shows the panel as the frames draw it: after a change (so "saved" shows),
  * with `name` open. The saved check is held at full opacity, and the panel is
- * repainted once: tiles re-rastered piecemeal while it opened can differ from
- * a fresh paint by a few levels of anti-aliasing.
+ * painted afresh once: tiles re-rastered piecemeal while it opened can differ
+ * from a fresh paint by a few levels of anti-aliasing.
  */
 async function showLikeFrame(page: Page, name: SettingsFrameName): Promise<void> {
   await openPanel(page);
@@ -69,8 +69,14 @@ async function showLikeFrame(page: Page, name: SettingsFrameName): Promise<void>
     const saved = document.querySelector<HTMLElement>('.settings__saved');
     for (const animation of saved?.getAnimations() ?? []) animation.cancel();
     saved?.style.setProperty('opacity', '1');
-    document.querySelector<HTMLElement>('.settings')?.style.setProperty('outline', '0px solid transparent');
+    // Paint the panel afresh: take it out of the page and put it back.
+    const panel = document.querySelector<HTMLElement>('.settings');
+    panel?.style.setProperty('display', 'none');
+    panel?.getBoundingClientRect();
+    panel?.style.removeProperty('display');
   });
+  // Let the browser draw at least one new frame (the page's own clock is held, so this waits in real time).
+  await page.waitForTimeout(100);
 }
 
 test.describe('the panel matches its frames', () => {

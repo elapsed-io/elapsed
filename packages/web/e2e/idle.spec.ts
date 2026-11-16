@@ -130,7 +130,7 @@ test('matches the idle frame pixel for pixel at 720 × 450', async ({ page, brow
 
   const diff = await diffPngs(reference, site, frame);
   await reference.close();
-  expect(diff).toEqual({ total: 720 * 450, differing: 0, visible: 0, maxChannelDelta: 0 });
+  expect(diff).toMatchObject({ total: 720 * 450, differing: 0, visible: 0, maxChannelDelta: 0 });
 });
 
 test('paints the same idle frame before the script runs', async ({ browser }) => {
@@ -151,7 +151,7 @@ test('paints the same idle frame before the script runs', async ({ browser }) =>
   const diff = await diffPngs(reference, site, frame);
   await reference.close();
   await context.close();
-  expect(diff).toEqual({ total: 720 * 450, differing: 0, visible: 0, maxChannelDelta: 0 });
+  expect(diff).toMatchObject({ total: 720 * 450, differing: 0, visible: 0, maxChannelDelta: 0 });
 });
 
 test.describe('window scaling', () => {

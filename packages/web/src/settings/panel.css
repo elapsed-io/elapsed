@@ -152,9 +152,20 @@
     stroke-width: var(--icon-stroke);
   }
 
-  .settings__search-input {
+  /* The hint is text in the label, as drawn; the field lies over it, so no field clips its first pixel. */
+  .settings__search-field {
+    position: relative;
     flex: 1;
+    align-self: stretch;
     min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .settings__search-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
     margin: 0;
     padding: 0;
     border: 0;
@@ -162,11 +173,6 @@
     color: var(--color-foreground);
     font: inherit;
     appearance: none;
-  }
-
-  .settings__search-input::placeholder {
-    color: var(--color-muted);
-    opacity: 1;
   }
 
   .settings__search-input:focus {
@@ -561,16 +567,35 @@
     border-radius: var(--colors-swatch-radius);
   }
 
+  /* The value is text, as drawn; the field over it shows its own text only while it is being edited. */
+  .color-row__value {
+    position: relative;
+    display: flex;
+    align-items: center;
+    font-size: var(--colors-size);
+    font-variant-numeric: tabular-nums;
+  }
+
   .color-row__hex {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 8ch;
+    height: 100%;
     margin: 0;
     padding: 0;
     border: 0;
     background: transparent;
     color: var(--color-foreground);
-    font-family: inherit;
-    font-size: var(--colors-size);
-    font-variant-numeric: tabular-nums;
+    font: inherit;
+  }
+
+  .color-row__hex:not(:focus) {
+    color: transparent;
+  }
+
+  .color-row__value:focus-within .color-row__hex-text {
+    visibility: hidden;
   }
 
   /* ---- Fonts ----------------------------------------------------------- */

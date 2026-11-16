@@ -87,6 +87,7 @@ export class SettingsPanel {
   readonly #saved: HTMLDivElement;
   readonly #savedText: Text;
   readonly #search: HTMLInputElement;
+  readonly #searchHint: HTMLSpanElement;
   readonly #back: HTMLButtonElement;
   readonly #empty: HTMLDivElement;
   readonly #phone: MediaQueryList;
@@ -119,11 +120,17 @@ export class SettingsPanel {
       html(doc, 'div', { class: 'settings__actions' }, [this.#saved, close]),
     ]);
 
-    this.#search = html(doc, 'input', { class: 'settings__search-input', attrs: { type: 'search', placeholder: copy.search, 'aria-label': copy.search, autocomplete: 'off', spellcheck: 'false' } });
+    // The hint is plain text, as the frames draw it, with the field laid over it; it hides while the field holds text.
+    this.#search = html(doc, 'input', { class: 'settings__search-input', attrs: { type: 'search', 'aria-label': copy.search, autocomplete: 'off', spellcheck: 'false' } });
+    this.#searchHint = html(doc, 'span', { class: 'settings__search-hint', attrs: { 'aria-hidden': 'true' } }, [copy.search]);
     this.#search.addEventListener('input', () => {
+      this.#searchHint.hidden = this.#search.value !== '';
       this.#filter();
     });
-    const search = html(doc, 'label', { class: 'settings__search' }, [iconElement(doc, 'search', 'settings__search-icon'), this.#search]);
+    const search = html(doc, 'label', { class: 'settings__search' }, [
+      iconElement(doc, 'search', 'settings__search-icon'),
+      html(doc, 'span', { class: 'settings__search-field' }, [this.#searchHint, this.#search]),
+    ]);
 
     const list = html(doc, 'div', { class: 'settings__categories' });
     for (const id of SETTINGS_CATEGORIES) {
@@ -444,6 +451,8 @@ export class SettingsPanel {
       const swatch = html(doc, 'span', { class: 'color-row__swatch', attrs: { 'aria-hidden': 'true' } });
       const picker = html(doc, 'input', { class: 'color-row__picker', attrs: { type: 'color', 'aria-label': name } });
       const hex = html(doc, 'input', { class: 'color-row__hex', attrs: { type: 'text', 'aria-label': copy.colors.hex.replace('{name}', name), maxlength: '7', spellcheck: 'false', autocomplete: 'off' } });
+      // The value is drawn as plain text, as in the frame; the field over it shows its own text only while editing.
+      const hexText = html(doc, 'span', { class: 'color-row__hex-text', attrs: { 'aria-hidden': 'true' } });
       const choose = (value: string): void => {
         const colour = normaliseHex(value);
         if (colour === null) return;
@@ -467,9 +476,14 @@ export class SettingsPanel {
         const colour = (settings.colors ?? presetColors(settings))[part];
         swatch.style.setProperty('--swatch', colour);
         if (picker.value !== colour) picker.value = colour;
+        hexText.textContent = colour;
         if (doc.activeElement !== hex) hex.value = colour;
       });
-      return html(doc, 'div', { class: 'color-row' }, [html(doc, 'div', { class: 'color-row__label', attrs: { 'aria-hidden': 'true' } }, [name]), html(doc, 'span', { class: 'color-row__well' }, [swatch, picker]), hex]);
+      return html(doc, 'div', { class: 'color-row' }, [
+        html(doc, 'div', { class: 'color-row__label', attrs: { 'aria-hidden': 'true' } }, [name]),
+        html(doc, 'span', { class: 'color-row__well' }, [swatch, picker]),
+        html(doc, 'span', { class: 'color-row__value' }, [hexText, hex]),
+      ]);
     });
     return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.colors.label]), rows), search: searchText(copy.colors.label, copy.colors.background, copy.colors.foreground, copy.colors.accent) };
   }

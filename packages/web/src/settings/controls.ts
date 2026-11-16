@@ -121,8 +121,9 @@ export function slider(doc: Document, options: SliderOptions, choose: (value: nu
     value,
   ]);
   const show = (current: number): void => {
+    // Whole percent of the track, rounded up, as the frames draw it: 30 min of 5 to 60 min (45.45 %) is drawn at 46 %.
     const fraction = (current - options.min) / (options.max - options.min);
-    track.style.setProperty('--fraction', String(Math.round(fraction * 10_000) / 10_000));
+    track.style.setProperty('--fraction', String(Math.ceil(fraction * 100 - 1e-9) / 100));
     value.textContent = options.format(current);
     input.setAttribute('aria-valuetext', options.format(current));
   };

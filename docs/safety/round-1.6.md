@@ -98,7 +98,8 @@ and forgetting, refusals, 14-day deletion, schema constraints); the settings sto
 sizes and stored records; the font registry; the appearance stylesheet; control value formats; clock
 formats; the repository text checks.
 
-Browser tests (25 new, 114 in total), against the production build under the real CSP:
+Browser tests (26 new, 115 in total), against the production build under the real CSP, in the full Chromium
+run headlessly (decision 184):
 
 - **Frames:** the panel with each of timer, display, appearance, notifications and privacy and data open,
   0 differing pixels against the frames (the owner's rules applied: no advanced row, no footer links, no
@@ -110,9 +111,16 @@ Browser tests (25 new, 114 in total), against the production build under the rea
   the check-in interval rule; a 5-minute pause limit; font previews only when appearance opens, a font
   only when chosen; own fonts refused (too large, not a font, unreadable) and accepted, kept across a
   reload, listed, and removed by clear device data with no database left behind before any file; usage
-  counts off; crash reports off and on, scrubbed; notification permission; phone pages; no CSP violation.
+  counts off; crash reports off and on, scrubbed; notification permission asked only when switched on, and a
+  refused prompt; phone pages; no CSP violation.
 - **Updated:** the first visit's files and the precache are now derived from the build, as the size check
-  derives them; display modes are chosen through stored settings instead of `?mode=`.
+  derives them; display modes are chosen through stored settings instead of `?mode=`; pixel diffs report
+  where they differ; the countdown frame test waits for the browser to draw the moment it holds (a race the
+  busier suite exposed in CI).
+- **CI:** the first runs of this round failed in CI on the frame tests, which passed here. The log showed a
+  slider thumb drawn 0.8 px from the frame (the frame rounds 45.45 % up to 46 %), the first pixel of input
+  text clipped, and run-to-run anti-aliasing noise in Playwright's headless shell; decisions 184 and 185 fix
+  all three.
 
 ## 8. Open risks and follow-ups
 

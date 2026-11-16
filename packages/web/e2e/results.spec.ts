@@ -63,13 +63,17 @@ test('the ending countdown matches its frame, with no corner icons', async ({ pa
   await page.locator(TIMER_END).click();
   await page.locator('.ending').waitFor();
   await page.mouse.move(0, 0);
-  // Hold the bar half full: 190 of 380 px at 2.5 s.
-  await page.locator('.ending__fill').evaluate((fill) => {
-    for (const animation of fill.getAnimations()) {
+  // Hold the bar half full: 190 of 380 px at 2.5 s, once its animation exists, then let the browser draw
+  // that moment (the bar moves on the compositor, which a screenshot can otherwise catch a frame early).
+  const fill = page.locator('.ending__fill');
+  await expect.poll(() => fill.evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
+  await fill.evaluate((element) => {
+    for (const animation of element.getAnimations()) {
       animation.pause();
       animation.currentTime = 2500;
     }
   });
+  await page.waitForTimeout(100);
   await expect(page.locator('.corner')).toBeHidden();
   const diff = await compareWithReference(page, browser, endingFrame(190));
   // The moving bar is drawn on its own layer, which shifts anti-aliasing at its edge.
