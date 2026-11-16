@@ -80,6 +80,17 @@ describe('repository text', () => {
     expect(script).toMatch(new RegExp(`image="mcr\\.microsoft\\.com/playwright:v${String(playwright).replaceAll('.', '\\.')}-noble@sha256:[0-9a-f]{64}"`));
   });
 
+  it('names one Wrangler version everywhere: the one the deploy scripts run', () => {
+    // docs/deploy.md and the other guides give the owner the scripts' exact commands.
+    const scripts = (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts;
+    const pinned = /wrangler@(\d+\.\d+\.\d+)/.exec(scripts['deploy:test'] ?? '')?.[1];
+    expect(pinned).toBeDefined();
+    expect(scripts['deploy:soon']).toContain(`npx --yes wrangler@${String(pinned)} `);
+    const named = files.flatMap((path) => [...readFileSync(join(root, path), 'utf8').matchAll(/wrangler@([\w.-]+)/g)].map((match) => `${path}: ${String(match[1])}`));
+    expect(named.length).toBeGreaterThan(0);
+    expect(named.filter((entry) => !entry.endsWith(`: ${String(pinned)}`))).toEqual([]);
+  });
+
   it('keeps local secret files out of git', () => {
     const ignored = readFileSync(join(root, '.gitignore'), 'utf8').split('\n');
     for (const entry of ['.env', '.env.*', '.dev.vars*', '.wrangler/']) expect(ignored, entry).toContain(entry);
