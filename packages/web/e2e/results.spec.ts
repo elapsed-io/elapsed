@@ -268,3 +268,26 @@ test('a pause past the limit skips the countdown and shows the results, in every
   await finishResults(page);
   await expect(page.locator('.results .visually-hidden')).toHaveText('00:06:00');
 });
+
+test('end now never shows the results before the tabulating screen has held and faded', async ({ page }) => {
+  await openApp(page);
+  await primary(page).click();
+  await page.clock.runFor(25 * SECOND);
+  // Watch every change to the page and note any moment the results could be seen early.
+  await page.evaluate(() => {
+    const early: string[] = [];
+    (window as unknown as { __early: string[] }).__early = early;
+    new MutationObserver(() => {
+      const results = document.querySelector('.results');
+      if (!(results instanceof HTMLElement) || results.hidden) return;
+      const style = getComputedStyle(results);
+      if (style.visibility !== 'hidden' && Number(style.opacity) > 0) early.push(results.hasAttribute('data-ready') ? 'ready' : 'not ready');
+    }).observe(document.body, { subtree: true, attributes: true, childList: true });
+  });
+  await endThroughCountdown(page);
+  await page.locator('.results[data-ready]').waitFor();
+  // Seen only once timed, and then only by its fade-in, which starts 1 s after the bar filled.
+  expect(await page.evaluate(() => (window as unknown as { __early: string[] }).__early)).toEqual([]);
+  const opacity = await page.locator('.results').evaluate((element) => getComputedStyle(element).opacity);
+  expect(Number(opacity)).toBeLessThan(1);
+});

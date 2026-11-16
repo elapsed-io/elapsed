@@ -139,7 +139,8 @@ export class ResultsScreen {
 
     const graphic = html(doc, 'div', { class: 'results__graphic' });
     delete this.element.dataset['ready'];
-    this.element.className = `results ${ring ? 'results--ring' : 'results--strip'}`;
+    // Laid out but unseen until its timing is set: the replay's drawing code may still be loading.
+    this.element.className = `results results--preparing ${ring ? 'results--ring' : 'results--strip'}`;
     this.element.replaceChildren(
       focused,
       ...(ring ? [html(doc, 'div', { class: 'results__row' }, [graphic, stats])] : [graphic, stats]),
@@ -149,6 +150,7 @@ export class ResultsScreen {
 
     await mode.replay(graphic, session);
     this.#time(time, graphic, session, summary, timing);
+    this.element.classList.remove('results--preparing');
     // Everything is drawn and timed (tests and custom CSS can rely on it).
     this.element.dataset['ready'] = '';
   }

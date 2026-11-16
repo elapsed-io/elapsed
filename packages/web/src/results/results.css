@@ -33,6 +33,10 @@
     display: none;
   }
 
+  .results--preparing {
+    visibility: hidden;
+  }
+
   .results--ring {
     gap: var(--results-ring-gap);
   }

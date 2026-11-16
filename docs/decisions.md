@@ -264,3 +264,10 @@ Owner answers for this round are decisions 123 to 138.
 | 151 | Below 720 px wide the results keep a 16 px side margin and three stat columns; the breakpoint is generated from the config module into the token stylesheet, since a media query cannot read a custom property. The ring layout puts the drawing above the stats when they no longer fit side by side, and the results scroll if a window is too short. | Decision 130. |
 | 152 | The plan audit now accounts for every script animation: inline keyframes must use transform or opacity, keyframes built elsewhere are allowed only in the ring replay and the results screen, and the only other properties allowed are stroke offsets in replay modules and `--results-focused` on the results screen. | Decision 138. |
 | 153 | The results screen sets `data-ready` once everything is drawn and timed. | Tests (and later custom CSS) need a moment when the screen is complete. |
+
+### Fixes from the owner's test run (2026-11-16)
+
+| # | Decision | Reason |
+| --- | --- | --- |
+| 154 | A blur-away animation whose window has passed is held at its end, never played again. `play()` on a finished animation rewinds it, so every 10 s render (which re-pins the animations to focused time) made the ones digit reappear and blur again. A browser test now lets the animations play in real time instead of holding them, and checks that the ones digit stays gone at 25 s. | Bug 1 in the owner's video: "00:00:20" showed every digit. The frame tests held animations at fixed moments, which hid it. |
+| 155 | The results screen is laid out unseen (`visibility: hidden`) until its timing is set, and the corner icons return only then. The replay's drawing code loads between showing the results and timing them, which let one frame of the finished results show before the tabulating screen. A browser test watches every change to the page and fails if the results can be seen before their fade-in. | Bug 2 in the owner's video: a frame of the results at 00:00:25, then the tabulating screen, then the results. |

@@ -203,8 +203,10 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     current = 'results';
     modeRoot.hidden = true;
     controlsRoot.hidden = true;
-    screenElement.classList.remove('screen--bare');
     await results.show(session, drawing, { start, reducedMotion: reducedMotion() });
+    if (showing !== session) return;
+    // The corner icons return with the results: their fade-in is set, so they stay unseen until it starts.
+    screenElement.classList.remove('screen--bare');
     if (takeFocus) results.focusRetry();
     render(engine.view);
   };

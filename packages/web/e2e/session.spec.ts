@@ -179,3 +179,28 @@ test('a device clock set back mid-session loses no time', async ({ page }) => {
   await page.clock.runFor(MINUTE);
   expect(await timeText(page)).toBe('00:06');
 });
+
+test('a seconds digit that has blurred away stays away: it never starts over at the next ten seconds', async ({ page }) => {
+  await openApp(page);
+  await primary(page).click();
+  // Renders at 10 s and 20 s re-pin the blur animations to focused time while they play.
+  await page.clock.runFor(25 * SECOND);
+  const state = await page.locator('.time--main').evaluate((time) => {
+    const ones = time.querySelector('.time__ones');
+    const tens = time.querySelector('.time__tens');
+    const timeOf = (element: Element | null): number[] =>
+      (element?.getAnimations() ?? []).map((animation) => Number(animation.currentTime ?? -1));
+    return {
+      onesOpacity: ones === null ? '' : getComputedStyle(ones).opacity,
+      onesTimes: timeOf(ones),
+      tensTimes: timeOf(tens),
+    };
+  });
+  expect(state.onesOpacity).toBe('0');
+  for (const time of state.onesTimes) expect(time).toBeGreaterThanOrEqual(10_000);
+  // The tens digit is part way through its own window (10 to 60 s), pinned to 20 s and playing on.
+  for (const time of state.tensTimes) {
+    expect(time).toBeGreaterThanOrEqual(20_000);
+    expect(time).toBeLessThan(23_000);
+  }
+});

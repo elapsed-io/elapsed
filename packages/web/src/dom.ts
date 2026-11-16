@@ -58,7 +58,11 @@ export function animationsOf(element: Element): Animation[] {
 export function syncAnimations(element: Element, atMs: number, playing: boolean): void {
   for (const animation of animationsOf(element)) {
     animation.currentTime = atMs;
-    if (playing) animation.play();
+    // play() on an animation that has reached its end starts it over (the browser rewinds a
+    // finished animation), so one whose window has passed is held at its end instead.
+    const end = animation.effect?.getComputedTiming().endTime;
+    const over = typeof end === 'number' && atMs >= end;
+    if (playing && !over) animation.play();
     else animation.pause();
   }
 }

@@ -95,3 +95,18 @@ Browser tests (15 new, 87 in total), against the production build under the real
    chosen.
 6. **Accessibility pass (round 8).** Focus styles are the browser's; the replay's drawings are images
    with a text label, and the statistics are a description list.
+
+## Fixes after the owner's test run (2026-11-16)
+
+The owner's screen recording showed two motion bugs that the frame tests, which hold animations at
+fixed moments, could not see:
+
+1. **Seconds starting over every 10 s.** Re-pinning the blur-away to focused time called `play()` on an
+   animation that had already finished, and browsers rewind a finished animation when it is played.
+   Finished windows are now held at their end (decision 154).
+2. **A frame of the results before the tabulating screen.** The results were made visible while the
+   replay's drawing code was still loading, before their fade-in was set. They are now laid out unseen
+   until timed (decision 155).
+
+Both have browser tests that let the animations run in real time; each test fails on the old code and
+passes on the fix. No data, input, dependency or security change. Unit tests: 398; browser tests: 89.
