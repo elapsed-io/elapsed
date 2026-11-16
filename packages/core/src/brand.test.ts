@@ -9,10 +9,14 @@ function strings(value: unknown, path = 'copy'): [string, string][] {
   return [];
 }
 
+/** Names and units the frames write with capitals ("on iPhone", "up to 2 MB"). */
+const PROPER = /\b(?:iPhone|MB|KB)\b/g;
+
 describe('brand', () => {
   it('keeps every interface string lowercase', () => {
     for (const [path, text] of strings(BRAND.copy)) {
-      expect(text, path).toBe(text.toLowerCase());
+      const plain = text.replace(PROPER, '');
+      expect(plain, path).toBe(plain.toLowerCase());
     }
   });
 

@@ -140,7 +140,7 @@ export class TimerEngine {
     const now = this.#observe();
     if (this.#state !== null) return false;
     const session = createSession({ id: this.#newId(), mode, at: now, timeZone: this.#timeZone() });
-    this.#state = startState(session);
+    this.#state = startState(session, this.#interval());
     this.#ended = null;
     this.#hoursReached = 0;
     this.#announcedCheckIn = null;
@@ -167,6 +167,7 @@ export class TimerEngine {
       presenceAt: at,
       missedCheckInAt: null,
       pauseLimitMs: (this.#rules ?? defaultRules()).pauseLimit,
+      checkInIntervalMs: this.#interval(),
     });
     this.#announcedCheckIn = null;
     this.#dirty = true;
@@ -182,7 +183,14 @@ export class TimerEngine {
     const state = this.#state;
     if (state === null || sessionStatus(state.session) !== 'paused') return false;
     const at = this.#stamp(state.session, now);
-    this.#state = freezeState({ ...state, session: resumeSession(state.session, at), presenceAt: at, missedCheckInAt: null, pauseLimitMs: null });
+    this.#state = freezeState({
+      ...state,
+      session: resumeSession(state.session, at),
+      presenceAt: at,
+      missedCheckInAt: null,
+      pauseLimitMs: null,
+      checkInIntervalMs: this.#interval(),
+    });
     this.#announcedCheckIn = null;
     this.#dirty = true;
     this.#events.emit('session.resumed', { at, session: this.#state.session });
@@ -218,6 +226,11 @@ export class TimerEngine {
     return true;
   }
 
+  /** The check-in interval to fix at a sign of presence. */
+  #interval(): number {
+    return (this.#rules ?? defaultRules()).checkInInterval;
+  }
+
   /** The engine's current time: the device clock, corrected for any jump it has detected. */
   now(): number {
     return this.#observe();
@@ -229,7 +242,7 @@ export class TimerEngine {
     const now = this.#observe();
     const state = this.#state;
     if (state === null || this.#rules === null || pendingCheckIn(state, this.#rules, now) === null) return false;
-    this.#state = freezeState({ ...state, presenceAt: now });
+    this.#state = freezeState({ ...state, presenceAt: now, checkInIntervalMs: this.#interval() });
     this.#announcedCheckIn = null;
     this.#dirty = true;
     this.#events.emit('checkin.answered', { at: now, session: state.session });
@@ -262,7 +275,11 @@ export class TimerEngine {
     this.sync();
   }
 
-  /** Changes the check-in interval and pause limit (a pause keeps the limit it began with). */
+  /**
+   * Changes the check-in interval and pause limit. Both apply from the next
+   * sign of presence or pause: a running stretch keeps the interval it began
+   * with, and a pause keeps its limit.
+   */
   setRules(rules: RuleSettings): void {
     this.#rules = normaliseRules(rules);
     this.sync();

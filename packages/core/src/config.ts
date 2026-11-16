@@ -92,6 +92,44 @@ export const CONFIG = {
     maxBodyBytes: 256,
   },
 
+  /** Opt-in crash reports (Release 1, round 6; Privacy). */
+  crashReports: {
+    /** Each report is at most 8 KB. */
+    maxBodyBytes: 8 * KB,
+    /** One address can send at most 5 a minute; the endpoint holds the address in memory only that long. */
+    perAddress: 5,
+    rateWindow: 1 * MINUTE,
+    /** Reports are deleted after 14 days. */
+    retentionDays: 14,
+    /** Lengths that keep a report under its size limit. */
+    maxMessageChars: 500,
+    maxStackChars: 6000,
+    maxVersionChars: 40,
+    /** A page sends at most this many reports, so a broken loop cannot flood the endpoint. */
+    maxPerPage: 5,
+  },
+
+  /** The settings panel and stored settings (Release 1, round 6; Settings catalog). */
+  settings: {
+    /** The check-in interval and pause limit move in these steps on their sliders. */
+    checkInStep: 15 * MINUTE,
+    pauseLimitStep: 5 * MINUTE,
+    /** Time size: one slider from 50 % to 150 %. */
+    timeSizePercent: { default: 100, min: 50, max: 150, step: 5 },
+    /** The "saved" check shows this long after each change. */
+    savedShown: 2000,
+    /** Stored settings longer than this many characters are not read. */
+    maxStoredChars: 16_384,
+    /** At first run, a chosen font may hold the screen back this long while it loads, so the time does not jump. */
+    fontBlockMax: 1000,
+  },
+
+  /** System notifications (Release 1, round 6; Settings catalog > Notifications). */
+  notifications: {
+    /** The pause-limit notification comes this long before a pause would end the session, or at once for shorter limits. */
+    pauseLimitWarning: 5 * MINUTE,
+  },
+
   /** History, streaks and retention (Release 3). */
   history: {
     /** A day counts toward a streak at 15 focused minutes. */
@@ -285,6 +323,45 @@ export const CONFIG = {
       resultsIconPx: 18,
       resultsBoxPx: 32,
     },
+    /** The settings panel, from the five Release 1 settings frames (1280 × 800). */
+    settings: {
+      paddingYPx: 22,
+      paddingXPx: 26,
+      gapPx: 14,
+      titlePx: 18,
+      headerGapPx: 6,
+      savedPx: 11,
+      savedIconPx: 12,
+      savedIconStroke: 2,
+      savedGapPx: 4,
+      closeBoxPx: 28,
+      closeIconPx: 16,
+      search: { heightPx: 34, paddingXPx: 12, radiusPx: 8, textPx: 13, iconPx: 14, gapPx: 8 },
+      row: { heightPx: 40, textPx: 14, paddingXPx: 4, chevronPx: 14 },
+      body: { gapPx: 16, paddingTopPx: 14, paddingXPx: 4, paddingBottomPx: 18 },
+      labelPx: 13,
+      helpPx: 11,
+      itemGapPx: 6,
+      groupGapPx: 8,
+      controlGapPx: 12,
+      segmented: { radiusPx: 7, paddingPx: 2, heightPx: 22, paddingXPx: 10, buttonRadiusPx: 5, textPx: 12 },
+      slider: { widthPx: 150, heightPx: 4, radiusPx: 2, thumbPx: 16, endPx: 11, valuePx: 13, valueWidthPx: 40, gapPx: 10 },
+      toggle: { widthPx: 32, heightPx: 18, knobPx: 14, insetPx: 2 },
+      shortcuts: { textPx: 12, gapPx: 4 },
+      tiles: { columns: 3, gapPx: 8, paddingTopPx: 10, paddingBottomPx: 8, radiusPx: 8, innerGapPx: 6, textPx: 12, previewWidthPx: 56, previewHeightPx: 32, previewDigitsPx: 15 },
+      themes: { columns: 5, gapPx: 8, swatchHeightPx: 42, radiusPx: 6, samplePx: 11, barWidthPx: 26, barHeightPx: 3, barRadiusPx: 2, namePx: 10, innerGapPx: 4, outlinePx: 2, outlineOffsetPx: 2 },
+      colors: { labelWidthPx: 74, swatchPx: 18, swatchRadiusPx: 4, textPx: 12, gapPx: 8 },
+      fonts: { columns: 3, gapPx: 6, heightPx: 32, radiusPx: 6, paddingXPx: 6, textPx: 12 },
+      selectedBorderPx: 2,
+      /** Keyboard focus rings in the panel. */
+      focusRingPx: 2,
+      focusOffsetPx: 2,
+      resetPx: 12,
+      clearButton: { heightPx: 22, paddingXPx: 10, radiusPx: 5, textPx: 12 },
+      footer: { gapPx: 8, paddingTopPx: 10, textPx: 11, linkGapPx: 16 },
+      /** Below this window width the panel fills the screen and each category is its own page. */
+      phoneBelowPx: 720,
+    },
     screens: {
       settingsPanelWidthPx: 440,
       dashboardCardRadiusPx: 12,
@@ -393,6 +470,8 @@ export const CONFIG = {
     unusedModeEvictionDays: 30,
     /** Custom CSS over this size is rejected. */
     customCssMaxBytes: 50 * KB,
+    /** A user's own font file: up to 2 MB. */
+    ownFontMaxBytes: 2 * KB * KB,
   },
 
   /** Size budgets, compressed (Loading and performance > Budgets). */

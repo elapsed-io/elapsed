@@ -1,0 +1,659 @@
+/*
+ * The settings panel, matching the five Release 1 settings frames (1280 × 800).
+ * Every size is a custom property generated from the config module
+ * (virtual:tokens/settings.css); colours are the theme's.
+ *
+ * The panel is drawn in the default font whatever font the timer uses, so a
+ * hard-to-read choice can always be changed back.
+ */
+
+@layer base {
+  /* Beside the panel, the timer has the rest of the window (wide layouts only). */
+  :root[data-settings="open"]:not([data-settings-layout="phone"]) {
+    --view-width: calc(100vw - var(--settings-width));
+  }
+
+  :root[data-settings="open"] .corner {
+    visibility: hidden;
+  }
+
+  /*
+   * Positioned like the frames' panel (the page itself never scrolls). It
+   * becomes a scroll container only when its content is taller than the
+   * window: a scroll container is drawn on its own layer, which shifts edges
+   * by a fraction of a pixel. It has no z-index for the same reason; coming
+   * after the screen in the document, it is painted over it.
+   */
+  .settings {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: var(--settings-width);
+    height: 100dvh;
+    box-sizing: border-box;
+    padding: var(--settings-padding-y) var(--settings-padding-x);
+    overscroll-behavior: contain;
+    background: var(--color-track);
+    border-left: 1px solid var(--color-faint);
+    color: var(--color-foreground);
+    font-family: var(--settings-font-family);
+    font-stretch: var(--settings-font-stretch);
+    display: flex;
+    flex-direction: column;
+    gap: var(--settings-gap);
+  }
+
+  .settings[data-overflow] {
+    overflow-y: auto;
+  }
+
+  .settings[data-layout="phone"] {
+    width: 100%;
+    border-left: 0;
+  }
+
+  .settings:focus {
+    outline: none;
+  }
+
+  .settings[hidden],
+  .settings [hidden] {
+    display: none;
+  }
+
+  /* Nothing in the panel shrinks; the panel scrolls instead (owner changes, item 4). */
+  .settings > * {
+    flex: none;
+  }
+
+  .settings button,
+  .settings input {
+    font-stretch: inherit;
+  }
+
+  /* ---- Header ---------------------------------------------------------- */
+
+  .settings__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .settings__heading {
+    display: flex;
+    align-items: center;
+    gap: var(--settings-header-gap);
+  }
+
+  .settings__title {
+    margin: 0;
+    font-size: var(--settings-title-size);
+    font-weight: inherit;
+  }
+
+  .settings__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--settings-header-gap);
+  }
+
+  .settings__saved {
+    display: flex;
+    align-items: center;
+    gap: var(--settings-saved-gap);
+    font-size: var(--settings-saved-size);
+    color: var(--color-muted);
+    opacity: 0;
+  }
+
+  .settings__saved-icon {
+    width: var(--settings-saved-icon);
+    height: var(--settings-saved-icon);
+    stroke-width: var(--settings-saved-stroke);
+  }
+
+  .settings__close,
+  .settings__back {
+    width: var(--settings-close-box);
+    height: var(--settings-close-box);
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--color-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .settings__close-icon {
+    width: var(--settings-close-icon);
+    height: var(--settings-close-icon);
+    stroke-width: var(--icon-stroke);
+  }
+
+  /* ---- Search ---------------------------------------------------------- */
+
+  .settings__search {
+    display: flex;
+    align-items: center;
+    gap: var(--settings-search-gap);
+    height: var(--settings-search-height);
+    padding: 0 var(--settings-search-padding-x);
+    border-radius: var(--settings-search-radius);
+    background: var(--color-background);
+    color: var(--color-muted);
+    font-size: var(--settings-search-size);
+  }
+
+  .settings__search-icon {
+    flex: none;
+    width: var(--settings-search-icon);
+    height: var(--settings-search-icon);
+    stroke-width: var(--icon-stroke);
+  }
+
+  .settings__search-input {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-foreground);
+    font: inherit;
+    appearance: none;
+  }
+
+  .settings__search-input::placeholder {
+    color: var(--color-muted);
+    opacity: 1;
+  }
+
+  .settings__search-input:focus {
+    outline: none;
+  }
+
+  .settings__search:has(.settings__search-input:focus-visible) {
+    outline: var(--settings-focus-ring) solid var(--color-accent);
+  }
+
+  /* ---- Categories ------------------------------------------------------ */
+
+  .settings__categories {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .settings__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: var(--settings-row-height);
+    padding: 0 var(--settings-row-padding-x);
+    border: 0;
+    border-bottom: 1px solid var(--color-faint);
+    background: transparent;
+    color: var(--color-foreground);
+    font-family: inherit;
+    font-size: var(--settings-row-size);
+  }
+
+  .settings__chevron-box {
+    display: flex;
+  }
+
+  .settings__chevron {
+    width: var(--settings-chevron);
+    height: var(--settings-chevron);
+    stroke-width: var(--icon-stroke);
+  }
+
+  .settings__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--settings-body-gap);
+    padding: var(--settings-body-padding-top) var(--settings-body-padding-x) var(--settings-body-padding-bottom);
+    border-bottom: 1px solid var(--color-faint);
+  }
+
+  .settings__empty {
+    font-size: var(--settings-label-size);
+    color: var(--color-muted);
+  }
+
+  /* ---- Setting rows ---------------------------------------------------- */
+
+  .setting {
+    display: flex;
+    flex-direction: column;
+    gap: var(--settings-item-gap);
+  }
+
+  .setting--group {
+    gap: var(--settings-group-gap);
+  }
+
+  .setting__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--settings-control-gap);
+  }
+
+  .setting__label {
+    font-size: var(--settings-label-size);
+  }
+
+  .setting__help {
+    font-size: var(--settings-help-size);
+    color: var(--color-muted);
+  }
+
+  .setting__value {
+    font-size: var(--settings-reset-size);
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .settings__reset {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--settings-reset-size);
+    color: var(--color-muted);
+    text-decoration: underline;
+  }
+
+  /* ---- Segmented choices ----------------------------------------------- */
+
+  .segmented {
+    display: flex;
+    background: var(--color-background);
+    border-radius: var(--segmented-radius);
+    padding: var(--segmented-padding);
+  }
+
+  .segmented__option {
+    height: var(--segmented-height);
+    padding: 0 var(--segmented-padding-x);
+    border-radius: var(--segmented-button-radius);
+    border: 0;
+    font-family: inherit;
+    font-size: var(--segmented-size);
+    background: transparent;
+    color: var(--color-muted);
+  }
+
+  .segmented__option.is-selected {
+    background: var(--color-pause);
+    color: var(--color-foreground);
+  }
+
+  /* ---- Sliders --------------------------------------------------------- */
+
+  .slider {
+    display: flex;
+    align-items: center;
+    gap: var(--slider-gap);
+  }
+
+  .slider__end {
+    font-size: var(--slider-end-size);
+    color: var(--color-muted);
+  }
+
+  .slider__track {
+    --fraction: 0;
+    position: relative;
+    width: var(--slider-width);
+    height: var(--slider-height);
+    border-radius: var(--slider-radius);
+    background: var(--color-faint);
+  }
+
+  .slider__fill {
+    width: calc(var(--fraction) * 100%);
+    height: var(--slider-height);
+    border-radius: var(--slider-radius);
+    background: var(--color-accent);
+  }
+
+  .slider__thumb {
+    position: absolute;
+    top: calc((var(--slider-height) - var(--slider-thumb)) / 2);
+    left: calc(var(--fraction) * 100% - var(--slider-thumb) / 2);
+    width: var(--slider-thumb);
+    height: var(--slider-thumb);
+    border-radius: calc(var(--slider-thumb) / 2);
+    background: var(--color-foreground);
+  }
+
+  /* The native slider, invisible, takes input over the drawn one; its thumb spans exactly the track. */
+  .slider__input {
+    position: absolute;
+    top: calc((var(--slider-height) - var(--slider-thumb)) / 2);
+    left: calc(var(--slider-thumb) / -2);
+    width: calc(100% + var(--slider-thumb));
+    height: var(--slider-thumb);
+    margin: 0;
+    opacity: 0;
+    appearance: none;
+  }
+
+  .slider__input::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--slider-thumb);
+    height: var(--slider-thumb);
+  }
+
+  .slider__input::-moz-range-thumb {
+    width: var(--slider-thumb);
+    height: var(--slider-thumb);
+    border: 0;
+  }
+
+  .slider__track:has(.slider__input:focus-visible) .slider__thumb {
+    outline: var(--settings-focus-ring) solid var(--color-accent);
+    outline-offset: var(--settings-focus-offset);
+  }
+
+  .slider__value {
+    display: block;
+    font-size: var(--slider-value-size);
+    width: var(--slider-value-width);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* ---- Switches -------------------------------------------------------- */
+
+  .toggle {
+    width: var(--toggle-width);
+    height: var(--toggle-height);
+    padding: 0;
+    border: 0;
+    border-radius: calc(var(--toggle-height) / 2);
+    background: var(--color-faint);
+    position: relative;
+  }
+
+  .toggle__knob {
+    position: absolute;
+    top: var(--toggle-inset);
+    left: var(--toggle-inset);
+    width: var(--toggle-knob);
+    height: var(--toggle-knob);
+    border-radius: calc(var(--toggle-knob) / 2);
+    background: var(--color-muted);
+    transition: transform var(--motion-morph) var(--ease-standard);
+  }
+
+  .toggle[aria-checked="true"] {
+    background: var(--color-accent);
+  }
+
+  .toggle[aria-checked="true"] .toggle__knob {
+    background: var(--color-foreground);
+    transform: translateX(var(--toggle-travel));
+  }
+
+  /* ---- Shortcuts ------------------------------------------------------- */
+
+  .shortcuts {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--shortcuts-gap);
+    font-size: var(--shortcuts-size);
+    color: var(--color-muted);
+  }
+
+  /* ---- Display mode tiles ---------------------------------------------- */
+
+  .mode-tiles {
+    display: grid;
+    grid-template-columns: repeat(var(--tiles-columns), minmax(0, 1fr));
+    gap: var(--tiles-gap);
+  }
+
+  .mode-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tile-gap);
+    padding: var(--tile-padding-top) 0 var(--tile-padding-bottom);
+    border-radius: var(--tile-radius);
+    border: 1px solid var(--color-faint);
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: inherit;
+    font-size: var(--tile-size);
+  }
+
+  .mode-tile.is-selected,
+  .font-tile.is-selected {
+    border: var(--settings-selected-border) solid var(--color-accent);
+  }
+
+  .mode-tile__digits {
+    font-family: var(--settings-font-family);
+    font-size: var(--tile-digits-size);
+    font-weight: var(--font-weight-time);
+    fill: currentColor;
+  }
+
+  .mode-tile__faint {
+    stroke: var(--color-faint);
+  }
+
+  .mode-tile__accent {
+    stroke: var(--color-accent);
+  }
+
+  .mode-tile__muted {
+    stroke: var(--color-muted);
+  }
+
+  /* ---- Theme cards ----------------------------------------------------- */
+
+  .theme-cards {
+    display: grid;
+    grid-template-columns: repeat(var(--themes-columns), minmax(0, 1fr));
+    gap: var(--themes-gap);
+  }
+
+  .theme-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--theme-card-gap);
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+
+  .theme-card__box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--theme-card-gap);
+    width: 100%;
+    height: var(--theme-card-height);
+    box-sizing: border-box;
+    border-radius: var(--theme-card-radius);
+    background: var(--card-background);
+    border: 1px solid var(--color-faint);
+  }
+
+  .theme-card.is-selected .theme-card__box {
+    outline: var(--theme-card-outline) solid var(--color-accent);
+    outline-offset: var(--theme-card-outline-offset);
+  }
+
+  .theme-card__sample {
+    font-size: var(--theme-card-sample);
+    color: var(--card-foreground);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .theme-card__bar {
+    width: var(--theme-card-bar-width);
+    height: var(--theme-card-bar-height);
+    border-radius: var(--theme-card-bar-radius);
+    background: var(--card-accent);
+  }
+
+  .theme-card__name {
+    font-size: var(--theme-card-name);
+    color: var(--color-muted);
+    white-space: nowrap;
+  }
+
+  /* ---- Theme colours --------------------------------------------------- */
+
+  .color-row {
+    display: flex;
+    align-items: center;
+    gap: var(--colors-gap);
+  }
+
+  .color-row__label {
+    font-size: var(--colors-size);
+    color: var(--color-muted);
+    width: var(--colors-label-width);
+  }
+
+  .color-row__well {
+    position: relative;
+    display: flex;
+  }
+
+  .color-row__swatch {
+    width: var(--colors-swatch);
+    height: var(--colors-swatch);
+    border-radius: var(--colors-swatch-radius);
+    background: var(--swatch);
+    border: 1px solid var(--color-faint);
+  }
+
+  /* The native colour picker, invisible, over the drawn swatch. */
+  .color-row__picker {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+  }
+
+  .color-row__well:has(.color-row__picker:focus-visible) {
+    outline: var(--settings-focus-ring) solid var(--color-accent);
+    outline-offset: var(--settings-focus-offset);
+    border-radius: var(--colors-swatch-radius);
+  }
+
+  .color-row__hex {
+    width: 8ch;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-foreground);
+    font-family: inherit;
+    font-size: var(--colors-size);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Fonts ----------------------------------------------------------- */
+
+  .font-tiles {
+    display: grid;
+    grid-template-columns: repeat(var(--fonts-columns), minmax(0, 1fr));
+    gap: var(--fonts-gap);
+  }
+
+  .font-tile {
+    height: var(--font-tile-height);
+    padding: 0 var(--font-tile-padding-x);
+    border-radius: var(--font-tile-radius);
+    border: 1px solid var(--color-faint);
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-stretch: 100%;
+    font-size: var(--font-tile-size);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .font-tile--default {
+    font-stretch: var(--settings-font-stretch);
+  }
+
+  /* A name is shown once its own letters have arrived. */
+  .font-tile--loading {
+    color: transparent;
+  }
+
+  .font-tile.font-tile--load {
+    border: 1px dashed var(--color-muted);
+    background: transparent;
+    color: var(--color-muted);
+    font-family: var(--settings-font-family);
+    font-stretch: inherit;
+  }
+
+  .font-tiles__file {
+    display: none;
+  }
+
+  /* ---- Privacy and data ------------------------------------------------ */
+
+  .settings__clear {
+    height: var(--clear-height);
+    padding: 0 var(--clear-padding-x);
+    border-radius: var(--clear-radius);
+    border: 0;
+    font-family: inherit;
+    font-size: var(--clear-size);
+    color: var(--color-foreground);
+    background: var(--color-end);
+  }
+
+  /* ---- Footer ---------------------------------------------------------- */
+
+  .settings__footer {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--settings-footer-gap);
+    padding-top: var(--settings-footer-padding-top);
+    border-top: 1px solid var(--color-faint);
+  }
+
+  .settings__note {
+    font-size: var(--settings-footer-size);
+    color: var(--color-muted);
+  }
+
+  .settings__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--settings-footer-link-gap);
+    font-size: var(--settings-footer-size);
+  }
+
+  .settings__link {
+    color: var(--color-muted);
+    text-decoration: none;
+  }
+}

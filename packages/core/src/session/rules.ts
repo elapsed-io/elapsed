@@ -5,7 +5,8 @@
  * as if it had been running (replay on wake).
  *
  * - Check-in: due after a full interval of running time since the last sign
- *   of presence. It can be answered until an hour after it fell due.
+ *   of presence, using the interval in force at that sign. It can be answered
+ *   until an hour after it fell due.
  * - Missed check-in: unanswered for an hour, the session pauses, backdated to
  *   when the check-in appeared. That pause ignores the pause limit and waits
  *   up to 12 hours (from the check-in), then the session ends dated to the
@@ -51,9 +52,14 @@ export function normaliseRules(rules: RuleSettings): RuleSettings {
   return { checkInInterval: pick(rules.checkInInterval, checkInInterval), pauseLimit: pick(rules.pauseLimit, pauseLimit) };
 }
 
+/** The interval in force since the last sign of presence: fixed then, or the current setting for older states. */
+export function checkInIntervalFor(state: ActiveState, rules: RuleSettings): number {
+  return state.checkInIntervalMs ?? rules.checkInInterval;
+}
+
 /** When the check-in falls due, for a running session; otherwise null. */
 export function checkInDueAt(state: ActiveState, rules: RuleSettings): number | null {
-  return sessionStatus(state.session) === 'running' ? state.presenceAt + rules.checkInInterval : null;
+  return sessionStatus(state.session) === 'running' ? state.presenceAt + checkInIntervalFor(state, rules) : null;
 }
 
 /** The check-in waiting for an answer at `now`, or null. */
@@ -80,7 +86,7 @@ export function nextTrigger(state: ActiveState, rules: RuleSettings): RuleTrigge
     const segment = lastSegment(session);
     const closed = focusedMs(session, segment.start);
     const maxAt = segment.start + Math.max(0, CONFIG.session.maxFocus - closed);
-    const due = state.presenceAt + rules.checkInInterval;
+    const due = state.presenceAt + checkInIntervalFor(state, rules);
     const missedAt = due + CONFIG.session.checkInResponseWindow;
     return missedAt < maxAt
       ? { kind: 'checkin-missed', decidedAt: missedAt, effectiveAt: due }

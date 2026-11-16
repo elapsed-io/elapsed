@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BRAND, computeView, createSession, pauseSession } from '@stopwatch/core';
-import { modeFromSearch } from '../modes/mode-param.ts';
+import { MODE_CHOICES } from '@stopwatch/core';
 import { MODE_MANIFESTS } from '../modes/manifests.ts';
 import { shortcutFor } from './shortcuts.ts';
 import type { KeyLike } from './shortcuts.ts';
@@ -24,6 +24,7 @@ describe('shortcuts', () => {
     expect(shortcutFor(key({}), { tagName: 'BODY' })).toBe('toggle');
     expect(shortcutFor(key({ key: 'e' }), { tagName: 'BODY' })).toBe('end');
     expect(shortcutFor(key({ key: 'E' }), null)).toBe('end');
+    expect(shortcutFor(key({ key: ',' }), { tagName: 'BUTTON' })).toBe('settings');
   });
 
   it.each([
@@ -35,7 +36,6 @@ describe('shortcuts', () => {
     ['composition', key({ isComposing: true })],
     ['a handled event', key({ defaultPrevented: true })],
     ['another key', key({ key: 'x' })],
-    ['comma, until settings exist', key({ key: ',' })],
   ])('ignores %s', (_label, event) => {
     expect(shortcutFor(event, { tagName: 'BODY' })).toBeNull();
   });
@@ -91,23 +91,9 @@ describe('clock times', () => {
   });
 });
 
-describe('mode parameter', () => {
-  it('accepts only known mode names', () => {
-    expect(modeFromSearch('?mode=ring')).toBe('ring');
-    expect(modeFromSearch('?mode=timeline&x=1')).toBe('timeline');
-    expect(modeFromSearch('?mode=digits')).toBe('digits');
-  });
-
-  it.each(['', '?mode=', '?mode=Ring', '?mode=ocean', '?mode=ring%00', '?mode=__proto__', '?mode=constructor', '?other=ring'])(
-    'falls back to digits for %j',
-    (search) => {
-      expect(modeFromSearch(search)).toBe('digits');
-    },
-  );
-});
-
 describe('mode manifests', () => {
-  it('lists the three Release 1 modes, digits in the core tier', () => {
+  it('lists the three Release 1 modes, digits in the core tier, matching the settings schema', () => {
+    expect(MODE_MANIFESTS.map((m) => m.id)).toEqual([...MODE_CHOICES]);
     expect(MODE_MANIFESTS.map((m) => [m.id, m.tier])).toEqual([
       ['digits', 'core'],
       ['ring', 'on-choice'],

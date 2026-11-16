@@ -1,10 +1,10 @@
 /**
  * Keyboard shortcuts (plan, Settings catalog > Timer): fixed, with no modifier
  * keys so they never clash with browser shortcuts, and never while typing.
- * Space starts, pauses and resumes; E ends. Comma (settings) arrives in round 6.
+ * Space starts, pauses and resumes; E ends; comma opens settings.
  */
 
-export type Shortcut = 'toggle' | 'end';
+export type Shortcut = 'toggle' | 'end' | 'settings';
 
 export interface KeyLike {
   readonly key: string;
@@ -38,5 +38,6 @@ export function shortcutFor(event: KeyLike, target: TargetLike | null): Shortcut
   if (isTypingTarget(target)) return null;
   if (event.key === ' ') return ACTIVATES_ON_SPACE.has(tag) ? null : 'toggle';
   if (event.key === 'e' || event.key === 'E') return 'end';
+  if (event.key === ',') return 'settings';
   return null;
 }

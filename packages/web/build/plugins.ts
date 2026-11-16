@@ -17,7 +17,7 @@ import type { Connect, Plugin } from 'vite';
 import { COUNT_PATH } from '@stopwatch/core';
 import { HEADER_RULES, headersForPath, renderHeadersFile } from './headers.ts';
 import { renderTemplate } from './html.ts';
-import { isModeTokenId, renderModeTokensCss, renderTokensCss } from '../src/styles/tokens.ts';
+import { isModeTokenId, renderModeTokensCss, renderSettingsTokensCss, renderTokensCss } from '../src/styles/tokens.ts';
 
 export function templateHtml(): Plugin {
   return {
@@ -45,6 +45,7 @@ export function tokensCss(): Plugin {
       if (id === RESOLVED_TOKENS_ID) return renderTokensCss();
       if (id.startsWith(RESOLVED_MODE_PREFIX)) {
         const mode = id.slice(RESOLVED_MODE_PREFIX.length).replace(/\.css$/, '');
+        if (mode === 'settings') return renderSettingsTokensCss();
         if (!isModeTokenId(mode)) throw new Error(`no tokens for display mode ${mode}`);
         return renderModeTokensCss(mode);
       }

@@ -6,8 +6,13 @@
 
 import type { SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
 
+/**
+ * What a mode reads from the site. The site owns this object and may change
+ * its values (a setting changed); it then calls render, or relayout when the
+ * font changed.
+ */
 export interface DisplayContext {
-  /** How much of the seconds is shown (settings, round 6). */
+  /** How much of the seconds is shown (Settings > Timer > seconds). */
   readonly seconds: SecondsDisplay;
   /** The user asked for reduced motion. */
   readonly reducedMotion: boolean;
@@ -29,6 +34,8 @@ export interface DisplayMode {
    * start, or finishes them at once. May load its drawing code first.
    */
   replay(root: HTMLElement, session: Session): void | Promise<void>;
+  /** The font changed: measure anything that depends on it (the blur-away widths). */
+  relayout?(): void;
   unmount(): void;
 }
 

@@ -165,15 +165,31 @@ export function migrateSession(value: unknown): Session {
   return migrate(value);
 }
 
-const ACTIVE_FIELDS = ['schema', 'session', 'presenceAt', 'missedCheckInAt', 'pauseLimitMs'] as const;
+const ACTIVE_FIELDS_1 = ['schema', 'session', 'presenceAt', 'missedCheckInAt', 'pauseLimitMs'] as const;
+const ACTIVE_FIELDS = [...ACTIVE_FIELDS_1, 'checkInIntervalMs'] as const;
+
+function rangeOrNull(value: unknown, path: string, range: { readonly min: number; readonly max: number }): number | null {
+  if (value === null) return null;
+  const ms = time(value, path);
+  if (ms < range.min || ms > range.max) throw new SessionValidationError(path, 'outside the allowed range');
+  return ms;
+}
 
 /**
  * Validates the active state read back from the device (round 4): an open
  * session plus what the rules remember about it, consistent with each other.
  */
 export function parseActiveState(value: unknown): ActiveState {
-  const fields = plainObject(value, 'state', ACTIVE_FIELDS);
-  if (fields['schema'] !== ACTIVE_STATE_SCHEMA) throw new SessionValidationError('state.schema', `expected ${String(ACTIVE_STATE_SCHEMA)}`);
+  return activeState(plainObject(value, 'state', ACTIVE_FIELDS), ACTIVE_STATE_SCHEMA);
+}
+
+/** Schema 1, saved before round 6: the same fields without the check-in interval. */
+function parseActiveStateV1(value: unknown): ActiveState {
+  return activeState({ ...plainObject(value, 'state', ACTIVE_FIELDS_1), checkInIntervalMs: null }, 1);
+}
+
+function activeState(fields: Fields, schema: number): ActiveState {
+  if (fields['schema'] !== schema) throw new SessionValidationError('state.schema', `expected ${String(schema)}`);
   const session = parseSession(fields['session']);
   if (session.endReason !== null) throw new SessionValidationError('state.session', 'an active session cannot have ended');
   const start = session.segments[0]?.start ?? 0;
@@ -187,17 +203,14 @@ export function parseActiveState(value: unknown): ActiveState {
   if (missed !== null && (last === undefined || last.end !== missed)) {
     throw new SessionValidationError('state.missedCheckInAt', 'a missed check-in pauses the session where it fell due');
   }
-  const rawLimit = fields['pauseLimitMs'];
-  const { min, max } = CONFIG.session.pauseLimit;
-  const pauseLimitMs = rawLimit === null ? null : time(rawLimit, 'state.pauseLimitMs');
-  if (pauseLimitMs !== null && (pauseLimitMs < min || pauseLimitMs > max)) {
-    throw new SessionValidationError('state.pauseLimitMs', 'outside the allowed range');
-  }
-  return freezeState({ schema: ACTIVE_STATE_SCHEMA, session, presenceAt, missedCheckInAt: missed, pauseLimitMs });
+  const pauseLimitMs = rangeOrNull(fields['pauseLimitMs'], 'state.pauseLimitMs', CONFIG.session.pauseLimit);
+  const checkInIntervalMs = rangeOrNull(fields['checkInIntervalMs'], 'state.checkInIntervalMs', CONFIG.session.checkInInterval);
+  return freezeState({ schema: ACTIVE_STATE_SCHEMA, session, presenceAt, missedCheckInAt: missed, pauseLimitMs, checkInIntervalMs });
 }
 
 const ACTIVE_MIGRATIONS: Readonly<Record<number, (value: unknown) => ActiveState>> = {
-  1: parseActiveState,
+  1: parseActiveStateV1,
+  2: parseActiveState,
 };
 
 /** Reads a stored active state of any supported schema. */

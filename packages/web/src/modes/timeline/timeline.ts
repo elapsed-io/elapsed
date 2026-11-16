@@ -91,6 +91,9 @@ export function createTimelineMode(): DisplayMode {
       const { drawStrip } = await import('../shared/strip-replay.ts');
       drawStrip(target, session);
     },
+    relayout() {
+      display?.measure();
+    },
     unmount() {
       root?.replaceChildren();
       root = null;

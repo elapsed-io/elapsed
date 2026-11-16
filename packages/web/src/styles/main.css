@@ -11,8 +11,20 @@
 
 @layer base {
   :root {
-    --u: min(calc(100vw / var(--reference-width)), calc(100dvh / var(--reference-height)));
+    /* The width the timer has: the window, less the settings panel while it is open beside it. */
+    --view-width: 100vw;
+    --u: min(calc(var(--view-width) / var(--reference-width)), calc(100dvh / var(--reference-height)));
     color-scheme: var(--color-scheme);
+  }
+
+  /* First run with a chosen font: the screen waits for it, at most --font-block, so the time never jumps. */
+  :root[data-font-loading] .screen {
+    animation: font-block var(--font-block) step-end;
+  }
+
+  @keyframes font-block {
+    from { opacity: 0; }
+    to { opacity: 0; }
   }
 
   html,
@@ -32,6 +44,7 @@
   .screen {
     position: relative;
     box-sizing: border-box;
+    width: var(--view-width);
     height: 100dvh;
     overflow: hidden;
     display: flex;

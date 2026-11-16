@@ -38,7 +38,7 @@ export type { SessionSummary } from './session/summary.ts';
 export { SessionValidationError, migrateActiveState, migrateSession, parseActiveState, parseSession } from './session/validate.ts';
 export { ACTIVE_STATE_SCHEMA, recordGap, serializeActiveState, serializeSession, shiftState, startState } from './session/state.ts';
 export type { ActiveState } from './session/state.ts';
-export { advance, applyTrigger, checkInDueAt, defaultRules, nextTrigger, normaliseRules, pendingCheckIn } from './session/rules.ts';
+export { advance, applyTrigger, checkInDueAt, checkInIntervalFor, defaultRules, nextTrigger, normaliseRules, pendingCheckIn } from './session/rules.ts';
 export type { RuleKind, RuleOutcome, RuleSettings, RuleTrigger } from './session/rules.ts';
 
 export { EventBus } from './events/bus.ts';
@@ -51,3 +51,37 @@ export { Scheduler } from './engine/scheduler.ts';
 export type { SchedulerOptions } from './engine/scheduler.ts';
 export { SECONDS_DISPLAYS, computeView, focusPrecision, isSecondsDisplay, msUntilNextChange, viewKey } from './engine/view.ts';
 export type { SecondsDisplay, TimerStatus, TimerView } from './engine/view.ts';
+
+export {
+  CLOCK_FORMATS,
+  FONT_CHOICES,
+  MODE_CHOICES,
+  SETTINGS,
+  SETTINGS_CATEGORIES,
+  SETTINGS_SCHEMA,
+  THEME_IDS,
+  declarationOf,
+  defaultSettings,
+  isValidValue,
+  migrateSettings,
+  normaliseHex,
+  parseSettings,
+  resetCategory,
+  rulesFrom,
+  serializeSettings,
+  withSetting,
+} from './settings/schema.ts';
+export type {
+  BuiltInFont,
+  ClockFormat,
+  FontChoice,
+  HexColor,
+  ModeChoice,
+  SettingDeclaration,
+  SettingKey,
+  SettingTarget,
+  Settings,
+  SettingsCategory,
+  ThemeColors,
+  ThemeId,
+} from './settings/schema.ts';

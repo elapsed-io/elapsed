@@ -27,7 +27,7 @@ export class TimeDisplay {
   readonly #checkIn: HTMLDivElement;
   readonly #context: DisplayContext;
   #blurAway = false;
-  #missedAt: number | null = null;
+  #missedText = '';
 
   constructor(doc: Document, context: DisplayContext) {
     this.#context = context;
@@ -56,6 +56,8 @@ export class TimeDisplay {
     if (blurAway !== this.#blurAway) {
       this.#blurAway = blurAway;
       this.#main.element.classList.toggle('time--blur-away', blurAway);
+      // The seconds may have been hidden when the font was measured (the seconds setting changed).
+      if (blurAway) this.#main.measure();
     }
     // CSS runs the blur-away; this only pins it to focused time and holds it while paused.
     if (blurAway) syncAnimations(this.#main.element, view.focusedMs, status === 'running');
@@ -79,9 +81,11 @@ export class TimeDisplay {
   }
 
   #showMissed(at: number | null): void {
-    if (at === this.#missedAt) return;
-    this.#missedAt = at;
+    // Compared as text, so a changed clock format shows at the next render.
+    const text = at === null ? '' : BRAND.copy.timer.missedCheckIn.replace('{time}', formatClockTime(at));
+    if (text === this.#missedText) return;
+    this.#missedText = text;
     this.#missed.hidden = at === null;
-    this.#missed.textContent = at === null ? '' : BRAND.copy.timer.missedCheckIn.replace('{time}', formatClockTime(at));
+    this.#missed.textContent = text;
   }
 }

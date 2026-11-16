@@ -10,7 +10,11 @@ import { SessionError, isTime, freezeSession } from './session.ts';
 import type { Gap, Session } from './session.ts';
 import { shiftSession } from './commands.ts';
 
-export const ACTIVE_STATE_SCHEMA = 1;
+/**
+ * 2 (round 6): adds checkInIntervalMs. Schema 1 states are still read, with
+ * the interval taken from the current settings until the next sign of presence.
+ */
+export const ACTIVE_STATE_SCHEMA = 2;
 
 export interface ActiveState {
   readonly schema: typeof ACTIVE_STATE_SCHEMA;
@@ -22,19 +26,27 @@ export interface ActiveState {
   readonly missedCheckInAt: number | null;
   /** The pause limit in force for the current pause, fixed when it began ("a changed limit applies from the next pause"). */
   readonly pauseLimitMs: number | null;
+  /**
+   * The check-in interval in force since the last sign of presence, fixed at
+   * that moment like the pause limit, so changing the setting can never make
+   * a check-in already due or missed (decision 167). null for a state saved
+   * before round 6: the current setting applies.
+   */
+  readonly checkInIntervalMs: number | null;
 }
 
 export function freezeState(state: ActiveState): ActiveState {
   return Object.freeze({ ...state, session: freezeSession(state.session) });
 }
 
-export function startState(session: Session): ActiveState {
+export function startState(session: Session, checkInIntervalMs: number | null = null): ActiveState {
   return freezeState({
     schema: ACTIVE_STATE_SCHEMA,
     session,
     presenceAt: lastSegment(session).start,
     missedCheckInAt: null,
     pauseLimitMs: null,
+    checkInIntervalMs,
   });
 }
 
@@ -74,6 +86,7 @@ export function serializeActiveState(state: ActiveState): string {
     presenceAt: state.presenceAt,
     missedCheckInAt: state.missedCheckInAt,
     pauseLimitMs: state.pauseLimitMs,
+    checkInIntervalMs: state.checkInIntervalMs,
   });
 }
 

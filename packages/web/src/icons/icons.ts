@@ -14,7 +14,18 @@ export interface IconElement {
   readonly attributes: Readonly<Record<string, string>>;
 }
 
-export type IconName = 'settings' | 'account' | 'maximum' | 'retry' | 'share' | 'check';
+export type IconName =
+  | 'settings'
+  | 'account'
+  | 'maximum'
+  | 'retry'
+  | 'share'
+  | 'check'
+  | 'close'
+  | 'search'
+  | 'chevronRight'
+  | 'chevronDown'
+  | 'chevronLeft';
 
 export const ICONS: Readonly<Record<IconName, readonly IconElement[]>> = {
   settings: [
@@ -41,6 +52,18 @@ export const ICONS: Readonly<Record<IconName, readonly IconElement[]>> = {
     { tag: 'path', attributes: { d: 'M12 4l0 12' } },
   ],
   check: [{ tag: 'path', attributes: { d: 'M5 12l5 5l10 -10' } }],
+  /** Settings panel: Tabler "x", "search", "chevron-right", "chevron-down" and "chevron-left", as drawn in the settings frames. */
+  close: [
+    { tag: 'path', attributes: { d: 'M18 6l-12 12' } },
+    { tag: 'path', attributes: { d: 'M6 6l12 12' } },
+  ],
+  search: [
+    { tag: 'circle', attributes: { cx: '10', cy: '10', r: '7' } },
+    { tag: 'path', attributes: { d: 'M21 21l-6 -6' } },
+  ],
+  chevronRight: [{ tag: 'path', attributes: { d: 'M9 6l6 6l-6 6' } }],
+  chevronDown: [{ tag: 'path', attributes: { d: 'M6 9l6 6l6 -6' } }],
+  chevronLeft: [{ tag: 'path', attributes: { d: 'M15 6l-6 6l6 6' } }],
   /** The session maximum notice: a clock face with a button on top, as drawn in the canvas's session maximum frame (not a Tabler icon). */
   maximum: [
     { tag: 'circle', attributes: { cx: '12', cy: '13', r: '8' } },

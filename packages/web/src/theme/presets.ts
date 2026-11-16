@@ -4,6 +4,7 @@
  */
 
 import { BRAND } from '@stopwatch/core';
+import type { ThemeId } from '@stopwatch/core';
 import { parseHex } from './color.ts';
 import type { Hex } from './color.ts';
 
@@ -16,17 +17,8 @@ export interface ThemeTokens {
   readonly accent: Hex;
 }
 
-export type PresetId =
-  | 'graphite'
-  | 'paper'
-  | 'deep-sea'
-  | 'forest'
-  | 'oxblood'
-  | 'plum'
-  | 'lilac'
-  | 'sky'
-  | 'sand'
-  | 'mint';
+/** The preset ids are declared once, in core's settings schema. */
+export type PresetId = ThemeId;
 
 export interface Preset extends ThemeTokens {
   readonly id: PresetId;

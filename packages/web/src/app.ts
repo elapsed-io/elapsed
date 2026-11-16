@@ -8,18 +8,22 @@
  * (after the tabulating screen); the session maximum notice.
  */
 
-import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, summarise } from '@stopwatch/core';
+import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, rulesFrom, summarise } from '@stopwatch/core';
 import type { SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
 import { CountClient } from './counts/client.ts';
-import type { DisplayContext, DisplayMode } from './modes/contract.ts';
+import type { DisplayMode } from './modes/contract.ts';
 import { DEFAULT_MODE_ID } from './modes/manifests.ts';
-import { requestedMode } from './modes/mode-param.ts';
 import { findMode } from './modes/registry.ts';
+import type { RegisteredMode } from './modes/registry.ts';
 import { registerServiceWorker } from './offline/register.ts';
 import type * as ResultsModule from './results/results.ts';
 import type { ResultsScreen } from './results/results.ts';
+import { SettingsController } from './settings/controller.ts';
+import type { SettingsEffects } from './settings/controller.ts';
+import type * as PanelModule from './settings/panel.ts';
+import type { NotificationAccess, SettingsPanel } from './settings/panel.ts';
 import { Announcer } from './shell/announcer.ts';
-import { formatClockTime } from './shell/clock-time.ts';
+import { formatClockTime, setClockFormat } from './shell/clock-time.ts';
 import { answersCheckIn } from './shell/check-in.ts';
 import { Controls } from './shell/controls.ts';
 import { EndingCountdown } from './shell/ending.ts';
@@ -27,7 +31,9 @@ import { MaximumNotice } from './shell/notice.ts';
 import { shortcutFor } from './shell/shortcuts.ts';
 import { titleFor } from './shell/title.ts';
 import { FinishedStore, browserSessionStorage } from './storage/finished-store.ts';
+import { IndexedDbMediaStore, browserIndexedDb } from './storage/media-store.ts';
 import { LocalSessionStore, browserLocalStorage, watchLocalStorage } from './storage/session-store.ts';
+import { LocalSettingsStore, watchSettings } from './storage/settings-store.ts';
 import { TabSync, openTabChannel } from './sync/tabs.ts';
 import { systemClock } from './time/system-clock.ts';
 
@@ -47,25 +53,58 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   const corner = required(doc, '.corner', HTMLElement);
   const modeRoot = required(doc, '.mode-root', HTMLElement);
   const controlsRoot = required(doc, '.controls', HTMLElement);
+  const settingsButton = required(doc, '.icon-button--settings', HTMLButtonElement);
 
-  // Settings arrive in round 6; until then the defaults apply.
-  const seconds: SecondsDisplay = 'blur-away';
-  const usageCounts = true;
+  // Settings come first: the theme, the font and the time size apply before anything else is drawn.
+  // The site reacts to a change through these effects, bound once everything they touch exists.
+  const effects: SettingsEffects = {
+    seconds: () => undefined,
+    rules: () => undefined,
+    mode: () => undefined,
+    clockFormat: () => undefined,
+    font: () => undefined,
+  };
+  const settingsStore = new LocalSettingsStore(browserLocalStorage(win), report);
+  const settings = new SettingsController({
+    doc,
+    store: settingsStore,
+    media: new IndexedDbMediaStore(browserIndexedDb(win)),
+    effects: {
+      seconds: (display) => {
+        effects.seconds(display);
+      },
+      rules: (rules) => {
+        effects.rules(rules);
+      },
+      mode: (id) => {
+        effects.mode(id);
+      },
+      clockFormat: (format) => {
+        setClockFormat(format);
+        effects.clockFormat(format);
+      },
+      font: () => {
+        effects.font();
+      },
+    },
+    onError: report,
+  });
+  setClockFormat(settings.current.clockFormat);
+  const fontReady = settings.start();
+
   const reducedMotion = (): boolean => win.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const context: DisplayContext = { seconds, reducedMotion: reducedMotion() };
+  // The site owns this object; a changed setting updates it and redraws (modes/contract.ts).
+  const context: { seconds: SecondsDisplay; reducedMotion: boolean } = { seconds: settings.current.seconds, reducedMotion: reducedMotion() };
 
-  const counts = new CountClient(win, () => usageCounts);
+  const counts = new CountClient(win, () => settings.current.usageCounts);
   counts.visit();
 
   const store = new LocalSessionStore(browserLocalStorage(win), report);
   const finished = new FinishedStore(browserSessionStorage(win), report);
   const saved = store.load();
-  const savedMode = saved.kind === 'state' ? currentMode(saved.state.session) : null;
-  // The temporary ?mode= parameter wins; otherwise a restored session keeps its mode.
-  const modeId = requestedMode(win.location.search) ?? savedMode ?? DEFAULT_MODE_ID;
-  const registered = findMode(modeId) ?? findMode(DEFAULT_MODE_ID);
-  if (registered === undefined) throw new Error('no display modes are registered');
-  const mode = (await registered.load())();
+  // The display mode is a setting; a restored session switches to it if another tab left it elsewhere.
+  let registered: RegisteredMode = findMode(settings.current.mode) ?? fallbackMode();
+  let mode: DisplayMode = (await registered.load())();
   screenElement.dataset['mode'] = registered.manifest.id;
   mode.mount(modeRoot, context);
 
@@ -88,7 +127,8 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     events: bus,
     newId: () => win.crypto.randomUUID(),
     onError: report,
-    seconds,
+    seconds: settings.current.seconds,
+    rules: rulesFrom(settings.current),
     beforeWake: () => {
       sync.pull();
     },
@@ -254,7 +294,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   const controls = new Controls(controlsRoot, { primary: toggle, end: beginEnding });
 
   // An ended session shows the idle screen behind the results.
-  const shown = (view: TimerView): TimerView => (view.status === 'ended' ? computeView(null, view.at, seconds) : view);
+  const shown = (view: TimerView): TimerView => (view.status === 'ended' ? computeView(null, view.at, context.seconds) : view);
   const render = (view: TimerView): void => {
     const visible = shown(view);
     mode.render(visible);
@@ -303,6 +343,84 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   bus.on('session.paused', ({ reason, at }) => {
     if (reason === 'checkin_missed') announcer.say(BRAND.copy.timer.missedCheckIn.replace('{time}', formatClockTime(at)));
   });
+
+  // ---- Settings ----------------------------------------------------------
+
+  effects.seconds = (display) => {
+    context.seconds = display;
+    sync.pull();
+    engine.setSecondsDisplay(display);
+    render(engine.view);
+  };
+  effects.rules = (rules) => {
+    // Both apply from the next sign of presence or pause (core: TimerEngine.setRules).
+    engine.setRules(rules);
+  };
+  effects.clockFormat = () => {
+    render(engine.view);
+  };
+  effects.font = () => {
+    mode.relayout?.();
+  };
+  let modeRequest = 0;
+  effects.mode = (id) => {
+    const next = findMode(id) ?? fallbackMode();
+    sync.pull();
+    // The session records the switch when it is chosen; the drawing follows once its code has loaded.
+    if (engine.state !== null) engine.switchMode(next.manifest.id);
+    const request = ++modeRequest;
+    void next.load().then((factory) => {
+      if (request !== modeRequest) return;
+      mode.unmount();
+      registered = next;
+      mode = factory();
+      screenElement.dataset['mode'] = next.manifest.id;
+      mode.mount(modeRoot, context);
+      render(engine.view);
+    }, report);
+  };
+  // Another tab's change applies here too, without being saved again.
+  watchSettings(win, settingsStore, (next) => {
+    settings.external(next);
+  });
+  // The chosen font may arrive after the first drawing; the blur-away widths follow it.
+  void fontReady.then(() => mode.relayout?.());
+
+  let panel: SettingsPanel | null = null;
+  let panelModule: Promise<typeof PanelModule> | null = null;
+  const closeSettings = (): void => {
+    if (panel === null || !panel.shown) return;
+    panel.hide();
+    settingsButton.focus({ preventScroll: true });
+  };
+  const openSettings = async (): Promise<void> => {
+    panelModule ??= import('./settings/panel.ts');
+    const module = await panelModule;
+    panel ??= new module.SettingsPanel(doc, {
+      controller: settings,
+      close: closeSettings,
+      requestNotifications,
+    });
+    if (!doc.body.contains(panel.element)) doc.body.append(panel.element);
+    panel.open();
+  };
+  const toggleSettings = (): void => {
+    if (panel?.shown === true) closeSettings();
+    else void openSettings().catch(report);
+  };
+  settingsButton.addEventListener('click', toggleSettings);
+
+  async function requestNotifications(): Promise<NotificationAccess> {
+    // Absent on iPhones until the site is added to the home screen.
+    const api = (win as Window & { readonly Notification?: typeof Notification }).Notification;
+    if (api === undefined) return 'unsupported';
+    if (api.permission !== 'default') return api.permission;
+    try {
+      return await api.requestPermission();
+    } catch {
+      return 'unsupported';
+    }
+  }
 
   // Restore the session saved on this device (a refresh or reopened tab), replaying the rules up to now.
   sync.attach(engine, saved);
@@ -372,9 +490,15 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       }
       return;
     }
+    if (event.key === 'Escape' && panel?.shown === true) {
+      event.preventDefault();
+      closeSettings();
+      return;
+    }
     if (shortcut === null) return;
     event.preventDefault();
-    if (current === 'results') {
+    if (shortcut === 'settings') toggleSettings();
+    else if (current === 'results') {
       if (shortcut === 'toggle') retry();
     } else if (shortcut === 'toggle') toggle();
     else if (current === 'timer') beginEnding();
@@ -394,6 +518,12 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   watchLocalStorage(win, store, refresh);
 
   registerServiceWorker(win, report);
+
+  function fallbackMode(): RegisteredMode {
+    const found = findMode(DEFAULT_MODE_ID);
+    if (found === undefined) throw new Error('no display modes are registered');
+    return found;
+  }
 
   function currentTime(): number {
     const time = doc.timeline.currentTime;

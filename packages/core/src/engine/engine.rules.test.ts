@@ -84,6 +84,35 @@ describe('check-ins', () => {
   });
 });
 
+describe('a changed check-in interval', () => {
+  it('applies from the next sign of presence, so shortening it never makes a check-in overdue or missed', () => {
+    const h = harness({ rules });
+    h.engine.start('digits');
+    h.clock.advance(110 * MINUTE);
+    h.engine.setRules({ ...rules, checkInInterval: 30 * MINUTE });
+    // The stretch began with 2 hours: nothing is due, and nothing was missed.
+    expect(h.engine.view).toMatchObject({ status: 'running', checkInDueAt: null, focusedMs: 110 * MINUTE });
+    h.clock.advance(10 * MINUTE);
+    expect(h.engine.view.checkInDueAt).toBe(T0 + 2 * HOUR);
+    expect(h.engine.answerCheckIn()).toBe(true);
+    // From the answer on, 30 minutes.
+    h.clock.advance(30 * MINUTE);
+    expect(h.engine.view.checkInDueAt).toBe(T0 + 2 * HOUR + 30 * MINUTE);
+    expect(h.engine.state?.checkInIntervalMs).toBe(30 * MINUTE);
+  });
+
+  it('is kept with the state, so another tab with older settings applies the same interval', () => {
+    const a = harness({ rules: { ...rules, checkInInterval: 30 * MINUTE } });
+    a.engine.start('digits');
+    const saved = a.engine.state;
+    if (saved === null) throw new Error('no state');
+    const b = harness({ rules });
+    b.engine.restore(parseActiveState(JSON.parse(JSON.stringify(saved))), T0);
+    b.clock.advance(30 * MINUTE);
+    expect(b.engine.view.checkInDueAt).toBe(T0 + 30 * MINUTE);
+  });
+});
+
 describe('pause limit', () => {
   it('ends a pause longer than the limit, dated to when it began; a changed limit applies from the next pause', () => {
     const h = harness({ rules });

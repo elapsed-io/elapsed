@@ -96,6 +96,9 @@ export function createRingMode(): DisplayMode {
     replay(target: HTMLElement, session: Session) {
       drawRings(target, session);
     },
+    relayout() {
+      display?.measure();
+    },
     unmount() {
       root?.replaceChildren();
       root = null;

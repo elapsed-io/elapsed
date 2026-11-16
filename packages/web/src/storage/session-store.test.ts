@@ -73,7 +73,7 @@ describe('the local session store', () => {
 
   it('leaves alone a session saved by a newer version of the site', () => {
     const { storage, store } = setup();
-    const newer = serializeActiveState(state).replace('{"schema":1,', '{"schema":2,');
+    const newer = serializeActiveState(state).replace('{"schema":2,', '{"schema":3,');
     storage.setItem(ACTIVE_KEY, newer);
     expect(store.load()).toEqual({ kind: 'unreadable', newer: true });
     expect(storage.getItem(ACTIVE_KEY)).toBe(newer);

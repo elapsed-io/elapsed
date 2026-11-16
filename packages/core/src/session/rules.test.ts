@@ -6,7 +6,7 @@ import { HOUR, ID, MINUTE, T0 } from './fixtures.ts';
 import { advance, checkInDueAt, defaultRules, nextTrigger, normaliseRules, pendingCheckIn } from './rules.ts';
 import { serializeActiveState, startState } from './state.ts';
 import type { ActiveState } from './state.ts';
-import { parseActiveState } from './validate.ts';
+import { migrateActiveState, parseActiveState } from './validate.ts';
 
 const rules = defaultRules();
 const fresh = (): ActiveState => startState(createSession({ id: ID, mode: 'digits', at: T0, timeZone: 'UTC' }));
@@ -83,7 +83,8 @@ describe('parseActiveState', () => {
   });
 
   it.each([
-    ['another schema', { schema: 2 }],
+    ['another schema', { schema: 1 }],
+    ['a check-in interval outside the range', { checkInIntervalMs: 4 * HOUR }],
     ['presence before the start', { presenceAt: T0 - 1 }],
     ['a missed check-in on a running session', { missedCheckInAt: T0 + HOUR }],
     ['a pause limit outside the range', { pauseLimitMs: 1000 }],
@@ -94,10 +95,19 @@ describe('parseActiveState', () => {
 
   it('serialises equal states to the same text, which reads back as the same state', () => {
     const state = parseActiveState(valid());
-    const reordered = { pauseLimitMs: null, missedCheckInAt: null, presenceAt: T0, session: state.session, schema: 1 };
+    const reordered = { checkInIntervalMs: null, pauseLimitMs: null, missedCheckInAt: null, presenceAt: T0, session: state.session, schema: 2 };
     const text = serializeActiveState(state);
     expect(serializeActiveState(parseActiveState(reordered))).toBe(text);
     expect(serializeActiveState(parseActiveState(JSON.parse(text)))).toBe(text);
+  });
+
+  it('reads a schema 1 state, saved before the check-in interval was kept', () => {
+    const older: Record<string, unknown> = { ...valid(), schema: 1 };
+    delete older['checkInIntervalMs'];
+    const state = migrateActiveState(older);
+    expect(state.schema).toBe(2);
+    expect(state.checkInIntervalMs).toBeNull();
+    expect(() => migrateActiveState({ ...older, checkInIntervalMs: null })).toThrow();
   });
 
   it('rejects an ended session', () => {
