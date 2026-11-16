@@ -42,6 +42,10 @@ export class TimeDisplay {
   readonly #context: DisplayContext;
   #blurAway = false;
   #missedText = '';
+  /** The last view drawn, so a change of size can re-pin the blur-away to the session's own time. */
+  #view: TimerView | null = null;
+  /** The time's font size when last seen; '' before the first look. */
+  #fontSize = '';
 
   constructor(doc: Document, context: DisplayContext, compose: Compose = (time) => [time]) {
     this.#context = context;
@@ -63,6 +67,38 @@ export class TimeDisplay {
     // While the held state fades in or out, a veil blurs what is under it at a fixed radius (time.css).
     this.#veil = html(doc, 'div', { class: 'time-stack__veil', attrs: { 'aria-hidden': 'true' } });
     this.element = html(doc, 'div', { class: 'time-stack' }, [this.#body, this.#veil, this.#overlay, this.#checkIn]);
+    // Opening settings (or any overlay that changes the room the time has) resizes the time while the
+    // seconds may be sliding away; see #resized.
+    const view = doc.defaultView;
+    if (view !== null && 'ResizeObserver' in view) {
+      new view.ResizeObserver(() => {
+        this.#resized();
+      }).observe(this.#main.element);
+    }
+  }
+
+  /**
+   * The time changed size. Its blur-away moves by distances in em of the time's size; a browser that runs
+   * the animation on the compositor keeps the distances it resolved when the animation started, so the
+   * slide would end a jump away from where the time now belongs (plan, Product principles: opening
+   * settings or any other overlay never restarts, skips or jumps a time-based animation). The animations
+   * are built afresh at the new size and pinned to the session's own time, in the same frame.
+   */
+  #resized(): void {
+    const element = this.#main.element;
+    const size = getComputedStyle(element).fontSize;
+    const first = this.#fontSize === '';
+    if (size === this.#fontSize) return;
+    this.#fontSize = size;
+    const view = this.#view;
+    if (first || !this.#blurAway || view === null) return;
+    element.classList.remove('time--blur-away');
+    // Asking for the animations brings the style up to date, which ends the old ones before the new start.
+    element.getAnimations();
+    element.classList.add('time--blur-away');
+    const running = view.status === 'running';
+    const focusedMs = running ? view.focusedMs + Math.max(0, Date.now() - view.at) : view.focusedMs;
+    syncAnimations(element, focusedMs, running);
   }
 
   /** Measures the font once it is ready; until then the blur-away cannot re-centre exactly. */
@@ -71,6 +107,7 @@ export class TimeDisplay {
   }
 
   render(view: TimerView): void {
+    this.#view = view;
     const { status } = view;
     const { layout, blurAway } = timeLayoutFor(this.#context.seconds, status, view.focusedMs);
     this.#main.show(view.shownMs, layout);
