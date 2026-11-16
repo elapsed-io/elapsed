@@ -8,7 +8,7 @@
  * (after the tabulating screen); the session maximum notice.
  */
 
-import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, rulesFrom, summarise } from '@stopwatch/core';
+import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, localDay, rulesFrom, summarise, systemTimeZone } from '@stopwatch/core';
 import type { SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
 import { CountClient } from './counts/client.ts';
 import { CrashReporter } from './crash/reporter.ts';
@@ -547,6 +547,15 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   watchLocalStorage(win, store, refresh);
 
   registerServiceWorker(win, report);
+
+  // A session's start reads its local day, and the first time zone lookup loads the browser's time zone
+  // data: about 10 ms, several times that on a slow phone. Done once the page has loaded, the first tap
+  // on start does not wait for it (plan: controls respond within 100 ms).
+  const readTimeZone = (): void => {
+    localDay(Date.now(), systemTimeZone());
+  };
+  if (doc.readyState === 'complete') readTimeZone();
+  else win.addEventListener('load', readTimeZone, { once: true });
 
   function fallbackMode(): RegisteredMode {
     const found = findMode(DEFAULT_MODE_ID);

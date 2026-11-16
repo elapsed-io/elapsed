@@ -31,6 +31,36 @@ test('controls respond within 100 ms, from click to the next painted frame', asy
   for (const ms of timings) expect(ms, timings.map((t) => t.toFixed(1)).join(', ')).toBeLessThan(100);
 });
 
+test('on a processor four times slower (a low-end phone), the first taps still respond within 100 ms', async ({ page, browserName }) => {
+  // The processor is slowed through the Chrome DevTools Protocol, which only Chromium has.
+  test.skip(browserName !== 'chromium', 'CPU throttling needs the Chrome DevTools Protocol');
+  await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  // Start, pause, resume, pause: the first of each does one-time work (the time zone is read at load).
+  const timings = await page.evaluate(async () => {
+    const button = document.querySelector<HTMLButtonElement>('.button--primary');
+    if (button === null) throw new Error('no primary button');
+    const results: number[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      const start = performance.now();
+      button.click();
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            resolve();
+          });
+        });
+      });
+      results.push(performance.now() - start);
+    }
+    return results;
+  });
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  for (const ms of timings) expect(ms, timings.map((t) => t.toFixed(1)).join(', ')).toBeLessThan(100);
+});
+
 test('nothing shifts the layout unexpectedly, on load or while using the controls', async ({ page }) => {
   await page.addInitScript(() => {
     const shifts: number[] = [];
