@@ -44,7 +44,7 @@ export class CrashReporter {
 
   send(error: unknown): void {
     if (!this.#enabled() || this.#sent.size >= CONFIG.crashReports.maxPerPage) return;
-    const message = error instanceof Error ? `${error.name}: ${error.message}` : typeof error === 'string' ? error : 'unknown error';
+    const message = error instanceof Error ? `${error.name}: ${error.message}` : typeof error === 'string' ? error : '(no message)';
     const stack = error instanceof Error ? (error.stack ?? '') : '';
     const report = crashReport({ message, stack, version: this.#version, userAgent: this.#win.navigator.userAgent, origin: this.#win.location.origin });
     const body = crashBody(report);
