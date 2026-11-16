@@ -1,37 +1,55 @@
-# Terms
+# terms
 
-> **Draft, not published.** For the owner's review before Release 1's public launch. Built only from the
-> plan's Privacy table and `docs/data-inventory.md`; the bracketed questions are the owner's to answer, and
-> the full terms follow before Release 3.
+Effective November 15, 2026.
 
-These terms cover your use of elapsed, a free stopwatch for focused work at elapsed.io.
+These terms cover elapsed, a stopwatch for focused work at elapsed.io, made by humanbn, based in Castro
+Valley, California. By using elapsed, you agree to them.
 
-## Using elapsed
+## elapsed.io today
+
+The timer has not opened yet: for now, elapsed.io shows a page saying it is coming soon. These terms cover
+that page and, once it opens, the timer.
+
+## using elapsed
 
 - elapsed is free and has no ads. You need no account.
-- Your sessions, settings and any font file you load are kept on your device, in your browser (see the
-  privacy page). Clearing your browser's site data, or "clear device data" in settings, removes them, and
-  we cannot restore them.
+- Your sessions, settings and anything you make, such as a font file you load or custom CSS you write, are
+  kept on your device, in your browser (see the privacy page). Clearing your browser's site data, or
+  "clear device data" in settings, removes them, and we cannot restore them.
 - A finished session is not saved anywhere once its tab closes.
 
-## Your own files
+## what you load
 
-A font file you load stays on your device; we never receive it. Load only files you have the right to use.
+A font file you load and custom CSS you write stay on your device; we never receive them. Load only files
+you have the right to use.
 
-## Anonymous counts and crash reports
+## anonymous counts and crash reports
 
-The site counts daily visits and sessions started, anonymously, unless you switch this off, and sends crash
-reports only if you switch them on. The privacy page says exactly what they contain.
+The timer counts daily visits and sessions started, anonymously, unless you switch this off, and sends
+crash reports only if you switch them on. The privacy page says exactly what they contain.
 
-## Open questions for the owner
+## no warranties
 
-[Owner: who provides the service (humanbn) and how to describe it; whether to state that the timer is
-provided as is, without warranties, and to limit liability; governing law; and how changes to these terms
-are announced. None of these is in the plan's privacy table or data inventory, so this draft does not
-invent them.]
+elapsed is provided "as is", without warranties of any kind. We do not promise that it will always be
+available, accurate or free of errors.
 
-## Contact
+## liability
+
+humanbn's liability to you for anything to do with elapsed is limited to the amount you paid for it.
+
+## your rights
+
+Nothing in these terms removes rights that cannot be excluded by law.
+
+## governing law
+
+The laws of California govern these terms. Any dispute about them or elapsed belongs in the state and
+federal courts in Alameda County, California.
+
+## changes
+
+If these terms change, the date at the top changes too, and the new terms apply from that date.
+
+## contact
 
 support@elapsed.io
-
-[Owner: effective date.]

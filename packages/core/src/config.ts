@@ -384,6 +384,12 @@ export const CONFIG = {
   theme: {
     /** Derived colours: the foreground mixed this far toward the background. */
     mix: { muted: 0.45, faint: 0.84, track: 0.91, pause: 0.8 },
+    /**
+     * Muted text starts at mix.muted and steps back toward the foreground by
+     * this much until it has text contrast against both the background and the
+     * panel (track), as the design canvas computes it.
+     */
+    mutedStep: 0.005,
     /** A background with relative luminance at or above this is a light theme. */
     lightBackgroundLuminance: 0.4,
     /** Minimum contrast ratios every preset must pass. */

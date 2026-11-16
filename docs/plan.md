@@ -30,7 +30,7 @@ Each of the four core development points is stated as rules that can be checked 
 | Principle | Rules |
 | --- | --- |
 | Customizable | Almost everything is user-customizable, and every design in the design file is only a default. A user can import their own background, move, rotate, stretch or hide any element (the timer, buttons, icons, widgets), and retune colours, fonts, timings and each display mode's parameters. Each new feature exposes its look and behaviour through the settings schema and CSS variables from its first round, never as hard-coded values. |
-| Appealing and fast | Animations use only `transform`, `opacity` and `filter`, with smooth easing so motion reads as fluid. There are exactly two exceptions: results replays may animate SVG stroke offsets, and the results headline may count up through an animated integer custom property. `prefers-reduced-motion` is honoured. Controls respond within 100 ms. The display re-renders only when the visible value changes. CSS does all motion; JavaScript only changes state when something happens, such as a minute ticking over, a check-in falling due or a button press, and never runs an animation loop. |
+| Appealing and fast | Animations use only `transform`, `opacity` and `filter`, with smooth easing so motion reads as fluid. There is exactly one exception: a results replay is driven by a single animated custom property holding its progress, from which its SVG stroke offsets, the clock hand's rotation and the headline count are all derived. `prefers-reduced-motion` is honoured. Controls respond within 100 ms. The display re-renders only when the visible value changes. CSS does all motion; JavaScript only changes state when something happens, such as a minute ticking over, a check-in falling due or a button press, and never runs an animation loop. |
 | Lightweight | No UI framework. First load is at most 150 KB compressed, including one self-hosted font, with at most 50 KB of JavaScript. CI warns when a budget is exceeded and fails only past twice the budget; see Loading and performance. Display modes, the layout editor and widgets are lazy-loaded. Every runtime dependency needs owner approval. |
 | Private | No ads, analytics or third-party requests from the timer page itself. Exceptions are isolated and opt-in: Google sign-in on the account page, and widgets a user connects, which run in a separate sandboxed origin, plus Cloudflare's CAPTCHA on the sign-up page only and, for signed-in users, the live-sync connection to the project's own Supabase database. Anonymous usage counts (daily visits and sessions started, with nothing that identifies a person or device; a visit is a page load that is not a reload or a back-and-forward navigation, and nothing is stored on the device to count it) are on by default and can be switched off in settings. Crash reports are opt-in and go only to our own server. No cookies for guests. Only the data listed under Privacy is collected. |
 | Safe | A strict Content Security Policy from round 1. No `eval`. No `innerHTML` with dynamic content. All input is validated at the boundary, including data read back from storage, imported files and widget data. Every round ends with a safety overview. |
@@ -165,7 +165,7 @@ Every setting below is declared once in the settings schema. Categories run from
 | Font | A grid of 14 built-in fonts, each name shown in its own font, or your own font file (woff2, woff, ttf or otf, up to 2 MB, kept on the device and never uploaded) | Archivo | Everyone |
 | Time size | One slider from 50% to 150% that scales the timer with its proportions locked; it changes the same value as the layout editor | Default | Everyone |
 | Clock format | 12-hour, 24-hour, follow region (for clock times such as "started 2:02 pm"; elapsed time stays hh:mm) | Follow region | Everyone |
-| Animation speed | Slower, normal, faster (Release 2, with the ambient modes) | Normal | Everyone |
+| Animation speed | Slower, normal, faster (Release 2, with the ambient modes); scales every animation's duration, including results replays, and "normal" is the timing in the Design system | Normal | Everyone |
 | Low power | On, off | Off | Everyone |
 
 ### 4. Notifications
@@ -288,7 +288,7 @@ The design canvas is the visual source of truth. Every product screen is built t
 | Sand | #F3E3C3 | #2A1E0C | #B9783C |
 | Mint | #D5F0E3 | #0E2A1E | #2F9D6C |
 
-- **Derived colors:** muted is the foreground mixed 45% toward the background (labels and icons); faint 84% (dividers, ring track); track 91% (cards and empty bars); the pause and cancel buttons 80%.
+- **Derived colors:** muted is the foreground mixed 45% toward the background, stepping back toward the foreground by 0.5% at a time until it has 4.5:1 contrast against both the background and the panel (labels and icons); faint 84% (dividers, ring track); track 91% (cards and empty bars); the pause and cancel buttons 80%.
 - **Fixed colors:** the end button is #A8403D on dark themes and #E28A86 on light ones (background luminance 0.4 or more). The personal record marker is #8C7A52 on dark themes and #8A6D2E on light ones. Button text is always the foreground.
 - **Ambient modes** use their own palettes, defined under Display modes below.
 
@@ -304,21 +304,21 @@ The design canvas is the visual source of truth. Every product screen is built t
 | --- | --- |
 | Start | Start morphs into pause and end fades in to its right, over 200 ms |
 | Seconds blur-away | The ones digit clears over the first 10 s; the tens digit and colon over 10 to 60 s. Within each window, with progress p and smoothstep s: blur is 14·s(p) px, opacity 1 − s((p − 0.3)/0.7), and width 1 − s((p − 0.55)/0.45), so the time re-centers smoothly. Static afterward |
-| Check-in and pause | Time blurred 10 px at 40% opacity, with the foreground text centered on it |
+| Check-in and pause | In every display mode, the whole display (the time and its graphics) blurs 10 px at 40% opacity, and "paused for" with the pause length, or the check-in line, sits at the center of the display. Buttons stay sharp |
 | Ending | The 5-second bar fills left to right at a constant rate |
-| Results | The tabulating screen holds 0.9 s and fades out over 0.8 s. Results fade in over 1.0 s from 1.0 s, rising 10 px. The replay starts at 2.0 s and runs 4.5 s, eased in and out (cubic). The focused headline counts up alongside it using CSS alone (a registered integer custom property shown through counter()), never a JavaScript loop; with reduced motion, or where the browser lacks support, it shows the final value at once |
+| Results | The tabulating screen holds 0.5 s and fades out over 0.4 s. Results fade in over 0.5 s from 0.5 s, rising 8 px. The replay starts at 0.8 s and runs 2.4 s with an ease-out curve, cubic-bezier(0.25, 1, 0.5, 1), so it starts quickly and settles gently. One registered custom property carries the replay's progress from 0 to 1, and the stroke offsets, the clock hand's rotation and the headline count (shown through counter()) are all calculated from it, so every part moves in step; never a JavaScript loop; with reduced motion, or where the browser lacks support, it shows the final value at once |
 | Reduced motion | No blur animation and no replay: the final state appears with a short crossfade |
 
 ### Display modes
 
-- **Ring:** one revolution per hour; an 8 px track in the faint color; a head dot with a 55° tail in 22 steps fading as (1 − i/22)^1.8. At 00:00 only the head shows at 12 o'clock; the tail grows in behind it over the first 9 minutes, so it never covers time that hasn't passed.
+- **Ring:** one revolution per hour; an 8 px track in the faint color; a round head dot with a tail up to 55° long, drawn as one smooth conic gradient (never stepped segments) that fades from the accent at the head to fully transparent at its far end. At 00:00 only the head shows at 12 o'clock; the tail grows in behind it over the first 9 minutes and fades out over whatever length it has, so there is never a hard edge at the top.
 - **Analog stopwatch:** one revolution per hour, labels every 5 minutes, an hours subdial, and the hand in the accent color.
-- **Timeline:** at reference, 10 minutes per 100 px with now at the center; the past line muted, the future faint; ticks every 5 minutes and hh:mm labels every 10. The personal record is a dashed marker labeled "pr: hh:mm:ss."
+- **Timeline:** the time at 56 px above a 480 px track (reference sizes; the track never grows past its frame size), 10 minutes per 100 px with now at the center, and both ends fading out. The past line is muted and the future faint; ticks every 5 minutes and hh:mm labels every 10. Nothing is drawn before the session's start. Lines and ticks sit on whole pixels and the track moves in whole-pixel steps once a minute, so they stay sharp. The personal record is a thin marker labeled "pr: hh:mm:ss".
 - **Ocean depth:** 15 m per focused minute, stopping at 10,935 m. The background is linear RGB (0.0232, 0.212, 0.392) × e^(−K·depth) with K = (0.30, 0.06, 0.023) per meter, drawn as a gradient from depth − 6 m to depth + 6 m, with text in #DCE8EE.
 - **Height:** 140 m per focused minute, stopping at 100 km. The sky is linear RGB (0.078, 0.275, 0.597) × e^(−K·h/8,500 m) with K = (1.25, 1.1, 0.95), as a gradient across ±1,500 m. Stars fade in between 18 and 42 km.
 - **Interstellar:** light speed. At reference, the map radius is 26 + 30·log10(AU/0.3) px from the center, with rings for the eight planets, dashed rings for the Kuiper belt edge (50 AU) and the heliopause (120 AU), a faint band for the Oort cloud (2,000 to 100,000 AU), Proxima Centauri at 268,000 AU, and travel toward −32°. The star field is the canvas catalog (Orion, Taurus with the Pleiades and Hyades, Gemini, Sirius, Procyon), projected around right ascension 5.5 h and declination +6° at 8 px per degree, each star's radius max(0.7, 2.7 − 0.42 × magnitude) px.
 - **Tree:** one year per focused hour, 15 minutes per season. Leaves grow in spring (#C2DE8E to #86C060), deepen in summer (#3E8B47), turn in autumn (#D9822F to #A9502A) and are all gone by the end of autumn, each cluster offset by up to a quarter season. Winter shows snow on the branches and the ground. Side and isometric views as drawn.
-- **Results replays:** digits and timeline as a focus strip; analog and ring as one ring per hour, outermost first, drawn exactly as the frame up to 6 hours and moving closer and thinner beyond that so every hour fits in the same circle; ocean depth and height as a profile chart with zone bands and at most two random landmarks per 1,000 m or 10 km band; the tree growing to full size at 60 focused minutes through its seasons; interstellar as the radial map with callouts.
+- **Results replays:** digits and timeline as a focus strip; analog and ring as one ring per hour, outermost first, each revealed exactly behind the sweeping hand, drawn exactly as the frame up to 6 hours and moving closer and thinner beyond that so every hour fits in the same circle; ocean depth and height as a profile chart with zone bands and at most two random landmarks per 1,000 m or 10 km band; the tree growing to full size at 60 focused minutes through its seasons; interstellar as the radial map with callouts.
 
 ### Screens
 
@@ -401,7 +401,7 @@ The stack as planned, with recommendations where a choice is still open.
 
 - **One scheduler:** the engine, modes, check-ins and heartbeat share one timer that wakes only for the next visible change, never separate intervals per module.
 - **No per-frame drawing:** SVG scenes animate by moving whole groups with CSS transforms. Season and light colors change every few seconds through animated CSS custom properties. Nothing is redrawn every frame.
-- **Replays:** results animations move stroke offsets and transforms rather than rebuilding shapes, and run once.
+- **Replays:** results animations move stroke offsets and transforms rather than rebuilding shapes, and run once. Every part of a replay is derived from one progress value, so focus arcs are revealed by the clock hand and never run ahead of it.
 - **Blur:** the seconds blur-away is the only animated blur, and it stops after the first minute.
 - **Images at screen size:** imported backgrounds are scaled to the device's screen when imported, stored compressed, and decoded once.
 - **Widgets on demand:** a widget's frame is created only when shown, and its refreshing stops when it is hidden, when the tab is hidden, or during sessions if the user hides widgets then.

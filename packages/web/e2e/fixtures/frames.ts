@@ -24,13 +24,17 @@ export interface FramePalette {
   readonly end: string;
 }
 
-/** The frames' palettes, computed by their own pal() for each theme. */
+/**
+ * The frames' palettes, computed by their own pal() for each theme: muted
+ * (and the icons) step back from 45 % until they reach 4.5:1 against both the
+ * background and the panel (the canvas's rule since 2026-11-16).
+ */
 export const GRAPHITE: FramePalette = {
   bg: '#0E0F11',
   text: '#ECEAE4',
   accent: '#35764E',
-  icon: '#888785',
-  muted: '#888785',
+  icon: '#8a8a87',
+  muted: '#8a8a87',
   faint: '#323233',
   track: '#222324',
   gray: '#3a3b3b',
@@ -41,8 +45,8 @@ export const PAPER: FramePalette = {
   bg: '#F6F5F2',
   text: '#1A1B1E',
   accent: '#4A9E6C',
-  icon: '#7d7d7d',
-  muted: '#7d7d7d',
+  icon: '#646465',
+  muted: '#646465',
   faint: '#d3d2d0',
   track: '#e2e1df',
   gray: '#cac9c8',
@@ -90,7 +94,8 @@ export function idleFrame(): string {
 
 /** The "soon" frame for elapsed.io before launch (graphite; in the paper palette, the light frame). */
 export function soonFrame(): string {
-  return root(14, `<div style="font-size: 13px; color: ${C.muted}; letter-spacing: 0.16em">elapsed</div><div style="${TIME_STYLE}; font-size: 120px">soon</div>`, false);
+  const links = `<div style="position: absolute; bottom: 18px; left: 0; right: 0; display: flex; justify-content: center; gap: 16px; font-size: 11px"><a href="#privacy" style="color: ${C.muted}; text-decoration: none">privacy</a><a href="#terms" style="color: ${C.muted}; text-decoration: none">terms</a></div>`;
+  return root(14, `<div style="font-size: 13px; color: ${C.muted}; letter-spacing: 0.16em">elapsed</div><div style="${TIME_STYLE}; font-size: 120px">soon</div>${links}`, false);
 }
 
 /** The running frame at `t` seconds of focus, as its renderVals() computes it. */

@@ -108,7 +108,7 @@ test('timeline matches the timeline frame', async ({ page, browser }) => {
   labels.forEach((label, index) => {
     // Within a quarter pixel (text boxes are measured in 1/64 px layout units); a minute is 10 px.
     expect(Math.abs(label.centre - (TIMELINE_FRAME_LABELS[index]?.[1] ?? Number.NaN))).toBeLessThan(0.25);
-    expect(label).toMatchObject({ size: '11px', family: '"Timer Sans", system-ui, sans-serif', weight: '400', fill: 'rgb(136, 135, 133)', baseline: '90' });
+    expect(label).toMatchObject({ size: '11px', family: '"Timer Sans", system-ui, sans-serif', weight: '400', fill: 'rgb(138, 138, 135)', baseline: '90' });
   });
 
   // Everything else, pixel for pixel. Text anti-aliasing inside a sliding layer varies between

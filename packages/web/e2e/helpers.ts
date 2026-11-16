@@ -64,11 +64,15 @@ export async function holdAnimationsAt(page: Page, focusedMs: number): Promise<v
 }
 
 /** Renders reference HTML outside the site's CSP and screenshots it. */
-export async function screenshotReference(browser: Browser, markup: string, viewport = { width: 720, height: 450 }): Promise<Buffer> {
+/**
+ * Draws a frame's markup as a reference image. Its "Archivo" is the site's default font, or `font`: a page
+ * with its own cut of that font is compared with the frame drawn in that cut, so only layout and colour differ.
+ */
+export async function screenshotReference(browser: Browser, markup: string, viewport = { width: 720, height: 450 }, font: Buffer = FONT): Promise<Buffer> {
   const reference = await browser.newPage({ viewport });
   await reference.route('http://frame.test/**', (route) => {
     const isFont = route.request().url().endsWith('/font.woff2');
-    return route.fulfill({ body: isFont ? FONT : markup, contentType: isFont ? 'font/woff2' : 'text/html' });
+    return route.fulfill({ body: isFont ? font : markup, contentType: isFont ? 'font/woff2' : 'text/html' });
   });
   await reference.goto('http://frame.test/');
   await reference.evaluate(() => document.fonts.ready);

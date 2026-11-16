@@ -4,7 +4,7 @@
  */
 
 import { CONFIG } from '@stopwatch/core';
-import { mix, parseHex, relativeLuminance } from './color.ts';
+import { contrastRatio, mix, parseHex, relativeLuminance } from './color.ts';
 import type { Hex } from './color.ts';
 import type { ThemeTokens } from './presets.ts';
 
@@ -34,18 +34,36 @@ export function isLightBackground(background: Hex): boolean {
   return relativeLuminance(background) >= CONFIG.theme.lightBackgroundLuminance;
 }
 
+/**
+ * Muted text and icons: the foreground mixed toward the background by at most
+ * `mix.muted`, stepping back toward the foreground until it has text contrast
+ * (4.5:1) against both the background and the panel it also sits on. The
+ * design canvas computes it with the same steps, so frames and site agree.
+ */
+export function mutedColour(foreground: Hex, background: Hex, panel: Hex): Hex {
+  const minimum = CONFIG.theme.minContrast.text;
+  let fraction: number = CONFIG.theme.mix.muted;
+  let colour = mix(foreground, background, fraction);
+  while (fraction > 0 && (contrastRatio(colour, background) < minimum || contrastRatio(colour, panel) < minimum)) {
+    fraction -= CONFIG.theme.mutedStep;
+    colour = mix(foreground, background, fraction);
+  }
+  return colour;
+}
+
 export function deriveTheme(tokens: ThemeTokens): DerivedTheme {
   const { background, foreground, accent } = tokens;
   const scheme = isLightBackground(background) ? 'light' : 'dark';
   const toward = (fraction: number): Hex => mix(foreground, background, fraction);
+  const track = toward(CONFIG.theme.mix.track);
   return {
     background,
     foreground,
     accent,
     scheme,
-    muted: toward(CONFIG.theme.mix.muted),
+    muted: mutedColour(foreground, background, track),
     faint: toward(CONFIG.theme.mix.faint),
-    track: toward(CONFIG.theme.mix.track),
+    track,
     pause: toward(CONFIG.theme.mix.pause),
     end: FIXED_COLOURS.end[scheme],
     recordMarker: FIXED_COLOURS.recordMarker[scheme],

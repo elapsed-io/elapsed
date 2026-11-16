@@ -1,7 +1,10 @@
 /**
  * Contrast rules every preset must pass (plan, Decisions > Themes): text at
  * least 4.5:1 and accent graphics at least 2.5:1. "Text" covers the time on
- * the background and each button's label on its own button colour.
+ * the background, each button's label on its own button colour, muted labels
+ * and help text on the background and on the settings panel. (The
+ * personal-record label arrives with records in Release 3, and must be
+ * checked then.)
  */
 
 import { CONFIG } from '@stopwatch/core';
@@ -37,6 +40,9 @@ export function checkThemeContrast(theme: DerivedTheme): readonly ContrastCheck[
     { pair: 'text on start button', foreground: theme.foreground, background: theme.accent, minimum: text },
     { pair: 'text on pause button', foreground: theme.foreground, background: theme.pause, minimum: text },
     { pair: 'text on end button', foreground: theme.foreground, background: theme.end, minimum: text },
+    { pair: 'text on settings panel', foreground: theme.foreground, background: theme.track, minimum: text },
+    { pair: 'muted text on background', foreground: theme.muted, background: theme.background, minimum: text },
+    { pair: 'muted text on settings panel', foreground: theme.muted, background: theme.track, minimum: text },
     { pair: 'accent on background', foreground: theme.accent, background: theme.background, minimum: accentGraphic },
   ].map(check);
 }

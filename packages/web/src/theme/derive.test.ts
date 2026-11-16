@@ -4,6 +4,26 @@ import { deriveTheme, isLightBackground, themeCustomProperties } from './derive.
 import { getPreset, PRESETS } from './presets.ts';
 
 describe('deriveTheme', () => {
+  // Computed by the design canvas's pal(): muted steps back from 45 % until it has 4.5:1 against the background and the panel.
+  const CANVAS_MUTED = {
+    graphite: '#8a8a87',
+    paper: '#646465',
+    'deep-sea': '#91a5b0',
+    forest: '#99aa96',
+    oxblood: '#ac9391',
+    plum: '#a294ac',
+    lilac: '#5b5370',
+    sky: '#485e6f',
+    sand: '#665943',
+    mint: '#496458',
+  } as const;
+
+  it('derives muted text in every preset exactly as the design canvas, with 4.5:1 on the background and the panel', () => {
+    for (const [id, muted] of Object.entries(CANVAS_MUTED)) {
+      expect(deriveTheme(getPreset(id as keyof typeof CANVAS_MUTED)).muted, id).toBe(muted);
+    }
+  });
+
   // Golden values from the design canvas's pal() function.
   it('derives graphite exactly as the design canvas', () => {
     expect(deriveTheme(getPreset('graphite'))).toEqual({
@@ -11,7 +31,7 @@ describe('deriveTheme', () => {
       foreground: '#eceae4',
       accent: '#35764e',
       scheme: 'dark',
-      muted: '#888785',
+      muted: '#8a8a87',
       faint: '#323233',
       track: '#222324',
       pause: '#3a3b3b',
@@ -23,7 +43,7 @@ describe('deriveTheme', () => {
   it('derives paper exactly as the design canvas', () => {
     expect(deriveTheme(getPreset('paper'))).toMatchObject({
       scheme: 'light',
-      muted: '#7d7d7d',
+      muted: '#646465',
       faint: '#d3d2d0',
       track: '#e2e1df',
       pause: '#cac9c8',
@@ -35,7 +55,7 @@ describe('deriveTheme', () => {
   it('derives lilac exactly as the design canvas', () => {
     expect(deriveTheme(getPreset('lilac'))).toMatchObject({
       scheme: 'light',
-      muted: '#79708d',
+      muted: '#5b5370',
       faint: '#c3bbd7',
       track: '#d1c9e4',
       pause: '#bcb4cf',
@@ -68,6 +88,6 @@ describe('themeCustomProperties', () => {
       '--color-record',
       '--color-scheme',
     ]);
-    expect(properties['--color-muted']).toBe('#888785');
+    expect(properties['--color-muted']).toBe('#8a8a87');
   });
 });
