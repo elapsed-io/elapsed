@@ -1,2 +1,4 @@
 * text=auto eol=lf
 *.woff2 binary
+# Font license files are kept byte for byte as their sources ship them (their SHA-256 is recorded).
+packages/web/src/assets/fonts/**/OFL.txt -text
