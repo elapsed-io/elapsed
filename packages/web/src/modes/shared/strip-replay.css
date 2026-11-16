@@ -32,6 +32,15 @@
     overflow: hidden;
   }
 
+  /* The replay, from --replay-progress alone; once it has finished (data-replayed), nothing is transformed. */
+  .results:not([data-replayed]) .strip__reveal {
+    transform: translateX(calc((var(--replay-progress) - 1) * 100%));
+  }
+
+  .results:not([data-replayed]) .strip__reveal-inner {
+    transform: translateX(calc((1 - var(--replay-progress)) * 100%));
+  }
+
   .strip__bar {
     position: absolute;
     top: 0;

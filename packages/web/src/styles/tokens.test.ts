@@ -30,11 +30,30 @@ describe('generated tokens', () => {
     }
   });
 
-  it('gives each mode its own sizes and motion', () => {
-    expect(renderModeTokensCss('ring')).toContain('--ring-revolution: 3600000ms');
-    expect(renderModeTokensCss('ring')).toContain('--mode-gap: 20');
-    expect(renderModeTokensCss('timeline')).toContain('--mode-gap: 18');
-    // 16 hours at 10 px a minute, starting with now at the centre.
-    expect(renderModeTokensCss('timeline')).toContain('to { transform: translateX(-9280px); }');
+  it('gives each mode its own sizes, as the revised frames draw them', () => {
+    const ring = renderModeTokensCss('ring');
+    expect(ring).toContain('--mode-gap: 20');
+    // A 232 px ring (112 px to the middle of its 8 px track) in a 280 px box, the head's top-left at 136, 24.
+    expect(ring).toContain('--ring-diameter: 232');
+    expect(ring).toContain('--ring-inset: 24');
+    expect(ring).toContain('--ring-head-left: 136');
+    expect(ring).toContain('--ring-head-top: 24');
+    expect(ring).toContain('--ring-tail-far-strength: 15%');
+    const timeline = renderModeTokensCss('timeline');
+    expect(timeline).toContain('--mode-gap: 30');
+    expect(timeline).toContain('--timeline-inner-gap: 18');
+    expect(timeline).toContain('--timeline-width: 480px');
+    expect(timeline).toContain('--timeline-fade: 14%');
+    // Modes move by transforms set once a minute, not by keyframes.
+    expect(ring + timeline).not.toContain('@keyframes');
+  });
+
+  it('scales every interface duration by one multiplier, and registers them as times', () => {
+    const css = renderTokensCss();
+    expect(css).toContain('--motion-scale: 1;');
+    expect(css).toContain('--replay-duration: calc(2400ms * var(--motion-scale));');
+    expect(css).toContain('--motion-morph: calc(200ms * var(--motion-scale));');
+    expect(css).toContain('@property --replay-duration {');
+    expect(css).toContain('--ease-replay: cubic-bezier(0.25, 1, 0.5, 1);');
   });
 });

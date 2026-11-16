@@ -11,14 +11,15 @@
  *
  * The replay reveals the bars from left to right as the replay's time sweeps
  * the session: a clipping box slides in while its content slides back the
- * same distance, so only transforms move.
+ * same distance, both calculated from --replay-progress (strip-replay.css),
+ * so only transforms move and nothing runs ahead of the replay.
  */
 
 import { BRAND, CONFIG, summarise } from '@stopwatch/core';
 import type { Session } from '@stopwatch/core';
 import { html } from '../../dom.ts';
 import { formatClockTime } from '../../shell/clock-time.ts';
-import { focusStretches, replayTiming } from './replay-timing.ts';
+import { focusStretches } from './replay-timing.ts';
 import './strip-replay.css';
 
 const STRIP = CONFIG.design.results.strip;
@@ -99,8 +100,4 @@ export function drawStrip(root: HTMLElement, session: Session): void {
   };
   arrange();
   if (typeof ResizeObserver === 'function') new ResizeObserver(arrange).observe(labelRow);
-
-  const timing = replayTiming(doc);
-  reveal.animate([{ transform: 'translateX(-100%)' }, { transform: 'translateX(0)' }], timing);
-  inner.animate([{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }], timing);
 }

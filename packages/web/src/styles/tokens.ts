@@ -26,6 +26,10 @@ const SMOOTHSTEP = 'cubic-bezier(0.333333, 0, 0.666667, 1)';
 const px = (value: number): string => `${String(value)}px`;
 const em = (value: number): string => `${String(value)}em`;
 const ms = (value: number): string => `${String(value)}ms`;
+/** A share as a percentage, without floating-point noise (0.55 is 55%, not 55.00000000000001%). */
+const share = (fraction: number): string => `${String(Math.round(fraction * 10_000) / 100)}%`;
+/** A duration of interface motion, scaled by --motion-scale. */
+const scaled = (value: number): string => `calc(${ms(value)} * var(--motion-scale))`;
 const percent = (fraction: number): string => `${String(Math.round(fraction * 10_000) / 100)}%`;
 
 export function designCustomProperties(): CustomProperties {
@@ -127,15 +131,20 @@ export function designCustomProperties(): CustomProperties {
     '--legend-pause-size': px(results.ring.legend.pausePx),
     '--legend-radius': px(results.ring.legend.radiusPx),
 
-    '--tabulating-hold': ms(motion.tabulatingHold),
-    '--tabulating-fade': ms(motion.tabulatingFadeOut),
-    '--results-fade-delay': ms(motion.resultsFadeInDelay),
-    '--results-fade': ms(motion.resultsFadeIn),
+    // Interface motion: each duration scaled by one multiplier (Release 2's animation speed setting).
+    '--motion-scale': String(motion.durationScale),
+    '--tabulating-hold': scaled(motion.tabulatingHold),
+    '--tabulating-fade': scaled(motion.tabulatingFadeOut),
+    '--results-fade-delay': scaled(motion.resultsFadeInDelay),
+    '--results-fade': scaled(motion.resultsFadeIn),
     '--results-rise': px(motion.resultsRisePx),
+    '--replay-delay': scaled(motion.replayDelay),
+    '--replay-duration': scaled(motion.replayDuration),
+    '--ease-replay': `cubic-bezier(${motion.replayEasing.join(', ')})`,
     '--copied-confirmation': ms(motion.copiedConfirmation),
     '--font-block': ms(CONFIG.settings.fontBlockMax),
 
-    '--motion-morph': ms(motion.startMorph),
+    '--motion-morph': scaled(motion.startMorph),
     '--ease-standard': `cubic-bezier(${motion.standardEasing.join(', ')})`,
     '--ease-smoothstep': SMOOTHSTEP,
     '--held-blur': px(motion.heldBlurPx),
@@ -187,13 +196,6 @@ function blurAwayKeyframes(): string {
   ].join('\n');
 }
 
-/** The plan's replay easing, the cubic ease-in-out, as a CSS linear() function sampled evenly. */
-export function replayEasing(samples: number = CONFIG.motion.replayEasingSamples): string {
-  const cubic = (q: number): number => (q < 0.5 ? 4 * q * q * q : 1 - (-2 * q + 2) ** 3 / 2);
-  const points = Array.from({ length: samples + 1 }, (_, i) => String(Math.round(cubic(i / samples) * 10_000) / 10_000));
-  return `linear(${points.join(', ')})`;
-}
-
 /** Below the results frame's width, a side margin and three stat columns (owner decision, 2026-11-15). */
 function narrowBlock(): string {
   const { results } = CONFIG.design;
@@ -203,12 +205,21 @@ function narrowBlock(): string {
   }).replace(/^/gm, '  ')}\n  }`;
 }
 
+/** Durations scaled by --motion-scale, registered as times so script reads them resolved ("0.2s"). */
+export const SCALED_DURATIONS = ['--motion-morph', '--tabulating-hold', '--tabulating-fade', '--results-fade-delay', '--results-fade', '--replay-delay', '--replay-duration'] as const;
+
+function registeredProperties(): string {
+  const time = SCALED_DURATIONS.map((name) => `@property ${name} {\n  syntax: "<time>";\n  inherits: true;\n  initial-value: 0s;\n}`);
+  return [`@property --motion-scale {\n  syntax: "<number>";\n  inherits: true;\n  initial-value: 1;\n}`, ...time].join('\n');
+}
+
 /** The generated stylesheet: design tokens and keyframes in `base`, the default theme in `theme`. */
 export function renderTokensCss(): string {
   const theme = deriveTheme(getPreset(DEFAULT_PRESET_ID));
   return [
     '/* Generated from packages/core/src/config.ts and packages/web/src/theme at build time. */',
-    `@layer base {\n${block(':root', { ...designCustomProperties(), '--ease-replay': replayEasing() })}\n${narrowBlock()}\n${blurAwayKeyframes()}\n}`,
+    registeredProperties(),
+    `@layer base {\n${block(':root', designCustomProperties())}\n${narrowBlock()}\n${blurAwayKeyframes()}\n}`,
     `@layer theme {\n${block(':root', themeCustomProperties(theme))}\n}`,
     '',
   ].join('\n');
@@ -349,38 +360,43 @@ export function isModeTokenId(value: string): value is ModeTokenId {
 
 function ringTokens(): string {
   const ring = CONFIG.modes.ring;
+  const diameter = 2 * ring.radiusPx + ring.trackPx;
+  const [far, near] = ring.tailStops;
   const properties: CustomProperties = {
     '--mode-time-size': String(CONFIG.design.type.ringTimePx),
     '--mode-gap': String(ring.gapPx),
+    // Reference pixels, scaled with the time.
     '--ring-box': String(ring.boxPx),
-    '--ring-revolution': ms(ring.revolution),
+    '--ring-diameter': String(diameter),
+    '--ring-inset': String((ring.boxPx - diameter) / 2),
+    '--ring-track': String(ring.trackPx),
+    '--ring-head': String(ring.headPx),
+    '--ring-head-left': String(ring.boxPx / 2 - ring.headPx / 2),
+    '--ring-head-top': String(ring.boxPx / 2 - ring.radiusPx - ring.headPx / 2),
+    '--ring-tail-far': String(far.at),
+    '--ring-tail-far-strength': share(far.strength),
+    '--ring-tail-near': String(near.at),
+    '--ring-tail-near-strength': share(near.strength),
   };
-  return [
-    block('[data-mode="ring"]', properties),
-    '  @keyframes ring-turn {\n    from { transform: rotate(0deg); }\n    to { transform: rotate(360deg); }\n  }',
-  ].join('\n');
+  return block('[data-mode="ring"]', properties);
 }
 
 function timelineTokens(): string {
   const timeline = CONFIG.modes.timeline;
-  const pxPerMinute = 100 / timeline.minutesPer100Px;
-  const start = timeline.widthPx / 2;
-  const travel = (CONFIG.session.maxFocus / 60_000) * pxPerMinute;
   const properties: CustomProperties = {
     '--mode-time-size': String(CONFIG.design.type.timelineTimePx),
     '--mode-gap': String(timeline.gapPx),
-    '--timeline-width': String(timeline.widthPx),
-    '--timeline-height': String(timeline.heightPx),
+    '--timeline-inner-gap': String(timeline.innerGapPx),
+    '--timeline-width': px(timeline.widthPx),
+    '--timeline-height': px(timeline.heightPx),
+    '--timeline-edge': px(timeline.edgePx),
+    '--timeline-fade': share(timeline.fadeShare),
     '--timeline-label-size': px(timeline.labelPx),
-    '--timeline-duration': ms(CONFIG.session.maxFocus),
   };
-  return [
-    block('[data-mode="timeline"]', properties),
-    `  @keyframes timeline-scroll {\n    from { transform: translateX(${px(start)}); }\n    to { transform: translateX(${px(start - travel)}); }\n  }`,
-  ].join('\n');
+  return block('[data-mode="timeline"]', properties);
 }
 
-/** One display mode's tokens and keyframes, in the `mode` layer. */
+/** One display mode's tokens, in the `mode` layer. */
 export function renderModeTokensCss(mode: ModeTokenId): string {
   const body = mode === 'ring' ? ringTokens() : timelineTokens();
   return `/* Generated from packages/core/src/config.ts at build time. */\n@layer mode {\n${body}\n}\n`;

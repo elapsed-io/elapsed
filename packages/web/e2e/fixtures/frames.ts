@@ -10,7 +10,6 @@
  * Release 3.
  */
 
-import { timelineStripMinutes } from '../../src/modes/timeline/strip.ts';
 
 export interface FramePalette {
   readonly bg: string;
@@ -80,6 +79,11 @@ const BUTTON = (label: string, background: string): string =>
   `<button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: ${C.text}; background: ${background}">${label}</button>`;
 const runningButtons = (): string => `<div style="display: flex; gap: 14px">${BUTTON('pause', C.gray)}${BUTTON('end', C.end)}</div>`;
 
+/** A frame's root markup as a whole page, with the site's default font standing in for Archivo. */
+export function frameDocument(markup: string): string {
+  return `${HEAD}${markup}</body></html>`;
+}
+
 function root(gap: number, children: string, withCorner = true): string {
   return `${HEAD}<div style="width: 720px; height: 450px; box-sizing: border-box; background: ${C.bg}; color: ${C.text}; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: ${String(gap)}px">${withCorner ? corner() : ''}${children}</div></body></html>`;
 }
@@ -147,74 +151,6 @@ export function limitFrame(): string {
   ];
   return root(16, children.join(''));
 }
-
-/**
- * The ring frame: 01:24, the head 24 minutes into the hour.
- *
- * The site turns the head and tail as one group by a CSS animation, which
- * browsers rasterise as a separate layer, and how a layer is rasterised
- * differs between browser versions. So the reference draws the frame's
- * geometry the same way: the frame's segments at rotate(54° − 2.5°·(i + 1))
- * become segments at rotate(−90° − 2.5°·(i + 1)) inside a group turned by
- * 144° (24 minutes), and the head (205.8, 230.6) becomes (140, 28) turned by
- * the same 144°. The frame's own markup was compared too during round 3: within
- * anti-aliasing on this rendering path, it differs only by layer raster noise.
- */
-export function ringFrame(): string {
-  const opacities = ['1.000', '0.920', '0.842', '0.768', '0.697', '0.629', '0.564', '0.502', '0.443', '0.388', '0.336', '0.287', '0.242', '0.200', '0.162', '0.127', '0.096', '0.069', '0.046', '0.028', '0.013', '0.004'];
-  const turned = 'will-change: transform; transform-box: view-box; transform-origin: 50% 50%; transform: rotate(144deg)';
-  const tail = opacities
-    .map(
-      (opacity, i) =>
-        `<circle cx="140" cy="140" r="112" fill="none" stroke="${C.accent}" stroke-width="8" stroke-dasharray="5.49 703.7" opacity="${opacity}" transform="rotate(${String(-90 - 2.5 * (i + 1))} 140 140)"></circle>`,
-    )
-    .join('');
-  const ring = `<div style="position: relative; width: 280px; height: 280px; display: flex; align-items: center; justify-content: center"><svg role="img" width="280" height="280" viewBox="0 0 280 280" style="position: absolute; top: 0; left: 0"><circle cx="140" cy="140" r="112" fill="none" stroke="${C.faint}" stroke-width="8"></circle><g><g style="${turned}">${tail}</g></g><g style="${turned}"><circle cx="140" cy="28" r="4" fill="${C.accent}"></circle></g></svg><div style="position: relative; ${TIME_STYLE}; font-size: 52px">01${COLON}24</div></div>`;
-  return root(20, ring + runningButtons());
-}
-
-/**
- * The timeline frame at 01:24, without the personal record marker.
- *
- * As with the ring, the site slides the ticks and labels as layers, so the
- * reference draws the frame's ticks (x = 30, 80, … 630) and labels the same
- * way: at x = minute × 10 inside groups translated by −520 px (84 minutes),
- * with the past ticks clipped to the left half and the future ticks to the
- * right half. The strip covers the same minutes as the site's, so the browser
- * lays out the layer identically. */
-export function timelineFrame(options: { readonly labels?: boolean } = {}): string {
-  // The same paused CSS animation the site uses, held at 84 minutes of a 16-hour slide from 320 px to −9,280 px.
-  const slid = 'animation: strip 57600000ms linear -5040000ms both paused';
-  // The whole strip, as the site draws it, so the layer has the same extent and raster origin.
-  const ticks = (stroke: string): string => {
-    const lines: string[] = [];
-    for (let minute = 0; minute <= timelineStripMinutes(); minute += 5) {
-      const x = minute * 10;
-      lines.push(`<line x1="${String(x)}" y1="60" x2="${String(x)}" y2="${minute % 10 === 0 ? '72' : '66'}" stroke="${stroke}" stroke-width="1.5"></line>`);
-    }
-    return lines.join('');
-  };
-  const labels: string[] = [];
-  for (let minute = 0; options.labels !== false && minute <= timelineStripMinutes(); minute += 10) {
-    const text = `${pad(Math.floor(minute / 60))}:${pad(minute % 60)}`;
-    labels.push(`<text x="${String(minute * 10)}" y="90" text-anchor="middle" font-family="Archivo, system-ui, sans-serif" font-size="11" fill="${C.muted}">${text}</text>`);
-  }
-  const keyframes = '<style>@keyframes strip { from { transform: translateX(320px); } to { transform: translateX(-9280px); } }</style>';
-  const svg = `${keyframes}<svg role="img" width="640" height="110" viewBox="0 0 640 110"><defs><clipPath id="past"><rect x="0" y="0" width="320" height="110"></rect></clipPath><clipPath id="future"><rect x="320" y="0" width="320" height="110"></rect></clipPath></defs><line x1="0" y1="60" x2="320" y2="60" stroke="${C.muted}" stroke-width="2"></line><line x1="320" y1="60" x2="640" y2="60" stroke="${C.faint}" stroke-width="2"></line><g clip-path="url(#past)"><g style="${slid}">${ticks(C.muted)}</g></g><g clip-path="url(#future)"><g style="${slid}">${ticks(C.faint)}</g></g><g style="${slid}">${labels.join('')}</g></svg>`;
-  const time = `<div style="${TIME_STYLE}; font-size: 56px">01${COLON}24</div>`;
-  return root(18, time + svg + runningButtons());
-}
-
-/** Where the timeline frame draws its labels at 01:24: text and centre x within the 640 px drawing. */
-export const TIMELINE_FRAME_LABELS: readonly (readonly [string, number])[] = [
-  ['01:00', 80],
-  ['01:10', 180],
-  ['01:20', 280],
-  ['01:30', 380],
-  ['01:40', 480],
-  ['01:50', 580],
-];
-
 
 /** The ending countdown frame with the bar `width` px full (it fills 380 px over 5 s). No corner icons. */
 export function endingFrame(width: number): string {

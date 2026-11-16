@@ -61,13 +61,14 @@ appearance instead.
 | `.screen--bare` | The timer view with its corner icons hidden (the ending countdown) |
 | `.corner`, `.icon-button` | The settings and account icons in the corner |
 | `.mode-root` | Where the display mode draws |
-| `.time-stack`, `.time`, `.time--main` | The time; `.time__colon` is each colon |
+| `.time-stack`, `.time`, `.time--main` | The display and its time; `.time__colon` is each colon |
+| `.time-stack__body` | Everything the display mode draws, which blurs while paused or waiting for a check-in |
 | `.time--paused-for` | How long the session has been paused, while paused |
 | `.check-in__text` | The check-in prompt |
 | `.controls`, `.button` | The buttons under the time |
 | `.button--primary`, `.button--secondary`, `.button--end` | Start, pause or resume; cancel (in the ending countdown); end |
-| `.ring`, `.ring__track`, `.ring__head` | The ring display mode |
-| `.timeline`, `.timeline__strip` | The timeline display mode |
+| `.ring`, `.ring__track`, `.ring__rotor`, `.ring__tail`, `.ring__head` | The ring display mode; the rotor turns once a minute (`--ring-angle`), and the tail is `--ring-tail` degrees long |
+| `.timeline`, `.timeline__track`, `.timeline__svg`, `.timeline__label` | The timeline display mode |
 | `.ending`, `.ending__bar`, `.ending__fill`, `.ending__text` | The ending countdown |
 | `.notice` | The session maximum notice |
 | `.results`, `.results__time`, `.stats`, `.stat`, `.stat__label`, `.stat__value` | The results screen |

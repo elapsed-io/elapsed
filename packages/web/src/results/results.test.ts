@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { arc, ringGeometry, ringPaths } from '../modes/ring/ring-replay.ts';
 import { placeLabels } from '../modes/shared/strip-replay.ts';
 import { FINISHED_KEY, FinishedStore } from '../storage/finished-store.ts';
-import { countKeyframes } from './results.ts';
+import { countAt, countExpression, countTerms } from './results.ts';
 import { shareDuration, shareText } from './share.ts';
 
 const T0 = Date.UTC(2026, 10, 16, 14, 2, 0);
@@ -29,21 +29,29 @@ describe('share text', () => {
 });
 
 describe('the headline count', () => {
-  it('rises only while the replay passes focus, and lands on the total', () => {
+  it('rises only while the replay passes focus, flat across each pause, and lands on the total', () => {
     const session = sample();
-    const frames = countKeyframes(session, summarise(session));
-    const values = frames.map((frame) => Number(frame['--results-focused']));
-    const offsets = frames.map((frame) => frame.offset ?? 0);
-    expect(values.at(0)).toBe(0);
-    expect(values.at(-1)).toBe(10_060);
-    expect(offsets.at(-1)).toBe(1);
-    // Never decreasing, never moving offset backward, flat across each pause.
-    for (let i = 1; i < frames.length; i += 1) {
-      expect(values[i] ?? 0).toBeGreaterThanOrEqual(values[i - 1] ?? 0);
-      expect(offsets[i] ?? 0).toBeGreaterThan(offsets[i - 1] ?? 0);
+    const summary = summarise(session);
+    const terms = countTerms(session, summary);
+    const seconds = summary.elapsedMs / 1000;
+    expect(countAt(terms, seconds, 0)).toBe(0);
+    expect(countAt(terms, seconds, 1)).toBe(10_060);
+    let previous = 0;
+    for (let step = 0; step <= 1000; step += 1) {
+      const value = countAt(terms, seconds, step / 1000);
+      expect(value).toBeGreaterThanOrEqual(previous);
+      previous = value;
     }
-    const pauseStart = offsets.findIndex((offset) => Math.abs(offset - 92 / (185 + 40 / 60)) < 1e-9);
-    expect(values[pauseStart]).toBe(values[pauseStart + 1]);
+    // Across the first pause (minutes 92 to 102 of 185.67), the count holds at 92 minutes.
+    expect(countAt(terms, seconds, (93 * 60) / seconds)).toBe(92 * 60);
+    expect(countAt(terms, seconds, (101 * 60) / seconds)).toBe(92 * 60);
+  });
+
+  it('is one CSS expression of the replay progress', () => {
+    expect(countExpression([{ from: 0, length: 60 }, { from: 90, length: 30 }], 120)).toBe(
+      'round(down, clamp(0, var(--replay-progress) * 120 - 0, 60) + clamp(0, var(--replay-progress) * 120 - 90, 30), 1)',
+    );
+    expect(countExpression([], 1)).toBe('round(down, 0, 1)');
   });
 });
 

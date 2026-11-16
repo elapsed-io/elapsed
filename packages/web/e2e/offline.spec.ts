@@ -78,11 +78,11 @@ test('keeps a display mode picked once for offline use, but never fetches one in
     localStorage.setItem('settings', JSON.stringify({ schema: 1, mode: 'ring' }));
   });
   await page.goto('/');
-  await page.locator('.ring__svg').waitFor();
+  await page.locator('.ring').waitFor();
   expect(await cachedModes()).toBeGreaterThan(0);
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator('.ring__svg')).toBeVisible();
+  await expect(page.locator('.ring')).toBeVisible();
   await context.setOffline(false);
 });
 

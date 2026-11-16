@@ -8,19 +8,25 @@
  * keep the same outer and inner rings and draw the hours closer and thinner
  * (owner decision, 2026-11-15).
  *
- * The replay reveals each ring's focus as the replay's time passes through
- * that hour (a mask whose stroke offset moves, as the plan's performance
- * requirements allow for replays) and turns the hands, all with one timing.
+ * The replay is drawn from one value, --replay-progress (0 to 1), which the
+ * results screen animates (plan, Principles). From it CSS calculates the
+ * hands' rotation and each hour's reveal (a mask's stroke offset, clamped to
+ * that hour), so every focus arc is revealed exactly behind the sweeping
+ * minute hand and never runs ahead of it.
  */
 
 import { BRAND, CONFIG, summarise } from '@stopwatch/core';
 import type { Session } from '@stopwatch/core';
 import { html, svg } from '../../dom.ts';
-import { focusStretches, replayTiming } from '../shared/replay-timing.ts';
+import { focusStretches } from '../shared/replay-timing.ts';
 import './ring-replay.css';
 
 const RING = CONFIG.design.results.ring;
 const C = RING.viewBox / 2;
+/** Minutes per ring, and how far each hand turns per minute: once an hour, and once in twelve on the dial. */
+const MINUTES_PER_RING = 60;
+const MINUTE_HAND_DEGREES = 360 / MINUTES_PER_RING;
+const HOUR_HAND_DEGREES = 360 / (12 * MINUTES_PER_RING);
 const MASK_PREFIX = 'results-ring-reveal-';
 
 const fixed = (value: number): string => String(Math.round(value * 100) / 100);
@@ -100,13 +106,18 @@ export function drawRings(root: HTMLElement, session: Session): void {
     svg(doc, 'circle', { class: 'rings__track', cx: C, cy: C, r: fixed(radius), 'stroke-width': fixed(geometry.strokeWidth) }),
   );
   const focus = paths.map((d, hour) =>
-    svg(doc, 'path', { class: 'rings__focus', d: d === '' ? 'M0 0' : d.trim(), 'stroke-width': fixed(geometry.strokeWidth), mask: `url(#${MASK_PREFIX}${String(hour)})` }),
+    svg(doc, 'path', {
+      class: 'rings__focus rings__focus--hour',
+      d: d === '' ? 'M0 0' : d.trim(),
+      'stroke-width': fixed(geometry.strokeWidth),
+      mask: `url(#${MASK_PREFIX}${String(hour)})`,
+    }),
   );
-  // Once the replay has finished, every hour's focus is one path, as the frame draws it.
-  const allFocus = svg(doc, 'path', { class: 'rings__focus', d: paths.join('').trim() || 'M0 0', 'stroke-width': fixed(geometry.strokeWidth), visibility: 'hidden' });
+  // Once the replay has finished, every hour's focus is one path, as the frame draws it (ring-replay.css).
+  const allFocus = svg(doc, 'path', { class: 'rings__focus rings__focus--all', d: paths.join('').trim() || 'M0 0', 'stroke-width': fixed(geometry.strokeWidth) });
   // Where the hands end: the minute hand turns once per hour of the session; the hour hand as on a 12-hour dial.
-  const minuteAngle = (minutes % 60) * 6;
-  const hourAngle = (minutes / 720) * 360;
+  const minuteAngle = (minutes % MINUTES_PER_RING) * MINUTE_HAND_DEGREES;
+  const hourAngle = minutes * HOUR_HAND_DEGREES;
   // Turned about the dial's centre by the hands' transform-origin (ring-replay.css), like the replay's own turn.
   const turned = (angle: number): string => `rotate(${angle.toFixed(1)})`;
   const hourHand = svg(doc, 'line', {
@@ -155,31 +166,16 @@ export function drawRings(root: HTMLElement, session: Session): void {
     html(doc, 'div', { class: 'legend__item' }, [html(doc, 'div', { class: 'legend__focus' }), results.legendFocus]),
     html(doc, 'div', { class: 'legend__item' }, [html(doc, 'div', { class: 'legend__pause' }), results.legendPause]),
   ]);
-  root.replaceChildren(html(doc, 'div', { class: 'rings' }, [drawing, legend]));
-
-  // The replay: each hour's ring fills while the replay's time passes through that hour.
-  const timing = replayTiming(doc);
-  const total = Math.max(minutes, 1 / 60);
-  const reveals = masks.flatMap((mask, hour) => {
-    const reveal = mask.firstElementChild;
-    if (!(reveal instanceof SVGElement)) return [];
-    const from = Math.min(1, (hour * 60) / total);
-    const to = Math.min(1, ((hour + 1) * 60) / total);
-    const keyframes: Keyframe[] = [{ strokeDashoffset: '1', offset: 0 }];
-    if (from > 0) keyframes.push({ strokeDashoffset: '1', offset: from });
-    keyframes.push({ strokeDashoffset: '0', offset: to });
-    if (to < 1) keyframes.push({ strokeDashoffset: '0', offset: 1 });
-    return [reveal.animate(keyframes, timing).finished];
+  const rings = html(doc, 'div', { class: 'rings' }, [drawing, legend]);
+  // With --replay-progress, all ring-replay.css needs: the session's length, where each hour's ring starts, and
+  // how fast each hand turns. Set through the CSSOM, never as style attributes (the CSP forbids them).
+  rings.style.setProperty('--replay-minutes', String(Math.max(minutes, 1 / 60)));
+  masks.forEach((mask, hour) => {
+    if (!(mask.firstElementChild instanceof SVGElement)) return;
+    mask.firstElementChild.style.setProperty('--hour-from', String(hour * MINUTES_PER_RING));
+    mask.firstElementChild.style.setProperty('--hour-span', String(MINUTES_PER_RING));
   });
-  void Promise.all(reveals).then(
-    () => {
-      for (const path of focus) path.remove();
-      for (const mask of masks) mask.remove();
-      allFocus.removeAttribute('visibility');
-    },
-    () => undefined,
-  );
-  // The hands turn from 12 o'clock to where they end; the minute hand goes round once per hour.
-  minuteHand.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${fixed(minutes * 6)}deg)` }], timing);
-  hourHand.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${fixed(hourAngle)}deg)` }], timing);
+  minuteHand.style.setProperty('--hand-rate', String(MINUTE_HAND_DEGREES));
+  hourHand.style.setProperty('--hand-rate', String(HOUR_HAND_DEGREES));
+  root.replaceChildren(rings);
 }

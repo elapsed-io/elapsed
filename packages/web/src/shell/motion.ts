@@ -1,7 +1,8 @@
 /**
  * Interface motion helpers. Durations and easing are read from CSS custom
- * properties, so custom CSS (round 7) and the animation speed setting
- * (round 6) retune script-started motion too. Only transform and opacity move.
+ * properties, so custom CSS and the animation speed setting (Release 2, which
+ * changes --motion-scale) retune script-started motion too. Only transform
+ * and opacity move.
  */
 
 export interface Motion {
@@ -48,4 +49,15 @@ export function fade(element: HTMLElement, from: number, to: number, motion: Mot
 
 export function cancelAnimations(element: HTMLElement): void {
   for (const animation of element.getAnimations()) animation.cancel();
+}
+
+/**
+ * The multiplier for every interface animation's duration (--motion-scale): 1,
+ * the "normal" timing, in Release 1. The CSS duration tokens are already
+ * scaled by it; motion started from script with the config's durations
+ * multiplies by it.
+ */
+export function motionScale(doc: Document): number {
+  const value = Number.parseFloat(doc.defaultView?.getComputedStyle(doc.documentElement).getPropertyValue('--motion-scale') ?? '');
+  return Number.isFinite(value) && value > 0 ? value : 1;
 }

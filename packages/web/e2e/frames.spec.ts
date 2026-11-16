@@ -13,9 +13,12 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { PAPER, TIMELINE_FRAME_LABELS, checkInFrame, idleFrame, inPalette, limitFrame, pausedFrame, pausedMissedFrame, ringFrame, runningFrame, timelineFrame } from './fixtures/frames.ts';
+import type { Page } from '@playwright/test';
+import { GRAPHITE, PAPER, checkInFrame, idleFrame, inPalette, limitFrame, pausedFrame, pausedMissedFrame, runningFrame } from './fixtures/frames.ts';
+import { modeFrame } from './fixtures/mode-frames.ts';
 import { createSession, pauseSession, resumeSession, serializeActiveState, startState } from '@stopwatch/core';
-import { MINUTE, SECOND, compareWithReference, holdAnimationsAt, openApp, settle } from './helpers.ts';
+import { writeFileSync } from 'node:fs';
+import { MINUTE, SECOND, compareWithReference, holdAnimationsAt, openApp, screenshotReference, settle } from './helpers.ts';
 
 /** Moments across both blur-away windows, including their ends. */
 const RUNNING_MOMENTS = [0.5, 3, 7.5, 9.9, 12, 35, 47.5, 59.5];
@@ -65,61 +68,38 @@ test('paused matches the paused frame exactly', async ({ page, browser }) => {
   expect(diff).toMatchObject({ differing: 0 });
 });
 
-test('ring matches the ring frame', async ({ page, browser }) => {
-  await openApp(page, { mode: 'ring' });
+/** Runs a session in `mode` to `focus`, then optionally pauses it for `paused`. */
+async function sessionAt(page: Page, mode: string, focus: number, paused = 0): Promise<void> {
+  await openApp(page, { mode });
   await page.locator('.button--primary').click();
-  await page.clock.runFor(84 * MINUTE);
+  await page.clock.runFor(focus);
+  if (paused > 0) {
+    await page.locator('.button--primary').click();
+    await page.clock.runFor(paused);
+  }
   await settle(page);
-  await holdAnimationsAt(page, 84 * MINUTE);
-  const diff = await compareWithReference(page, browser, ringFrame());
-  expect(diff.visible).toBeLessThanOrEqual(20);
-  expect(diff.maxChannelDelta).toBeLessThanOrEqual(40);
-});
+}
 
-test('timeline matches the timeline frame', async ({ page, browser }) => {
-  await openApp(page, { mode: 'timeline' });
-  await page.locator('.button--primary').click();
-  await page.clock.runFor(84 * MINUTE);
-  await settle(page);
-  await holdAnimationsAt(page, 84 * MINUTE);
-
-  // Labels: the same text, centred at the frame's positions, in the frame's type and colour.
-  const labels = await page.evaluate(() => {
-    const drawing = document.querySelector('.timeline__svg');
-    if (drawing === null) throw new Error('no timeline');
-    const box = drawing.getBoundingClientRect();
-    return [...document.querySelectorAll('.timeline__label')]
-      .map((text) => {
-        const rect = text.getBoundingClientRect();
-        const style = getComputedStyle(text);
-        return {
-          text: text.textContent,
-          centre: rect.x + rect.width / 2 - box.x,
-          size: style.fontSize,
-          family: style.fontFamily,
-          weight: style.fontWeight,
-          fill: style.fill,
-          baseline: text.getAttribute('y'),
-        };
-      })
-      .filter((label) => label.centre > 0 && label.centre < box.width);
+// The revised ring and timeline frames. The ring turns as a whole by a transform, so its edges are
+// resampled by the browser where the frame draws them in place: a few pixels of anti-aliasing differ.
+for (const [name, mode, focus, paused, limit] of [
+  ['ring', 'ring', 84 * MINUTE, 0, 40],
+  ['ringStart', 'ring', 1 * MINUTE, 0, 40],
+  ['ringPaused', 'ring', 84 * MINUTE, 4 * MINUTE + 12 * SECOND, 40],
+  ['timeline', 'timeline', 84 * MINUTE, 0, 0],
+  ['timelineStart', 'timeline', 4 * MINUTE, 0, 0],
+  ['timelinePaused', 'timeline', 84 * MINUTE, 4 * MINUTE + 12 * SECOND, 0],
+] as const) {
+  test(`${mode} matches the "${name}" frame`, async ({ page, browser }) => {
+    await sessionAt(page, mode, focus, paused);
+    if (process.env['DEBUG_FRAMES'] !== undefined) {
+      writeFileSync(`${process.env['DEBUG_FRAMES']}/${name}-site.png`, await page.screenshot());
+      writeFileSync(`${process.env['DEBUG_FRAMES']}/${name}-frame.png`, await screenshotReference(browser, modeFrame(name, GRAPHITE)));
+    }
+    const diff = await compareWithReference(page, browser, modeFrame(name, GRAPHITE));
+    expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(limit);
   });
-  expect(labels.map((label) => label.text)).toEqual(TIMELINE_FRAME_LABELS.map(([text]) => text));
-  labels.forEach((label, index) => {
-    // Within a quarter pixel (text boxes are measured in 1/64 px layout units); a minute is 10 px.
-    expect(Math.abs(label.centre - (TIMELINE_FRAME_LABELS[index]?.[1] ?? Number.NaN))).toBeLessThan(0.25);
-    expect(label).toMatchObject({ size: '11px', family: '"Timer Sans", system-ui, sans-serif', weight: '400', fill: 'rgb(138, 138, 135)', baseline: '90' });
-  });
-
-  // Everything else, pixel for pixel. Text anti-aliasing inside a sliding layer varies between
-  // browser versions, so the labels are compared by geometry above rather than here.
-  await page.evaluate(() => {
-    for (const label of document.querySelectorAll<SVGElement>('.timeline__label')) label.style.setProperty('visibility', 'hidden');
-  });
-  const diff = await compareWithReference(page, browser, timelineFrame({ labels: false }));
-  expect(diff.visible).toBeLessThanOrEqual(20);
-  expect(diff.maxChannelDelta).toBeLessThanOrEqual(48);
-});
+}
 
 test('a check-in waiting matches the check-in frame exactly', async ({ page, browser }) => {
   await openApp(page);

@@ -158,18 +158,23 @@ export const CONFIG = {
     /** Check-in and pause: time blurred 10 px at 40 % opacity. */
     heldBlurPx: 10,
     heldOpacity: 0.4,
-    /** Results: tabulating holds 0.9 s then fades out over 0.8 s. */
-    tabulatingHold: 900,
-    tabulatingFadeOut: 800,
-    /** Results fade in over 1.0 s from 1.0 s, rising 10 px. */
-    resultsFadeInDelay: 1000,
-    resultsFadeIn: 1000,
-    resultsRisePx: 10,
-    /** The replay starts at 2.0 s and runs 4.5 s, eased in and out (cubic). */
-    replayDelay: 2000,
-    replayDuration: 4500,
-    /** Samples of the cubic ease-in-out drawn as a CSS linear() easing. */
-    replayEasingSamples: 32,
+    /** Results: tabulating holds 0.5 s then fades out over 0.4 s. */
+    tabulatingHold: 500,
+    tabulatingFadeOut: 400,
+    /** Results fade in over 0.5 s from 0.5 s, rising 8 px. */
+    resultsFadeInDelay: 500,
+    resultsFadeIn: 500,
+    resultsRisePx: 8,
+    /** The replay starts at 0.8 s and runs 2.4 s, starting quickly and settling gently. */
+    replayDelay: 800,
+    replayDuration: 2400,
+    replayEasing: [0.25, 1, 0.5, 1],
+    /**
+     * Every interface animation's duration is multiplied by this ("normal"
+     * timing). Release 2's animation speed setting changes it, through the
+     * --motion-scale custom property.
+     */
+    durationScale: 1,
     /** After copying the share text, the share icon shows a check for this long (owner decision, 2026-11-15). */
     copiedConfirmation: 2000,
     /** Easing for interface motion (start morph, fades): cubic-bezier control points. */
@@ -401,15 +406,17 @@ export const CONFIG = {
     ring: {
       revolution: 1 * HOUR,
       trackPx: 8,
+      /** The tail: up to 55° long, one smooth conic gradient fading from the accent at the head to nothing. */
       tailDegrees: 55,
-      tailSteps: 22,
-      tailFadeExponent: 1.8,
-      /** Geometry at reference, from the ring frame: a 280 px box, a 112 px radius, a 4 px head dot. */
+      /** The gradient's stops, from the far end: the accent at these shares of full strength, at these shares of the tail's length. */
+      tailStops: [
+        { at: 0.45, strength: 0.15 },
+        { at: 0.75, strength: 0.55 },
+      ],
+      /** Geometry at reference, from the ring frame: a 280 px box, the ring's centre line at 112 px, an 8 px round head. */
       boxPx: 280,
       radiusPx: 112,
-      headRadiusPx: 4,
-      /** Each tail step is drawn this long along the ring, slightly longer than a step, so steps overlap without gaps. */
-      tailSegmentArcPx: 5.49,
+      headPx: 8,
       /** The ring sits 20 px above the buttons. */
       gapPx: 20,
     },
@@ -418,18 +425,27 @@ export const CONFIG = {
       minutesPer100Px: 10,
       tickEveryMinutes: 5,
       labelEveryMinutes: 10,
-      /** Geometry at reference, from the timeline frame. */
-      widthPx: 640,
-      heightPx: 110,
-      baselineYPx: 60,
-      lineWidthPx: 2,
-      tickWidthPx: 1.5,
-      minorTickPx: 6,
-      majorTickPx: 12,
-      labelYPx: 90,
+      /**
+       * Geometry from the revised timeline frame, in CSS pixels: never scaled,
+       * so lines and ticks stay on whole pixels. The track never grows past
+       * its frame width; on narrow windows less of it shows.
+       */
+      widthPx: 480,
+      heightPx: 64,
+      lineYPx: 20,
+      lineHeightPx: 2,
+      tickWidthPx: 1,
+      minorTickPx: 5,
+      majorTickPx: 8,
+      labelYPx: 46,
       labelPx: 11,
-      /** Time, timeline and buttons are 18 px apart. */
-      gapPx: 18,
+      /** Both ends fade out over this share of the track. */
+      fadeShare: 0.14,
+      /** On windows narrower than the track, it keeps this far from each edge. */
+      edgePx: 16,
+      /** The time sits 18 px above the track; the track 30 px above the buttons. */
+      innerGapPx: 18,
+      gapPx: 30,
     },
     ocean: {
       metresPerFocusedMinute: 15,

@@ -29,6 +29,7 @@ import { answersCheckIn } from './shell/check-in.ts';
 import { Controls } from './shell/controls.ts';
 import { EndingCountdown } from './shell/ending.ts';
 import { MaximumNotice } from './shell/notice.ts';
+import { motionScale } from './shell/motion.ts';
 import { Notifier } from './shell/notifier.ts';
 import { takeSafeMode } from './shell/safe-mode.ts';
 import { ICON_FILES } from './icons/app-icons.ts';
@@ -223,12 +224,13 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       start = currentTime();
       // The tabulating screen holds, then fades out (plan, Motion).
       const { tabulatingHold, tabulatingFadeOut, startMorph } = CONFIG.motion;
+      const scale = motionScale(doc);
       const fade = ending.element.animate([{ opacity: 1 }, { opacity: 0 }], {
-        duration: reducedMotion() ? startMorph : tabulatingFadeOut,
+        duration: (reducedMotion() ? startMorph : tabulatingFadeOut) * scale,
         easing: smoothstep(),
         fill: 'forwards',
       });
-      fade.startTime = start + tabulatingHold;
+      fade.startTime = start + tabulatingHold * scale;
       void fade.finished.then(
         () => {
           fade.cancel();

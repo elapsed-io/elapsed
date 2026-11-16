@@ -8,10 +8,16 @@
  * hidden until accounts exist (owner decision, 2026-11-15).
  *
  * Timing, from the moment the tabulating screen is complete: results fade in
- * over 1.0 s from 1.0 s, rising 10 px; the replay starts at 2.0 s and runs
- * 4.5 s, and the headline counts up with it. With reduced motion there is no
- * replay and the final state crossfades in. A reloaded results screen shows
- * the final state at once.
+ * over 0.5 s from 0.5 s, rising 8 px; the replay starts at 0.8 s and runs
+ * 2.4 s, starting quickly and settling gently. Every duration is scaled by
+ * --motion-scale (Release 2's animation speed).
+ *
+ * The replay is one animation of one registered custom property,
+ * --replay-progress, from 0 to 1 (plan, Principles: the one exception). The
+ * replay graphic and the headline count are calculated from it in CSS, so
+ * every part moves in step. With reduced motion, or where the browser cannot
+ * animate a registered property, there is no replay and the final state shows;
+ * a reloaded results screen shows the final state at once.
  */
 
 import './results.css';
@@ -21,6 +27,7 @@ import { html } from '../dom.ts';
 import { iconElement } from '../icons/icon-element.ts';
 import type { DisplayMode } from '../modes/contract.ts';
 import { formatClockTime } from '../shell/clock-time.ts';
+import { motionScale } from '../shell/motion.ts';
 import { shareResult } from './share.ts';
 
 const pad = (value: number): string => String(value).padStart(2, '0');
@@ -44,33 +51,41 @@ export interface ResultsOptions {
   readonly companions: readonly HTMLElement[];
 }
 
-/** Whether the browser can count the headline up in CSS (registered properties, round() and mod()). */
+/** Whether the browser can animate the registered progress property (the replay). */
+function canReplay(): boolean {
+  return typeof CSS.registerProperty === 'function';
+}
+
+/** Whether it can also count the headline up in CSS (round() and mod()). */
 function canCount(): boolean {
-  return typeof CSS.registerProperty === 'function' && CSS.supports('width', 'calc(mod(7px, 3px) + round(down, 7px, 2px))');
+  return canReplay() && CSS.supports('width', 'calc(mod(7px, 3px) + round(down, 7px, 2px))');
 }
 
-/** Focused time from the start of a finished session up to `at`. */
-function focusBefore(session: Session, at: number): number {
-  let total = 0;
-  for (const { start, end } of session.segments) total += Math.max(0, Math.min(end ?? start, at) - start);
-  return total;
+export interface CountTerm {
+  /** Seconds from the session's start to the stretch of focus. */
+  readonly from: number;
+  readonly length: number;
 }
 
-/** The headline's keyframes: focused seconds as the replay's time sweeps the session. */
-export function countKeyframes(session: Session, summary: SessionSummary): Keyframe[] {
-  const total = Math.max(1, summary.elapsedMs);
-  const frames: Keyframe[] = [{ '--results-focused': '0', offset: 0 }];
-  for (const { start, end } of session.segments) {
-    for (const at of [start, end ?? start]) {
-      const offset = Math.min(1, (at - summary.startedAt) / total);
-      const value = String(Math.floor(focusBefore(session, at) / 1000));
-      const last = frames.at(-1);
-      if (last !== undefined && last.offset === offset) last['--results-focused'] = value;
-      else frames.push({ '--results-focused': value, offset });
-    }
-  }
-  if (frames.at(-1)?.offset !== 1) frames.push({ '--results-focused': String(Math.floor(summary.focusedMs / 1000)), offset: 1 });
-  return frames;
+/** The session's stretches of focus, in seconds from its start. */
+export function countTerms(session: Session, summary: SessionSummary): CountTerm[] {
+  return session.segments.map(({ start, end }) => ({ from: (start - summary.startedAt) / 1000, length: ((end ?? start) - start) / 1000 }));
+}
+
+/**
+ * The headline's focused seconds at replay progress p, as CSS: the sum over
+ * stretches of clamp(0, p × session seconds − start, length), rounded down. It
+ * rises only while the replay passes focus and lands on the total.
+ */
+export function countExpression(terms: readonly CountTerm[], sessionSeconds: number): string {
+  const total = String(sessionSeconds);
+  const sum = terms.map(({ from, length }) => `clamp(0, var(--replay-progress) * ${total} - ${String(from)}, ${String(length)})`).join(' + ');
+  return `round(down, ${sum === '' ? '0' : sum}, 1)`;
+}
+
+/** The same count in script, for tests: focused seconds at progress p. */
+export function countAt(terms: readonly CountTerm[], sessionSeconds: number, progress: number): number {
+  return Math.floor(terms.reduce((sum, { from, length }) => sum + Math.min(length, Math.max(0, progress * sessionSeconds - from)), 0));
 }
 
 export class ResultsScreen {
@@ -139,6 +154,7 @@ export class ResultsScreen {
 
     const graphic = html(doc, 'div', { class: 'results__graphic' });
     delete this.element.dataset['ready'];
+    delete this.element.dataset['replayed'];
     // Laid out but unseen until its timing is set: the replay's drawing code may still be loading.
     this.element.className = `results results--preparing ${ring ? 'results--ring' : 'results--strip'}`;
     this.element.replaceChildren(
@@ -149,7 +165,7 @@ export class ResultsScreen {
     this.element.hidden = false;
 
     await mode.replay(graphic, session);
-    this.#time(time, graphic, session, summary, timing);
+    this.#time(time, session, summary, timing);
     this.element.classList.remove('results--preparing');
     // Everything is drawn and timed (tests and custom CSS can rely on it).
     this.element.dataset['ready'] = '';
@@ -163,28 +179,23 @@ export class ResultsScreen {
   hide(): void {
     for (const animation of this.element.getAnimations({ subtree: true })) animation.cancel();
     delete this.element.dataset['ready'];
+    delete this.element.dataset['replayed'];
     this.element.hidden = true;
     this.element.replaceChildren();
     this.#retry = null;
   }
 
-  #time(time: HTMLElement, graphic: HTMLElement, session: Session, summary: SessionSummary, timing: ResultsTiming): void {
-    const replays = graphic.getAnimations({ subtree: true });
-    // A finished replay leaves the drawing as it is without animations, so nothing stays on a separate layer.
-    for (const animation of replays) {
-      void animation.finished.then(
-        () => {
-          animation.cancel();
-        },
-        () => undefined,
-      );
-    }
+  #time(time: HTMLElement, session: Session, summary: SessionSummary, timing: ResultsTiming): void {
+    const replayed = (): void => {
+      this.element.dataset['replayed'] = '';
+    };
     const { start, reducedMotion } = timing;
     const { motion } = CONFIG;
     if (start === null) {
-      for (const animation of replays) animation.finish();
+      replayed();
       return;
     }
+    const scale = motionScale(this.#doc);
     const view = this.#doc.defaultView ?? window;
     const smoothstep = view.getComputedStyle(this.#doc.documentElement).getPropertyValue('--ease-smoothstep').trim() || 'ease-in-out';
     const appear = reducedMotion
@@ -198,26 +209,36 @@ export class ResultsScreen {
           ],
         };
     for (const element of [this.element, ...this.#options.companions]) {
-      const animation = element.animate(appear.keyframes, { duration: appear.duration, easing: smoothstep, fill: 'backwards' });
-      animation.startTime = start + appear.delay;
+      const animation = element.animate(appear.keyframes, { duration: appear.duration * scale, easing: smoothstep, fill: 'backwards' });
+      animation.startTime = start + appear.delay * scale;
     }
-    if (reducedMotion) {
-      for (const animation of replays) animation.finish();
+    if (reducedMotion || !canReplay()) {
+      replayed();
       return;
     }
-    for (const animation of replays) animation.startTime = start + motion.replayDelay;
-    if (canCount()) {
+    const counting = canCount();
+    if (counting) {
       time.classList.add('results__time--counting');
-      const counting = time.animate(countKeyframes(session, summary), { duration: motion.replayDuration, easing: replays[0]?.effect?.getTiming().easing ?? 'linear', fill: 'both' });
-      counting.startTime = start + motion.replayDelay;
-      void counting.finished.then(
-        () => {
-          // The count has landed on the total: plain text from here on.
-          counting.cancel();
-          time.classList.remove('results__time--counting');
-        },
-        () => undefined,
-      );
+      time.style.setProperty('--results-focused', countExpression(countTerms(session, summary), Math.max(1, summary.elapsedMs) / 1000));
     }
+    // The replay: one property, from 0 to 1. Everything that moves is calculated from it.
+    const replay = this.element.animate([{ '--replay-progress': 0 }, { '--replay-progress': 1 }], {
+      duration: motion.replayDuration * scale,
+      easing: `cubic-bezier(${motion.replayEasing.join(', ')})`,
+      fill: 'both',
+    });
+    replay.startTime = start + motion.replayDelay * scale;
+    void replay.finished.then(
+      () => {
+        // Landed: the final drawing and plain text from here on, with no animation left.
+        replayed();
+        replay.cancel();
+        if (counting) {
+          time.classList.remove('results__time--counting');
+          time.style.removeProperty('--results-focused');
+        }
+      },
+      () => undefined,
+    );
   }
 }

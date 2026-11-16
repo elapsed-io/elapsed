@@ -1,7 +1,12 @@
 /**
- * A mode's time with its pause and check-in treatment (plan, Design system >
- * Motion: "Check-in and pause: time blurred 10 px at 40% opacity, with the
- * foreground text centered on it").
+ * A mode's whole display with its pause and check-in treatment (plan, Design
+ * system > Motion: "In every display mode, the whole display (the time and its
+ * graphics) blurs 10 px at 40% opacity, and "paused for" with the pause
+ * length, or the check-in line, sits at the center of the display. Buttons
+ * stay sharp"; the "ring, paused" and "timeline, paused" frames).
+ *
+ * The mode puts its graphics and the time in the display's body; the body
+ * blurs while held, and the text sits centred over all of it.
  *
  * - Paused frame: "paused for" above the pause length.
  * - Paused after a missed check-in: also "a check-in went unanswered at
@@ -18,8 +23,13 @@ import type { DisplayContext } from '../contract.ts';
 import { TimeText, timeLayoutFor } from './time-text.ts';
 import './time.css';
 
+/** Arranges a mode's body around its time: digits show the time alone. */
+export type Compose = (time: HTMLElement) => readonly Node[];
+
 export class TimeDisplay {
+  /** The whole display: the body, and the text centred over it. */
   readonly element: HTMLDivElement;
+  readonly #body: HTMLDivElement;
   readonly #main: TimeText;
   readonly #pausedFor: TimeText;
   readonly #overlay: HTMLDivElement;
@@ -29,7 +39,7 @@ export class TimeDisplay {
   #blurAway = false;
   #missedText = '';
 
-  constructor(doc: Document, context: DisplayContext) {
+  constructor(doc: Document, context: DisplayContext, compose: Compose = (time) => [time]) {
     this.#context = context;
     this.#main = new TimeText(doc, 'time--main');
     this.#pausedFor = new TimeText(doc, 'time--paused-for');
@@ -40,7 +50,8 @@ export class TimeDisplay {
     this.#checkIn = html(doc, 'div', { class: 'check-in overlay', attrs: { 'aria-hidden': 'true' } }, [
       html(doc, 'span', { class: 'check-in__text' }, [BRAND.copy.timer.checkIn]),
     ]);
-    this.element = html(doc, 'div', { class: 'time-stack' }, [this.#main.element, this.#overlay, this.#checkIn]);
+    this.#body = html(doc, 'div', { class: 'time-stack__body' }, [...compose(this.#main.element)]);
+    this.element = html(doc, 'div', { class: 'time-stack' }, [this.#body, this.#overlay, this.#checkIn]);
   }
 
   /** Measures the font once it is ready; until then the blur-away cannot re-centre exactly. */
@@ -65,8 +76,8 @@ export class TimeDisplay {
     const paused = status === 'paused';
     const checkIn = status === 'running' && view.checkInDueAt !== null;
     const held = paused || checkIn;
-    this.#main.element.classList.toggle('time--held', held);
-    this.#main.element.setAttribute('aria-hidden', held ? 'true' : 'false');
+    this.#body.classList.toggle('time-stack__body--held', held);
+    this.#body.setAttribute('aria-hidden', held ? 'true' : 'false');
     this.#show(this.#overlay, paused);
     this.#show(this.#checkIn, checkIn);
     if (paused) {

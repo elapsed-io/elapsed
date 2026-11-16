@@ -76,19 +76,19 @@
     }
   }
 
-  /* Paused: the time is held behind a blur and the pause length is shown over it. */
-  .time--main {
+  /* Paused or waiting for a check-in: the whole display (time and graphics) is held behind a blur. */
+  .time-stack__body {
     transition:
       filter var(--motion-morph) var(--ease-standard),
       opacity var(--motion-morph) var(--ease-standard);
   }
 
-  .time--held {
+  .time-stack__body--held {
     filter: blur(var(--held-blur));
     opacity: var(--held-opacity);
   }
 
-  /* Text centred over the held time: the pause length, or the check-in line. */
+  /* Text centred over the held display: the pause length, or the check-in line. */
   .overlay {
     position: absolute;
     inset: 0;
@@ -149,7 +149,7 @@
 
   /* Reduced motion: no blur animates; the pause still crossfades. */
   @media (prefers-reduced-motion: reduce) {
-    .time--main {
+    .time-stack__body {
       transition: opacity var(--motion-morph) var(--ease-standard);
     }
   }

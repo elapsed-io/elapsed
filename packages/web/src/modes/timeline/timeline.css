@@ -1,36 +1,49 @@
-/* Timeline mode, sized in reference pixels and scaled with the window like the time. */
+/*
+ * Timeline mode, as the revised timeline frame: the time (which scales with
+ * the window) above a track drawn in CSS pixels that are never scaled. The
+ * track is at most its frame width; on narrower windows less of it shows,
+ * centred on now, and both ends fade out.
+ */
 @layer mode {
   .timeline {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: max(calc(var(--mode-gap) * 1px), calc(var(--mode-gap) * var(--u) * var(--time-scale)));
+    gap: max(calc(var(--timeline-inner-gap) * 1px), calc(var(--timeline-inner-gap) * var(--u) * var(--time-scale)));
+  }
+
+  /*
+   * As in the frame, the drawing is inline in its block, so the line it sits
+   * on adds the font's descent below it; centred by margin when the track is
+   * narrower than the drawing.
+   */
+  .timeline__track {
+    display: block;
+    overflow: hidden;
+    width: min(var(--timeline-width), calc(var(--view-width) - 2 * var(--timeline-edge)));
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--timeline-fade), #000 calc(100% - var(--timeline-fade)), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 var(--timeline-fade), #000 calc(100% - var(--timeline-fade)), transparent);
   }
 
   .timeline__svg {
-    display: block;
-    width: calc(var(--timeline-width) * var(--u) * var(--time-scale));
-    height: calc(var(--timeline-height) * var(--u) * var(--time-scale));
+    margin-left: calc((100% - var(--timeline-width)) / 2);
+    width: var(--timeline-width);
+    height: var(--timeline-height);
   }
 
-  .timeline__line--past,
-  .timeline__tick--past {
-    stroke: var(--color-muted);
+  .timeline__strip--past {
+    fill: var(--color-muted);
   }
 
-  .timeline__line--future,
-  .timeline__tick--future {
-    stroke: var(--color-faint);
+  .timeline__strip--future {
+    fill: var(--color-faint);
   }
 
   .timeline__label {
     fill: var(--color-muted);
     font-family: var(--font-family);
     font-size: var(--timeline-label-size);
+    font-variant-numeric: tabular-nums;
     text-anchor: middle;
-  }
-
-  .timeline__strip {
-    animation: timeline-scroll var(--timeline-duration) linear both;
   }
 }

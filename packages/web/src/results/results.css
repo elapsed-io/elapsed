@@ -8,7 +8,18 @@
  * below 720 px wide the stats wrap into rows of three.
  */
 
-/* The headline counts up through this integer during the replay (owner decision, 2026-11-15). */
+/*
+ * The replay's progress, from 0 to 1: the one property a results replay
+ * animates (plan, Principles). The replay graphic and the headline count are
+ * calculated from it. At rest it is 1, the final state.
+ */
+@property --replay-progress {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+/* The headline's focused seconds during the replay, calculated from the progress (results.ts). */
 @property --results-focused {
   syntax: "<integer>";
   inherits: true;

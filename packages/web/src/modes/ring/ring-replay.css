@@ -26,9 +26,34 @@
     stroke: var(--color-accent);
   }
 
+  /*
+   * The replay, from --replay-progress alone: each hour's ring is revealed
+   * while the replay's time passes through that hour, exactly as far as the
+   * minute hand has swept. Once it has finished (data-replayed), every hour's
+   * focus is one plain path, as the frame draws it, and the hands keep the
+   * angles they ended at.
+   */
   .rings__reveal {
     fill: none;
     stroke: white;
+    stroke-dashoffset: calc(1 - clamp(0, (var(--replay-progress) * var(--replay-minutes) - var(--hour-from)) / var(--hour-span), 1));
+  }
+
+  .results:not([data-replayed]) .rings__hand {
+    transform: rotate(calc(var(--replay-progress) * var(--replay-minutes) * var(--hand-rate) * 1deg));
+  }
+
+  .rings__focus--all,
+  .results:not([data-replayed]) .rings__focus--all {
+    visibility: hidden;
+  }
+
+  .results[data-replayed] .rings__focus--all {
+    visibility: visible;
+  }
+
+  .results[data-replayed] .rings__focus--hour {
+    display: none;
   }
 
   .rings__ticks {

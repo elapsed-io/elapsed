@@ -133,21 +133,80 @@ test('end now ignores a press in its first 300 ms', async ({ page }) => {
   await expect(page.locator('.results')).toHaveCount(0);
 });
 
-test('the headline counts up in CSS during the replay and lands on the total', async ({ page }) => {
+/** Holds the replay at `share` of its duration, and reads the progress and what is drawn from it. */
+async function holdReplay(page: Page, share: number): Promise<{ progress: number; count: number; minuteHand: number | null; reveals: number[]; minutes: number | null }> {
+  return page.evaluate((at) => {
+    const results = document.querySelector('.results');
+    if (results === null) throw new Error('no results');
+    const replays = results.getAnimations().filter((animation) => {
+      const effect = animation.effect;
+      return effect instanceof KeyframeEffect && effect.getKeyframes().some((frame) => '--replay-progress' in frame);
+    });
+    if (replays.length !== 1) throw new Error(`expected one replay animation, found ${String(replays.length)}`);
+    const replay = replays[0];
+    if (replay === undefined) throw new Error('no replay');
+    replay.pause();
+    replay.currentTime = Number(replay.effect?.getTiming().duration) * at;
+    const progress = Number(getComputedStyle(results).getPropertyValue('--replay-progress'));
+    const hand = document.querySelector('.rings__hand:last-of-type');
+    const matrix = hand === null ? null : new DOMMatrix(getComputedStyle(hand).transform);
+    const rings = document.querySelector<HTMLElement>('.rings');
+    return {
+      progress,
+      // The count is drawn by CSS counters from this value (results.css), which innerText cannot see.
+      count: Number(getComputedStyle(document.querySelector('.results__time') ?? results).getPropertyValue('--results-focused')),
+      minuteHand: matrix === null ? null : (Math.atan2(matrix.b, matrix.a) * 180) / Math.PI,
+      // Serialised as a length, possibly inside calc(): "calc(0.78px)".
+      reveals: [...document.querySelectorAll('.rings__reveal')].map((circle) => Number(/-?\d*\.?\d+/.exec(getComputedStyle(circle).strokeDashoffset)?.[0])),
+      minutes: rings === null ? null : Number(rings.style.getPropertyValue('--replay-minutes')),
+    };
+  }, share);
+}
+
+test('the headline counts up with the replay, pauses where the session paused, and lands on the total', async ({ page }) => {
   await openApp(page);
   await primary(page).click();
-  await page.clock.runFor(42 * MINUTE + 7 * SECOND);
+  await page.clock.runFor(20 * MINUTE);
+  await primary(page).click();
+  await page.clock.runFor(10 * MINUTE);
+  await primary(page).click();
+  await page.clock.runFor(22 * MINUTE + 7 * SECOND);
   await endThroughCountdown(page);
   const time = page.locator('.results__time');
+  await page.locator('.results[data-ready]').waitFor();
   await expect(time).toHaveClass(/results__time--counting/);
-  const counted = await time.evaluate((element) =>
-    element.getAnimations().flatMap((animation) => (animation.effect instanceof KeyframeEffect ? animation.effect.getKeyframes().map((frame) => Object.keys(frame)) : [])).flat(),
-  );
-  expect(counted).toContain('--results-focused');
+  // Within the pause (minutes 20 to 30 of 52:07), the count holds at 20 minutes.
+  const total = 52 * 60 + 7;
+  for (const share of [0.1, 0.25, 0.45, 0.6, 0.9]) {
+    const { progress, count } = await holdReplay(page, share);
+    const elapsed = progress * total;
+    const focused = Math.floor(Math.min(elapsed, 20 * 60) + Math.max(0, elapsed - 30 * 60));
+    expect(count, String(share)).toBe(focused);
+  }
   await finishResults(page);
   await expect(time).not.toHaveClass(/results__time--counting/);
   expect(await time.innerText()).toBe('00:42:07');
   await expect(page.locator('.results .visually-hidden')).toHaveText('00:42:07');
+});
+
+test('the ring replay is one progress value: the arcs are revealed exactly behind the minute hand', async ({ page }) => {
+  await openApp(page, { mode: 'ring' });
+  await primary(page).click();
+  await page.clock.runFor(84 * MINUTE);
+  await endThroughCountdown(page);
+  await page.locator('.results[data-ready]').waitFor();
+  for (const share of [0.05, 0.3, 0.5, 0.8]) {
+    const { progress, minuteHand, reveals, minutes } = await holdReplay(page, share);
+    expect(minutes).toBeCloseTo(84, 3);
+    const elapsed = progress * (minutes ?? 0);
+    // The minute hand at elapsed × 6°; each hour's ring revealed exactly that far into its hour, and no further.
+    const expectedHand = ((elapsed * 6 + 180) % 360) - 180;
+    expect(minuteHand ?? Number.NaN, String(share)).toBeCloseTo(expectedHand, 1);
+    reveals.forEach((offset, hour) => {
+      const shown = Math.min(1, Math.max(0, (elapsed - hour * 60) / 60));
+      expect(1 - offset, `${String(share)} hour ${String(hour)}`).toBeCloseTo(shown, 3);
+    });
+  }
 });
 
 test('retry and Space start a new session; the finished one leaves tab storage', async ({ page }) => {

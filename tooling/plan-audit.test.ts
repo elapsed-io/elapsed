@@ -54,23 +54,24 @@ describe('plan audit: performance', () => {
       for (const [, value = ''] of css.matchAll(/transition\s*:\s*([^;]+);/g)) {
         for (const part of value.split(',')) {
           const property = part.trim().split(/\s+/)[0] ?? '';
-          // visibility switches after a fade with zero duration; it is not animated.
+          // visibility switches after a fade with zero duration; it is not animated. "none" turns transitions off.
           if (property === 'visibility' && /\b0s\b/.test(part)) continue;
+          if (property === 'none') continue;
           expect(ANIMATABLE, `transition of ${property}`).toContain(property);
         }
       }
     }
   });
 
-  it('animates from script only with transform and opacity, apart from the replays’ two exceptions', () => {
-    // Plan, Performance requirements: "results animations move stroke offsets and transforms".
-    // Owner decision 125: the results headline counts up through one registered integer property.
+  it('animates from script only with transform and opacity, apart from the one replay exception', () => {
+    // Plan, Principles: "There is exactly one exception: a results replay is driven by a single animated
+    // custom property holding its progress, from which its SVG stroke offsets, the clock hand's rotation
+    // and the headline count are all derived."
     const EXCEPTIONS: Readonly<Record<string, RegExp>> = {
-      strokeDashoffset: /packages\/web\/src\/modes\/[a-z]+\/[a-z-]*replay\.ts$/,
-      '--results-focused': /packages\/web\/src\/results\/results\.ts$/,
+      '--replay-progress': /packages\/web\/src\/results\/results\.ts$/,
     };
     // Keyframes built away from the call are checked in these files as a whole.
-    const BUILT_ELSEWHERE = ['packages/web/src/modes/ring/ring-replay.ts', 'packages/web/src/results/results.ts'];
+    const BUILT_ELSEWHERE = ['packages/web/src/results/results.ts'];
     const allowed = (property: string, path: string): boolean =>
       property === 'transform' || property === 'opacity' || property === 'offset' || (EXCEPTIONS[property]?.test(path) ?? false);
     for (const path of SITE_SOURCE) {
@@ -88,6 +89,16 @@ describe('plan audit: performance', () => {
           expect(allowed(property, path), `${property} in ${rel(path)}`).toBe(true);
         }
       }
+    }
+  });
+});
+
+describe('plan audit: results replays', () => {
+  it('drive each replay from exactly one animated progress property, and nothing else moves them', () => {
+    const animating = SITE_SOURCE.filter((path) => /'--replay-progress'\s*:/.test(withoutComments(readFileSync(path, 'utf8'))));
+    expect(animating.map(rel)).toEqual(['packages/web/src/results/results.ts']);
+    for (const path of SITE_SOURCE.filter((p) => /replay\.ts$/.test(p))) {
+      expect(withoutComments(readFileSync(path, 'utf8')), rel(path)).not.toMatch(/\.animate\(/);
     }
   });
 });
