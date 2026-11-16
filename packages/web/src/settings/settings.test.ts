@@ -168,15 +168,15 @@ describe('control values', () => {
   });
 
   it('show clock times in 12-hour, 24-hour or the region’s format', () => {
+    const cycle = (format: '12h' | '24h' | 'region', locale: string) => formatterFor(format, locale).resolvedOptions().hourCycle;
+    expect(cycle('12h', 'en-GB')).toBe('h12');
+    expect(cycle('24h', 'en-US')).toBe('h23');
+    expect(cycle('region', 'en-US')).toBe('h12');
+    expect(cycle('region', 'en-GB')).toBe('h23');
     const at = Date.UTC(2026, 10, 16, 14, 2);
-    const utc = (format: '12h' | '24h' | 'region', locale: string) => {
-      const formatter = formatterFor(format, locale);
-      return formatClockTime(at, new Intl.DateTimeFormat(locale, { ...formatter.resolvedOptions(), timeZone: 'UTC', hour: 'numeric', minute: '2-digit' }));
-    };
-    expect(utc('12h', 'en-GB')).toBe('2:02 pm');
-    expect(utc('24h', 'en-US')).toBe('14:02');
-    expect(utc('region', 'en-US')).toBe('2:02 pm');
-    expect(utc('region', 'en-GB')).toBe('14:02');
+    const utc = (hourCycle: 'h12' | 'h23') => new Intl.DateTimeFormat('en-GB', { hour: 'numeric', minute: '2-digit', hourCycle, timeZone: 'UTC' });
+    expect(formatClockTime(at, utc('h12'))).toBe('2:02 pm');
+    expect(formatClockTime(at, utc('h23'))).toBe('14:02');
   });
 });
 

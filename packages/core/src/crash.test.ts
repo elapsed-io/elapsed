@@ -43,6 +43,12 @@ describe('crash reports', () => {
     expect(parseCrashBody(crashBody(report), SITE)).toEqual(report);
   });
 
+  it('measure the body in UTF-8 bytes', () => {
+    const report = crashReport({ message: 'é…😀', stack: '', version: 'v', userAgent: CHROME, origin: SITE });
+    // é is 2 bytes, … 3 and the emoji 4.
+    expect(crashBodyBytes(report)).toBe(crashBody(report).length - 'é…😀'.length + 2 + 3 + 4);
+  });
+
   it('always fit in 8 KB, however long or escaped the stack', () => {
     const report = crashReport({ message: '…'.repeat(2000), stack: '\n"\\'.repeat(10_000), version: 'v', userAgent: CHROME, origin: SITE });
     expect(crashBodyBytes(report)).toBeLessThanOrEqual(CONFIG.crashReports.maxBodyBytes);

@@ -67,11 +67,19 @@ export function browserOf(userAgent: string): { readonly browser: BrowserFamily;
   return { browser: 'other', browserVersion: 0 };
 }
 
-const encoder = new TextEncoder();
+/** The length of `text` in UTF-8 bytes (core has no TextEncoder: it runs without a browser or Node). */
+function utf8Length(text: string): number {
+  let bytes = 0;
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0;
+    bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
+  }
+  return bytes;
+}
 
 /** The size of a report's request body in bytes. */
 export function crashBodyBytes(report: CrashReport): number {
-  return encoder.encode(crashBody(report)).byteLength;
+  return utf8Length(crashBody(report));
 }
 
 /** A report from an error, scrubbed and cut until its request body fits the 8 KB limit. */

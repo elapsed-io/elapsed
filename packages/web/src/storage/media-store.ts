@@ -70,7 +70,7 @@ export class IndexedDbMediaStore implements MediaStore {
   }
 
   async getFont(): Promise<StoredFont | null> {
-    const db = await this.#open();
+    const db = await this.#open(false);
     if (db === null) return null;
     const value: unknown = await request(db.transaction(STORE, 'readonly').objectStore(STORE).get(FONT_KEY));
     if (value === undefined) return null;
@@ -80,14 +80,14 @@ export class IndexedDbMediaStore implements MediaStore {
   }
 
   async putFont(font: StoredFont): Promise<void> {
-    const db = await this.#open();
+    const db = await this.#open(true);
     if (db === null) throw new Error('no IndexedDB in this browser');
     const record = { schema: RECORD_SCHEMA, kind: 'font', format: font.format, bytes: font.bytes };
     await request(db.transaction(STORE, 'readwrite').objectStore(STORE).put(record, FONT_KEY));
   }
 
   async removeFont(): Promise<void> {
-    const db = await this.#open();
+    const db = await this.#open(false);
     if (db === null) return;
     await request(db.transaction(STORE, 'readwrite').objectStore(STORE).delete(FONT_KEY));
   }
@@ -98,14 +98,19 @@ export class IndexedDbMediaStore implements MediaStore {
   }
 
   async clear(): Promise<void> {
-    const db = await this.#open();
+    const db = await this.#open(false);
     if (db === null) return;
     await request(db.transaction(STORE, 'readwrite').objectStore(STORE).clear());
   }
 
-  #open(): Promise<IDBDatabase | null> {
+  /**
+   * Opens the database. Reading never creates it, so a device where no file
+   * was ever stored keeps no database at all.
+   */
+  async #open(create: boolean): Promise<IDBDatabase | null> {
     const factory = this.#factory;
-    if (factory === null) return Promise.resolve(null);
+    if (factory === null) return null;
+    if (this.#database === null && !create && !(await this.#exists(factory))) return null;
     this.#database ??= new Promise((resolve, reject) => {
       const req = factory.open(MEDIA_DATABASE, 1);
       req.addEventListener('upgradeneeded', () => {
@@ -127,6 +132,16 @@ export class IndexedDbMediaStore implements MediaStore {
       this.#database = null;
       return null;
     });
+  }
+
+  async #exists(factory: IDBFactory): Promise<boolean> {
+    // Where the browser cannot list databases, reading opens (and so creates) it, as before.
+    if (typeof factory.databases !== 'function') return true;
+    try {
+      return (await factory.databases()).some((info) => info.name === MEDIA_DATABASE);
+    } catch {
+      return true;
+    }
   }
 }
 

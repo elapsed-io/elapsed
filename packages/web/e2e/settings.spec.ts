@@ -306,6 +306,11 @@ test.describe('fonts', () => {
     await openApp(page, { width: 1280, height: 800 });
     await openPanel(page);
     await openCategory(page, 'appearance');
+    await openCategory(page, 'privacy and data');
+    await expect(page.locator('.setting__value')).toHaveText('nothing stored');
+    // Looking for a stored file creates no database.
+    expect(await page.evaluate(async () => (await indexedDB.databases()).map((info) => info.name))).toEqual([]);
+    await openCategory(page, 'appearance');
     const file = page.locator('.font-tiles__file');
     const note = page.locator('.font-tiles ~ .setting__help');
     await file.setInputFiles({ name: 'big.woff2', mimeType: 'font/woff2', buffer: Buffer.alloc(2 * 1024 * 1024 + 1, 1) });

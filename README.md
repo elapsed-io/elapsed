@@ -10,15 +10,15 @@ Working rules apply to every change. The visual source of truth is the design ca
 
 ```text
 packages/core   Pure TypeScript: config (every tunable number), brand (name and all copy), the
-                session model and its validation, the event bus, and the timer engine with its
-                single scheduler. Test helpers (a fake clock) at @stopwatch/core/testing.
-                No DOM, no network.
-packages/web    The site: index.html, styles, themes, icons, the self-hosted font, storage
-                adapters, tab coordination, the service worker, build plugins, CI scripts and
-                end-to-end tests.
+                session model and its validation, the settings schema, the crash report format,
+                the event bus, and the timer engine with its single scheduler. Test helpers (a
+                fake clock) at @stopwatch/core/testing. No DOM, no network.
+packages/web    The site: index.html, styles, themes, icons, the self-hosted fonts, the settings
+                panel, storage adapters, tab coordination, the service worker, build plugins, CI
+                scripts and end-to-end tests.
 packages/endpoint
                 The one small endpoint: a Cloudflare Worker that keeps anonymous daily usage
-                counts in D1 (migrations/, wrangler.jsonc).
+                counts and opt-in crash reports in D1 (migrations/, wrangler.jsonc).
 docs            plan.md, decisions.md, data-inventory.md, safety/ (one overview per round)
 tooling         Lint safety rules and repository-wide tests.
 ```
