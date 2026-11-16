@@ -105,8 +105,9 @@ when the fourth mode arrives (the Release 2 frame).
 - The ring's head glides: the rotor turns through a linear CSS rotation on its own layer, anchored by
   script once a minute (as the timeline glides, decision 242), and steps once a minute with reduced motion
   or low power. The tail turns with the head; over the first 9 minutes it also grows in behind it, which
-  no transform can draw (its length is a gradient), so its length follows in steps too small to see.
-  The ring frames are re-checked with the glide frozen at each frame's moment.
+  no transform can draw (its length is a gradient) and no timer may (one scheduler, no wakes in a hidden
+  tab), so its length grows once a minute, as the frames draw it (decision 267). The ring frames are
+  re-checked with the glide frozen at each frame's moment.
 - The settings schema, migrations (schema 2), and the Release 2 appearance frame and the display frame's
   downloaded-modes list for these controls.
 
