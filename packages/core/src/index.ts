@@ -103,3 +103,6 @@ export { attenuated, contrast, hex, luminance, parseHexColour, srgbChannel } fro
 export type { LinearRgb } from './modes/light.ts';
 export { OCEAN_LANDMARKS, oceanColour, oceanDepth, oceanLitColour, oceanZone, pickLandmarks, spreadLandmarks } from './modes/ocean.ts';
 export type { Landmark, LandmarkId, OceanZone } from './modes/ocean.ts';
+export { HEIGHT_LANDMARKS, atmosphereLayer, heightReached, pickHeightLandmarks, skyColour, skyLitColour, spreadHeightLandmarks, starsOpacity } from './modes/height.ts';
+export type { AtmosphereLayer, HeightLandmark, HeightLandmarkId } from './modes/height.ts';
+export { pickByBand, spreadBy } from './modes/landmarks.ts';

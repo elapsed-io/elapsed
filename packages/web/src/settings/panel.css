@@ -511,6 +511,10 @@
     stroke: var(--color-muted);
   }
 
+  .mode-tile__text {
+    stroke: currentColor;
+  }
+
   /* The chosen mode's options: a box on the page colour under the tiles (the Release 2 display frame). */
   .mode-options {
     display: flex;

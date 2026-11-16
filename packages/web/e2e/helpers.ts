@@ -59,7 +59,7 @@ export async function settle(page: Page): Promise<void> {
       const running = document
         .getAnimations()
         .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
-        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .ocean__strip') === true));
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .ocean__strip, .height__strip, .height__stars') === true));
       if (running.length === 0 && round > 0) return;
       await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
       await frames();
@@ -122,7 +122,7 @@ export async function holdAnimationsAt(page: Page, focusedMs: number): Promise<v
  * Draws a frame's markup as a reference image. Its "Archivo" is the site's default font, or `font`: a page
  * with its own cut of that font is compared with the frame drawn in that cut, so only layout and colour differ.
  */
-export async function screenshotReference(browser: Browser, markup: string, viewport = { width: 720, height: 450 }, font: Buffer = FONT): Promise<Buffer> {
+export async function screenshotReference(browser: Browser, markup: string, viewport = { width: 720, height: 450 }, font: Buffer = FONT, clip?: Clip): Promise<Buffer> {
   const reference = await browser.newPage({ viewport });
   await reference.route('http://frame.test/**', (route) => {
     const isFont = route.request().url().endsWith('/font.woff2');
@@ -130,14 +130,23 @@ export async function screenshotReference(browser: Browser, markup: string, view
   });
   await reference.goto('http://frame.test/');
   await reference.evaluate(() => document.fonts.ready);
-  const image = await reference.screenshot();
+  const image = await reference.screenshot(clip === undefined ? {} : { clip });
   await reference.close();
   return image;
 }
 
-export async function compareWithReference(page: Page, browser: Browser, markup: string): Promise<PixelDiff> {
-  const site = await page.screenshot();
-  const reference = await screenshotReference(browser, markup, page.viewportSize() ?? undefined);
+/** A part of the screen, in CSS pixels. */
+export interface Clip {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** Compares the page with a frame's markup, the whole screen or only `clip`. */
+export async function compareWithReference(page: Page, browser: Browser, markup: string, clip?: Clip): Promise<PixelDiff> {
+  const site = await page.screenshot(clip === undefined ? {} : { clip });
+  const reference = await screenshotReference(browser, markup, page.viewportSize() ?? undefined, FONT, clip);
   const scratch = await browser.newPage();
   const diff = await diffPngs(scratch, site, reference);
   await scratch.close();
@@ -182,7 +191,7 @@ export async function finishResults(page: Page): Promise<void> {
       const running = document
         .getAnimations()
         .filter((animation) => !(animation instanceof CSSAnimation))
-        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .ocean__strip') === true));
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .ocean__strip, .height__strip, .height__stars') === true));
       for (const animation of running) animation.finish();
       // Let finish handlers (which cancel spent animations and remove masks) run. The page's timers
       // may be held by the test clock, so only promises are awaited.

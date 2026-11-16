@@ -381,7 +381,7 @@ export function renderSettingsTokensCss(): string {
   return `/* Generated from packages/core/src/config.ts at build time. */\n@layer base {\n${block(':root', settingsCustomProperties())}\n}\n`;
 }
 
-export const MODE_TOKEN_IDS = ['ring', 'timeline', 'analog', 'ocean'] as const;
+export const MODE_TOKEN_IDS = ['ring', 'timeline', 'analog', 'ocean', 'height'] as const;
 export type ModeTokenId = (typeof MODE_TOKEN_IDS)[number];
 
 export function isModeTokenId(value: string): value is ModeTokenId {
@@ -467,18 +467,60 @@ function oceanTokens(): string {
     '--ocean-end': ocean.palette.end,
     '--ocean-pause': ocean.palette.pause,
   };
-  // The dive profile and the lit card, on :root: a session's replay may be drawn while another mode shows.
+  // The dive profile and the lit card, on the results that replay ocean depth (whichever mode is showing).
   const chart = ocean.results;
-  const mark = chart.landmark;
   const { pings, passing } = chart;
   const profile: CustomProperties = {
+    ...profileTokens({ origin: 0, chart: { ...chart, valuePx: chart.depthPx }, landmark: chart.landmark, near: chart.lit.aboveMetres, far: chart.lit.belowMetres, passing }),
+    '--ping-size': px(2 * pings.toRadiusPx),
+    '--ping-colour': pings.colour,
+    '--passing-silhouette': passing.colours.silhouette,
+    '--passing-deep': passing.colours.deep,
+    '--passing-jelly': passing.colours.jelly,
+    '--passing-jelly-line': passing.colours.jellyLine,
+    '--passing-glow': passing.colours.glow,
+  };
+  return `${block('[data-mode="ocean"]', properties)}\n${block('[data-replay="ocean"]', profile)}\n${lifeTokens()}`;
+}
+
+/** A config literal's shape with its numbers and strings widened, so another mode's values fit it. */
+type Widened<T> = { readonly [K in keyof T]: T[K] extends number ? number : T[K] extends string ? string : Widened<T[K]> };
+
+/** What the profile chart's tokens are made from (ocean depth's and height's results config). */
+interface ProfileTokenSource {
+  /** 0: a dive, measured from the top; 1: a climb, measured from the bottom. */
+  readonly origin: 0 | 1;
+  readonly chart: {
+    readonly widthPx: number;
+    readonly heightPx: number;
+    readonly minScaleMetres: number;
+    readonly scaleHeadroom: number;
+    readonly colours: { readonly line: string; readonly text: string; readonly muted: string };
+    readonly valuePx: number;
+    readonly zonePx: number;
+    readonly zoneOpacity: number;
+    readonly textInsetPx: number;
+    readonly timesPx: number;
+    readonly timesGapPx: number;
+    readonly zoneLines: { readonly opacity: number; readonly scaleShare: number; readonly minYPx: number };
+  };
+  readonly landmark: Widened<(typeof CONFIG.modes.ocean.results)['landmark']>;
+  readonly near: number;
+  readonly far: number;
+  readonly passing: { readonly fromPx: number; readonly travelPx: number; readonly cardHeightPx: number };
+}
+
+/** The shared profile chart's tokens (modes/shared/profile-chart.css), for one mode's results. */
+function profileTokens({ origin, chart, landmark: mark, near, far, passing }: ProfileTokenSource): CustomProperties {
+  return {
+    '--profile-origin': String(origin),
     '--profile-aspect': `${String(chart.widthPx)} / ${String(chart.heightPx)}`,
     '--profile-min-scale': String(chart.minScaleMetres),
     '--profile-headroom': String(chart.scaleHeadroom),
     '--profile-line': chart.colours.line,
     '--profile-card-text': chart.colours.text,
     '--profile-card-muted': chart.colours.muted,
-    '--profile-depth-size': px(chart.depthPx),
+    '--profile-value-size': px(chart.valuePx),
     '--profile-zone-size': px(chart.zonePx),
     '--profile-zone-opacity': String(chart.zoneOpacity),
     '--profile-inset': px(chart.textInsetPx),
@@ -507,20 +549,11 @@ function oceanTokens(): string {
     '--landmark-text-colour': mark.colours.text,
     '--landmark-fill': mark.colours.fill,
     '--landmark-edge': mark.colours.border,
-    '--ping-size': px(2 * pings.toRadiusPx),
-    '--ping-colour': pings.colour,
-    '--lit-above': String(chart.lit.aboveMetres),
-    '--lit-below': String(chart.lit.belowMetres),
-    '--lit-black-from': String(chart.lit.blackFromMetres),
+    '--lit-near': String(near),
+    '--lit-far': String(far),
     '--passing-from': String(passing.fromPx / passing.cardHeightPx),
     '--passing-travel': String(passing.travelPx / passing.cardHeightPx),
-    '--passing-silhouette': passing.colours.silhouette,
-    '--passing-deep': passing.colours.deep,
-    '--passing-jelly': passing.colours.jelly,
-    '--passing-jelly-line': passing.colours.jellyLine,
-    '--passing-glow': passing.colours.glow,
   };
-  return `${block('[data-mode="ocean"]', properties)}\n${block(':root', profile)}\n${lifeTokens()}`;
 }
 
 /** Ocean life's colours and motions (the "ocean depth, paused" frame), from CONFIG.modes.ocean.life. */
@@ -556,7 +589,78 @@ function lifeTokens(): string {
   ].join('\n');
 }
 
-const MODE_TOKENS: Readonly<Record<ModeTokenId, () => string>> = { ring: ringTokens, timeline: timelineTokens, analog: analogTokens, ocean: oceanTokens };
+function heightTokens(): string {
+  const height = CONFIG.modes.height;
+  const stars: CustomProperties = { '--height-star-faint': height.stars.faint, '--height-star-white': height.stars.white, '--height-star-warm': height.stars.warm };
+  const { meteors } = height;
+  const properties: CustomProperties = {
+    '--mode-time-size': String(height.timePx),
+    '--mode-gap': String(height.gapPx),
+    '--height-text': height.palette.text,
+    '--height-icon': height.palette.icon,
+    '--height-icon-paused': height.palette.iconPaused,
+    '--height-label': height.palette.label,
+    '--height-accent': height.palette.accent,
+    '--height-end': height.palette.end,
+    '--height-pause': height.palette.pause,
+    '--height-altitude-size': px(height.altitudeLine.textPx),
+    '--height-altitude-bottom': px(height.altitudeLine.bottomPx),
+    '--meteor-radius': px(meteors.radiusPx),
+    '--meteor-shower-period': `${String(meteors.shower.periodSeconds)}s`,
+    ...stars,
+  };
+  // The climb profile and the lit card, on the results that replay height (whichever mode is showing).
+  const chart = height.results;
+  const { passing, horizon } = chart;
+  const profile: CustomProperties = {
+    ...profileTokens({
+      origin: 1,
+      chart,
+      // The same markers as ocean depth's (both frames draw them alike), passed over the climb's own distances.
+      landmark: { ...CONFIG.modes.ocean.results.landmark, ...chart.landmark },
+      near: chart.lit.belowMetres,
+      far: chart.lit.aboveMetres,
+      passing,
+    }),
+    ...stars,
+    '--climb-stars-from': String(chart.stars.fromMetres),
+    '--climb-stars-span': String(chart.stars.spanMetres),
+    '--horizon-size': px(horizon.diameterPx),
+    '--horizon-from': String(horizon.fromPx / passing.cardHeightPx),
+    '--horizon-rise': String(horizon.risePx / passing.cardHeightPx),
+    '--horizon-high-rise': String(horizon.highRisePx / passing.cardHeightPx),
+    '--horizon-fade-from': String(horizon.fadeFromMetres),
+    '--horizon-fade-span': String(horizon.fadeSpanMetres),
+    '--horizon-high-from': String(horizon.highFromMetres),
+    '--horizon-high-span': String(horizon.highSpanMetres),
+    '--horizon-body': horizon.colours.body,
+    '--horizon-rim': horizon.colours.rim,
+    '--horizon-edge': horizon.colours.edge,
+    '--horizon-body-stop': `${String(horizon.stops.body * 100)}%`,
+    '--horizon-rim-stop': `${String(horizon.stops.rim * 100)}%`,
+    '--horizon-glow': px(horizon.glowPx),
+    '--horizon-glow-spread': px(horizon.glowSpreadPx),
+    '--horizon-glow-colour': horizon.colours.glow,
+    '--passing-silhouette': passing.colours.silhouette,
+    '--passing-cloud': passing.colours.cloud,
+    '--passing-contrail': passing.colours.contrail,
+    '--passing-balloon': passing.colours.balloon,
+    '--passing-rigging': passing.colours.rigging,
+  };
+  // The shooting star and the shower (the "height, paused" frame's keyframes; the shower's scaled to its period).
+  const percent = (share: number): string => `${String(Math.round(share * 1e6) / 1e4)}%`;
+  const streak = (name: string, peak: number, end: number): string =>
+    `  @keyframes ${name} {\n    0% { transform: translate(0, 0) rotate(var(--meteor-angle)); opacity: 0; }\n    ${percent(peak)} { opacity: 1; }\n    ${percent(end)} { transform: translate(var(--meteor-dx), var(--meteor-dy)) rotate(var(--meteor-angle)); opacity: 0; }\n    100% { transform: translate(var(--meteor-dx), var(--meteor-dy)) rotate(var(--meteor-angle)); opacity: 0; }\n  }`;
+  const { shower } = meteors;
+  return [
+    block('[data-mode="height"]', properties),
+    block('[data-replay="height"]', profile),
+    streak('height-shoot', meteors.peakShare, meteors.endShare),
+    streak('height-shower', shower.peakSeconds / shower.periodSeconds, shower.endSeconds / shower.periodSeconds),
+  ].join('\n');
+}
+
+const MODE_TOKENS: Readonly<Record<ModeTokenId, () => string>> = { ring: ringTokens, timeline: timelineTokens, analog: analogTokens, ocean: oceanTokens, height: heightTokens };
 
 /** One display mode's tokens, in the `mode` layer. */
 export function renderModeTokensCss(mode: ModeTokenId): string {

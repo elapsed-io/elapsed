@@ -34,9 +34,6 @@ import { motionScale } from '../shell/motion.ts';
 import { shareResult } from './share.ts';
 
 const pad = (value: number): string => String(value).padStart(2, '0');
-const RING_LAYOUT = new Set(['ring', 'analog']);
-/** Modes whose replay is a profile chart over the stats, 16 px apart (the "results: ocean depth" frame). */
-const CHART_LAYOUT = new Set(['ocean']);
 
 function clockDuration(ms: number): string {
   const { hours, minutes, seconds } = durationParts(ms);
@@ -114,8 +111,8 @@ export class ResultsScreen {
     const doc = this.#doc;
     const summary = summarise(session);
     const copy = BRAND.copy.results;
-    const ring = RING_LAYOUT.has(mode.id);
-    const layout = ring ? 'results--ring' : CHART_LAYOUT.has(mode.id) ? 'results--chart' : 'results--strip';
+    const ring = mode.replayLayout === 'ring';
+    const layout = `results--${mode.replayLayout}`;
 
     const final = clockDuration(summary.focusedMs);
     const [h = '00', m = '00', s = '00'] = final.split(':');

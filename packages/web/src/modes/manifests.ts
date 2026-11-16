@@ -41,6 +41,15 @@ export const MODE_MANIFESTS: readonly ModeManifest[] = [
       ...(['sunlight', 'twilight', 'midnight', 'abyssal', 'hadal'] as const).flatMap((zone) => ['fish-far', 'fish-mid', 'fish-near', 'bubble'].map((name) => `${zone}/${name}`)),
     ],
   },
+  {
+    id: 'height',
+    name: BRAND.copy.modes.height,
+    tier: 'on-choice',
+    budget,
+    source: 'src/modes/height/height.ts',
+    // The stars over the sky (art/height/sky.ts); on the results, the card's stars and the things that pass (results.ts).
+    art: ['sky/stars', 'sky/stars-card', ...CONFIG.modes.height.results.passing.things.map((thing) => thing.key)],
+  },
 ];
 
 export const DEFAULT_MODE_ID = 'digits';

@@ -106,6 +106,7 @@ export const BRAND = {
       timeline: 'timeline',
       analog: 'analog',
       ocean: 'ocean depth',
+      height: 'height',
     },
     analog: {
       /** Under the hours subdial (the analog frame). */
@@ -142,6 +143,28 @@ export const BRAND = {
       profile: 'dive profile: depth over the session, flat during pauses',
       /** The landmarks the dive passed, listed for screen readers. */
       landmarksPassed: 'landmarks passed',
+    },
+    height: {
+      height: '{height} m',
+      layers: { troposphere: 'troposphere', stratosphere: 'stratosphere', mesosphere: 'mesosphere', thermosphere: 'thermosphere' },
+      landmarks: {
+        burjKhalifa: 'height of the burj khalifa',
+        highestTown: 'highest town on earth',
+        everest: 'summit of everest',
+        airliner: 'airliner cruising altitude',
+        highestBird: 'highest bird ever recorded',
+        concorde: 'concorde cruising altitude',
+        armstrongLimit: 'armstrong limit: blood would boil',
+        ozoneLayer: 'heart of the ozone layer',
+      },
+      /** A landmark on the climb profile: its name and height. */
+      landmark: '{name} · {height} m',
+      /** The climb profile, read on request (the frame's own words). */
+      profile: 'climb profile: altitude over the session',
+      /** The landmarks the climb passed, listed for screen readers. */
+      landmarksPassed: 'landmarks passed',
+      /** While paused, at the bottom: the altitude and the layer of the atmosphere ("31,240 m · stratosphere"). */
+      altitude: '{height} m · {layer}',
     },
     themes: {
       graphite: 'graphite',

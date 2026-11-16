@@ -1,0 +1,127 @@
+/*
+ * Height, drawn as the height frames: the sky and its stars behind the whole screen, and the frames' own
+ * colours for the time, the corner icons and the buttons over it. The results and the ending keep the theme's
+ * colours, the corner icons too: the corner takes the sky's only while the timer shows.
+ */
+@layer mode {
+  .screen[data-mode="height"] > :is(.mode-root, .controls),
+  .screen[data-mode="height"]:has(> .mode-root:not([hidden])) > .corner {
+    --color-foreground: var(--height-text);
+    --color-muted: var(--height-icon);
+    --color-accent: var(--height-accent);
+    --color-end: var(--height-end);
+    --color-pause: var(--height-pause);
+    color: var(--color-foreground);
+  }
+
+  /* While paused the icons dim, as the paused frame draws them. */
+  .screen[data-mode="height"]:has(> .mode-root:not([hidden]) .height__sky--paused) > .corner {
+    --color-muted: var(--height-icon-paused);
+  }
+
+  /* "paused for" and the altitude line take the paused frame's label colour: set on the mode root's children,
+     so it holds whatever the specificity of the palette rule above (the build merges its selectors). */
+  .screen[data-mode="height"] > .mode-root > * {
+    --color-muted: var(--height-label);
+  }
+
+  /* The screen is the sky's stacking context, so the sky sits over its background and under its content. */
+  .screen[data-mode="height"] {
+    isolation: isolate;
+  }
+
+  /* Behind everything on the screen; inside the mode's root, so it hides with the timer. */
+  .height__sky {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+  }
+
+  /* The minute's sky, standing on the bottom of the screen and moved down by a linear transform as the climb
+     goes on (height.ts). */
+  .height__strip {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform-origin: bottom;
+    will-change: transform;
+  }
+
+  .height__strip--still {
+    will-change: auto;
+  }
+
+  .height__stars {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+  }
+
+  .height__stars .height__stars-art {
+    width: 100%;
+    height: 100%;
+  }
+
+  .height__stars .art [data-tone="star-faint"] {
+    fill: var(--height-star-faint);
+  }
+
+  .height__stars .art [data-tone="star-white"] {
+    fill: var(--height-star-white);
+  }
+
+  .height__stars .art [data-tone="star-warm"] {
+    fill: var(--height-star-warm);
+  }
+
+  /* While paused: the altitude and the layer of the atmosphere, at the bottom (the "height, paused" frame). */
+  .height__altitude {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: var(--height-altitude-bottom);
+    text-align: center;
+    font-size: var(--height-altitude-size);
+    color: var(--color-muted);
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--motion-fade) var(--ease-standard),
+      visibility 0s linear var(--motion-fade);
+  }
+
+  .height__altitude--shown {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--motion-fade) var(--ease-standard);
+  }
+
+  /*
+   * Shooting stars and the meteor shower while paused: each streak brightens toward its head (its right end),
+   * turned to its slope about the head, and crosses the sky in the first moments of its period (the frame's
+   * own keyframes, generated from the config module in styles/tokens.ts). height.ts draws them at random once.
+   */
+  .meteors {
+    position: absolute;
+    inset: 0;
+  }
+
+  .meteor {
+    position: absolute;
+    left: calc(var(--meteor-left) * 100%);
+    top: calc(var(--meteor-top) * 100%);
+    width: var(--meteor-length);
+    height: var(--meteor-thickness);
+    border-radius: var(--meteor-radius);
+    background: linear-gradient(90deg, transparent, var(--meteor-colour));
+    transform-origin: 100% 50%;
+    opacity: 0;
+    animation: height-shoot var(--meteor-period) linear var(--meteor-delay) infinite;
+  }
+
+  .meteor--shower {
+    animation: height-shower var(--meteor-shower-period) linear var(--meteor-delay) infinite;
+  }
+}

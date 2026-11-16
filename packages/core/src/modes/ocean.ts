@@ -7,6 +7,7 @@
 
 import { CONFIG } from '../config.ts';
 import { attenuated, hex } from './light.ts';
+import { pickByBand, spreadBy } from './landmarks.ts';
 
 const OCEAN = CONFIG.modes.ocean;
 const MINUTE = 60_000;
@@ -54,23 +55,7 @@ export const OCEAN_LANDMARKS: readonly Landmark[] = OCEAN.landmarks.map(([depth,
  * two), in depth order. `random` returns numbers in [0, 1), like Math.random.
  */
 export function pickLandmarks(random: () => number): Landmark[] {
-  const bands = new Map<number, Landmark[]>();
-  for (const landmark of OCEAN_LANDMARKS) {
-    const band = Math.floor(landmark.depth / OCEAN.landmarkBandMetres);
-    bands.set(band, [...(bands.get(band) ?? []), landmark]);
-  }
-  const picked: Landmark[] = [];
-  for (const band of [...bands.keys()].sort((a, b) => a - b)) {
-    const pool = [...(bands.get(band) ?? [])];
-    // Fisher–Yates, so every order is equally likely.
-    for (let i = pool.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j] as Landmark, pool[i] as Landmark];
-    }
-    const count = Math.min(OCEAN.landmarksPerBand, random() < 0.5 ? 1 : 2);
-    picked.push(...pool.slice(0, count));
-  }
-  return picked.sort((a, b) => a.depth - b.depth);
+  return pickByBand(OCEAN_LANDMARKS, (landmark) => landmark.depth, OCEAN.landmarkBandMetres, OCEAN.landmarksPerBand, random);
 }
 
 /**
@@ -78,14 +63,5 @@ export function pickLandmarks(random: () => number): Landmark[] {
  * path"): while there are too many, one of the two closest in depth goes, picked by `random`. Keeps depth order.
  */
 export function spreadLandmarks(landmarks: readonly Landmark[], max: number, random: () => number): Landmark[] {
-  const kept = [...landmarks].sort((a, b) => a.depth - b.depth);
-  while (kept.length > Math.max(0, max)) {
-    let closest = 0;
-    for (let i = 1; i < kept.length - 1; i += 1) {
-      const gap = (kept[i + 1]?.depth ?? 0) - (kept[i]?.depth ?? 0);
-      if (gap < (kept[closest + 1]?.depth ?? 0) - (kept[closest]?.depth ?? 0)) closest = i;
-    }
-    kept.splice(closest + (random() < 0.5 ? 0 : 1), 1);
-  }
-  return kept;
+  return spreadBy(landmarks, (landmark) => landmark.depth, max, random);
 }

@@ -15,6 +15,7 @@ const LOADERS: Readonly<Record<string, () => Promise<DisplayModeFactory>>> = {
   timeline: async () => (await import('./timeline/timeline.ts')).createTimelineMode,
   analog: async () => (await import('./analog/analog.ts')).createAnalogMode,
   ocean: async () => (await import('./ocean/ocean.ts')).createOceanMode,
+  height: async () => (await import('./height/height.ts')).createHeightMode,
 };
 
 export interface RegisteredMode {

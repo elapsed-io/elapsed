@@ -14,6 +14,7 @@
 
 import type { FramePalette } from './frames.ts';
 import { frameDocument } from './frames.ts';
+import { PAUSED_STARS, RUNNING_STARS } from './height-stars.ts';
 
 type Frame = (c: FramePalette) => string;
 
@@ -229,4 +230,59 @@ export function oceanPausedFrame(t: number, pausedFor: string): string {
 /** The ocean frames' water at `depth`: their own light model, as oceanWater() draws it. */
 function oceanWaterAt(depth: number): string {
   return oceanWater(depth);
+}
+
+/** The height frames' own light model (ModeHeight.dc.html's sky()), independent of the site's code. */
+export function heightSkyColour(z: number, dim = 1): string {
+  return `#${[0.078, 0.275, 0.597]
+    .map((v, i) => {
+      let x = dim * v * Math.exp((-([1.25, 1.1, 0.95][i] ?? 0) * Math.max(0, Math.min(z, 100000))) / 8500);
+      x = x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+      return Math.round(Math.max(0, Math.min(1, x)) * 255)
+        .toString(16)
+        .padStart(2, '0');
+    })
+    .join('')}`;
+}
+
+const heightSky = (h: number): string => `linear-gradient(180deg, ${heightSkyColour(h + 1500)} 0%, ${heightSkyColour(h - 1500)} 100%)`;
+const smooth = (x: number): number => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+const HEIGHT_ICONS = (colour: string): string =>
+  `<div style="position: absolute; top: 14px; right: 14px; display: flex; gap: 4px"><button aria-label="settings" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${colour}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><circle cx="12" cy="12" r="3"></circle></svg></button><button aria-label="account" style="width: 28px; height: 28px; padding: 0; background: transparent; border: 0; color: ${colour}; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"></circle><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path></svg></button></div>`;
+const COLON = '<span style="margin: 0 -0.05em; position: relative; top: -0.06em">:</span>';
+
+/**
+ * The "height, full climb" frame at `h` metres (canvas version 1794830661-c660): its own sky at that height,
+ * its stars at the opacity the frame gives them there, and the time `hhmm` ("01:24").
+ */
+export function heightFrame(h: number, hhmm: string): string {
+  const [hh = '', mm = ''] = hhmm.split(':');
+  return frameDocument(`<div style="width: 720px; height: 450px; box-sizing: border-box; background: ${heightSky(h)}; color: #EEF4FA; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px">
+<svg aria-hidden="true" width="720" height="450" viewBox="0 0 720 450" style="position: absolute; top: 0; left: 0"><g opacity="${smooth((h - 18000) / 24000).toFixed(3)}">${RUNNING_STARS.join('')}</g></svg>
+${HEIGHT_ICONS('#C9DCEE')}
+<div style="position: relative; font-family: Archivo, system-ui, sans-serif; font-weight: 300; font-stretch: 92%; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; white-space: nowrap; text-align: center; font-size: 104px">${hh}${COLON}${mm}</div>
+<div style="position: relative"><div style="display: flex; gap: 14px"><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: #EEF4FA; background: #2A4A6A">pause</button><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: #EEF4FA; background: #A8403D">end</button></div>
+</div>
+</div>`);
+}
+
+/**
+ * The "height, paused" frame without its shooting stars (canvas version 1794830661-c660), at `h` metres: the
+ * time `hhmm` held behind the blur, "paused for" `pausedFor` (hh:mm:ss), and the altitude line. Where the frame
+ * is a still picture, its sky and stars are the light model's at that height and the running frame's star field
+ * (`ownSky` draws the frame's own instead, for the record): decision 304.
+ */
+export function heightPausedFrame(h: number, hhmm: string, pausedFor: string, line: string, ownSky = false): string {
+  const [hh = '', mm = ''] = hhmm.split(':');
+  const [ph = '', pm = '', ps = ''] = pausedFor.split(':');
+  const background = ownSky ? 'linear-gradient(180deg, #020A1C 0%, #041330 100%)' : heightSky(h);
+  const stars = ownSky ? `<g>${PAUSED_STARS.join('')}</g>` : `<g opacity="${smooth((h - 18000) / 24000).toFixed(3)}">${RUNNING_STARS.join('')}</g>`;
+  return frameDocument(`<div style="width: 720px; height: 450px; box-sizing: border-box; background: ${background}; color: #EEF4FA; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px">
+<svg aria-hidden="true" width="720" height="450" viewBox="0 0 720 450" style="position: absolute; top: 0; left: 0">${stars}</svg>
+${HEIGHT_ICONS('#9AA6C8')}
+<div style="position: relative; display: flex; align-items: center; justify-content: center"><div aria-hidden="true" style="font-family: Archivo, system-ui, sans-serif; font-weight: 300; font-stretch: 92%; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; white-space: nowrap; text-align: center; font-size: 104px; color: #EEF4FA; filter: blur(10px); opacity: 0.4">${hh}${COLON}${mm}</div><div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="position: relative; font-family: Archivo, system-ui, sans-serif; font-weight: 300; font-stretch: 92%; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.01em; white-space: nowrap; text-align: center; font-size: 44px; color: #EEF4FA">${ph}${COLON}${pm}${COLON}${ps}<div style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; font-size: 12px; font-weight: 400; color: #B9C6DE; letter-spacing: 0.14em; white-space: nowrap">paused for</div></div></div></div>
+<div style="position: relative"><div style="display: flex; gap: 14px"><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: #EEF4FA; background: #35764E">resume</button><button style="height: 24px; padding: 0 13px; border-radius: 6px; border: 0; font-family: Archivo, system-ui, sans-serif; font-size: 12px; font-weight: 500; color: #EEF4FA; background: #A8403D">end</button></div>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 16px; text-align: center; font-size: 11px; color: #B9C6DE">${line}</div>
+</div>`);
 }

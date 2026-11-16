@@ -1078,6 +1078,13 @@ function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
       svg(doc, 'circle', { cx: 24, cy: 20, r: 1.4, fill: wave }),
       svg(doc, 'circle', { cx: 30, cy: 23, r: 1, fill: wave }),
     );
+  } else if (mode === 'height') {
+    // The Release 2 display frame's height tile: a muted mountain, its summit in the text colour, an accent star.
+    root.append(
+      svg(doc, 'path', { class: 'mode-tile__muted', d: 'M8 27 L22 9 L29 18 L34 13 L48 27 Z', 'stroke-width': 1.5, 'stroke-linejoin': 'round' }),
+      svg(doc, 'path', { class: 'mode-tile__text', d: 'M19.5 12.2 L22 9 L24.6 12.3', 'stroke-width': 1.5 }),
+      svg(doc, 'circle', { class: 'mode-tile__head', cx: 42, cy: 7, r: 1.3 }),
+    );
   } else {
     root.append(
       svg(doc, 'line', { class: 'mode-tile__muted', x1: 4, y1: 20, x2: 28, y2: 20, 'stroke-width': 2 }),

@@ -5,8 +5,8 @@ when the run stops; questions for the owner are collected below as they come up.
 
 ## Morning summary
 
-Written as each round is pushed, so it is current whenever the run stops. At this point rounds 2.1 to 2.4 are
-done and round 2.5 (height) is under way.
+Written as each round is pushed, so it is current whenever the run stops. At this point rounds 2.1 to 2.5 are
+done and pushed; round 2.6 (tree) is next.
 
 **What each round built**
 
@@ -26,14 +26,20 @@ done and round 2.5 (height) is under way.
   "ocean depth options" box.
 - **Round 2.4, ocean life:** while paused, the frame's fish and bubbles drift in (CSS animations only), one
   zone's catalog loaded at a time; the "ocean life" option.
+- **Round 2.5, height:** the sky from its light model gliding a minute at a time, the frame's stars fading in
+  from 18 km, stopping at 100 km; while paused, the altitude line, shooting stars and a rare meteor shower (CSS
+  only, drawn once per pause); its results as the new "build this one" frame (the card lit by the sky, stars and
+  Earth's horizon as the climb rises, things falling past, landmarks on the path); its tile. Ocean depth's
+  results now share one profile chart with height, and the display-mode contract gained `replayLayout`.
 
 **Test results** (each round: `npm run check`, then the whole end-to-end suite in Chromium, Firefox and
 WebKit through the reference image)
 
 - Release 1 after the motion changes: 549 passed, 6 skipped (declared), 0 failed.
 - Release 2 after round 2.3: 693 passed, 12 skipped, 0 failed. After round 2.4: 711 passed, 13 skipped, and two
-  WebKit page loads that stalled once (see the progress log; both passed four times over when repeated).
-- Unit tests: 528 on Release 1, 552 on Release 2.
+  WebKit page loads that stalled once (see the progress log; both passed four times over when repeated). After
+  round 2.5: 779 passed, 16 skipped, 0 failed.
+- Unit tests: 528 on Release 1, 559 on Release 2.
 - Along the way, intermittent failures were traced and fixed rather than retried: a test that re-created a
   cache it was checking (2.2), CSP reports read before the browser fired them, a helper fooled by a leftover
   countdown animation, transitions a busy WebKit starts a frame late, and Chromium's compositor drawing a
@@ -42,7 +48,7 @@ WebKit through the reference image)
 
 **Skipped and why**
 
-- Rounds 2.5 to 2.7: not finished yet (above).
+- Rounds 2.6 and 2.7: not finished yet (above).
 - Nothing was deployed, merged into Release 1 beyond your items 1 and 2 (and the test fixes they needed),
   released, or changed on Cloudflare or GitHub settings.
 
@@ -52,6 +58,14 @@ WebKit through the reference image)
 2. Ocean icons near the surface: the frames' #9EC3D6 is 2.39:1 over the surface water; keep, or lighten?
 3. The placeholder art's licence (it is outside the GPL under its own licence file, with no licence granted
    yet).
+4. Height's paused frame draws a darker sky, brighter stars, another star field and another time than the
+   light model gives at its altitude: built per the plan; right?
+5. Height near the ground: icons below 3:1 for the first 1,937 m, paused labels below 4.5:1 for the first
+   8,654 m, as drawn; keep, or lighten?
+6. Height's landmarks stop at 25 km (the frame's eight): add higher ones?
+7. Should height get its own options box with "results landmarks" (today the one switch covers both)?
+8. An intermittent WebKit page-load stall in the reference image under full load (progress log): watch it in
+   CI.
 
 ## Progress log
 
@@ -89,6 +103,14 @@ WebKit through the reference image)
   ocean depth), a stall not seen before in any run. Both specs then passed in WebKit four times over (156 of
   156), so it is recorded here rather than worked around.
 
+- Round 2.5: height, and the shared profile chart (decisions 301 to 310). Two findings in the reference
+  image: (1) Chromium there draws the timer's small text over the sky with subpixel
+  anti-aliasing where the frame's page gets greyscale (decision 310: the sky is checked exactly apart from the
+  text); (2) an intermittent WebKit page load that never fires its load event, now seen three times in about 2,200 WebKit
+  page loads, only when all three browsers run together (WebKit alone: 254 of 254 passed). Not worked around:
+  if it keeps appearing it needs a trace from a failing run (the WebKit-only run with traces did not reproduce
+  it).
+
 ## Questions for the owner
 
 1. **The analog hours hand (round 2.2).** The analog frame draws the hours subdial's hand at the whole hour
@@ -104,3 +126,18 @@ WebKit through the reference image)
    `packages/web/src/art/ocean/` with their own `LICENSE.md`, outside the GPL. It says they belong to you and
    that no licence is granted yet. Which licence should the art carry (for example all rights reserved, or a
    Creative Commons licence), and should the commissioned art use the same?
+4. **Height's paused frame against the light model (round 2.5, decision 304).** The "height, paused" frame
+   draws its sky up to 8 levels darker than the plan's light model at its 31,240 m, its stars at full strength
+   (the model gives 58 % there), another random field of faint stars than the running frame's, and its blurred
+   time as 01:24 (31,240 m is 03:43). Built per the plan and the running frame, with one star field. Is that
+   right, or should the paused sky be darker and its stars brighter?
+5. **Height's colours near the ground (round 2.5, decision 309).** Over the bright low sky, the frames' icon
+   colour is below 3:1 for the first 1,937 m (2.44:1 at the ground, about the first 14 minutes), and the paused
+   label colour ("paused for" and the altitude line, #B9C6DE) below 4.5:1 for the first 8,654 m (about the
+   first hour). Built as drawn; keep, or lighten them near the ground?
+6. **Height's landmarks above 25 km (round 2.5).** The frame's catalog has eight landmarks, the highest the
+   ozone layer at 25 km, so a climb past 30 km shows none in its upper bands. Should there be more (for
+   example record balloon flights, the Kármán line), and which?
+7. **Results landmarks for height (round 2.5, decision 306).** The one "results landmarks" option sits in the
+   ocean depth options box and now also covers height's results. Should height have its own options box with
+   that switch ("up to two per 10 km on the results"), as the plan's mode options suggest?

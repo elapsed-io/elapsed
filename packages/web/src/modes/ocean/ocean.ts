@@ -241,6 +241,7 @@ export function createOceanMode(): DisplayMode {
   return {
     id: 'ocean',
     replayTiming: OCEAN.replay,
+    replayLayout: 'chart',
     mount(element: HTMLElement, displayContext: DisplayContext) {
       root = element;
       context = displayContext;

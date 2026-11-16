@@ -55,6 +55,9 @@ export interface ReplaySurface {
   readonly scale: number;
 }
 
+/** The results card's layouts a replay may draw into (each as its frame draws it). */
+export type ReplayLayout = 'strip' | 'ring' | 'chart';
+
 /** Events a mode may react to. Release 3 adds record.passed; round 4 adds checkin.due. */
 export type ModeEvent = { readonly type: 'milestone.hour'; readonly payload: TimerEvents['milestone.hour'] };
 
@@ -66,6 +69,12 @@ export interface DisplayMode {
    * by the animation speed.
    */
   readonly replayTiming: ReplayTiming;
+  /**
+   * How the results card is laid out around the replay's graphic (decision 302): `strip` (a strip over the
+   * stats: digits, timeline), `ring` (the rings beside the stats: ring, analog) or `chart` (a profile chart over
+   * the stats, 16 px apart: ocean depth, height).
+   */
+  readonly replayLayout: ReplayLayout;
   mount(root: HTMLElement, context: DisplayContext): void;
   /** Called only when the visible value changes. */
   render(view: TimerView): void;

@@ -151,6 +151,7 @@ export function createTimelineMode(): DisplayMode {
   return {
     id: 'timeline',
     replayTiming: CONFIG.modes.timeline.replay,
+    replayLayout: 'strip',
     mount(element: HTMLElement, displayContext: DisplayContext) {
       root = element;
       context = displayContext;

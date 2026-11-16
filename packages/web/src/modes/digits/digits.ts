@@ -11,6 +11,7 @@ export function createDigitsMode(): DisplayMode {
   return {
     id: 'digits',
     replayTiming: CONFIG.modes.digits.replay,
+    replayLayout: 'strip',
     mount(element: HTMLElement, context: DisplayContext) {
       root = element;
       display = new TimeDisplay(element.ownerDocument, context);
