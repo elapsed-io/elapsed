@@ -4,11 +4,19 @@
  * fades from the accent at the head to nothing (plan, Design system > Display
  * modes; the revised "ring" and "ring at 00:01" frames).
  *
- * The head and tail turn by a CSS transform set once a minute, never redrawn.
+ * The head and tail turn together on one rotor, never redrawn. While a session
+ * runs, the rotor glides continuously through a linear CSS transform animation
+ * on its own layer, 6° a minute; script sets the animation's start once a
+ * minute and never runs a loop (as the timeline glides, decision 242). Paused
+ * or waiting for a check-in, it holds where it had reached. With low power or
+ * reduced motion it steps once a minute instead (owner, 2026-11-16).
+ *
  * At the start of a session only the head shows at 12 o'clock; the tail grows
  * in behind it over the first nine minutes, always fading out over whatever
  * length it has, so it never covers time that has not passed and never ends in
- * a hard edge.
+ * a hard edge. Its length is a gradient, which no transform can stretch, so
+ * while the head glides it grows in steps of half a degree (CONFIG.modes.ring
+ * .tailStep); once whole, it never changes again.
  */
 
 import 'virtual:tokens/ring.css';
@@ -23,29 +31,122 @@ import { drawRings } from './ring-replay.ts';
 const RING = CONFIG.modes.ring;
 const MINUTE_MS = 60_000;
 const DEGREES_PER_MINUTE = 360 / (RING.revolution / MINUTE_MS);
+/** A glide this far from focused time is set right (after the device slept, or the tab was hidden). */
+const DRIFT_MS = 250;
 
-/** Where the head points and how long the tail is, in degrees, after `focusedMs` of focus: whole minutes only. */
-export function ringAngles(focusedMs: number): { readonly head: number; readonly tail: number } {
-  const minutes = Math.floor(Math.max(0, focusedMs) / MINUTE_MS);
-  const head = minutes * DEGREES_PER_MINUTE;
-  return { head, tail: Math.min(RING.tailDegrees, head) };
+/**
+ * Where the head points and how long the tail is, in degrees, after `focusedMs` of focus. Stepped (low
+ * power, reduced motion): whole minutes only. Gliding: the head exactly, the tail in its small steps.
+ * Unbounded, so the head always turns forward, also past 12 o'clock.
+ */
+export function ringAngles(focusedMs: number, stepped = true): { readonly head: number; readonly tail: number } {
+  const focused = Math.max(0, focusedMs);
+  const minutes = Math.floor(focused / MINUTE_MS);
+  if (stepped) {
+    const head = minutes * DEGREES_PER_MINUTE;
+    return { head, tail: Math.min(RING.tailDegrees, head) };
+  }
+  const head = (focused / MINUTE_MS) * DEGREES_PER_MINUTE;
+  const grown = ((Math.floor(focused / RING.tailStep) * RING.tailStep) / MINUTE_MS) * DEGREES_PER_MINUTE;
+  return { head, tail: Math.min(RING.tailDegrees, grown) };
 }
+
+type State = 'idle' | 'running' | 'held';
 
 export function createRingMode(): DisplayMode {
   let root: HTMLElement | null = null;
   let display: TimeDisplay | null = null;
+  let context: DisplayContext | null = null;
   let rotor: HTMLDivElement | null = null;
-  let shown = '';
+  let glide: Animation | null = null;
+  /** The minute the glide was set for, or null while the rotor stands still. */
+  let glidingMinute: number | null = null;
+  let still = '';
+  let tail = '';
+  let tailTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const deg = (value: number): string => `${String(value)}deg`;
+  const rotate = (value: number): string => `rotate(${deg(value)})`;
+
+  const showTail = (degrees: number): void => {
+    const value = deg(degrees);
+    if (value === tail || rotor === null) return;
+    tail = value;
+    rotor.style.setProperty('--ring-tail', value);
+  };
+
+  const stopTail = (): void => {
+    if (tailTimer !== null) clearTimeout(tailTimer);
+    tailTimer = null;
+  };
+
+  /** While the head glides and the tail is not yet whole, grows the tail at each step of focused time. */
+  const growTail = (focusedMs: number, at: number): void => {
+    stopTail();
+    const { tail: degrees } = ringAngles(focusedMs, false);
+    showTail(degrees);
+    if (degrees >= RING.tailDegrees) return;
+    const wait = RING.tailStep - (Math.max(0, focusedMs) % RING.tailStep);
+    tailTimer = setTimeout(() => {
+      tailTimer = null;
+      growTail(focusedMs + (Date.now() - at), Date.now());
+    }, wait);
+  };
+
+  const place = (focusedMs: number, at: number, state: State): void => {
+    if (rotor === null) return;
+    const stepped = context?.lowPower === true;
+    if (state !== 'running' || stepped) {
+      // Still: where the glide had reached (held), or on the minute (low power, reduced motion, idle).
+      stopTail();
+      const angles = ringAngles(focusedMs, stepped || state === 'idle');
+      const key = `${String(angles.head)}/${state}`;
+      showTail(angles.tail);
+      if (glidingMinute === null && key === still) return;
+      glide?.cancel();
+      glide = null;
+      glidingMinute = null;
+      still = key;
+      rotor.classList.add('ring__rotor--still');
+      rotor.style.setProperty('transform', rotate(angles.head));
+      return;
+    }
+    // Gliding: 6° over the rest of this minute, set afresh only when the minute turns.
+    still = '';
+    const minute = Math.floor(Math.max(0, focusedMs) / MINUTE_MS);
+    const into = Math.max(0, focusedMs) - minute * MINUTE_MS;
+    const from = minute * DEGREES_PER_MINUTE;
+    const fresh = glide === null || glidingMinute !== minute;
+    if (fresh) {
+      glide?.cancel();
+      rotor.classList.remove('ring__rotor--still');
+      rotor.style.setProperty('transform', rotate(from));
+      glide = rotor.animate([{ transform: rotate(from) }, { transform: rotate(from + DEGREES_PER_MINUTE) }], {
+        duration: MINUTE_MS,
+        easing: 'linear',
+        fill: 'forwards',
+      });
+      glidingMinute = minute;
+    }
+    if (glide === null) return;
+    if (fresh || glide.playState === 'finished' || Math.abs(Number(glide.currentTime) - into) >= DRIFT_MS) glide.currentTime = into;
+    if (glide.playState !== 'running') glide.play();
+    growTail(focusedMs, at);
+  };
 
   return {
     id: 'ring',
-    mount(element: HTMLElement, context: DisplayContext) {
+    mount(element: HTMLElement, displayContext: DisplayContext) {
       root = element;
-      shown = '';
+      context = displayContext;
+      glide = null;
+      glidingMinute = null;
+      still = '';
+      tail = '';
       const doc = element.ownerDocument;
-      rotor = html(doc, 'div', { class: 'ring__rotor' }, [html(doc, 'div', { class: 'ring__tail' }), html(doc, 'div', { class: 'ring__head' })]);
+      rotor = html(doc, 'div', { class: 'ring__rotor ring__rotor--still' }, [html(doc, 'div', { class: 'ring__tail' }), html(doc, 'div', { class: 'ring__head' })]);
       const ring = rotor;
-      display = new TimeDisplay(doc, context, (time) => [
+      display = new TimeDisplay(doc, displayContext, (time) => [
         html(doc, 'div', { class: 'ring' }, [html(doc, 'div', { class: 'ring__track', attrs: { 'aria-hidden': 'true' } }), ring, time]),
       ]);
       rotor.setAttribute('aria-hidden', 'true');
@@ -54,14 +155,8 @@ export function createRingMode(): DisplayMode {
     },
     render(view: TimerView) {
       display?.render(view);
-      if (rotor === null) return;
-      const { head, tail } = ringAngles(view.focusedMs);
-      const key = `${String(head)}/${String(tail)}`;
-      if (key === shown) return;
-      shown = key;
-      // Unbounded, so the head always turns forward, also past 12 o'clock.
-      rotor.style.setProperty('--ring-angle', `${String(head)}deg`);
-      rotor.style.setProperty('--ring-tail', `${String(tail)}deg`);
+      const state: State = view.status === 'idle' || view.status === 'ended' ? 'idle' : view.status === 'running' && view.checkInDueAt === null ? 'running' : 'held';
+      place(view.focusedMs, view.at, state);
     },
     replay(target: HTMLElement, session: Session) {
       drawRings(target, session);
@@ -70,10 +165,15 @@ export function createRingMode(): DisplayMode {
       display?.measure();
     },
     unmount() {
+      stopTail();
+      glide?.cancel();
       root?.replaceChildren();
       root = null;
       display = null;
+      context = null;
       rotor = null;
+      glide = null;
+      glidingMinute = null;
     },
   };
 }

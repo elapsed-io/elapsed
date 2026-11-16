@@ -17,6 +17,7 @@
  */
 
 import {
+  ANIMATION_SPEEDS,
   BRAND,
   CLOCK_FORMATS,
   CONFIG,
@@ -29,7 +30,7 @@ import {
   resetCategory,
   withSetting,
 } from '@stopwatch/core';
-import type { ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId } from '@stopwatch/core';
+import type { AnimationSpeed, ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId } from '@stopwatch/core';
 import { parseSettingsFile, settingsFile, settingsFileName } from '@stopwatch/core/settings-file';
 import 'virtual:tokens/settings.css';
 import { html, svg } from '../dom.ts';
@@ -109,6 +110,8 @@ export class SettingsPanel {
   readonly #back: HTMLButtonElement;
   readonly #empty: HTMLDivElement;
   readonly #phone: MediaQueryList;
+  /** The system's reduced-motion preference, which also turns low power on. */
+  readonly #reducedMotion: MediaQueryList | null;
   readonly #fontTiles = new Map<FontChoice, HTMLButtonElement>();
   #ownTile: HTMLButtonElement | null = null;
   #fontNote: HTMLDivElement | null = null;
@@ -133,6 +136,7 @@ export class SettingsPanel {
   constructor(doc: Document, host: PanelHost) {
     this.#doc = doc;
     this.#host = host;
+    this.#reducedMotion = doc.defaultView?.matchMedia('(prefers-reduced-motion: reduce)') ?? null;
 
     this.#savedText = doc.createTextNode('');
     this.#saved = html(doc, 'div', { class: 'settings__saved', attrs: { role: 'status' } }, [iconElement(doc, 'check', 'settings__saved-icon'), this.#savedText]);
@@ -418,7 +422,7 @@ export class SettingsPanel {
       case 'display':
         return [this.#modes()];
       case 'appearance':
-        return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat()];
+        return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat(), this.#animationSpeed(), this.#lowPower()];
       case 'notifications':
         return this.#notifications();
       case 'privacy':
@@ -658,6 +662,41 @@ export class SettingsPanel {
     });
     return { element: settingRow(this.#doc, label(this.#doc, copy.clockFormat.label), control.element, null), search: searchText(copy.clockFormat.label, ...options.map((option) => option.label)) };
   }
+  #animationSpeed(): Item {
+    const text = copy.animationSpeed;
+    const options = ANIMATION_SPEEDS.map((value) => ({ value, label: text.options[value] }));
+    const control = segmented<AnimationSpeed>(this.#doc, text.label, options, (value) => {
+      this.#set('animationSpeed', value);
+    });
+    this.#updates.push((settings) => {
+      control.update(settings.animationSpeed);
+    });
+    return { element: settingRow(this.#doc, label(this.#doc, text.label), control.element, text.help), search: searchText(text.label, text.help, ...options.map((option) => option.label)) };
+  }
+
+  /**
+   * Low power: on by hand, and also whenever the system asks for reduced motion (plan, Loading and
+   * performance). While the system asks, the switch shows on and cannot be turned off here.
+   */
+  #lowPower(): Item {
+    const doc = this.#doc;
+    const text = copy.lowPower;
+    const control = toggle(doc, text.label, (on) => {
+      if (this.#reducedMotion?.matches === true) return;
+      this.#set('lowPower', on);
+    });
+    const show = (settings: Settings): void => {
+      const system = this.#reducedMotion?.matches === true;
+      control.update(settings.lowPower || system);
+      control.element.toggleAttribute('aria-disabled', system);
+    };
+    this.#updates.push(show);
+    this.#reducedMotion?.addEventListener('change', () => {
+      show(this.#host.controller.current);
+    });
+    return { element: settingRow(doc, html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [text.label]), control.element, text.help), search: searchText(text.label, text.help) };
+  }
+
 
   // ---- Notifications -----------------------------------------------------
 

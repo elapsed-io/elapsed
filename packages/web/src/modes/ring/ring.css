@@ -1,7 +1,7 @@
 /*
  * Ring mode, drawn as the revised ring frame: a masked track, and a rotor
  * holding the tail (one conic gradient) and the round head, turned by a
- * transform once a minute. Sized in reference pixels and scaled with the
+ * transform that glides (ring.ts). Sized in reference pixels and scaled with the
  * window like the time.
  */
 @layer mode {
@@ -32,11 +32,18 @@
     background: var(--color-faint);
   }
 
+  /*
+   * Turned by script: a linear glide while a session runs, on its own layer, drawn once (ring.ts). Standing
+   * still (idle, held, low power, reduced motion), it is drawn in place like the rest of the page.
+   */
   .ring__rotor {
     position: absolute;
     inset: 0;
-    transform: rotate(var(--ring-angle, 0deg));
-    transition: transform var(--motion-morph) var(--ease-standard);
+    will-change: transform;
+  }
+
+  .ring__rotor--still {
+    will-change: auto;
   }
 
   /* From the tail's far end (transparent) to the head (the accent), over --ring-tail degrees. */
@@ -63,11 +70,5 @@
 
   .ring > .time {
     position: relative;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .ring__rotor {
-      transition: none;
-    }
   }
 }

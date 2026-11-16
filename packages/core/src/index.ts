@@ -53,6 +53,7 @@ export { SECONDS_DISPLAYS, computeView, focusPrecision, isSecondsDisplay, msUnti
 export type { SecondsDisplay, TimerStatus, TimerView } from './engine/view.ts';
 
 export {
+  ANIMATION_SPEEDS,
   CLOCK_FORMATS,
   FONT_CHOICES,
   MODE_CHOICES,
@@ -72,6 +73,7 @@ export {
   withSetting,
 } from './settings/schema.ts';
 export type {
+  AnimationSpeed,
   BuiltInFont,
   ClockFormat,
   FontChoice,

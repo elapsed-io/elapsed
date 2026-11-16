@@ -13,7 +13,7 @@
  * layers, so nothing is redrawn: script sets the animation's start once a
  * minute (and when the session resumes or the tab returns) and never runs a
  * loop. Paused or waiting for a check-in, the strip stands still where it
- * was, drawn in place. With reduced motion it steps once a minute instead.
+ * was, drawn in place. With low power (or reduced motion) it steps once a minute instead.
  * The personal record marker arrives with records in Release 3.
  */
 
@@ -101,17 +101,18 @@ export function createTimelineMode(): DisplayMode {
    * Puts every layer at `focusedMs`. While a session runs with full motion, each layer glides 10 px over
    * the rest of the minute on its own compositor layer; the animation is set afresh only when the minute
    * turns, and set right when focused time and the animation disagree (after sleep). Otherwise (idle,
-   * paused, a check-in waiting, or reduced motion) the layers stand still where they are, drawn in place
-   * like the rest of the page (with reduced motion, on the minute's whole pixel).
+   * paused, a check-in waiting, or low power) the layers stand still where they are, drawn in place
+   * like the rest of the page (with low power, on the minute's whole pixel).
    */
   const place = (focusedMs: number, state: 'idle' | 'running' | 'held'): void => {
     const offset = stripOffset(focusedMs);
     const into = Math.max(0, focusedMs) % MINUTE_MS;
-    const still = context?.reducedMotion === true;
+    // Low power, which reduced motion also turns on, steps once a minute instead of gliding.
+    const still = context?.lowPower === true;
     const glide = state === 'running' && !still;
     if (!glide) {
       // Where the glide had reached: still, and at a whole pixel at the turn of each minute. While held,
-      // or with reduced motion, nothing moves, so the layers are drawn in place, not on their own layers
+      // or with low power, nothing moves, so the layers are drawn in place, not on their own layers
       // (text drawn over them, such as the pause length, keeps its sharpest anti-aliasing).
       const reached = still ? 0 : (into / MINUTE_MS) * PX_PER_MINUTE;
       const flat = state === 'held' || still;
