@@ -184,7 +184,7 @@ test.describe('changes', () => {
     const background = (target: Page) => target.evaluate(() => getComputedStyle(document.body).backgroundColor);
     expect(await background(page)).toBe('rgb(246, 245, 242)');
     await expect.poll(() => background(other)).toBe('rgb(246, 245, 242)');
-    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ schema: 1, theme: 'paper' });
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ schema: 2, theme: 'paper' });
     await page.reload();
     await page.locator('.button--primary').waitFor();
     expect(await background(page)).toBe('rgb(246, 245, 242)');

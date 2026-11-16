@@ -17,6 +17,7 @@
  */
 
 import {
+  ANIMATION_SPEEDS,
   BRAND,
   CLOCK_FORMATS,
   CONFIG,
@@ -29,11 +30,12 @@ import {
   resetCategory,
   withSetting,
 } from '@stopwatch/core';
-import type { ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId } from '@stopwatch/core';
+import type { AnimationSpeed, ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId } from '@stopwatch/core';
 import { parseSettingsFile, settingsFile, settingsFileName } from '@stopwatch/core/settings-file';
 import 'virtual:tokens/settings.css';
 import { html, svg } from '../dom.ts';
 import { formatBytes } from '../fonts/font-file.ts';
+import { listDownloadedModes, removeDownloadedMode } from '../storage/mode-cache.ts';
 import { BUILT_IN_FONTS, OWN_FONT_FAMILY, familyStack, previewFamily } from '../fonts/registry.ts';
 import { iconElement } from '../icons/icon-element.ts';
 import { restartInSafeMode } from '../shell/safe-mode.ts';
@@ -109,10 +111,14 @@ export class SettingsPanel {
   readonly #back: HTMLButtonElement;
   readonly #empty: HTMLDivElement;
   readonly #phone: MediaQueryList;
+  /** The system's reduced-motion preference, which also turns low power on. */
+  readonly #reducedMotion: MediaQueryList | null;
   readonly #fontTiles = new Map<FontChoice, HTMLButtonElement>();
   #ownTile: HTMLButtonElement | null = null;
   #fontNote: HTMLDivElement | null = null;
   #storageValue: HTMLDivElement | null = null;
+  #downloadsGroup: HTMLDivElement | null = null;
+  #downloadsList: HTMLDivElement | null = null;
   #blocked: HTMLDivElement | null = null;
   /** Custom CSS: the editor's place, its note, and the editor once its code has loaded. */
   #cssSlot: HTMLDivElement | null = null;
@@ -133,6 +139,7 @@ export class SettingsPanel {
   constructor(doc: Document, host: PanelHost) {
     this.#doc = doc;
     this.#host = host;
+    this.#reducedMotion = doc.defaultView?.matchMedia('(prefers-reduced-motion: reduce)') ?? null;
 
     this.#savedText = doc.createTextNode('');
     this.#saved = html(doc, 'div', { class: 'settings__saved', attrs: { role: 'status' } }, [iconElement(doc, 'check', 'settings__saved-icon'), this.#savedText]);
@@ -369,6 +376,7 @@ export class SettingsPanel {
       this.#requestPreviews();
       void this.#refreshOwnTile();
     }
+    if (visible('display')) void this.refreshDownloads();
     if (visible('privacy')) void this.#refreshStorage();
     if (visible('advanced')) void this.#loadEditor().catch(() => undefined);
   }
@@ -416,9 +424,9 @@ export class SettingsPanel {
       case 'timer':
         return [this.#seconds(), this.#rangeItem('checkInInterval', copy.checkIn, formatHoursMinutes), this.#rangeItem('pauseLimit', copy.pauseLimit, formatMinutes), this.#shortcuts()];
       case 'display':
-        return [this.#modes()];
+        return [this.#modes(), this.#downloads()];
       case 'appearance':
-        return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat()];
+        return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat(), this.#animationSpeed(), this.#lowPower()];
       case 'notifications':
         return this.#notifications();
       case 'privacy':
@@ -481,6 +489,40 @@ export class SettingsPanel {
       update(settings.mode);
     });
     return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.mode.label]), [grid]), search: searchText(copy.mode.label, ...MODE_CHOICES.map((value) => BRAND.copy.modes[value])) };
+  }
+
+  /**
+   * Downloaded modes, as the Release 2 display frame draws them: each with its size and a remove button.
+   * The item is a wrapper laid out as its contents, so the list takes no room while nothing is downloaded.
+   */
+  #downloads(): Item {
+    const doc = this.#doc;
+    const text = copy.downloadedModes;
+    this.#downloadsList = html(doc, 'div', { class: 'downloads' });
+    this.#downloadsGroup = settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [text.label]), [this.#downloadsList, html(doc, 'div', { class: 'setting__help' }, [text.help])]);
+    this.#downloadsGroup.hidden = true;
+    return { element: html(doc, 'div', { class: 'settings__item-contents' }, [this.#downloadsGroup]), search: searchText(text.label, text.help) };
+  }
+
+  /** Lists the modes on this device again (a mode was just cached, or removed). */
+  async refreshDownloads(): Promise<void> {
+    const view = this.#doc.defaultView;
+    const list = this.#downloadsList;
+    const group = this.#downloadsGroup;
+    if (view === null || list === null || group === null) return;
+    const modes = await listDownloadedModes(view, MODE_CHOICES);
+    const doc = this.#doc;
+    list.replaceChildren(
+      ...modes.map((mode) => {
+        const name = (MODE_CHOICES as readonly string[]).includes(mode.id) ? BRAND.copy.modes[mode.id as ModeChoice] : mode.id;
+        const remove = html(doc, 'button', { class: 'downloads__remove', attrs: { type: 'button', 'aria-label': copy.downloadedModes.removeName.replace('{mode}', name) } }, [copy.downloadedModes.remove]);
+        remove.addEventListener('click', () => {
+          void removeDownloadedMode(view, mode.id).then(() => this.refreshDownloads());
+        });
+        return html(doc, 'div', { class: 'downloads__row' }, [html(doc, 'div', {}, [name]), html(doc, 'div', { class: 'downloads__end' }, [html(doc, 'div', { class: 'setting__value' }, [formatBytes(mode.bytes)]), remove])]);
+      }),
+    );
+    group.hidden = modes.length === 0;
   }
 
   // ---- Appearance --------------------------------------------------------
@@ -658,6 +700,41 @@ export class SettingsPanel {
     });
     return { element: settingRow(this.#doc, label(this.#doc, copy.clockFormat.label), control.element, null), search: searchText(copy.clockFormat.label, ...options.map((option) => option.label)) };
   }
+  #animationSpeed(): Item {
+    const text = copy.animationSpeed;
+    const options = ANIMATION_SPEEDS.map((value) => ({ value, label: text.options[value] }));
+    const control = segmented<AnimationSpeed>(this.#doc, text.label, options, (value) => {
+      this.#set('animationSpeed', value);
+    });
+    this.#updates.push((settings) => {
+      control.update(settings.animationSpeed);
+    });
+    return { element: settingRow(this.#doc, label(this.#doc, text.label), control.element, text.help), search: searchText(text.label, text.help, ...options.map((option) => option.label)) };
+  }
+
+  /**
+   * Low power: on by hand, and also whenever the system asks for reduced motion (plan, Loading and
+   * performance). While the system asks, the switch shows on and cannot be turned off here.
+   */
+  #lowPower(): Item {
+    const doc = this.#doc;
+    const text = copy.lowPower;
+    const control = toggle(doc, text.label, (on) => {
+      if (this.#reducedMotion?.matches === true) return;
+      this.#set('lowPower', on);
+    });
+    const show = (settings: Settings): void => {
+      const system = this.#reducedMotion?.matches === true;
+      control.update(settings.lowPower || system);
+      control.element.toggleAttribute('aria-disabled', system);
+    };
+    this.#updates.push(show);
+    this.#reducedMotion?.addEventListener('change', () => {
+      show(this.#host.controller.current);
+    });
+    return { element: settingRow(doc, html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [text.label]), control.element, text.help), search: searchText(text.label, text.help) };
+  }
+
 
   // ---- Notifications -----------------------------------------------------
 

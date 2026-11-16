@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
+import { CONFIG } from '@stopwatch/core';
 import { coreFiles } from '../scripts/size-budget.ts';
 import { diffPngs } from './pixels.ts';
 import type { PixelDiff } from './pixels.ts';
@@ -44,15 +46,16 @@ export async function openApp(
 }
 
 /**
- * Lets every interface transition (200 ms crossfades and slides) finish in real time. The timeline's glide,
- * which runs a minute at a time and holds while paused, is ambient motion, not a transition: tests freeze it.
+ * Lets every interface transition (200 ms crossfades and slides) finish in real time. The timeline's and the
+ * ring's glides, which run a minute at a time and hold while paused, are motion with time, not transitions:
+ * tests freeze them.
  */
 export async function settle(page: Page): Promise<void> {
   await page.evaluate(async () => {
     const running = document
       .getAnimations()
       .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
-      .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide') === true));
+      .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor') === true));
     await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
   });
 }
@@ -130,10 +133,20 @@ export const TIMER_END = '.screen > .controls .button--end';
  * Ends the session through the countdown: end, then end now once its 300 ms
  * guard has passed (the countdown runs on the browser's own animation clock).
  */
+/**
+ * Waits until end now accepts a press: it ignores its first 300 ms, counted on the countdown's own animation
+ * (shell/ending.ts), which a slow browser starts a little after the countdown appears.
+ */
+export async function untilEndNowAccepts(page: Page): Promise<void> {
+  await page.locator('.ending').waitFor();
+  await expect
+    .poll(() => page.locator('.ending').evaluate((ending) => Math.max(0, ...ending.getAnimations({ subtree: true }).map((animation) => Number(animation.currentTime ?? 0)))))
+    .toBeGreaterThanOrEqual(CONFIG.session.endNowGuard);
+}
+
 export async function endThroughCountdown(page: Page): Promise<void> {
   await page.locator(TIMER_END).click();
-  await page.locator('.ending').waitFor();
-  await page.waitForTimeout(350);
+  await untilEndNowAccepts(page);
   await page.getByRole('button', { name: 'end now' }).click();
   await page.locator('.results').waitFor();
 }
@@ -147,7 +160,7 @@ export async function finishResults(page: Page): Promise<void> {
       const running = document
         .getAnimations()
         .filter((animation) => !(animation instanceof CSSAnimation))
-        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide') === true));
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor') === true));
       for (const animation of running) animation.finish();
       // Let finish handlers (which cancel spent animations and remove masks) run. The page's timers
       // may be held by the test clock, so only promises are awaited.

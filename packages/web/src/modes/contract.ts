@@ -16,6 +16,12 @@ export interface DisplayContext {
   readonly seconds: SecondsDisplay;
   /** The user asked for reduced motion. */
   readonly reducedMotion: boolean;
+  /**
+   * Low power is on: by hand (Settings > Appearance), or because the system asks for reduced motion
+   * (plan, Loading and performance). Ambient animation stops and only the time shows; anything that
+   * moves with time steps once a minute instead of gliding.
+   */
+  readonly lowPower: boolean;
 }
 
 /** Events a mode may react to. Release 3 adds record.passed; round 4 adds checkin.due. */

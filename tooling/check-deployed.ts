@@ -9,7 +9,7 @@
  *
  * `app` needs `npm run build` first (it reads packages/web/dist/_headers).
  * Behind Cloudflare Access, set CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET
- * to a service token (docs/test-run.md); nothing else is sent.
+ * to a service token (docs/deploy.md, part 3, step 6); nothing else is sent.
  */
 
 import { readFileSync } from 'node:fs';
@@ -29,7 +29,7 @@ const secret = process.env['CF_ACCESS_CLIENT_SECRET'];
 const behindAccess = id !== undefined && secret !== undefined;
 const sent: Record<string, string> = behindAccess ? { 'CF-Access-Client-Id': id, 'CF-Access-Client-Secret': secret } : {};
 
-/** `open`: a path that must answer without Access's sign-in (docs/test-run.md: the bypass rules). */
+/** `open`: a path that must answer without Access's sign-in (docs/deploy.md, part 3, step 4: the bypass rules). */
 async function fetchLive(path: string, open = false): Promise<LiveResponse & { readonly text: string }> {
   const response = await fetch(new URL(path, origin), { headers: open ? {} : sent, redirect: 'manual' });
   const headers: Record<string, string> = {};

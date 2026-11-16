@@ -177,6 +177,12 @@ export const CONFIG = {
      * --motion-scale custom property.
      */
     durationScale: 1,
+    /**
+     * The animation speed setting's multipliers for --motion-scale (Settings catalog > Appearance; owner,
+     * 2026-11-16: "normal" is the Design system's timing). Slower is half as long again; faster is the
+     * reciprocal, so the two are equally far from normal.
+     */
+    speeds: { slower: 1.5, normal: 1, faster: 2 / 3 },
     /** After copying the share text, the share icon shows a check for this long (owner decision, 2026-11-15). */
     copiedConfirmation: 2000,
     /** Easing for interface motion (start morph, fades): cubic-bezier control points. */

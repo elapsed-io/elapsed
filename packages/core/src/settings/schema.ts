@@ -11,6 +11,9 @@
  *
  * Release 1 categories (owner changes, item 5): timer, display, appearance,
  * notifications, privacy and data. Advanced arrives in round 7.
+ *
+ * Schema 2 (Release 2, round 2.1) adds animation speed and low power. Older
+ * settings migrate field by field: what they lack takes its default.
  */
 
 import { CONFIG } from '../config.ts';
@@ -18,7 +21,7 @@ import { SECONDS_DISPLAYS } from '../engine/view.ts';
 import type { SecondsDisplay } from '../engine/view.ts';
 import type { RuleSettings } from '../session/rules.ts';
 
-export const SETTINGS_SCHEMA = 1;
+export const SETTINGS_SCHEMA = 2;
 
 export const SETTINGS_CATEGORIES = ['timer', 'display', 'appearance', 'notifications', 'privacy'] as const;
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
@@ -54,6 +57,10 @@ export type BuiltInFont = Exclude<FontChoice, 'own'>;
 export const CLOCK_FORMATS = ['12h', '24h', 'region'] as const;
 export type ClockFormat = (typeof CLOCK_FORMATS)[number];
 
+/** Animation speed (Release 2): multiplies every interface animation's duration (CONFIG.motion.speeds). */
+export const ANIMATION_SPEEDS = ['slower', 'normal', 'faster'] as const;
+export type AnimationSpeed = (typeof ANIMATION_SPEEDS)[number];
+
 /** A colour as #rrggbb in lowercase. */
 export type HexColor = `#${string}`;
 
@@ -78,6 +85,9 @@ export interface Settings {
   readonly font: FontChoice;
   readonly timeSize: number;
   readonly clockFormat: ClockFormat;
+  readonly animationSpeed: AnimationSpeed;
+  /** Freezes ambient animation and shows only the time; the system's reduced-motion preference also turns it on. */
+  readonly lowPower: boolean;
   // Notifications
   readonly notifyCheckIns: boolean;
   readonly notifyPauseLimit: boolean;
@@ -97,7 +107,7 @@ export type SettingTarget =
   | { readonly css: `--${string}` }
   | { readonly theme: 'preset' | 'colors' }
   | { readonly engine: 'secondsDisplay' | 'checkInInterval' | 'pauseLimit' }
-  | { readonly site: 'mode' | 'clockFormat' | 'notifications' | 'usageCounts' | 'crashReports' };
+  | { readonly site: 'mode' | 'clockFormat' | 'lowPower' | 'notifications' | 'usageCounts' | 'crashReports' };
 
 interface Declared<K extends SettingKey> {
   readonly key: K;
@@ -136,6 +146,8 @@ export type SettingDeclaration =
   | ChoiceSetting<'font'>
   | RangeSetting<'timeSize'>
   | ChoiceSetting<'clockFormat'>
+  | ChoiceSetting<'animationSpeed'>
+  | SwitchSetting<'lowPower'>
   | SwitchSetting<'notifyCheckIns'>
   | SwitchSetting<'notifyPauseLimit'>
   | SwitchSetting<'usageCounts'>
@@ -182,6 +194,8 @@ export const SETTINGS: readonly SettingDeclaration[] = [
     target: { css: '--time-size-setting' },
   },
   { key: 'clockFormat', kind: 'choice', category: 'appearance', options: CLOCK_FORMATS, default: 'region', target: { site: 'clockFormat' } },
+  { key: 'animationSpeed', kind: 'choice', category: 'appearance', options: ANIMATION_SPEEDS, default: 'normal', target: { css: '--motion-scale' } },
+  { key: 'lowPower', kind: 'switch', category: 'appearance', default: false, target: { site: 'lowPower' } },
   { key: 'notifyCheckIns', kind: 'switch', category: 'notifications', default: false, target: { site: 'notifications' } },
   { key: 'notifyPauseLimit', kind: 'switch', category: 'notifications', default: false, target: { site: 'notifications' } },
   { key: 'usageCounts', kind: 'switch', category: 'privacy', default: true, target: { site: 'usageCounts' } },

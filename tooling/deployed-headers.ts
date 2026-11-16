@@ -66,7 +66,7 @@ export function judge(
   if (response.location !== null && /cloudflareaccess\.com/.test(response.location)) {
     return [
       options.open === true
-        ? `${response.path}: Cloudflare Access asked for a sign-in, but this path must answer without one (docs/test-run.md: the bypass rules)`
+        ? `${response.path}: Cloudflare Access asked for a sign-in, but this path must answer without one (docs/deploy.md, part 3, step 4: the bypass rules)`
         : `${response.path}: Cloudflare Access asked for a sign-in; set CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET to a service token`,
     ];
   }

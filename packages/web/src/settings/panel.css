@@ -264,6 +264,41 @@
     color: var(--color-muted);
   }
 
+  /* An item that only wraps another, so a hidden inner item takes no room (downloaded modes). */
+  .settings__item-contents {
+    display: contents;
+  }
+
+  /* Downloaded modes: the Release 2 display frame's rows. */
+  .downloads {
+    display: flex;
+    flex-direction: column;
+    gap: var(--settings-group-gap);
+  }
+
+  .downloads__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: var(--settings-reset-size);
+  }
+
+  .downloads__end {
+    display: flex;
+    align-items: center;
+    gap: var(--settings-control-gap);
+  }
+
+  .downloads__remove {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--settings-reset-size);
+    color: var(--color-muted);
+    text-decoration: underline;
+  }
+
   .setting__value {
     font-size: var(--settings-reset-size);
     color: var(--color-muted);
