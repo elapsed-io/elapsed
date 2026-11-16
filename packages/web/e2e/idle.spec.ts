@@ -48,7 +48,11 @@ test('loads under the CSP with no violations, errors or third-party requests', a
     if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text());
   });
   page.on('pageerror', (error) => errors.push(error.message));
-  page.on('request', (request) => requests.push(request.url()));
+  const fontRequests: Promise<number>[] = [];
+  page.on('request', (request) => {
+    requests.push(request.url());
+    if (request.url().endsWith('.woff2')) fontRequests.push(request.response().then(async () => (await request.sizes()).responseBodySize));
+  });
 
   const controlRead = page.waitForRequest('**/sw-control.json');
   await openIdle(page);
@@ -59,14 +63,20 @@ test('loads under the CSP with no violations, errors or third-party requests', a
   const origin = new URL(baseURL ?? '').origin;
   expect(requests.filter((url) => !url.startsWith('data:') && new URL(url).origin !== origin)).toEqual([]);
   // The page, its script, its stylesheet and the preloaded font; the visit count and the offline kill
-  // switch. The browser fetches the tab icon when it chooses, so it may or may not have happened yet.
-  // No display mode chunk loads for digits.
-  const paths = requests
-    .filter((url) => !url.startsWith('data:'))
-    .map((url) => new URL(url).pathname)
-    .filter((path) => path !== '/icons/icon.svg')
-    .sort();
+  // switch. The browser fetches icons and the manifest for its own use when it chooses (Firefox takes the
+  // touch icon, WebKit the manifest), so they may or may not appear. No display mode chunk loads for digits.
+  const paths = [
+    ...new Set(
+      requests
+        .filter((url) => !url.startsWith('data:'))
+        .map((url) => new URL(url).pathname)
+        .filter((path) => !path.startsWith('/icons/') && path !== '/manifest.webmanifest'),
+    ),
+  ].sort();
   expect(paths).toEqual([...corePaths(), '/api/count', '/sw-control.json'].sort());
+  // WebKit reports the preloaded font twice (the preload, then the face taking it): it is downloaded once.
+  const fontBytes = (await Promise.all(fontRequests)).reduce((sum, bytes) => sum + bytes, 0);
+  expect(fontBytes).toBe(FONT.byteLength);
   // The core is the page, its scripts, one stylesheet and the default font: no display mode, panel or other font.
   expect(corePaths().filter((path) => /\.woff2$/.test(path)).map((path) => path.replace(/-[\w-]{8}\.woff2$/, ''))).toEqual(['/assets/timer-sans']);
   expect(corePaths().some((path) => /\/(ring|timeline|panel|results)-/.test(path))).toBe(false);
@@ -105,11 +115,16 @@ test('uses the self-hosted trimmed font for the time and the buttons', async ({ 
     [...document.fonts].map((face) => ({ family: face.family, status: face.status, weight: face.weight, stretch: face.stretch })),
   );
   expect(fonts).toEqual([{ family: 'Timer Sans', status: 'loaded', weight: '300 500', stretch: '92%' }]);
-  await expect(page.locator('.time--main')).toHaveCSS('font-family', '"Timer Sans", system-ui, sans-serif');
+  // Chromium quotes the family name; Firefox and WebKit do not.
+  const family = await page.locator('.time--main').evaluate((element) => getComputedStyle(element).fontFamily.replaceAll('"', ''));
+  expect(family).toBe('Timer Sans, system-ui, sans-serif');
   await expect(page.locator('.time--main')).toHaveCSS('font-weight', '300');
   await expect(page.locator('.button--primary')).toHaveCSS('font-weight', '500');
   await expect(page.locator('.button--primary')).toHaveCSS('font-stretch', '92%');
 });
+
+/** Screenshots are taken at the device's pixel ratio (2 in the Desktop Safari profile). */
+const pixelsAt = (width: number, height: number): number => width * height * (test.info().project.use.deviceScaleFactor ?? 1) ** 2;
 
 test('matches the idle frame pixel for pixel at 720 × 450', async ({ page, browser }) => {
   await page.setViewportSize({ width: 720, height: 450 });
@@ -130,14 +145,16 @@ test('matches the idle frame pixel for pixel at 720 × 450', async ({ page, brow
 
   const diff = await diffPngs(reference, site, frame);
   await reference.close();
-  expect(diff).toMatchObject({ total: 720 * 450, differing: 0, visible: 0, maxChannelDelta: 0 });
+  expect(diff).toMatchObject({ total: pixelsAt(720, 450), differing: 0, visible: 0, maxChannelDelta: 0 });
 });
 
 test('paints the same idle frame before the script runs', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 720, height: 450 } });
   const page = await context.newPage();
+  // No script can be evaluated in this page (Firefox waits for one forever), so wait for the font to arrive.
+  const font = page.waitForResponse((response) => response.url().endsWith('.woff2'));
   await page.goto('/');
-  await page.evaluate(() => document.fonts.ready).catch(() => undefined);
+  await (await font).finished();
   await page.waitForTimeout(300);
   const site = await page.screenshot();
   const reference = await browser.newPage({ viewport: { width: 720, height: 450 } });
@@ -151,7 +168,7 @@ test('paints the same idle frame before the script runs', async ({ browser }) =>
   const diff = await diffPngs(reference, site, frame);
   await reference.close();
   await context.close();
-  expect(diff).toMatchObject({ total: 720 * 450, differing: 0, visible: 0, maxChannelDelta: 0 });
+  expect(diff).toMatchObject({ total: pixelsAt(720, 450), differing: 0, visible: 0, maxChannelDelta: 0 });
 });
 
 test.describe('window scaling', () => {
@@ -187,9 +204,11 @@ test.describe('window scaling', () => {
           iconBox: icon.width,
           insetTop: corner.top,
           insetRight: window.innerWidth - corner.right,
+          // For reading a failure: what this browser takes the window's width to be.
+          widths: [window.innerWidth, document.documentElement.clientWidth, box('.screen').width, window.visualViewport?.width ?? 0],
         };
       });
-      expect(measured.time).toBeCloseTo(time, 2);
+      expect(measured.time, JSON.stringify(measured)).toBeCloseTo(time, 2);
       expect(measured.gap).toBeCloseTo(gap, 1);
       expect(measured.buttonHeight).toBe(24);
       expect(measured.buttonFont).toBe('12px');

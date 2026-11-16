@@ -211,7 +211,8 @@ async function hitAreas(page: Page): Promise<{ name: string; width: number; heig
 }
 
 test.describe('touch', () => {
-  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  // Playwright cannot emulate a mobile viewport in Firefox; there it is a touch screen only.
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: async ({ browserName }, use) => use(browserName !== 'firefox') });
 
   test('every tap target on the timer, the results and in settings is at least 44 px', async ({ page }) => {
     await openApp(page, { width: 390, height: 844 });

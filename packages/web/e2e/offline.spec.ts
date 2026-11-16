@@ -86,7 +86,11 @@ test('keeps a display mode picked once for offline use, but never fetches one in
   await context.setOffline(false);
 });
 
-test('the kill switch unregisters the worker and empties its caches', async ({ page, context }) => {
+/** What the tests cannot see: Playwright's routes do not reach a service worker's own requests in WebKit. */
+const UNROUTABLE = 'Playwright cannot route a service worker’s requests in WebKit; checked by hand in Safari (docs/device-checks.md)';
+
+test('the kill switch unregisters the worker and empties its caches', async ({ page, context, browserName }) => {
+  test.skip(browserName === 'webkit', UNROUTABLE);
   await page.goto('/');
   await untilOffline(page);
   await context.route('**/sw-control.json', (route) => route.fulfill({ contentType: 'application/json', body: '{"serviceWorker":"off"}' }));
@@ -96,7 +100,8 @@ test('the kill switch unregisters the worker and empties its caches', async ({ p
     .toEqual({ workers: 0, caches: 0 });
 });
 
-test('never answers the counting endpoint from a cache', async ({ page, context }) => {
+test('never answers the counting endpoint from a cache', async ({ page, context, browserName }) => {
+  test.skip(browserName === 'webkit', UNROUTABLE);
   await page.goto('/');
   await untilOffline(page);
   const counted: string[] = [];

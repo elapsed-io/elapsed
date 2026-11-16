@@ -28,7 +28,7 @@ test('controls respond within 100 ms, from click to the next painted frame', asy
     }
     return results;
   });
-  for (const ms of timings) expect(ms).toBeLessThan(100);
+  for (const ms of timings) expect(ms, timings.map((t) => t.toFixed(1)).join(', ')).toBeLessThan(100);
 });
 
 test('nothing shifts the layout unexpectedly, on load or while using the controls', async ({ page }) => {

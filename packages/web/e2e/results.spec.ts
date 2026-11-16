@@ -245,8 +245,20 @@ test('a session shorter than a minute still gets its results', async ({ page }) 
 });
 
 test.describe('share', () => {
-  test('copies the line on a computer and shows a check for 2 seconds', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  test('copies the line on a computer and shows a check for 2 seconds', async ({ page, context, browserName }) => {
+    // Only Chromium lets a test grant clipboard access and read the clipboard back; elsewhere the copy
+    // is real too, and the test reads what the site gave the clipboard.
+    if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.addInitScript(() => {
+      const written: string[] = [];
+      (window as unknown as { __written: string[] }).__written = written;
+      const clipboard = navigator.clipboard;
+      const write = clipboard.writeText.bind(clipboard);
+      clipboard.writeText = (text: string) => {
+        written.push(text);
+        return write(text);
+      };
+    });
     await openApp(page);
     await primary(page).click();
     await page.clock.runFor(2 * 60 * MINUTE - 13 * MINUTE + 5 * SECOND);
@@ -255,8 +267,9 @@ test.describe('share', () => {
     await page.getByRole('button', { name: 'share' }).click();
     await expect(page.locator('[role="status"]')).toHaveText('copied');
     await expect(page.locator('.action__check')).toHaveCSS('opacity', '1');
-    const copied = await page.evaluate(() => navigator.clipboard.readText());
-    expect(copied).toBe(`i studied for 1h 47m on ${BRAND.name} http://localhost:4173/`);
+    const line = `i studied for 1h 47m on ${BRAND.name} http://localhost:4173/`;
+    expect(await page.evaluate(() => (window as unknown as { __written: string[] }).__written)).toEqual([line]);
+    if (browserName === 'chromium') expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(line);
   });
 
   test('opens the share sheet on a touch device', async ({ page }) => {
@@ -310,9 +323,10 @@ test('on a phone the headline scales, the strip fits and the stats wrap into row
       strip: box('.strip'),
       rows: new Set(stats).size,
       scrollWidth: document.documentElement.scrollWidth,
+      widths: [window.innerWidth, document.documentElement.clientWidth, window.visualViewport?.width ?? 0],
     };
   });
-  expect(layout.headline).toBeCloseTo(60 * (390 / 720), 1);
+  expect(layout.headline, JSON.stringify(layout)).toBeCloseTo(60 * (390 / 720), 1);
   expect(layout.label).toBe(11);
   expect(layout.strip?.left).toBeGreaterThanOrEqual(16);
   expect(layout.strip?.right).toBeLessThanOrEqual(390 - 16);

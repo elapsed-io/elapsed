@@ -380,18 +380,26 @@ test.describe('privacy and data', () => {
     await expect(page.getByRole('switch', { name: 'anonymous usage counts' })).toHaveAttribute('aria-checked', 'false');
   });
 
-  test('crash reports are sent only when switched on, scrubbed, to the site itself', async ({ page }) => {
+  test('crash reports are sent only when switched on, scrubbed, to the site itself', async ({ page, browserName }) => {
     const reports: string[] = [];
     await page.route('**/api/crash', async (route) => {
       reports.push(route.request().postData() ?? '');
       await route.fulfill({ status: 204 });
     });
     await openApp(page, { width: 1280, height: 800 });
-    // The site reports its own errors this way (app.ts); the browser turns it into an error event.
+    // An unhandled rejection in the page; resolves once it has been dispatched, so the site's own listener
+    // (added first) has run. (An error event from the test's own script names no file of the site in Firefox
+    // and WebKit, and is rightly ignored there as another origin's.)
     const fail = () =>
-      page.evaluate(() => {
-        reportError(new TypeError('bad value "my private note" at https://evil.example/x?token=1'));
-      });
+      page.evaluate(
+        () =>
+          new Promise<void>((resolve) => {
+            window.addEventListener('unhandledrejection', () => {
+              resolve();
+            }, { once: true });
+            void Promise.reject(new TypeError('bad value "my private note" at https://evil.example/x?token=1'));
+          }),
+      );
     await fail();
     expect(reports).toEqual([]);
     await openPanel(page);
@@ -404,7 +412,7 @@ test.describe('privacy and data', () => {
     const report = JSON.parse(reports[0] ?? '{}') as Record<string, unknown>;
     expect(Object.keys(report).sort()).toEqual(['browser', 'browserVersion', 'message', 'stack', 'version']);
     expect(report['message']).toBe('TypeError: bad value "…" at [other origin]');
-    expect(report['browser']).toBe('chrome');
+    expect(report['browser']).toBe({ chromium: 'chrome', firefox: 'firefox', webkit: 'safari' }[browserName]);
     expect(JSON.stringify(report)).not.toContain('private');
   });
 });

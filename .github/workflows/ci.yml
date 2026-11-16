@@ -72,6 +72,15 @@ jobs:
         run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: End-to-end tests
         run: npm run test:e2e -w @stopwatch/web -- --project=${{ matrix.browser }}
+      # A failed pixel comparison keeps both images (e2e/pixels.ts); they are kept for a week to be looked at.
+      - name: Keep the failed tests' images
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-${{ matrix.browser }}
+          path: packages/web/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
 
   dependency-review:
     name: dependency review

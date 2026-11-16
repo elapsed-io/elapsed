@@ -63,7 +63,6 @@ export async function holdAnimationsAt(page: Page, focusedMs: number): Promise<v
   }, focusedMs);
 }
 
-/** Renders reference HTML outside the site's CSP and screenshots it. */
 /**
  * Draws a frame's markup as a reference image. Its "Archivo" is the site's default font, or `font`: a page
  * with its own cut of that font is compared with the frame drawn in that cut, so only layout and colour differ.

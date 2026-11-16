@@ -1,3 +1,6 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import { test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 export interface PixelDiff {
@@ -14,14 +17,33 @@ export interface PixelDiff {
 
 const VISIBLE_DELTA = 8;
 
+/** How many image pairs each test has kept, so a test that compares several keeps them all. */
+const kept = new Map<string, number>();
+
+/**
+ * Keeps both images in the test's output folder, which CI uploads when a test fails, so a pixel
+ * difference in any browser can be looked at, not only counted.
+ */
+async function keepScreenshots(site: Buffer, reference: Buffer): Promise<void> {
+  const info = test.info();
+  const index = (kept.get(info.testId) ?? 0) + 1;
+  kept.set(info.testId, index);
+  const sitePath = info.outputPath(`${String(index)}-site.png`);
+  await mkdir(dirname(sitePath), { recursive: true });
+  await writeFile(sitePath, site);
+  await writeFile(info.outputPath(`${String(index)}-reference.png`), reference);
+}
+
 /** Compares two PNG screenshots pixel by pixel in a blank page, with no image library. */
 export async function diffPngs(page: Page, a: Buffer, b: Buffer): Promise<PixelDiff> {
+  await keepScreenshots(a, b);
   await page.goto('about:blank');
   return page.evaluate(
     async ([first, second, threshold]) => {
       const decode = async (base64: string): Promise<ImageData> => {
-        const blob = await (await fetch(`data:image/png;base64,${base64}`)).blob();
-        const bitmap = await createImageBitmap(blob);
+        // Decoded from bytes, not fetched from a data: URL, which WebKit refuses past a size.
+        const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+        const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
         const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
         const context = canvas.getContext('2d');
         if (context === null) throw new Error('no 2d context');
