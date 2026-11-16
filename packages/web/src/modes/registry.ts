@@ -16,6 +16,7 @@ const LOADERS: Readonly<Record<string, () => Promise<DisplayModeFactory>>> = {
   analog: async () => (await import('./analog/analog.ts')).createAnalogMode,
   ocean: async () => (await import('./ocean/ocean.ts')).createOceanMode,
   height: async () => (await import('./height/height.ts')).createHeightMode,
+  tree: async () => (await import('./tree/tree.ts')).createTreeMode,
 };
 
 export interface RegisteredMode {

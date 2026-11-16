@@ -1,0 +1,339 @@
+/*
+ * The tree's results replay (tree-replay.ts): its season phase (--tree-g, 0 to 4) and size come from the
+ * session's focused minutes so far, an expression of --replay-progress, and each part's look from the phase, by
+ * the formulas of core's tree.ts (season(), weather()): smoothsteps of the phase, switched on and off by season.
+ * Registered as numbers, so each is computed once per element.
+ */
+@property --tree-focus {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --tree-g {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --tree-presence {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tree-a1 {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tree-a2 {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tree-a3 {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tree-a4 {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tree-w0 {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+@property --tree-w1 {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --tree-w2 {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --tree-w3 {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --tree-w4 {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+/*
+ * Tree, drawn as the tree frames: the drawing above the time (30 px at reference), 12 px apart side on and 8 px
+ * apart isometric; the drawing scales with the window like the time. Its colours are the tree's tokens (generated
+ * from CONFIG.modes.tree): each leaf cluster and the isometric field are drawn in all their colours, stacked and
+ * added together (tree.ts), the share of each set by its opacity.
+ */
+@layer mode {
+  .screen[data-mode="tree"]:has(.tree--isometric) {
+    --mode-gap: var(--tree-iso-gap);
+  }
+
+  .tree {
+    --tree-px: calc(var(--u) * var(--time-scale));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--mode-gap) * var(--tree-px));
+  }
+
+  .tree__drawing {
+    width: calc(var(--tree-side-width) * var(--tree-px));
+    height: calc(var(--tree-side-height) * var(--tree-px));
+  }
+
+  .tree__drawing.tree--isometric {
+    width: calc(var(--tree-iso-width) * var(--tree-px));
+    height: calc(var(--tree-iso-height) * var(--tree-px));
+  }
+
+  /* Clipped to its box, as the frames clip it (the isometric field's near corner). */
+  .tree__svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* The results tree: the side view at its frame size, shrinking to fit a narrower window; it grows from the
+     trunk's foot (tree-replay.ts). */
+  .tree-replay {
+    width: min(calc(var(--tree-side-width) * 1px), 100%);
+    aspect-ratio: var(--tree-side-width) / var(--tree-side-height);
+  }
+
+  .tree__grow {
+    transform-box: view-box;
+    transform-origin: 0 0;
+  }
+
+  /* A cluster (or the field) is its own group, where its colours add up before it meets what is behind it. */
+  .tree__cluster,
+  .tree__field {
+    isolation: isolate;
+  }
+
+  .tree__stage {
+    mix-blend-mode: plus-lighter;
+  }
+
+  .tree__stage--0 {
+    --leaf: var(--tree-leaf-0);
+    --leaf-dark: var(--tree-leaf-0-dark);
+    --leaf-light: var(--tree-leaf-0-light);
+    --leaf-top: var(--tree-leaf-0-top);
+    --leaf-right: var(--tree-leaf-0-right);
+    --grass: var(--tree-grass-0);
+    --blade: var(--tree-blade-0);
+  }
+
+  .tree__stage--1 {
+    --leaf: var(--tree-leaf-1);
+    --leaf-dark: var(--tree-leaf-1-dark);
+    --leaf-light: var(--tree-leaf-1-light);
+    --leaf-top: var(--tree-leaf-1-top);
+    --leaf-right: var(--tree-leaf-1-right);
+    --grass: var(--tree-grass-1);
+    --blade: var(--tree-blade-1);
+  }
+
+  .tree__stage--2 {
+    --leaf: var(--tree-leaf-2);
+    --leaf-dark: var(--tree-leaf-2-dark);
+    --leaf-light: var(--tree-leaf-2-light);
+    --leaf-top: var(--tree-leaf-2-top);
+    --leaf-right: var(--tree-leaf-2-right);
+    --grass: var(--tree-grass-2);
+    --blade: var(--tree-blade-2);
+  }
+
+  .tree__stage--3 {
+    --leaf: var(--tree-leaf-3);
+    --leaf-dark: var(--tree-leaf-3-dark);
+    --leaf-light: var(--tree-leaf-3-light);
+    --leaf-top: var(--tree-leaf-3-top);
+    --leaf-right: var(--tree-leaf-3-right);
+    --grass: var(--tree-grass-3);
+    --blade: var(--tree-blade-3);
+  }
+
+  .tree__stage--4 {
+    --leaf: var(--tree-leaf-4);
+    --leaf-dark: var(--tree-leaf-4-dark);
+    --leaf-light: var(--tree-leaf-4-light);
+    --leaf-top: var(--tree-leaf-4-top);
+    --leaf-right: var(--tree-leaf-4-right);
+    --grass: var(--tree-grass-4);
+    --blade: var(--tree-blade-4);
+  }
+
+  /* The art's tones (art/tree): the frames' colours, the ground in the theme's track colour. */
+  .tree-art [data-tone="ground"] {
+    fill: var(--color-track);
+  }
+
+  .tree-art [data-tone="trunk"] {
+    fill: none;
+    stroke: var(--tree-trunk);
+  }
+
+  .tree-art [data-tone="iso-trunk"] {
+    fill: none;
+    stroke: var(--tree-iso-trunk);
+  }
+
+  .tree-art [data-tone="snow"] {
+    fill: var(--tree-snow);
+  }
+
+  .tree-art [data-tone="snow-line"] {
+    fill: none;
+    stroke: var(--tree-snow);
+  }
+
+  .tree-art [data-tone="fall"] {
+    fill: var(--tree-fall);
+  }
+
+  .tree-art [data-tone="ground-leaf"] {
+    fill: var(--tree-ground-leaf);
+  }
+
+  .tree-art [data-tone="leaf-dark"] {
+    fill: var(--leaf-dark);
+  }
+
+  .tree-art [data-tone="leaf-base"],
+  .tree-art [data-tone="leaf-left"] {
+    fill: var(--leaf);
+  }
+
+  .tree-art [data-tone="leaf-light"] {
+    fill: var(--leaf-light);
+  }
+
+  .tree-art [data-tone="leaf-top"] {
+    fill: var(--leaf-top);
+  }
+
+  .tree-art [data-tone="leaf-right"] {
+    fill: var(--leaf-right);
+  }
+
+  .tree-art [data-tone="grass"] {
+    fill: var(--grass);
+  }
+
+  .tree-art [data-tone="field-light"] {
+    fill: var(--tree-field-light);
+  }
+
+  .tree-art [data-tone="blade"] {
+    fill: var(--blade);
+  }
+
+  /* ---- The results replay (tree-replay.ts) ---------------------------------------------------------- */
+
+  .tree-replay {
+    --tree-g: var(--tree-g-final);
+    --tree-grow: var(--tree-grow-final);
+    /* Which season the phase is in: 1 inside it, 0 outside. */
+    --tree-in1: clamp(0, (1 - var(--tree-g)) * 1000000000, 1);
+    --tree-in2: calc(clamp(0, (var(--tree-g) - 1) * 1000000000 + 1, 1) * clamp(0, (2 - var(--tree-g)) * 1000000000, 1));
+    --tree-in3: calc(clamp(0, (var(--tree-g) - 2) * 1000000000 + 1, 1) * clamp(0, (3 - var(--tree-g)) * 1000000000, 1));
+    --tree-in4: clamp(0, (var(--tree-g) - 3) * 1000000000 + 1, 1);
+  }
+
+  .results:not([data-replayed]) .tree-replay:not(.tree-replay--still) {
+    --tree-focus: var(--tree-focus-replay);
+    --tree-g: mod(var(--tree-focus) / 15, 4);
+    --tree-grow: calc(0.45 + 0.55 * min(1, var(--tree-focus) / 60));
+  }
+
+  .tree-replay .tree__grow {
+    transform: scale(var(--tree-grow));
+  }
+
+  /* A cluster: present in spring as it grows in, all summer, until it falls in autumn; its colours by season. */
+  .tree-replay .tree__cluster {
+    --tree-t-spring: clamp(0, (var(--tree-g) - var(--tree-o) * 0.8) / 0.35, 1);
+    --tree-t-fall: clamp(0, (var(--tree-g) - 2.4 - var(--tree-o) * 0.5) / 0.35, 1);
+    --tree-t1: clamp(0, var(--tree-g), 1);
+    --tree-t2: clamp(0, (var(--tree-g) - 1) / 0.4, 1);
+    --tree-t3: clamp(0, (var(--tree-g) - 2 - var(--tree-o) * 0.5) / 0.35, 1);
+    --tree-t4: clamp(0, (var(--tree-g) - 2.5) / 0.4, 1);
+    --tree-presence: calc(
+      var(--tree-in1) * var(--tree-t-spring) * var(--tree-t-spring) * (3 - 2 * var(--tree-t-spring)) + var(--tree-in2) +
+        var(--tree-in3) * (1 - var(--tree-t-fall) * var(--tree-t-fall) * (3 - 2 * var(--tree-t-fall)))
+    );
+    --tree-a1: calc(var(--tree-in1) * var(--tree-t1) * var(--tree-t1) * (3 - 2 * var(--tree-t1)) + 1 - var(--tree-in1));
+    --tree-a2: calc(var(--tree-in2) * var(--tree-t2) * var(--tree-t2) * (3 - 2 * var(--tree-t2)) + var(--tree-in3) + var(--tree-in4));
+    --tree-a3: calc(var(--tree-in3) * var(--tree-t3) * var(--tree-t3) * (3 - 2 * var(--tree-t3)) + var(--tree-in4));
+    --tree-a4: calc(var(--tree-in3) * var(--tree-t4) * var(--tree-t4) * (3 - 2 * var(--tree-t4)) + var(--tree-in4));
+    --tree-w4: var(--tree-a4);
+    --tree-w3: calc((1 - var(--tree-a4)) * var(--tree-a3));
+    --tree-w2: calc((1 - var(--tree-a4)) * (1 - var(--tree-a3)) * var(--tree-a2));
+    --tree-w1: calc((1 - var(--tree-a4)) * (1 - var(--tree-a3)) * (1 - var(--tree-a2)) * var(--tree-a1));
+    --tree-w0: calc((1 - var(--tree-a4)) * (1 - var(--tree-a3)) * (1 - var(--tree-a2)) * (1 - var(--tree-a1)));
+
+    opacity: var(--tree-presence);
+    transform: translate(var(--tree-x), var(--tree-y)) scale(calc(0.35 + 0.65 * var(--tree-presence))) translate(calc(-1 * var(--tree-x)), calc(-1 * var(--tree-y)));
+  }
+
+  .tree-replay .tree__stage--0 {
+    opacity: var(--tree-w0);
+  }
+
+  .tree-replay .tree__stage--1 {
+    opacity: var(--tree-w1);
+  }
+
+  .tree-replay .tree__stage--2 {
+    opacity: var(--tree-w2);
+  }
+
+  .tree-replay .tree__stage--3 {
+    opacity: var(--tree-w3);
+  }
+
+  .tree-replay .tree__stage--4 {
+    opacity: var(--tree-w4);
+  }
+
+  /* Snow on the ground and the branches through winter; leaves falling, then lying on the ground, in autumn. */
+  .tree-replay :is(.tree__layer--snow-ground, .tree__layer--snow-branches) {
+    --tree-s-in: clamp(0, (var(--tree-g) - 3.05) / 0.2, 1);
+    --tree-s-out: clamp(0, (var(--tree-g) - 3.75) / 0.2, 1);
+    opacity: calc(var(--tree-s-in) * var(--tree-s-in) * (3 - 2 * var(--tree-s-in)) * (1 - var(--tree-s-out) * var(--tree-s-out) * (3 - 2 * var(--tree-s-out))));
+  }
+
+  .tree-replay .tree__layer--fall {
+    --tree-f-in: clamp(0, (var(--tree-g) - 2.4) / 0.15, 1);
+    --tree-f-out: clamp(0, (var(--tree-g) - 2.95) / 0.08, 1);
+    opacity: calc(var(--tree-f-in) * var(--tree-f-in) * (3 - 2 * var(--tree-f-in)) * (1 - var(--tree-f-out) * var(--tree-f-out) * (3 - 2 * var(--tree-f-out))));
+  }
+
+  .tree-replay .tree__layer--ground-leaves {
+    --tree-l-in: clamp(0, (var(--tree-g) - 2.5) / 0.2, 1);
+    --tree-l-out: clamp(0, (var(--tree-g) - 3.1) / 0.2, 1);
+    opacity: calc(var(--tree-l-in) * var(--tree-l-in) * (3 - 2 * var(--tree-l-in)) * (1 - var(--tree-l-out) * var(--tree-l-out) * (3 - 2 * var(--tree-l-out))));
+  }
+}

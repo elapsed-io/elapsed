@@ -66,6 +66,12 @@
     gap: var(--results-ring-gap);
   }
 
+  /* A drawing over the stats (the "results: tree" frame): 10 px apart, closer to the top and bottom. */
+  .results--figure {
+    gap: var(--results-figure-gap);
+    padding-block: var(--results-figure-padding-y);
+  }
+
   .results__focused {
     display: flex;
     flex-direction: column;

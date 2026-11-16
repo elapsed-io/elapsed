@@ -4,7 +4,7 @@
  * digits is built through it, not as a special case.
  */
 
-import type { ReplayTiming, SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
+import type { ReplayTiming, SecondsDisplay, Session, TimerEvents, TimerView, TreeView } from '@stopwatch/core';
 
 /**
  * What a mode reads from the site. The site owns this object and may change
@@ -29,13 +29,15 @@ export interface DisplayContext {
 /**
  * A mode's own options (plan, Interface: "each display mode's options live in the display mode section"),
  * as the site's settings hold them. Release 2 adds them round by round: results landmarks in 2.3, ocean life
- * in 2.4.
+ * in 2.4, the tree's view in 2.6.
  */
 export interface ModeOptions {
   /** Sea life drifts in while a session is paused (ocean depth). */
   readonly oceanLife: boolean;
   /** Random landmarks on the results' profile chart (ocean depth, height). */
   readonly resultsLandmarks: boolean;
+  /** The tree's view: side or isometric. */
+  readonly treeView: TreeView;
 }
 
 /**
@@ -56,7 +58,7 @@ export interface ReplaySurface {
 }
 
 /** The results card's layouts a replay may draw into (each as its frame draws it). */
-export type ReplayLayout = 'strip' | 'ring' | 'chart';
+export type ReplayLayout = 'strip' | 'ring' | 'chart' | 'figure';
 
 /** Events a mode may react to. Release 3 adds record.passed; round 4 adds checkin.due. */
 export type ModeEvent = { readonly type: 'milestone.hour'; readonly payload: TimerEvents['milestone.hour'] };
@@ -71,8 +73,8 @@ export interface DisplayMode {
   readonly replayTiming: ReplayTiming;
   /**
    * How the results card is laid out around the replay's graphic (decision 302): `strip` (a strip over the
-   * stats: digits, timeline), `ring` (the rings beside the stats: ring, analog) or `chart` (a profile chart over
-   * the stats, 16 px apart: ocean depth, height).
+   * stats: digits, timeline), `ring` (the rings beside the stats: ring, analog), `chart` (a profile chart over
+   * the stats, 16 px apart: ocean depth, height) or `figure` (a drawing over the stats, 10 px apart: tree).
    */
   readonly replayLayout: ReplayLayout;
   mount(root: HTMLElement, context: DisplayContext): void;

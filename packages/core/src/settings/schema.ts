@@ -28,8 +28,12 @@ export const SETTINGS_CATEGORIES = ['timer', 'display', 'appearance', 'notificat
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
 /** The display modes, in the tiles' order (Release 2 adds each in its round: analog in 2.2). */
-export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height'] as const;
+export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree'] as const;
 export type ModeChoice = (typeof MODE_CHOICES)[number];
+
+/** The tree's views (a mode option; plan, Settings catalog: "tree view (side or isometric)", side by default). */
+export const TREE_VIEWS = ['side', 'isometric'] as const;
+export type TreeView = (typeof TREE_VIEWS)[number];
 
 /** The preset themes, in the frames' order (Design system > Color). */
 export const THEME_IDS = ['graphite', 'paper', 'deep-sea', 'forest', 'oxblood', 'plum', 'lilac', 'sky', 'sand', 'mint'] as const;
@@ -83,6 +87,8 @@ export interface Settings {
   readonly oceanLife: boolean;
   /** Mode option (ocean depth and height): random landmarks on the results' profile. */
   readonly resultsLandmarks: boolean;
+  /** Mode option (tree): the side view or the isometric one. */
+  readonly treeView: TreeView;
   // Appearance
   readonly theme: ThemeId;
   /** The theme's colours when the user has changed them; null means the preset's own. */
@@ -148,6 +154,7 @@ export type SettingDeclaration =
   | ChoiceSetting<'mode'>
   | SwitchSetting<'oceanLife'>
   | SwitchSetting<'resultsLandmarks'>
+  | ChoiceSetting<'treeView'>
   | ChoiceSetting<'theme'>
   | ColorsSetting<'colors'>
   | ChoiceSetting<'font'>
@@ -189,6 +196,7 @@ export const SETTINGS: readonly SettingDeclaration[] = [
   { key: 'mode', kind: 'choice', category: 'display', options: MODE_CHOICES, default: 'digits', target: { site: 'mode' } },
   { key: 'oceanLife', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
   { key: 'resultsLandmarks', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
+  { key: 'treeView', kind: 'choice', category: 'display', options: TREE_VIEWS, default: 'side', target: { site: 'modeOptions' } },
   { key: 'theme', kind: 'choice', category: 'appearance', options: THEME_IDS, default: 'graphite', target: { theme: 'preset' } },
   { key: 'colors', kind: 'colors', category: 'appearance', default: null, target: { theme: 'colors' } },
   { key: 'font', kind: 'choice', category: 'appearance', options: FONT_CHOICES, default: 'archivo', target: { css: '--font-family' } },

@@ -11,7 +11,7 @@
  *   only with that mode.
  */
 
-import { CONFIG } from '@stopwatch/core';
+import { CONFIG, mixColour } from '@stopwatch/core';
 import { deriveTheme, themeCustomProperties } from '../theme/derive.ts';
 import { DEFAULT_PRESET_ID, getPreset } from '../theme/presets.ts';
 
@@ -101,6 +101,8 @@ export function designCustomProperties(): CustomProperties {
     '--results-padding-x': px(results.paddingXPx),
     '--results-gap': px(results.gapPx),
     '--results-ring-gap': px(results.ringGapPx),
+    '--results-figure-gap': px(results.figureGapPx),
+    '--results-figure-padding-y': px(results.figurePaddingYPx),
     '--results-label-size': px(results.labelPx),
     '--results-label-tracking': em(results.labelTrackingEm),
     '--results-label-gap': px(results.labelGapPx),
@@ -381,7 +383,7 @@ export function renderSettingsTokensCss(): string {
   return `/* Generated from packages/core/src/config.ts at build time. */\n@layer base {\n${block(':root', settingsCustomProperties())}\n}\n`;
 }
 
-export const MODE_TOKEN_IDS = ['ring', 'timeline', 'analog', 'ocean', 'height'] as const;
+export const MODE_TOKEN_IDS = ['ring', 'timeline', 'analog', 'ocean', 'height', 'tree'] as const;
 export type ModeTokenId = (typeof MODE_TOKEN_IDS)[number];
 
 export function isModeTokenId(value: string): value is ModeTokenId {
@@ -660,7 +662,45 @@ function heightTokens(): string {
   ].join('\n');
 }
 
-const MODE_TOKENS: Readonly<Record<ModeTokenId, () => string>> = { ring: ringTokens, timeline: timelineTokens, analog: analogTokens, ocean: oceanTokens, height: heightTokens };
+function treeTokens(): string {
+  const tree = CONFIG.modes.tree;
+  const { side, iso } = tree.shade;
+  const colours: Record<`--${string}`, string> = {
+    '--tree-side-width': String(tree.side.widthPx),
+    '--tree-side-height': String(tree.side.heightPx),
+    '--tree-trunk': tree.colours.trunk,
+    '--tree-iso-trunk': tree.colours.isoTrunk,
+    '--tree-snow': tree.colours.snow,
+    '--tree-fall': tree.colours.fall,
+    '--tree-ground-leaf': tree.colours.groundLeaf,
+    '--tree-field-light': tree.colours.isoFieldLight,
+  };
+  // Each leaf colour with its shades (side: dark and light; isometric: top and right), and each grass colour
+  // with its blades' darker one, as the frames mix them.
+  tree.leaves.forEach((colour, stage) => {
+    const k = String(stage);
+    colours[`--tree-leaf-${k}`] = colour;
+    colours[`--tree-leaf-${k}-dark`] = mixColour(colour, '#000000', side.dark);
+    colours[`--tree-leaf-${k}-light`] = mixColour(colour, '#FFFFFF', side.light);
+    colours[`--tree-leaf-${k}-top`] = mixColour(colour, '#FFFFFF', iso.top);
+    colours[`--tree-leaf-${k}-right`] = mixColour(colour, '#000000', iso.right);
+  });
+  tree.grass.forEach((colour, stage) => {
+    colours[`--tree-grass-${String(stage)}`] = colour;
+    colours[`--tree-blade-${String(stage)}`] = mixColour(colour, '#000000', tree.grassDark);
+  });
+  const properties: CustomProperties = {
+    '--mode-time-size': String(tree.timePx),
+    '--mode-gap': String(tree.side.gapPx),
+    '--tree-iso-gap': String(tree.iso.gapPx),
+    '--tree-iso-width': String(tree.iso.widthPx),
+    '--tree-iso-height': String(tree.iso.heightPx),
+  };
+  // The colours on the timer and on the results that replay the tree (whichever mode is showing).
+  return `${block('[data-mode="tree"]', properties)}\n${block('[data-mode="tree"], [data-replay="tree"]', colours)}`;
+}
+
+const MODE_TOKENS: Readonly<Record<ModeTokenId, () => string>> = { ring: ringTokens, timeline: timelineTokens, analog: analogTokens, ocean: oceanTokens, height: heightTokens, tree: treeTokens };
 
 /** One display mode's tokens, in the `mode` layer. */
 export function renderModeTokensCss(mode: ModeTokenId): string {

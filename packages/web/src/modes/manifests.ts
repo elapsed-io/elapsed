@@ -50,6 +50,18 @@ export const MODE_MANIFESTS: readonly ModeManifest[] = [
     // The stars over the sky (art/height/sky.ts); on the results, the card's stars and the things that pass (results.ts).
     art: ['sky/stars', 'sky/stars-card', ...CONFIG.modes.height.results.passing.things.map((thing) => thing.key)],
   },
+  {
+    id: 'tree',
+    name: BRAND.copy.modes.tree,
+    tier: 'on-choice',
+    budget,
+    source: 'src/modes/tree/tree.ts',
+    // The tree as the canvas draws it, side on (art/tree/side.ts) and isometric (iso.ts).
+    art: [
+      ...['ground', 'snow-ground', 'branches', 'snow-branches', 'leaves', 'fall', 'ground-leaves'].map((part) => `tree/side-${part}`),
+      ...['field', 'snow-field', 'ground-leaves', 'branches', 'snow-branches', 'leaves', 'fall'].map((part) => `tree/iso-${part}`),
+    ],
+  },
 ];
 
 export const DEFAULT_MODE_ID = 'digits';

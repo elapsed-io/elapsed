@@ -1085,6 +1085,17 @@ function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
       svg(doc, 'path', { class: 'mode-tile__text', d: 'M19.5 12.2 L22 9 L24.6 12.3', 'stroke-width': 1.5 }),
       svg(doc, 'circle', { class: 'mode-tile__head', cx: 42, cy: 7, r: 1.3 }),
     );
+  } else if (mode === 'tree') {
+    // The Release 2 display frame's tree tile: a trunk and a summer crown in the tree's own colours, on muted ground.
+    const { trunk } = CONFIG.modes.tree.colours;
+    const crown = CONFIG.modes.tree.leaves[2];
+    root.append(
+      svg(doc, 'line', { x1: 28, y1: 27, x2: 28, y2: 16, stroke: trunk, 'stroke-width': 2.5 }),
+      svg(doc, 'circle', { cx: 28, cy: 12, r: 7, fill: crown }),
+      svg(doc, 'circle', { cx: 22.5, cy: 15, r: 4.5, fill: crown }),
+      svg(doc, 'circle', { cx: 33.5, cy: 15, r: 4.5, fill: crown }),
+      svg(doc, 'line', { class: 'mode-tile__muted', x1: 16, y1: 27.5, x2: 40, y2: 27.5, 'stroke-width': 1.5 }),
+    );
   } else {
     root.append(
       svg(doc, 'line', { class: 'mode-tile__muted', x1: 4, y1: 20, x2: 28, y2: 20, 'stroke-width': 2 }),

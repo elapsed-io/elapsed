@@ -59,6 +59,8 @@ export async function settle(page: Page): Promise<void> {
       const running = document
         .getAnimations()
         .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
+        // Motion with time is no transition: the glides a minute at a time, and the tree's endless year.
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
         .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .ocean__strip, .height__strip, .height__stars') === true));
       if (running.length === 0 && round > 0) return;
       await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
@@ -191,6 +193,7 @@ export async function finishResults(page: Page): Promise<void> {
       const running = document
         .getAnimations()
         .filter((animation) => !(animation instanceof CSSAnimation))
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
         .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .ocean__strip, .height__strip, .height__stars') === true));
       for (const animation of running) animation.finish();
       // Let finish handlers (which cancel spent animations and remove masks) run. The page's timers

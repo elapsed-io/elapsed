@@ -115,7 +115,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   // Low power: the setting, or the system's reduced-motion preference (plan, Loading and performance).
   const lowPower = (): boolean => settings.current.lowPower || reducedMotion();
   // The site owns this object; a changed setting updates it and redraws (modes/contract.ts).
-  const modeOptions = (): ModeOptions => ({ oceanLife: settings.current.oceanLife, resultsLandmarks: settings.current.resultsLandmarks });
+  const modeOptions = (): ModeOptions => ({ oceanLife: settings.current.oceanLife, resultsLandmarks: settings.current.resultsLandmarks, treeView: settings.current.treeView });
   const context: { seconds: SecondsDisplay; reducedMotion: boolean; lowPower: boolean; options: ModeOptions } = {
     seconds: settings.current.seconds,
     reducedMotion: reducedMotion(),

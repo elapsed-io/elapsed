@@ -51,8 +51,8 @@ The code is the reference: `packages/web/src/modes/contract.ts` (what a mode rec
 | Paused | The held display: the site blurs the whole display 10 px at 40 % and shows "paused for" over it. A mode may add pause effects (ocean life, shooting stars, comets) as pure CSS animations randomized once when the pause starts; nothing at all with reduced motion or low power. | The shared `TimeDisplay` (`modes/shared/time-display.ts`) draws the time and its held state. |
 | Results replay | The replay graphic, drawn from one progress value, and anything behind the card. | `replay()` draws the final state; everything that moves is derived in CSS from `--replay-progress` (0 to 1), which the results screen animates. Anything else it animates (a crossfade, pings) it creates untimed, from the replay's start, and the results screen starts it with the replay or finishes it at once. The results element carries `data-replay="<id>"`, where the replay's stylesheet may set the card's text colours (`--color-foreground`, `--color-muted`). |
 | Replay timing | Its own replay length and curve at normal speed. | `replayTiming` (`{ durationMs, easing }`, from the mode's config section). The results screen starts it at 0.5 s, adds the shared long-session extra (core, `replay.ts`) and scales it by the animation speed. |
-| Replay layout | How the results card is laid out around the replay. | `replayLayout`: `strip` (a strip over the stats: digits, timeline), `ring` (rings beside the stats: ring, analog) or `chart` (a profile chart over the stats: ocean depth, height). Decision 302. |
-| Options | Settings of its own (results landmarks, ocean life, the tree's view). | Declared in the settings schema under display; shown in a box under the mode tiles while the mode is chosen; passed to `replay()` and in the context. |
+| Replay layout | How the results card is laid out around the replay. | `replayLayout`: `strip` (a strip over the stats: digits, timeline), `ring` (rings beside the stats: ring, analog), `chart` (a profile chart over the stats: ocean depth, height) or `figure` (a drawing over the stats: tree). Decisions 302 and 316. |
+| Options | Settings of its own (results landmarks, ocean life, the tree's view: `DisplayContext.options.treeView`). | Declared in the settings schema under display; shown in a box under the mode tiles while the mode is chosen; passed to `replay()` and in the context. |
 | Art | Its creatures, landmarks and scenery. | Through the asset registry: keys declared in the manifest, drawn as placeholders until the mode's catalog registers them. |
 | Size | Within its budget. | The size check fails the build past the budget. |
 
@@ -83,7 +83,7 @@ What a mode sets for itself, scoped to `.screen[data-mode="<id>"]` in its own ge
 - `--mode-time-size`: the time's size at the reference frame (720 × 450), which the site scales.
 - `--mode-gap`: the gap between the time and the controls.
 - Its own sizes and colours, named after the mode (`--ring-*`, `--timeline-*`, `--analog-*`, `--ocean-*`,
-  `--height-*`, `--meteor-*`).
+  `--height-*`, `--meteor-*`, `--tree-*`; the tree's colours also on `[data-replay="tree"]`).
 
 What a replay sets for itself, scoped to `[data-replay="<id>"]` (the results element, whichever mode is
 showing): for the shared profile chart (ocean depth, height; decision 301), `--profile-*`, `--landmark-*`,

@@ -5,8 +5,10 @@ when the run stops; questions for the owner are collected below as they come up.
 
 ## Morning summary
 
-Written as each round is pushed, so it is current whenever the run stops. At this point rounds 2.1 to 2.5 are
-done and pushed; round 2.6 (tree) is next.
+Stopped after round 2.6: rounds 2.1 to 2.6 are done, checked in all three browsers and pushed. Round 2.7
+(interstellar) is not started: its turning sky is drawn from an all-sky star catalog whose licence you asked me
+to confirm, and it is not clear (question 9). The round cannot be finished without that answer, and the rules
+say a round is finished whole or not started on top of an unfinished one.
 
 **What each round built**
 
@@ -26,6 +28,10 @@ done and pushed; round 2.6 (tree) is next.
   "ocean depth options" box.
 - **Round 2.4, ocean life:** while paused, the frame's fish and bubbles drift in (CSS animations only), one
   zone's catalog loaded at a time; the "ocean life" option.
+- **Round 2.6, tree:** the tree as its frames draw it, side on and isometric, through a one-hour year
+  (leaves growing, deepening, turning and falling, snow in winter, the isometric field's grass), its colours
+  changed by opacity alone; its results growing the tree through the session's seasons from the one replay
+  progress; its tile. The view option exists in settings but has no control yet (no frame draws it).
 - **Round 2.5, height:** the sky from its light model gliding a minute at a time, the frame's stars fading in
   from 18 km, stopping at 100 km; while paused, the altitude line, shooting stars and a rare meteor shower (CSS
   only, drawn once per pause); its results as the new "build this one" frame (the card lit by the sky, stars and
@@ -38,8 +44,8 @@ WebKit through the reference image)
 - Release 1 after the motion changes: 549 passed, 6 skipped (declared), 0 failed.
 - Release 2 after round 2.3: 693 passed, 12 skipped, 0 failed. After round 2.4: 711 passed, 13 skipped, and two
   WebKit page loads that stalled once (see the progress log; both passed four times over when repeated). After
-  round 2.5: 779 passed, 16 skipped, 0 failed.
-- Unit tests: 528 on Release 1, 559 on Release 2.
+  round 2.5: 779 passed, 16 skipped, 0 failed. After round 2.6: 822 passed, 18 skipped, 0 failed.
+- Unit tests: 528 on Release 1, 567 on Release 2.
 - Along the way, intermittent failures were traced and fixed rather than retried: a test that re-created a
   cache it was checking (2.2), CSP reports read before the browser fired them, a helper fooled by a leftover
   countdown animation, transitions a busy WebKit starts a frame late, and Chromium's compositor drawing a
@@ -48,7 +54,8 @@ WebKit through the reference image)
 
 **Skipped and why**
 
-- Rounds 2.6 and 2.7: not finished yet (above).
+- Round 2.7 (interstellar): not started, waiting on the star catalog's licence (question 9).
+- The tree's view control: the setting and both views are built; the control waits for a frame (question 8).
 - Nothing was deployed, merged into Release 1 beyond your items 1 and 2 (and the test fixes they needed),
   released, or changed on Cloudflare or GitHub settings.
 
@@ -64,8 +71,10 @@ WebKit through the reference image)
    8,654 m, as drawn; keep, or lighten?
 6. Height's landmarks stop at 25 km (the frame's eight): add higher ones?
 7. Should height get its own options box with "results landmarks" (today the one switch covers both)?
-8. An intermittent WebKit page-load stall in the reference image under full load (progress log): watch it in
-   CI.
+8. The tree's view option has no frame: how should its control look?
+9. The star catalog for interstellar's turning sky: which one, under which licence?
+10. An intermittent WebKit page-load stall in the reference image under full load (progress log): watch it in
+    CI.
 
 ## Progress log
 
@@ -111,6 +120,12 @@ WebKit through the reference image)
   if it keeps appearing it needs a trace from a failing run (the WebKit-only run with traces did not reproduce
   it).
 
+- Round 2.6: tree (decisions 311 to 318). Checks: `npm run check` (567 unit tests); the reference image in
+  Chromium, Firefox and WebKit: 822 passed, 18 skipped as declared, 0 failed. Once, under local load (not in the
+  reference image), the kill-switch test found a cache the service worker was still filling; it passed three
+  times over on its own and in the reference run.
+- Stopped before round 2.7 (question 9).
+
 ## Questions for the owner
 
 1. **The analog hours hand (round 2.2).** The analog frame draws the hours subdial's hand at the whole hour
@@ -141,3 +156,16 @@ WebKit through the reference image)
 7. **Results landmarks for height (round 2.5, decision 306).** The one "results landmarks" option sits in the
    ocean depth options box and now also covers height's results. Should height have its own options box with
    that switch ("up to two per 10 km on the results"), as the plan's mode options suggest?
+8. **The tree's view option (round 2.6, decision 314).** The plan offers "tree view (side or isometric)" as a
+   mode option, side by default, but the Release 2 display frame draws no options box for the tree. The
+   setting exists (and the isometric view is built and tested); the control is not. How should it look: a
+   "tree options" box under the tiles like ocean depth's, with a side / isometric choice?
+9. **The star catalog for interstellar's turning sky (round 2.7).** The changes ask for the whole sky drawn from
+   an all-sky catalog (stars to magnitude 5), naming the Yale Bright Star Catalog and asking me to confirm its
+   licence. It is not clear: NASA's HEASARC lists its BSC5P table as a US government work
+   (<https://catalog.data.gov/dataset/bright-star-catalog>), but the catalogue itself is
+   "1991 (c) Hoffleit E.D., Warren Jr. W.H.", and Debian's packaging of it records that modified versions may not
+   be redistributed (<https://metadata.ftp-master.debian.org/changelogs/non-free/y/yale/stable_copyright>); a
+   projected, magnitude-limited sky strip is a modified version. Which would you like: the Bright Star Catalog
+   (after asking its keepers), or another catalog with a clear licence (for example the HYG database under
+   CC BY-SA, whose share-alike would apply to that one art file)? Round 2.7 waits for this.

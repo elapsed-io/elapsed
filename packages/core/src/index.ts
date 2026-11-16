@@ -57,6 +57,7 @@ export {
   CLOCK_FORMATS,
   FONT_CHOICES,
   MODE_CHOICES,
+  TREE_VIEWS,
   SETTINGS,
   SETTINGS_CATEGORIES,
   SETTINGS_SCHEMA,
@@ -79,6 +80,7 @@ export type {
   FontChoice,
   HexColor,
   ModeChoice,
+  TreeView,
   SettingDeclaration,
   SettingKey,
   SettingTarget,
@@ -106,3 +108,5 @@ export type { Landmark, LandmarkId, OceanZone } from './modes/ocean.ts';
 export { HEIGHT_LANDMARKS, atmosphereLayer, heightReached, pickHeightLandmarks, skyColour, skyLitColour, spreadHeightLandmarks, starsOpacity } from './modes/height.ts';
 export type { AtmosphereLayer, HeightLandmark, HeightLandmarkId } from './modes/height.ts';
 export { pickByBand, spreadBy } from './modes/landmarks.ts';
+export { grassColour, grassWeights, leafColour, leafScale, leafState, mixColour, seasonPhase, shares, stackedColour, treeGrowth, weather, yearPhase } from './modes/tree.ts';
+export type { LeafState, Weather } from './modes/tree.ts';

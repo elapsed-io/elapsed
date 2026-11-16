@@ -107,6 +107,7 @@ export const BRAND = {
       analog: 'analog',
       ocean: 'ocean depth',
       height: 'height',
+      tree: 'tree',
     },
     analog: {
       /** Under the hours subdial (the analog frame). */
@@ -165,6 +166,12 @@ export const BRAND = {
       landmarksPassed: 'landmarks passed',
       /** While paused, at the bottom: the altitude and the layer of the atmosphere ("31,240 m · stratosphere"). */
       altitude: '{height} m · {layer}',
+    },
+    tree: {
+      /** The drawings' names, read on request (the frames' own words; the isometric tree stands on a grassy field). */
+      side: 'a tree cycling through the seasons',
+      isometric: 'an isometric tree on a grassy field, cycling through the seasons',
+      replay: 'tree replay: the tree grows and cycles through the seasons of the session',
     },
     themes: {
       graphite: 'graphite',
