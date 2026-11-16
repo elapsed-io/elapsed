@@ -20,6 +20,9 @@ say a round is finished whole or not started on top of an unfinished one.
 - **Item 4:** `docs/display-mode-contract.md` documents the one contract every mode uses; the contract was
   extended twice, for every mode (replays draw into a surface with a backdrop; the running context carries
   the modes' options).
+- **Round 2.1, the mode platform** (pushed before tonight's changes): downloaded modes with their sizes and
+  removal, the asset registry, low power, animation speed and the ring's glide; tonight's follow-up keeps
+  time-based motion from jumping when settings or an overlay open.
 - **Round 2.2, analog stopwatch:** as the frame, the hands gliding on the compositor.
 - **Round 2.3, ocean depth:** the running mode as its frames (the water from the light model, never above the
   surface, gliding); its results rebuilt to the new "build this one" frame: the card lit by the replay's
@@ -28,15 +31,15 @@ say a round is finished whole or not started on top of an unfinished one.
   "ocean depth options" box.
 - **Round 2.4, ocean life:** while paused, the frame's fish and bubbles drift in (CSS animations only), one
   zone's catalog loaded at a time; the "ocean life" option.
-- **Round 2.6, tree:** the tree as its frames draw it, side on and isometric, through a one-hour year
-  (leaves growing, deepening, turning and falling, snow in winter, the isometric field's grass), its colours
-  changed by opacity alone; its results growing the tree through the session's seasons from the one replay
-  progress; its tile. The view option exists in settings but has no control yet (no frame draws it).
 - **Round 2.5, height:** the sky from its light model gliding a minute at a time, the frame's stars fading in
   from 18 km, stopping at 100 km; while paused, the altitude line, shooting stars and a rare meteor shower (CSS
   only, drawn once per pause); its results as the new "build this one" frame (the card lit by the sky, stars and
   Earth's horizon as the climb rises, things falling past, landmarks on the path); its tile. Ocean depth's
   results now share one profile chart with height, and the display-mode contract gained `replayLayout`.
+- **Round 2.6, tree:** the tree as its frames draw it, side on and isometric, through a one-hour year
+  (leaves growing, deepening, turning and falling, snow in winter, the isometric field's grass), its colours
+  changed by opacity alone; its results growing the tree through the session's seasons from the one replay
+  progress; its tile. The view option exists in settings but has no control yet (no frame draws it).
 
 **Test results** (each round: `npm run check`, then the whole end-to-end suite in Chromium, Firefox and
 WebKit through the reference image)
