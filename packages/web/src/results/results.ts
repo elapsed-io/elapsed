@@ -138,6 +138,7 @@ export class ResultsScreen {
     const actions = html(doc, 'div', { class: 'results__actions' }, [html(doc, 'div', { class: 'results__buttons' }, [retry, share])]);
 
     const graphic = html(doc, 'div', { class: 'results__graphic' });
+    delete this.element.dataset['ready'];
     this.element.className = `results ${ring ? 'results--ring' : 'results--strip'}`;
     this.element.replaceChildren(
       focused,
@@ -148,6 +149,8 @@ export class ResultsScreen {
 
     await mode.replay(graphic, session);
     this.#time(time, graphic, session, summary, timing);
+    // Everything is drawn and timed (tests and custom CSS can rely on it).
+    this.element.dataset['ready'] = '';
   }
 
   /** Moves focus to retry, when focus was on something the results replaced. */
@@ -157,6 +160,7 @@ export class ResultsScreen {
 
   hide(): void {
     for (const animation of this.element.getAnimations({ subtree: true })) animation.cancel();
+    delete this.element.dataset['ready'];
     this.element.hidden = true;
     this.element.replaceChildren();
     this.#retry = null;

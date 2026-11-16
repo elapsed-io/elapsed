@@ -5,17 +5,19 @@ updates it in the same change (plan, Privacy > Living inventory).
 
 ## What the site does today
 
-As of Release 1, round 4 (Persistence and abandonment).
+As of Release 1, round 5 (End screen).
 
 | | Current state |
 | --- | --- |
 | Requests on a visit | All to the site's own origin, none to anyone else (`e2e/idle.spec.ts`): the page, its script, its stylesheet, the default font and the tab icon (`/icons/icon.svg`); `GET /sw-control.json` (the offline kill switch, never cached); `POST /api/count` with `{"event":"visit"}` unless the load is a reload or a back-and-forward navigation. Ring or timeline adds that mode's script and stylesheet. |
-| Requests later | `POST /api/count` with `{"event":"session"}` when a session starts. The service worker (`/sw.js`) fetches the core files, `/manifest.webmanifest` and the tab icon when it installs, and the browser re-checks `/sw.js` on each visit. Installing to a home screen fetches the PNG icons. |
+| Requests later | `POST /api/count` with `{"event":"session"}` when a session starts. The results screen's script and stylesheet the first time a session ends (and the focus strip's or the ring's drawing code). The service worker (`/sw.js`) fetches the core files, `/manifest.webmanifest` and the tab icon when it installs, and the browser re-checks `/sw.js` on each visit. Installing to a home screen fetches the PNG icons. |
 | What a count request carries | The event's name and nothing else: no cookies (credentials omitted), no referrer, no time, no identifier, nothing stored on the device. The server sees the request's IP address and headers as any web server does; the Worker reads none of them except `Origin`, `Sec-Fetch-Site`, `Content-Type` and `Content-Length`, and keeps none. |
 | Local storage | Only while a session is open, both removed when it ends: `timer.active` (the session's random id, its start, pause, resume and end timestamps, informational gaps, display modes with their start times, its local day, the last sign of presence, the time of a missed check-in, and the pause limit in force) and `timer.heartbeat` (the time of the last heartbeat). Nothing about what the user is doing. Validated whenever read. |
 | Cache Storage | `timer-offline-<version>`: copies of the site's own files (page, script, stylesheet, font, manifest, icon, and display modes once picked). No personal data and nothing from `/api/`. Old versions are removed when a new one takes over; the kill switch empties it. |
 | Service worker | One registration for the site's own scope (`/`). |
-| `sessionStorage`, IndexedDB, cookies | None. Lint bans `document.cookie`. |
+| Session storage (this tab only) | `timer.finished`: the last finished session (the same fields as `timer.active`'s session, with how it ended), from when it ends until a new session starts or the tab closes. Validated whenever read. |
+| Sharing | Only when the user presses share: on a touch device, the device's share sheet receives "i studied for 2h 47m on [name]" and the site's address; on a computer, the same line goes to the clipboard. Nothing else, and nothing to a server. |
+| IndexedDB, cookies | None. Lint bans `document.cookie`. |
 | Server data | Cloudflare D1, table `daily_counts`: one row per UTC day and event (`visit`, `session`) holding a total. Nothing else. Kept as long as the site runs; totals describe no one. |
 | Logs | The Worker writes none (`observability` off). Cloudflare's platform keeps its own standard request logs for the site. |
 

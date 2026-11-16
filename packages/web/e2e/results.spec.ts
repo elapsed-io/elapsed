@@ -159,7 +159,7 @@ test('a reload shows the results again, in their final state, without the replay
   await page.clock.runFor(25 * MINUTE);
   await endThroughCountdown(page);
   await page.reload();
-  await page.locator('.results .action').first().waitFor();
+  await page.locator('.results[data-ready]').waitFor();
   await expect(page.locator('.results .visually-hidden')).toHaveText('00:25:00');
   const running = await page.locator('.results').evaluate((element) => element.getAnimations({ subtree: true }).filter((a) => a.playState === 'running').length);
   expect(running).toBe(0);
@@ -260,8 +260,9 @@ test('a pause past the limit skips the countdown and shows the results, in every
   await other.goto('/');
   await other.locator('[role="status"]').waitFor({ state: 'attached' });
   await page.clock.runFor(31 * MINUTE);
+  // Both tabs replay 31 minutes of one-second wakes first, which is slow when tests run in parallel.
   for (const tab of [page, other]) {
-    await expect(tab.getByRole('button', { name: 'retry' })).toBeVisible();
+    await expect(tab.getByRole('button', { name: 'retry' })).toBeVisible({ timeout: 15_000 });
     await expect(tab.getByRole('button', { name: 'cancel' })).toBeHidden();
   }
   await finishResults(page);

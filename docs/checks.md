@@ -36,5 +36,6 @@ Then confirm the GitHub Actions run for the pushed commit passed.
 | | The counting endpoint refuses anything but a same-origin, size-capped, exact event; nothing from `/api/` is cached | `packages/endpoint/src/*.test.ts`, `e2e/offline.spec.ts` |
 | | The service worker registers under the CSP and Trusted Types; the kill switch removes it | `packages/web/e2e/offline.spec.ts` |
 | Behaviour | Refresh, a closed tab, check-ins, missed check-ins, the pause limit, the session maximum, two tabs, offline | `packages/core/src/**/*.test.ts`, `packages/web/e2e/persistence.spec.ts`, `offline.spec.ts` |
-| Design | Every built screen against its canvas frame, pixel by pixel | `packages/web/e2e/frames.spec.ts`, `idle.spec.ts` |
+| | The countdown, results, replays, retry, share, reload, reduced motion, phones, automatic endings in every tab | `packages/web/e2e/results.spec.ts`, `packages/web/src/results/*.test.ts` |
+| Design | Every built screen against its canvas frame, pixel by pixel | `packages/web/e2e/frames.spec.ts`, `idle.spec.ts`, `results.spec.ts` |
 | | Preset contrast; lowercase copy; copy only in the brand module; numbers only in the config module | `npm run check:contrast`, `tooling/plan-audit.test.ts`, brand tests |

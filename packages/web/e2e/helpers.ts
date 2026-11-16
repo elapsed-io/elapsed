@@ -87,7 +87,8 @@ export async function endThroughCountdown(page: Page): Promise<void> {
 
 /** Finishes every running animation (the tabulating fade, the results fade-in, the replay), as if their time had passed. */
 export async function finishResults(page: Page): Promise<void> {
-  await page.locator('.results .action').first().waitFor();
+  // Drawn and timed: every animation of the sequence exists.
+  await page.locator('.results[data-ready]').waitFor();
   await page.evaluate(async () => {
     for (let round = 0; round < 3; round += 1) {
       const running = document.getAnimations().filter((animation) => !(animation instanceof CSSAnimation));
