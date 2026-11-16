@@ -95,8 +95,8 @@ when the fourth mode arrives (the Release 2 frame).
 - Downloaded modes: a mode is fetched only when picked, cached for offline use, and listed in settings
   ("downloaded modes", as the Release 2 display frame draws it) with its size and a remove button. A mode
   unused for 30 days is removed automatically: its last use is kept with the cached files, and the check
-  runs when the page loads, never on a timer. Release 1's modes (digits, ring, timeline) stay part of the
-  app, as now, and are not listed.
+  runs when the page loads, never on a timer. Digits is part of the core and always offline; every other
+  mode, ring and timeline included, is a downloaded mode (plan, Loading and performance: "On choice").
 - Low power (appearance, off by default; also on under the system's reduced-motion preference): freezes
   ambient animation and shows only the time; time-based motion (the timeline, the ring, the analog hand)
   steps once a minute. The app may suggest it where the browser reports a low, discharging battery.
