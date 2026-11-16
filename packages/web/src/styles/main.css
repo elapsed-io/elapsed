@@ -89,6 +89,7 @@
   }
 
   .icon-button {
+    position: relative;
     width: var(--icon-box);
     height: var(--icon-box);
     padding: 0;
@@ -98,6 +99,28 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  /*
+   * The settings icon's invisible 44 px tap area grows away from the account
+   * icon beside it (left, up and down), so the two never overlap.
+   */
+  .icon-button--settings::before {
+    content: "";
+    position: absolute;
+    top: calc((var(--icon-box) - var(--tap-target)) / 2);
+    bottom: calc((var(--icon-box) - var(--tap-target)) / 2);
+    left: calc(var(--icon-box) - var(--tap-target));
+    right: 0;
+  }
+
+  /*
+   * Keyboard focus, everywhere: a ring in the foreground colour, which has
+   * text contrast against every theme's background (WCAG 2.2, 2.4.7, 1.4.11).
+   */
+  :focus-visible {
+    outline: var(--focus-ring) solid var(--color-foreground);
+    outline-offset: var(--focus-offset);
   }
 
   .icon {

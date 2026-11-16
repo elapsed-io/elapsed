@@ -177,7 +177,8 @@ export class SettingsPanel {
       footer.append(html(doc, 'nav', { class: 'settings__links' }, links.map((link) => html(doc, 'a', { class: 'settings__link', attrs: { href: link.href } }, [link.label]))));
     }
 
-    this.element = html(doc, 'aside', { class: 'settings', attrs: { role: 'dialog', 'aria-modal': 'false', 'aria-label': copy.title, tabindex: '-1' } }, [
+    // A modal dialog: focus stays inside while it is open (WCAG 2.2: keyboard focus never wanders behind it).
+    this.element = html(doc, 'aside', { class: 'settings', attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-label': copy.title, tabindex: '-1' } }, [
       header,
       search,
       list,
@@ -190,6 +191,8 @@ export class SettingsPanel {
         event.preventDefault();
         event.stopPropagation();
         host.close();
+      } else if (event.key === 'Tab') {
+        this.#trapFocus(event);
       }
     });
 
@@ -233,6 +236,24 @@ export class SettingsPanel {
     this.#refreshOpenCategory();
     this.#fit();
     this.element.focus({ preventScroll: true });
+  }
+
+  /** Tab from the last control goes to the first, and Shift+Tab from the first (or the panel itself) to the last. */
+  #trapFocus(event: KeyboardEvent): void {
+    const focusable = [...this.element.querySelectorAll<HTMLElement>('button, input, textarea, select, a[href], [tabindex]')].filter(
+      (element) => element.tabIndex >= 0 && !element.hasAttribute('disabled') && element.getClientRects().length > 0,
+    );
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (first === undefined || last === undefined) return;
+    const active = this.#doc.activeElement;
+    if (event.shiftKey && (active === first || active === this.element)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   hide(): void {

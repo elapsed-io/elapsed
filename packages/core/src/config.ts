@@ -216,6 +216,9 @@ export const CONFIG = {
       buttonGapPx: 14,
       /** Small buttons keep an invisible 44 px tap area. */
       tapTargetPx: 44,
+      /** Keyboard focus: a ring in the foreground colour, which has text contrast in every theme. */
+      focusRingPx: 2,
+      focusOffsetPx: 2,
       /** Buttons sit 26 px below the time. */
       timeToButtonsPx: 26,
       endingBar: { width: 380, height: 3 },

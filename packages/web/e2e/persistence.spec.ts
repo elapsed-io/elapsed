@@ -123,7 +123,7 @@ test.describe('check-ins', () => {
     await expect(checkIn(page)).toHaveText('press any key if you’re still here');
     await expect(page.locator('[role="status"]')).toHaveText('press any key if you’re still here');
     expect(await page.title()).toBe(`check in · 02:00 · ${NAME}`);
-    expect(await page.locator('.time--main').evaluate((element) => element.closest('[aria-hidden="true"]') !== null)).toBe(true);
+    expect(await page.locator('.time-stack__body').getAttribute('aria-hidden')).toBe('');
 
     await page.keyboard.press('Space');
     await expect(checkIn(page)).toBeHidden();

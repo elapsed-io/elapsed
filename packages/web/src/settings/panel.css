@@ -180,7 +180,7 @@
   }
 
   .settings__search:has(.settings__search-input:focus-visible) {
-    outline: var(--settings-focus-ring) solid var(--color-accent);
+    outline: var(--settings-focus-ring) solid var(--color-foreground);
   }
 
   /* ---- Categories ------------------------------------------------------ */
@@ -240,11 +240,19 @@
     gap: var(--settings-group-gap);
   }
 
+  /* A control that no longer fits beside its label (a 320 px window) wraps below it. */
   .setting__row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--settings-control-gap);
+  }
+
+  /* Help text beside a button (custom css's "save") takes the room left and wraps within it, as drawn. */
+  .setting__row > .setting__help {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .setting__label {
@@ -362,7 +370,7 @@
   }
 
   .slider__track:has(.slider__input:focus-visible) .slider__thumb {
-    outline: var(--settings-focus-ring) solid var(--color-accent);
+    outline: var(--settings-focus-ring) solid var(--color-foreground);
     outline-offset: var(--settings-focus-offset);
   }
 
@@ -562,7 +570,7 @@
   }
 
   .color-row__well:has(.color-row__picker:focus-visible) {
-    outline: var(--settings-focus-ring) solid var(--color-accent);
+    outline: var(--settings-focus-ring) solid var(--color-foreground);
     outline-offset: var(--settings-focus-offset);
     border-radius: var(--colors-swatch-radius);
   }
@@ -721,7 +729,7 @@
   }
 
   .css-editor:has(.css-editor__input:focus-visible) {
-    outline: var(--settings-focus-ring) solid var(--color-accent);
+    outline: var(--settings-focus-ring) solid var(--color-foreground);
   }
 
   .css-editor__gutter {
@@ -821,5 +829,79 @@
   .settings__link {
     color: var(--color-muted);
     text-decoration: none;
+  }
+
+  /*
+   * Touch screens: every tap target is at least 44 px (WCAG 2.2, 2.5.8, and
+   * the plan's 44 px rule). Buttons get an invisible tap area, inputs a taller
+   * box; each setting row is at least 44 px tall, so neighbouring tap areas
+   * never overlap. Only the spacing changes; nothing is drawn larger.
+   */
+  @media (pointer: coarse) {
+    .settings__row,
+    .setting__row,
+    .color-row,
+    .confirm__buttons {
+      min-height: var(--tap-target);
+    }
+
+    .settings__row {
+      height: var(--tap-target);
+    }
+
+    .settings__search {
+      height: var(--tap-target);
+    }
+
+    .settings__close,
+    .settings__back,
+    .toggle,
+    .segmented__option,
+    .settings__action,
+    .settings__reset,
+    .settings__save {
+      position: relative;
+      min-width: var(--tap-target);
+    }
+
+    .settings__close::before,
+    .settings__back::before,
+    .toggle::before,
+    .segmented__option::before,
+    .settings__action::before,
+    .settings__reset::before,
+    .settings__save::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, var(--tap-target));
+      height: max(100%, var(--tap-target));
+      transform: translate(-50%, -50%);
+    }
+
+    .font-tile {
+      min-height: var(--tap-target);
+    }
+
+    .slider__input {
+      top: calc((var(--slider-height) - var(--tap-target)) / 2);
+      height: var(--tap-target);
+    }
+
+    .color-row__well {
+      width: var(--tap-target);
+      height: var(--tap-target);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .color-row__value {
+      min-height: var(--tap-target);
+    }
+
+    .color-row__hex {
+      min-width: var(--tap-target);
+    }
   }
 }

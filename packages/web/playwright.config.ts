@@ -25,6 +25,14 @@ export default defineConfig({
         ...(executablePath === undefined ? { channel: 'chromium' } : { launchOptions: { executablePath } }),
       },
     },
+    // Release 1's cross-browser pass (plan, round 8): every test in Firefox and in WebKit (Safari's engine) too.
+    // CI runs each in its own job; locally they run with ALL_BROWSERS=1, once those browsers are installed.
+    ...(inCi || process.env['ALL_BROWSERS'] === '1'
+      ? [
+          { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+          { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+        ]
+      : []),
   ],
   // Production build behind `vite preview`, which sends the same headers as Cloudflare.
   webServer: {

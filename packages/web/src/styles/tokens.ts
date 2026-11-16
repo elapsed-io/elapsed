@@ -79,6 +79,8 @@ export function designCustomProperties(): CustomProperties {
     '--button-gap': px(controls.buttonGapPx),
     '--button-font-size': px(type.buttonPx),
     '--tap-target': px(controls.tapTargetPx),
+    '--focus-ring': px(controls.focusRingPx),
+    '--focus-offset': px(controls.focusOffsetPx),
 
     '--icon-stroke': String(icons.strokeWidth),
     '--icon-size': px(icons.cornerIconPx),

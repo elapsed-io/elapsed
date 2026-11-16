@@ -38,6 +38,20 @@ export const BRAND = {
       checkIn: 'press any key if you’re still here',
       /** The "paused after a missed check-in" frame; {time} is the clock time the check-in appeared ("2:00 pm"). */
       missedCheckIn: 'a check-in went unanswered at {time}',
+      /**
+       * The time as a screen reader reads it on request (Tab to it, or read
+       * the page): words, not digits. Never announced on its own.
+       */
+      spoken: {
+        focused: '{time} focused',
+        pausedFor: 'paused for {time}',
+        hour: '1 hour',
+        hours: '{n} hours',
+        minute: '1 minute',
+        minutes: '{n} minutes',
+        second: '1 second',
+        seconds: '{n} seconds',
+      },
     },
     /** The session maximum frame; {hours} is the maximum in hours. */
     maximum: {

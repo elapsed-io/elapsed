@@ -13,7 +13,8 @@
       <main class="screen" data-mode="digits">
         <div class="corner">
           <button type="button" class="icon-button icon-button--settings" aria-label="{{ copy.icons.settings }}">{{ icon.settings }}</button>
-          <button type="button" class="icon-button" aria-label="{{ copy.icons.account }}">{{ icon.account }}</button>
+          <!-- Accounts arrive in Release 3: until then the account icon is drawn, as in the frames, but does nothing, so it is not a control. -->
+          <span class="icon-button icon-button--placeholder" aria-hidden="true">{{ icon.account }}</span>
         </div>
         <!-- Painted before the script runs; the display mode and controls then replace it with identical markup. -->
         <div class="mode-root">

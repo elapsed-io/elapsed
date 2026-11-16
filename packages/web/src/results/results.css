@@ -188,6 +188,17 @@
     justify-content: center;
   }
 
+  /* An invisible 44 px tap area (the two actions are 46 px apart, so they never overlap). */
+  .action::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, var(--tap-target));
+    height: max(100%, var(--tap-target));
+    transform: translate(-50%, -50%);
+  }
+
   .action .icon {
     width: var(--results-icon-size);
     height: var(--results-icon-size);

@@ -20,6 +20,7 @@ import { BRAND } from '@stopwatch/core';
 import { html, syncAnimations } from '../../dom.ts';
 import { formatClockTime } from '../../shell/clock-time.ts';
 import type { DisplayContext } from '../contract.ts';
+import { spokenDuration } from './spoken.ts';
 import { TimeText, timeLayoutFor } from './time-text.ts';
 import './time.css';
 
@@ -50,6 +51,11 @@ export class TimeDisplay {
     this.#checkIn = html(doc, 'div', { class: 'check-in overlay', attrs: { 'aria-hidden': 'true' } }, [
       html(doc, 'span', { class: 'check-in__text' }, [BRAND.copy.timer.checkIn]),
     ]);
+    // The time can always be read on request: Tab to it, or read the page. It is never announced by itself.
+    this.#main.element.setAttribute('role', 'timer');
+    this.#main.element.setAttribute('tabindex', '0');
+    this.#pausedFor.element.setAttribute('role', 'timer');
+    this.#pausedFor.element.tabIndex = -1;
     this.#body = html(doc, 'div', { class: 'time-stack__body' }, [...compose(this.#main.element)]);
     this.element = html(doc, 'div', { class: 'time-stack' }, [this.#body, this.#overlay, this.#checkIn]);
   }
@@ -77,13 +83,26 @@ export class TimeDisplay {
     const checkIn = status === 'running' && view.checkInDueAt !== null;
     const held = paused || checkIn;
     this.#body.classList.toggle('time-stack__body--held', held);
-    this.#body.setAttribute('aria-hidden', held ? 'true' : 'false');
+    // Held, the blurred display is decoration: hidden from screen readers and out of the tab order; the text over it
+    // (the pause length, or the check-in line) is what is read.
+    this.#body.toggleAttribute('aria-hidden', held);
+    this.#main.element.tabIndex = held ? -1 : 0;
+    this.#pausedFor.element.tabIndex = paused ? 0 : -1;
+    const focused = BRAND.copy.timer.spoken.focused.replace('{time}', spokenDuration(view.shownMs, layout === 'full'));
+    this.#label(this.#main.element, focused);
     this.#show(this.#overlay, paused);
     this.#show(this.#checkIn, checkIn);
     if (paused) {
       this.#pausedFor.show(view.pausedForShownMs ?? 0, 'full');
       this.#showMissed(view.missedCheckInAt);
+      const pause = BRAND.copy.timer.spoken.pausedFor.replace('{time}', spokenDuration(view.pausedForShownMs ?? 0, true));
+      this.#label(this.#pausedFor.element, [pause, focused, this.#missedText].filter((part) => part !== '').join('. '));
     }
+  }
+
+  /** Labels a time in words when the words change (a timer's label is read on request, never announced). */
+  #label(element: HTMLElement, label: string): void {
+    if (element.getAttribute('aria-label') !== label) element.setAttribute('aria-label', label);
   }
 
   #show(overlay: HTMLElement, shown: boolean): void {
