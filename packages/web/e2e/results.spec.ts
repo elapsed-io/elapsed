@@ -136,7 +136,8 @@ for (const [mode, duration] of [
     // Results fade in over 0.3 s from 0.3 s, rising 6 px; the replay starts at 0.5 s.
     expect(appear).toMatchObject({ duration: CONFIG.motion.resultsFadeIn, easing: FAST });
     expect(replay).toMatchObject({ duration, easing: FAST });
-    expect((replay?.start ?? 0) - (appear?.start ?? 0)).toBeCloseTo(CONFIG.motion.replayDelay - CONFIG.motion.resultsFadeInDelay, 3);
+    // Firefox reports start times coarsened by a few hundredths of a millisecond.
+    expect((replay?.start ?? 0) - (appear?.start ?? 0)).toBeCloseTo(CONFIG.motion.replayDelay - CONFIG.motion.resultsFadeInDelay, 0);
   });
 }
 

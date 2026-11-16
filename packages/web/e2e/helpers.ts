@@ -139,7 +139,11 @@ export const TIMER_END = '.screen > .controls .button--end';
 export async function untilEndNowAccepts(page: Page): Promise<void> {
   await page.locator('.ending').waitFor();
   await expect
-    .poll(() => page.locator('.ending').evaluate((ending) => Math.max(0, ...ending.getAnimations({ subtree: true }).map((animation) => Number(animation.currentTime ?? 0)))))
+    .poll(() =>
+      page
+        .locator('.ending__fill')
+        .evaluate((fill) => Math.max(0, ...fill.getAnimations().filter((animation) => animation.playState === 'running').map((animation) => Number(animation.currentTime ?? 0)))),
+    )
     .toBeGreaterThanOrEqual(CONFIG.session.endNowGuard);
 }
 
