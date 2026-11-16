@@ -12,6 +12,11 @@
  *   answers; offline, the cached page is used.
  * - Everything else of the site's own (the manifest, icons) is network-first
  *   with the cache as a fallback.
+ * - A downloaded display mode (every mode but digits, plan: "On choice") has
+ *   a cache of its own, filled when the page says the mode was used, and
+ *   kept across versions: a new version refreshes its files when it
+ *   installs. Its last use is kept in it, beside its files. A mode's own
+ *   files are served from its cache, or from the network without being kept.
  */
 
 /** Cache names start with this, then the build version. Must match OFFLINE_CACHE_PREFIX in src/storage/offline-cache.ts. */
@@ -37,9 +42,52 @@ export function cacheName(version: string): string {
   return `${CACHE_PREFIX}${version}`;
 }
 
-/** Old versions' caches, to delete when this version takes over. */
+/** Each downloaded mode's cache is this, then the mode's id. One per mode, across versions. */
+export const MODE_CACHE_PREFIX = `${CACHE_PREFIX}mode-`;
+
+export function modeCacheName(id: string): string {
+  return `${MODE_CACHE_PREFIX}${id}`;
+}
+
+/** The mode a cache holds, or null for any other cache. */
+export function modeOfCache(name: string): string | null {
+  return name.startsWith(MODE_CACHE_PREFIX) && name.length > MODE_CACHE_PREFIX.length ? name.slice(MODE_CACHE_PREFIX.length) : null;
+}
+
+/** Where a mode's cache keeps its last use (milliseconds since 1970, as text), beside its files. */
+export const LAST_USE_PATH = '/mode-last-use';
+
+/** Old versions' caches, to delete when this version takes over. Downloaded modes' caches outlive versions. */
 export function staleCaches(names: readonly string[], version: string): string[] {
-  return names.filter((name) => name.startsWith(CACHE_PREFIX) && name !== cacheName(version));
+  return names.filter((name) => name.startsWith(CACHE_PREFIX) && modeOfCache(name) === null && name !== cacheName(version));
+}
+
+/** The page's message that a mode was just used: cache its files and record when. */
+export const MODE_USED_MESSAGE = 'mode-used';
+
+export interface ModeUsed {
+  readonly type: typeof MODE_USED_MESSAGE;
+  readonly id: string;
+  readonly at: number;
+}
+
+/** A "mode used" message for one of `known` modes, or null for anything else. */
+export function readModeUsed(data: unknown, known: readonly string[]): ModeUsed | null {
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) return null;
+  const record = data as Record<string, unknown>;
+  if (Object.keys(record).sort().join(',') !== 'at,id,type' || record['type'] !== MODE_USED_MESSAGE) return null;
+  const { id, at } = record;
+  if (typeof id !== 'string' || !known.includes(id) || typeof at !== 'number' || !Number.isFinite(at) || at < 0) return null;
+  return { type: MODE_USED_MESSAGE, id, at };
+}
+
+/** Which modes each file of the build belongs to, as paths ("/assets/ring-….js"). */
+export function modesByFile(modes: Readonly<Record<string, readonly string[]>>): Map<string, string[]> {
+  const byFile = new Map<string, string[]>();
+  for (const [id, files] of Object.entries(modes)) {
+    for (const file of files) byFile.set(file, [...(byFile.get(file) ?? []), id]);
+  }
+  return byFile;
 }
 
 /** Only complete, same-origin, non-redirected answers are kept. */

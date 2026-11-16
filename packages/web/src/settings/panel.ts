@@ -35,6 +35,7 @@ import { parseSettingsFile, settingsFile, settingsFileName } from '@stopwatch/co
 import 'virtual:tokens/settings.css';
 import { html, svg } from '../dom.ts';
 import { formatBytes } from '../fonts/font-file.ts';
+import { listDownloadedModes, removeDownloadedMode } from '../offline/downloaded-modes.ts';
 import { BUILT_IN_FONTS, OWN_FONT_FAMILY, familyStack, previewFamily } from '../fonts/registry.ts';
 import { iconElement } from '../icons/icon-element.ts';
 import { restartInSafeMode } from '../shell/safe-mode.ts';
@@ -116,6 +117,8 @@ export class SettingsPanel {
   #ownTile: HTMLButtonElement | null = null;
   #fontNote: HTMLDivElement | null = null;
   #storageValue: HTMLDivElement | null = null;
+  #downloadsGroup: HTMLDivElement | null = null;
+  #downloadsList: HTMLDivElement | null = null;
   #blocked: HTMLDivElement | null = null;
   /** Custom CSS: the editor's place, its note, and the editor once its code has loaded. */
   #cssSlot: HTMLDivElement | null = null;
@@ -373,6 +376,7 @@ export class SettingsPanel {
       this.#requestPreviews();
       void this.#refreshOwnTile();
     }
+    if (visible('display')) void this.refreshDownloads();
     if (visible('privacy')) void this.#refreshStorage();
     if (visible('advanced')) void this.#loadEditor().catch(() => undefined);
   }
@@ -420,7 +424,7 @@ export class SettingsPanel {
       case 'timer':
         return [this.#seconds(), this.#rangeItem('checkInInterval', copy.checkIn, formatHoursMinutes), this.#rangeItem('pauseLimit', copy.pauseLimit, formatMinutes), this.#shortcuts()];
       case 'display':
-        return [this.#modes()];
+        return [this.#modes(), this.#downloads()];
       case 'appearance':
         return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat(), this.#animationSpeed(), this.#lowPower()];
       case 'notifications':
@@ -485,6 +489,40 @@ export class SettingsPanel {
       update(settings.mode);
     });
     return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.mode.label]), [grid]), search: searchText(copy.mode.label, ...MODE_CHOICES.map((value) => BRAND.copy.modes[value])) };
+  }
+
+  /**
+   * Downloaded modes, as the Release 2 display frame draws them: each with its size and a remove button.
+   * The item is a wrapper laid out as its contents, so the list takes no room while nothing is downloaded.
+   */
+  #downloads(): Item {
+    const doc = this.#doc;
+    const text = copy.downloadedModes;
+    this.#downloadsList = html(doc, 'div', { class: 'downloads' });
+    this.#downloadsGroup = settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [text.label]), [this.#downloadsList, html(doc, 'div', { class: 'setting__help' }, [text.help])]);
+    this.#downloadsGroup.hidden = true;
+    return { element: html(doc, 'div', { class: 'settings__item-contents' }, [this.#downloadsGroup]), search: searchText(text.label, text.help) };
+  }
+
+  /** Lists the modes on this device again (a mode was just cached, or removed). */
+  async refreshDownloads(): Promise<void> {
+    const view = this.#doc.defaultView;
+    const list = this.#downloadsList;
+    const group = this.#downloadsGroup;
+    if (view === null || list === null || group === null) return;
+    const modes = await listDownloadedModes(view, MODE_CHOICES);
+    const doc = this.#doc;
+    list.replaceChildren(
+      ...modes.map((mode) => {
+        const name = (MODE_CHOICES as readonly string[]).includes(mode.id) ? BRAND.copy.modes[mode.id as ModeChoice] : mode.id;
+        const remove = html(doc, 'button', { class: 'downloads__remove', attrs: { type: 'button', 'aria-label': copy.downloadedModes.removeName.replace('{mode}', name) } }, [copy.downloadedModes.remove]);
+        remove.addEventListener('click', () => {
+          void removeDownloadedMode(view, mode.id).then(() => this.refreshDownloads());
+        });
+        return html(doc, 'div', { class: 'downloads__row' }, [html(doc, 'div', {}, [name]), html(doc, 'div', { class: 'downloads__end' }, [html(doc, 'div', { class: 'setting__value' }, [formatBytes(mode.bytes)]), remove])]);
+      }),
+    );
+    group.hidden = modes.length === 0;
   }
 
   // ---- Appearance --------------------------------------------------------
