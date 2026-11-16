@@ -30,26 +30,89 @@ test('no longer reads a mode from the address', async ({ page }) => {
   await expect(page.locator('.screen')).toHaveAttribute('data-mode', 'digits');
 });
 
-test('the ring turns once a minute, and its tail grows in behind the head, whole after about nine minutes', async ({ page }) => {
+/** The ring's rotor: its resting transform, its glide if any, its tail's length, and whether it has its own layer. */
+function ringRotor(page: Page): Promise<{ rest: string; glide: { from: string; to: string; easing: string; duration: number; state: string; at: number } | null; tail: string; layer: string }> {
+  return page.locator('.ring__rotor').evaluate((element) => {
+    const animation = element.getAnimations()[0];
+    const effect = animation?.effect instanceof KeyframeEffect ? animation.effect : null;
+    const frames = effect?.getKeyframes() ?? [];
+    return {
+      rest: (element as HTMLElement).style.transform,
+      glide:
+        animation === undefined || effect === null
+          ? null
+          : {
+              from: String(frames[0]?.['transform']),
+              to: String(frames.at(-1)?.['transform']),
+              easing: String(effect.getTiming().easing),
+              duration: Number(effect.getTiming().duration),
+              state: animation.playState,
+              at: Math.round(Number(animation.currentTime)),
+            },
+      tail: (element as HTMLElement).style.getPropertyValue('--ring-tail'),
+      layer: getComputedStyle(element).willChange,
+    };
+  });
+}
+
+test('the ring glides 6° a minute on its own layer, anchored once a minute, and its tail grows in behind the head', async ({ page }) => {
   await openApp(page, { mode: 'ring' });
-  const rotor = page.locator('.ring__rotor');
-  const angles = () => rotor.evaluate((element) => [element.style.getPropertyValue('--ring-angle'), element.style.getPropertyValue('--ring-tail')]);
-  expect(await angles()).toEqual(['0deg', '0deg']);
+  expect(await ringRotor(page)).toMatchObject({ rest: 'rotate(0deg)', glide: null, tail: '0deg', layer: 'auto' });
   await page.locator('.button--primary').click();
-  await page.clock.runFor(59 * SECOND);
-  expect(await angles()).toEqual(['0deg', '0deg']);
-  await page.clock.runFor(SECOND);
-  expect(await angles()).toEqual(['6deg', '6deg']);
-  await page.clock.runFor(4 * MINUTE);
-  expect(await angles()).toEqual(['30deg', '30deg']);
+  await page.clock.runFor(30 * SECOND);
+  // Half way through the first minute: gliding from 12 o'clock; the tail grows on whole minutes behind it.
+  expect(await ringRotor(page)).toMatchObject({
+    glide: { from: 'rotate(0deg)', to: 'rotate(6deg)', easing: 'linear', duration: 60_000, state: 'running' },
+    tail: '0deg',
+    layer: 'transform',
+  });
+  expect((await ringRotor(page)).glide?.at).toBeCloseTo(30_000, -3);
+  await page.clock.runFor(30 * SECOND);
+  expect(await ringRotor(page)).toMatchObject({ glide: { from: 'rotate(6deg)', to: 'rotate(12deg)', state: 'running' }, tail: '6deg' });
+  await page.clock.runFor(4 * MINUTE + 2 * SECOND);
+  expect(await ringRotor(page)).toMatchObject({ glide: { from: 'rotate(30deg)', to: 'rotate(36deg)' }, tail: '30deg' });
+  // Whole after about nine minutes, and never changed again.
   await page.clock.runFor(5 * MINUTE);
-  expect(await angles()).toEqual(['60deg', '55deg']);
+  expect(await ringRotor(page)).toMatchObject({ glide: { from: 'rotate(60deg)', to: 'rotate(66deg)' }, tail: '55deg' });
   // Past 12 o'clock it keeps turning forward, never back.
   await page.clock.runFor(55 * MINUTE);
-  expect(await angles()).toEqual(['390deg', '55deg']);
-  // Turned by a transform, never redrawn.
-  expect(await rotor.evaluate((element) => getComputedStyle(element).transform)).not.toBe('none');
+  expect(await ringRotor(page)).toMatchObject({ glide: { from: 'rotate(390deg)', to: 'rotate(396deg)' }, tail: '55deg' });
 });
+
+test('the ring holds where its glide had reached while paused, and glides on from there', async ({ page }) => {
+  await openApp(page, { mode: 'ring' });
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(3 * MINUTE + 30 * SECOND);
+  await page.locator('.button--primary').click();
+  expect(await ringRotor(page)).toMatchObject({ rest: 'rotate(21deg)', glide: null, layer: 'auto' });
+  await page.clock.runFor(10 * MINUTE);
+  expect(await ringRotor(page)).toMatchObject({ rest: 'rotate(21deg)', glide: null });
+  await page.locator('.button--primary').click();
+  expect(await ringRotor(page)).toMatchObject({ glide: { from: 'rotate(18deg)', to: 'rotate(24deg)', state: 'running' } });
+  expect((await ringRotor(page)).glide?.at).toBeCloseTo(30_000, -3);
+});
+
+for (const [how, prepare] of [
+  ['low power', async (page: Page) => openApp(page, { mode: 'ring', settings: { lowPower: true } })],
+  [
+    'reduced motion',
+    async (page: Page) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await openApp(page, { mode: 'ring' });
+    },
+  ],
+] as const) {
+  test(`with ${how}, the ring steps once a minute instead of gliding`, async ({ page }) => {
+    await prepare(page);
+    await page.locator('.button--primary').click();
+    await page.clock.runFor(59 * SECOND);
+    expect(await ringRotor(page)).toMatchObject({ rest: 'rotate(0deg)', glide: null, tail: '0deg', layer: 'auto' });
+    await page.clock.runFor(SECOND);
+    expect(await ringRotor(page)).toMatchObject({ rest: 'rotate(6deg)', glide: null, tail: '6deg' });
+    await page.clock.runFor(9 * MINUTE + 30 * SECOND);
+    expect(await ringRotor(page)).toMatchObject({ rest: 'rotate(60deg)', glide: null, tail: '55deg' });
+  });
+}
 
 /** Each timeline layer's resting transform and its glide, if any. */
 function timelineLayers(page: Page): Promise<{ rest: string; glide: { from: string; to: string; easing: string; duration: number; state: string } | null; layer: string }[]> {
@@ -109,9 +172,18 @@ test('the timeline glides 10 px a minute on its own layers, anchored once a minu
   expect(await page.locator('.timeline__svg').evaluateAll((drawings) => drawings.map((drawing) => drawing.getAttribute('shape-rendering')))).toEqual(['crispEdges', 'crispEdges', 'crispEdges']);
 });
 
-test('with reduced motion, the timeline steps once a minute instead of gliding', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await openApp(page, { mode: 'timeline' });
+for (const [how, prepare] of [
+  ['low power', async (page: Page) => openApp(page, { mode: 'timeline', settings: { lowPower: true } })],
+  [
+    'reduced motion',
+    async (page: Page) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await openApp(page, { mode: 'timeline' });
+    },
+  ],
+] as const) {
+test(`with ${how}, the timeline steps once a minute instead of gliding`, async ({ page }) => {
+  await prepare(page);
   await page.locator('.button--primary').click();
   await page.clock.runFor(59 * SECOND);
   expect((await timelineLayers(page)).map(({ rest, glide }) => [rest, glide])[0]).toEqual(['translateX(240px)', null]);
@@ -122,6 +194,7 @@ test('with reduced motion, the timeline steps once a minute instead of gliding',
     ['translateX(230px)', null],
   ]);
 });
+}
 
 for (const mode of ['ring', 'timeline', 'digits']) {
   test(`paused in ${mode}, the whole display blurs and the buttons stay sharp`, async ({ page }) => {
@@ -157,13 +230,4 @@ test('modes record the mode a session started in', async ({ page }) => {
   await expect(page.locator('.timeline .time--main')).toBeVisible();
 });
 
-test('modes hold their motion while paused', async ({ page }) => {
-  await openApp(page, { mode: 'ring' });
-  await page.locator('.button--primary').click();
-  await page.clock.runFor(3 * MINUTE);
-  await page.locator('.button--primary').click();
-  const angle = () => page.locator('.ring__rotor').evaluate((element) => element.style.getPropertyValue('--ring-angle'));
-  expect(await angle()).toBe('18deg');
-  await page.clock.runFor(10 * MINUTE);
-  expect(await angle()).toBe('18deg');
-});
+

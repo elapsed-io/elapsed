@@ -104,10 +104,13 @@ async function sessionAt(page: Page, mode: string, focus: number, paused = 0): P
 }
 
 // The revised ring and timeline frames. The ring turns as a whole by a transform, so its edges are
-// resampled by the browser where the frame draws them in place: a few pixels of anti-aliasing differ.
-// Each frame shows a whole minute, so the timeline's glide is frozen at the start of its minute.
+// resampled by the browser where the frame draws them in place: a few pixels of anti-aliasing differ. While
+// it glides, the rotor is a layer the compositor turns, which resamples a little more (decision 267): the
+// running frame allows 100 such pixels, and the control below shows a ring 3° off fails by far.
+// Each frame shows a whole minute, so the timeline's and the ring's glides are frozen at the start of their minute.
+const RING_GLIDING_LIMIT = 100;
 for (const [name, mode, focus, paused, limit] of [
-  ['ring', 'ring', 84 * MINUTE, 0, 40],
+  ['ring', 'ring', 84 * MINUTE, 0, RING_GLIDING_LIMIT],
   ['ringStart', 'ring', 1 * MINUTE, 0, 40],
   ['ringPaused', 'ring', 84 * MINUTE, 4 * MINUTE + 12 * SECOND, 40],
   ['timeline', 'timeline', 84 * MINUTE, 0, 0],
@@ -116,13 +119,23 @@ for (const [name, mode, focus, paused, limit] of [
 ] as const) {
   test(`${mode} matches the "${name}" frame`, async ({ page, browser, browserName }) => {
     await sessionAt(page, mode, focus, paused);
-    await freezeAnimations(page, { at: { '.timeline__glide': 0 } });
+    await freezeAnimations(page, { at: { '.timeline__glide': 0, '.ring__rotor': 0 } });
     const diff = await compareWithReference(page, browser, modeFrame(name, GRAPHITE));
     expectLikeFrame(diff, browserName, () => {
       expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(limit);
+      expect(diff.smoothedMaxDelta, JSON.stringify(diff)).toBeLessThanOrEqual(SMOOTHED_LIMIT);
     });
   });
 }
+
+test('control: a gliding ring 3° from the frame fails the ring frame by far', async ({ page, browser, browserName }) => {
+  test.skip(browserName !== 'chromium' || process.env['PIXEL_REFERENCE'] !== '1', 'exact pixel rules hold only in the reference environment');
+  await sessionAt(page, 'ring', 84 * MINUTE);
+  await freezeAnimations(page, { at: { '.ring__rotor': 30 * SECOND } });
+  const diff = await compareWithReference(page, browser, modeFrame('ring', GRAPHITE));
+  expect(diff.visible).toBeGreaterThan(RING_GLIDING_LIMIT);
+  expect(diff.smoothedMaxDelta).toBeGreaterThan(SMOOTHED_LIMIT);
+});
 
 test('a check-in waiting matches the check-in frame exactly', async ({ page, browser, browserName }) => {
   await openApp(page);

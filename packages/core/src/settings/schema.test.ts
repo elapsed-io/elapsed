@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { BRAND } from '../brand.ts';
 import { CONFIG } from '../config.ts';
 import {
+  ANIMATION_SPEEDS,
   FONT_CHOICES,
   MODE_CHOICES,
   SETTINGS,
   SETTINGS_CATEGORIES,
+  SETTINGS_SCHEMA,
   THEME_IDS,
+  declarationOf,
   defaultSettings,
   isValidValue,
   migrateSettings,
@@ -91,6 +94,22 @@ describe('settings schema', () => {
     });
     expect(settings).not.toHaveProperty('extra');
     expect(Object.isFrozen(settings)).toBe(true);
+  });
+
+  it('migrates schema 1 settings to schema 2: every choice kept, the new ones at their defaults', () => {
+    const stored = { schema: 1, seconds: 'always', mode: 'ring', theme: 'sky', timeSize: 120, clockFormat: '12h', usageCounts: false };
+    const settings = migrateSettings(stored);
+    expect(settings).toMatchObject({ ...stored, schema: SETTINGS_SCHEMA, animationSpeed: 'normal', lowPower: false });
+    expect(SETTINGS_SCHEMA).toBe(2);
+    expect(JSON.parse(serializeSettings(settings))).toMatchObject({ schema: 2, animationSpeed: 'normal', lowPower: false });
+  });
+
+  it('adds animation speed (slower, normal, faster) and low power to appearance', () => {
+    expect(declarationOf('animationSpeed')).toMatchObject({ category: 'appearance', options: ['slower', 'normal', 'faster'], default: 'normal', target: { css: '--motion-scale' } });
+    expect(declarationOf('lowPower')).toMatchObject({ category: 'appearance', kind: 'switch', default: false });
+    expect(Object.keys(CONFIG.motion.speeds)).toEqual([...ANIMATION_SPEEDS]);
+    expect(CONFIG.motion.speeds.normal).toBe(CONFIG.motion.durationScale);
+    expect(CONFIG.motion.speeds.slower * CONFIG.motion.speeds.faster).toBeCloseTo(1);
   });
 
   it.each([null, 'text', 42, [], { colors: { background: '#000', foreground: '#fff', accent: '#0f0', more: 1 } }])(

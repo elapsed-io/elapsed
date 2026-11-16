@@ -46,15 +46,16 @@ export async function openApp(
 }
 
 /**
- * Lets every interface transition (200 ms crossfades and slides) finish in real time. The timeline's glide,
- * which runs a minute at a time and holds while paused, is ambient motion, not a transition: tests freeze it.
+ * Lets every interface transition (200 ms crossfades and slides) finish in real time. The timeline's and the
+ * ring's glides, which run a minute at a time and hold while paused, are motion with time, not transitions:
+ * tests freeze them.
  */
 export async function settle(page: Page): Promise<void> {
   await page.evaluate(async () => {
     const running = document
       .getAnimations()
       .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
-      .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide') === true));
+      .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor') === true));
     await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
   });
 }
@@ -159,7 +160,7 @@ export async function finishResults(page: Page): Promise<void> {
       const running = document
         .getAnimations()
         .filter((animation) => !(animation instanceof CSSAnimation))
-        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide') === true));
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor') === true));
       for (const animation of running) animation.finish();
       // Let finish handlers (which cancel spent animations and remove masks) run. The page's timers
       // may be held by the test clock, so only promises are awaited.

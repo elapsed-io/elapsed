@@ -26,6 +26,8 @@ export interface SettingsEffects {
   rules(rules: RuleSettings): void;
   mode(id: ModeChoice): void;
   clockFormat(format: ClockFormat): void;
+  /** The low power setting changed (the system's reduced-motion preference is the site's to add). */
+  lowPower(on: boolean): void;
   /** The font in use changed (after it loaded). */
   font(): void;
 }
@@ -238,6 +240,7 @@ export class SettingsController {
     if (next.checkInInterval !== previous.checkInInterval || next.pauseLimit !== previous.pauseLimit) this.#effects.rules(rulesFrom(next));
     if (next.mode !== previous.mode) this.#effects.mode(next.mode);
     if (next.clockFormat !== previous.clockFormat) this.#effects.clockFormat(next.clockFormat);
+    if (next.lowPower !== previous.lowPower) this.#effects.lowPower(next.lowPower);
     this.#applyAppearance();
     if (next.font !== previous.font) void this.#applyFont();
     for (const listener of this.#listeners) listener(next);

@@ -178,6 +178,18 @@ export const BRAND = {
       },
       timeSize: { label: 'time size' },
       clockFormat: { label: 'clock format', options: { '12h': '12-hour', '24h': '24-hour', region: 'follow region' } },
+      animationSpeed: {
+        label: 'animation speed',
+        options: { slower: 'slower', normal: 'normal', faster: 'faster' },
+        help: 'every animation, including the results replay',
+      },
+      lowPower: { label: 'low power', help: 'stops ambient animation and shows only the time. on when your system asks for reduced motion.' },
+      downloadedModes: {
+        label: 'downloaded modes',
+        help: 'modes download when you pick them and work offline. ones unused for 30 days are removed.',
+        remove: 'remove',
+        removeName: 'remove {mode}',
+      },
       notifyCheckIns: { label: 'check-ins', name: 'check-in notifications', help: 'a system notification when a check-in appears' },
       notifyPauseLimit: {
         label: 'pause limit',

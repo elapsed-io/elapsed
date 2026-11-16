@@ -17,6 +17,7 @@ import { DEFAULT_MODE_ID } from './modes/manifests.ts';
 import { findMode } from './modes/registry.ts';
 import type { RegisteredMode } from './modes/registry.ts';
 import { registerServiceWorker } from './offline/register.ts';
+import { recordModeUse, removeUnusedModes } from './storage/mode-cache.ts';
 import type * as ResultsModule from './results/results.ts';
 import type { ResultsScreen } from './results/results.ts';
 import { SettingsController } from './settings/controller.ts';
@@ -68,6 +69,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     rules: () => undefined,
     mode: () => undefined,
     clockFormat: () => undefined,
+    lowPower: () => undefined,
     font: () => undefined,
   };
   const settingsStore = new LocalSettingsStore(browserLocalStorage(win), report);
@@ -92,6 +94,9 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
         setClockFormat(format);
         effects.clockFormat(format);
       },
+      lowPower: (on) => {
+        effects.lowPower(on);
+      },
       font: () => {
         effects.font();
       },
@@ -101,9 +106,20 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   setClockFormat(settings.current.clockFormat);
   const fontReady = settings.start();
 
-  const reducedMotion = (): boolean => win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionQuery = win.matchMedia('(prefers-reduced-motion: reduce)');
+  const reducedMotion = (): boolean => motionQuery.matches;
+  // Low power: the setting, or the system's reduced-motion preference (plan, Loading and performance).
+  const lowPower = (): boolean => settings.current.lowPower || reducedMotion();
   // The site owns this object; a changed setting updates it and redraws (modes/contract.ts).
-  const context: { seconds: SecondsDisplay; reducedMotion: boolean } = { seconds: settings.current.seconds, reducedMotion: reducedMotion() };
+  const context: { seconds: SecondsDisplay; reducedMotion: boolean; lowPower: boolean } = {
+    seconds: settings.current.seconds,
+    reducedMotion: reducedMotion(),
+    lowPower: lowPower(),
+  };
+  const showLowPower = (): void => {
+    doc.documentElement.toggleAttribute('data-low-power', context.lowPower);
+  };
+  showLowPower();
 
   const counts = new CountClient(win, () => settings.current.usageCounts);
   counts.visit();
@@ -113,8 +129,13 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   const finished = new FinishedStore(browserSessionStorage(win), report);
   const saved = store.load();
   // The display mode is a setting; a restored session switches to it if another tab left it elsewhere.
+  /** Settings' list of downloaded modes follows a mode's caching; set once the panel can exist. */
+  let downloadsChanged = (): void => undefined;
   let registered: RegisteredMode = findMode(settings.current.mode) ?? fallbackMode();
+  // Downloaded modes unused for 30 days go when the page loads, never on a timer (plan, Loading and performance).
+  void removeUnusedModes(win, Date.now(), registered.manifest.id).catch(report);
   let mode: DisplayMode = (await registered.load())();
+  usedMode(registered);
   screenElement.dataset['mode'] = registered.manifest.id;
   mode.mount(modeRoot, context);
 
@@ -386,6 +407,14 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   effects.clockFormat = () => {
     render(engine.view);
   };
+  const motionChanged = (): void => {
+    context.reducedMotion = reducedMotion();
+    context.lowPower = lowPower();
+    showLowPower();
+    render(engine.view);
+  };
+  effects.lowPower = motionChanged;
+  motionQuery.addEventListener('change', motionChanged);
   effects.font = () => {
     mode.relayout?.();
   };
@@ -397,6 +426,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     if (engine.state !== null) engine.switchMode(next.manifest.id);
     const request = ++modeRequest;
     void next.load().then((factory) => {
+      usedMode(next);
       if (request !== modeRequest) return;
       mode.unmount();
       registered = next;
@@ -418,6 +448,9 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
 
   let panel: SettingsPanel | null = null;
   let panelModule: Promise<typeof PanelModule> | null = null;
+  downloadsChanged = () => {
+    void panel?.refreshDownloads();
+  };
   const closeSettings = (): void => {
     if (panel === null || !panel.shown) return;
     panel.hide();
@@ -564,6 +597,14 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   };
   if (doc.readyState === 'complete') readTimeZone();
   else win.addEventListener('load', readTimeZone, { once: true });
+
+  /** A downloaded mode was shown: the service worker keeps it for offline use, and settings list it. */
+  function usedMode(shown: RegisteredMode): void {
+    if (shown.manifest.tier !== 'on-choice') return;
+    void recordModeUse(win, shown.manifest.id, Date.now()).then(() => {
+      downloadsChanged();
+    }, report);
+  }
 
   function fallbackMode(): RegisteredMode {
     const found = findMode(DEFAULT_MODE_ID);
