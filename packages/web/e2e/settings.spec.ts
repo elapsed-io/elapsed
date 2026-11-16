@@ -12,7 +12,7 @@ import type { Browser, Page } from '@playwright/test';
 import { FONT, MINUTE, SECOND, endThroughCountdown, finishResults, openApp, seedSettings, settle } from './helpers.ts';
 import { FRAME_FONTS, SETTINGS_FRAME_HEIGHT, settingsFrame } from './fixtures/settings-frames.ts';
 import type { Palette, SettingsFrameName } from './fixtures/settings-frames.ts';
-import { GRAPHITE } from './fixtures/frames.ts';
+import { GRAPHITE, PAPER } from './fixtures/frames.ts';
 import { diffPngs, expectLikeFrame } from './pixels.ts';
 
 const PANEL = { x: 840, width: 440 };
@@ -33,7 +33,9 @@ function choiceFont(id: string, name = `${id}.name.woff2`): Buffer {
   return readFileSync(fileURLToPath(new URL(`../src/assets/fonts/choices/${id}/${name}`, import.meta.url)));
 }
 
-async function frameReference(browser: Browser, name: SettingsFrameName, palette: Palette, storage?: string): Promise<Buffer> {
+type Clip = { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+
+async function frameReference(browser: Browser, name: SettingsFrameName, palette: Palette, storage?: string, clip?: Clip): Promise<Buffer> {
   const height = SETTINGS_FRAME_HEIGHT[name];
   const reference = await browser.newPage({ viewport: { width: 1280, height } });
   await reference.route('http://frame.test/**', (route) => {
@@ -47,7 +49,7 @@ async function frameReference(browser: Browser, name: SettingsFrameName, palette
   });
   await reference.goto('http://frame.test/');
   await reference.evaluate(() => document.fonts.ready);
-  const image = await reference.screenshot({ clip: { ...PANEL, y: 0, height } });
+  const image = await reference.screenshot({ clip: clip ?? { ...PANEL, y: 0, height } });
   await reference.close();
   return image;
 }
@@ -106,6 +108,29 @@ test.describe('the panel matches its frames', () => {
       const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: SETTINGS_FRAME_HEIGHT[name] } });
       const reference = await frameReference(browser, name, GRAPHITE);
       const diff = await diffPngs(page, site, reference);
+      expectLikeFrame(diff, browserName, () => {
+        expect(diff.differing, JSON.stringify(diff)).toBe(0);
+      });
+    });
+  }
+
+  // Tester report: the ring tile showed a filled arc, not the ring's trail. Both display frames draw it as the
+  // ring itself: a faint track, a short accent tail fading toward its far end, and the round head.
+  for (const [theme, palette] of [
+    ['graphite', GRAPHITE],
+    ['paper', PAPER],
+  ] as const) {
+    test(`the ring tile matches the display frame's, in ${theme}`, async ({ page, browser, browserName }) => {
+      await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT.display, settings: { theme } });
+      await showLikeFrame(page, 'display');
+      const box = await page.getByRole('radio', { name: 'ring' }).boundingBox();
+      if (box === null) throw new Error('no ring tile');
+      const clip = { x: Math.floor(box.x), y: Math.floor(box.y), width: Math.ceil(box.width), height: Math.ceil(box.height) };
+      // The tile draws the track, ten fading arcs and the head, never one solid arc.
+      const shapes = await page.getByRole('radio', { name: 'ring' }).evaluate((tile) => ({ arcs: tile.querySelectorAll('path').length, circles: tile.querySelectorAll('circle').length }));
+      expect(shapes).toEqual({ arcs: 10, circles: 2 });
+      const site = await page.screenshot({ clip });
+      const diff = await diffPngs(page, site, await frameReference(browser, 'display', palette, undefined, clip));
       expectLikeFrame(diff, browserName, () => {
         expect(diff.differing, JSON.stringify(diff)).toBe(0);
       });

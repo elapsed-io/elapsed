@@ -897,13 +897,33 @@ function searchText(...parts: readonly string[]): string {
 }
 
 /** The display-mode tiles' small previews, as drawn in the display frame (56 × 32). */
+/** The ring tile's tail, from its far end to the head: each arc and its strength (the display frames' own numbers). */
+const RING_TILE_TAIL: readonly (readonly [string, string])[] = [
+  ['M37.19 8.29 A12 12 0 0 1 38.18 9.64', '0.03'],
+  ['M38.06 9.46 A12 12 0 0 1 38.88 10.93', '0.08'],
+  ['M38.79 10.74 A12 12 0 0 1 39.41 12.29', '0.15'],
+  ['M39.35 12.09 A12 12 0 0 1 39.78 13.71', '0.23'],
+  ['M39.74 13.51 A12 12 0 0 1 39.97 15.16', '0.33'],
+  ['M39.95 14.95 A12 12 0 0 1 39.98 16.63', '0.44'],
+  ['M39.99 16.42 A12 12 0 0 1 39.82 18.08', '0.57'],
+  ['M39.85 17.88 A12 12 0 0 1 39.48 19.51', '0.70'],
+  ['M39.54 19.31 A12 12 0 0 1 38.96 20.88', '0.84'],
+  ['M39.05 20.69 A12 12 0 0 1 38.29 22.18', '1.00'],
+];
+
 function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
   const { previewWidthPx: width, previewHeightPx: height } = CONFIG.design.settings.tiles;
   const root = svg(doc, 'svg', { class: 'mode-tile__preview', width, height, viewBox: `0 0 ${String(width)} ${String(height)}`, fill: 'none', 'stroke-linecap': 'round', 'aria-hidden': 'true' });
   if (mode === 'digits') {
     root.append(svg(doc, 'text', { class: 'mode-tile__digits', x: 28, y: 21, 'text-anchor': 'middle' }, ['00:00']));
   } else if (mode === 'ring') {
-    root.append(svg(doc, 'circle', { class: 'mode-tile__faint', cx: 28, cy: 16, r: 12, 'stroke-width': 3 }), svg(doc, 'path', { class: 'mode-tile__accent', d: 'M28 4 A12 12 0 0 1 39.4 19.7', 'stroke-width': 3 }));
+    // The ring itself, as both display frames draw its tile: the faint track, a short accent tail fading out
+    // toward its far end in ten arcs, and the round head.
+    root.append(
+      svg(doc, 'circle', { class: 'mode-tile__faint', cx: 28, cy: 16, r: 12, 'stroke-width': 3 }),
+      ...RING_TILE_TAIL.map(([d, opacity]) => svg(doc, 'path', { class: 'mode-tile__accent', d, 'stroke-width': 3, 'stroke-opacity': opacity, 'stroke-linecap': 'butt' })),
+      svg(doc, 'circle', { class: 'mode-tile__head', cx: 38.39, cy: 22, r: 2.2 }),
+    );
   } else {
     root.append(
       svg(doc, 'line', { class: 'mode-tile__muted', x1: 4, y1: 20, x2: 28, y2: 20, 'stroke-width': 2 }),

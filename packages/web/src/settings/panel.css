@@ -468,6 +468,10 @@
     stroke: var(--color-accent);
   }
 
+  .mode-tile__head {
+    fill: var(--color-accent);
+  }
+
   .mode-tile__muted {
     stroke: var(--color-muted);
   }
