@@ -94,3 +94,5 @@ export type { BrowserFamily, CrashReport } from './crash.ts';
 // this index, so the first visit never loads them: the checker loads only with
 // the editor (plan, Loading and performance > Custom CSS).
 export { utf8Bytes } from './utf8.ts';
+export { longSessionReplayExtraMs, replayLengthMs } from './replay.ts';
+export type { ReplayTiming } from './replay.ts';

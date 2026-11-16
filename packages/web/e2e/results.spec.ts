@@ -6,10 +6,10 @@
 
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { BRAND } from '@stopwatch/core';
+import { BRAND, CONFIG, createSession, serializeActiveState, startState } from '@stopwatch/core';
 import { PAPER, endingFrame, inPalette, resultsRingFrame, resultsStripFrame } from './fixtures/frames.ts';
 import type { ResultsData } from './fixtures/frames.ts';
-import { MINUTE, SECOND, TIMER_END, compareWithReference, endThroughCountdown, finishResults, freezeAnimations, openApp, settle, untilEndNowAccepts } from './helpers.ts';
+import { MINUTE, SECOND, T0, TIMER_END, compareWithReference, endThroughCountdown, finishResults, freezeAnimations, openApp, settle, untilEndNowAccepts } from './helpers.ts';
 import { expectLikeFrame } from './pixels.ts';
 
 // Clock times as in the frames: a 24-hour region, in UTC.
@@ -101,6 +101,58 @@ test('results for ring match the "results: analog and ring" frame exactly', asyn
   expectLikeFrame(diff, browserName, () => {
     expect(diff).toMatchObject({ differing: 0 });
   });
+});
+
+/** The results screen's own animations: what each moves, for how long, on which curve, and when it starts. */
+function resultsMotion(page: Page): Promise<{ moves: string; duration: number; easing: string; start: number }[]> {
+  return page.locator('.results').evaluate((results) =>
+    results.getAnimations().map((animation) => {
+      const effect = animation.effect as KeyframeEffect;
+      const moves = Object.keys(effect.getKeyframes()[0] ?? {})
+        .filter((key) => !['offset', 'easing', 'composite', 'computedOffset'].includes(key))
+        .sort()
+        .join(' ');
+      return { moves, duration: Number(effect.getTiming().duration), easing: String(effect.getTiming().easing), start: Number(animation.startTime) };
+    }),
+  );
+}
+
+const FAST = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+for (const [mode, duration] of [
+  ['digits', 1400],
+  ['ring', 2000],
+  ['timeline', 2000],
+] as const) {
+  test(`${mode} replays for its own ${String(duration / 1000)} s on the fast ease-out, after a quicker fade-in`, async ({ page }) => {
+    await openApp(page, { width: 720, height: 520, mode });
+    await primary(page).click();
+    await page.clock.runFor(20 * MINUTE);
+    await endThroughCountdown(page);
+    await page.locator('.results[data-ready]').waitFor();
+    const motion = await resultsMotion(page);
+    const appear = motion.find((animation) => animation.moves === 'opacity transform');
+    const replay = motion.find((animation) => animation.moves === '--replay-progress');
+    // Results fade in over 0.3 s from 0.3 s, rising 6 px; the replay starts at 0.5 s.
+    expect(appear).toMatchObject({ duration: CONFIG.motion.resultsFadeIn, easing: FAST });
+    expect(replay).toMatchObject({ duration, easing: FAST });
+    expect((replay?.start ?? 0) - (appear?.start ?? 0)).toBeCloseTo(CONFIG.motion.replayDelay - CONFIG.motion.resultsFadeInDelay, 3);
+  });
+}
+
+test('a session over 2 hours replays longer: 8 hours of ring, 1 s more', async ({ page }) => {
+  const HOUR = 60 * MINUTE;
+  const session = createSession({ id: '5b8e2c1d-4a6f-4e9b-8c3d-2e1f0a9b8c7d', mode: 'ring', at: T0 - 8 * HOUR, timeZone: 'UTC' });
+  await page.goto('/sw-control.json');
+  await page.evaluate((text) => {
+    localStorage.setItem('timer.active', text);
+  }, serializeActiveState({ ...startState(session), presenceAt: T0 - 10 * MINUTE }));
+  await openApp(page, { width: 720, height: 520, mode: 'ring' });
+  await endThroughCountdown(page);
+  await page.locator('.results[data-ready]').waitFor();
+  const replay = (await resultsMotion(page)).find((animation) => animation.moves === '--replay-progress');
+  // 2 s for ring, 0.5 s × log2(8 ÷ 2) more (the session ran a few seconds past 8 hours).
+  expect(replay?.duration).toBeCloseTo(3000, -1);
 });
 
 test('timeline replays as the focus strip too', async ({ page }) => {

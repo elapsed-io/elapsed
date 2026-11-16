@@ -79,12 +79,12 @@
   /*
    * Paused or waiting for a check-in: the whole display (time and graphics) is held behind a blur, as the
    * frames draw it: blurred 10 px at 40 %. The blur never animates (plan, Performance: the seconds
-   * blur-away is the only animated blur). The blurred state fades in and out over 0.2 s through a veil
+   * blur-away is the only animated blur). The blurred state fades in and out over 180 ms through a veil
    * whose own blur is fixed and only whose opacity moves (time-display.ts); at rest, the display carries
    * the blur itself. The veil reaches well past the display, so the blur's soft edge is never cut.
    */
   .time-stack__body {
-    transition: opacity var(--motion-morph) var(--ease-standard);
+    transition: opacity var(--motion-fade) var(--ease-standard);
   }
 
   .time-stack__body--held {
@@ -117,14 +117,14 @@
     opacity: 0;
     visibility: hidden;
     transition:
-      opacity var(--motion-morph) var(--ease-standard),
-      visibility 0s linear var(--motion-morph);
+      opacity var(--motion-fade) var(--ease-standard),
+      visibility 0s linear var(--motion-fade);
   }
 
   .overlay--shown {
     opacity: 1;
     visibility: visible;
-    transition: opacity var(--motion-morph) var(--ease-standard);
+    transition: opacity var(--motion-fade) var(--ease-standard);
   }
 
   .check-in__text {

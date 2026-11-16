@@ -39,6 +39,7 @@ export function createRingMode(): DisplayMode {
 
   return {
     id: 'ring',
+    replayTiming: CONFIG.modes.ring.replay,
     mount(element: HTMLElement, context: DisplayContext) {
       root = element;
       shown = '';

@@ -9,9 +9,11 @@
  * hidden until accounts exist (owner decision, 2026-11-15).
  *
  * Timing, from the moment the tabulating screen is complete: results fade in
- * over 0.5 s from 0.5 s, rising 8 px; the replay starts at 0.8 s and runs
- * 2.4 s, starting quickly and settling gently. Every duration is scaled by
- * --motion-scale (Release 2's animation speed).
+ * over 0.3 s from 0.3 s, rising 6 px, on the interface's fast ease-out; the
+ * replay starts at 0.5 s and runs the mode's own length on its own curve
+ * (DisplayMode.replayTiming), longer for sessions over 2 hours (core,
+ * replay.ts). Every duration is scaled by --motion-scale (Release 2's
+ * animation speed).
  *
  * The replay is one animation of one registered custom property,
  * --replay-progress, from 0 to 1 (plan, Principles: the one exception). The
@@ -22,8 +24,8 @@
  */
 
 import './results.css';
-import { BRAND, CONFIG, durationParts, summarise } from '@stopwatch/core';
-import type { Session, SessionSummary } from '@stopwatch/core';
+import { BRAND, CONFIG, durationParts, replayLengthMs, summarise } from '@stopwatch/core';
+import type { ReplayTiming, Session, SessionSummary } from '@stopwatch/core';
 import { html } from '../dom.ts';
 import { iconElement } from '../icons/icon-element.ts';
 import type { DisplayMode } from '../modes/contract.ts';
@@ -170,7 +172,7 @@ export class ResultsScreen {
     this.element.hidden = false;
 
     await mode.replay(graphic, session);
-    this.#time(time, session, summary, timing);
+    this.#time(time, session, summary, timing, mode.replayTiming);
     this.element.classList.remove('results--preparing');
     // Everything is drawn and timed (tests and custom CSS can rely on it).
     this.element.dataset['ready'] = '';
@@ -190,7 +192,7 @@ export class ResultsScreen {
     this.#retry = null;
   }
 
-  #time(time: HTMLElement, session: Session, summary: SessionSummary, timing: ResultsTiming): void {
+  #time(time: HTMLElement, session: Session, summary: SessionSummary, timing: ResultsTiming, replayTiming: ReplayTiming): void {
     const replayed = (): void => {
       this.element.dataset['replayed'] = '';
     };
@@ -202,9 +204,9 @@ export class ResultsScreen {
     }
     const scale = motionScale(this.#doc);
     const view = this.#doc.defaultView ?? window;
-    const smoothstep = view.getComputedStyle(this.#doc.documentElement).getPropertyValue('--ease-smoothstep').trim() || 'ease-in-out';
+    const easing = view.getComputedStyle(this.#doc.documentElement).getPropertyValue('--ease-standard').trim() || 'ease-out';
     const appear = reducedMotion
-      ? { delay: motion.tabulatingHold, duration: motion.startMorph, keyframes: [{ opacity: 0 }, { opacity: 1 }] }
+      ? { delay: motion.tabulatingHold, duration: motion.fade, keyframes: [{ opacity: 0 }, { opacity: 1 }] }
       : {
           delay: motion.resultsFadeInDelay,
           duration: motion.resultsFadeIn,
@@ -214,7 +216,7 @@ export class ResultsScreen {
           ],
         };
     for (const element of [this.element, ...this.#options.companions]) {
-      const animation = element.animate(appear.keyframes, { duration: appear.duration * scale, easing: smoothstep, fill: 'backwards' });
+      const animation = element.animate(appear.keyframes, { duration: appear.duration * scale, easing, fill: 'backwards' });
       animation.startTime = start + appear.delay * scale;
     }
     if (reducedMotion || !canReplay()) {
@@ -228,8 +230,8 @@ export class ResultsScreen {
     }
     // The replay: one property, from 0 to 1. Everything that moves is calculated from it.
     const replay = this.element.animate([{ '--replay-progress': 0 }, { '--replay-progress': 1 }], {
-      duration: motion.replayDuration * scale,
-      easing: `cubic-bezier(${motion.replayEasing.join(', ')})`,
+      duration: replayLengthMs(replayTiming, summary.elapsedMs) * scale,
+      easing: `cubic-bezier(${replayTiming.easing.join(', ')})`,
       fill: 'both',
     });
     replay.startTime = start + motion.replayDelay * scale;

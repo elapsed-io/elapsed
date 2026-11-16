@@ -36,7 +36,7 @@
     position: absolute;
     inset: 0;
     transform: rotate(var(--ring-angle, 0deg));
-    transition: transform var(--motion-morph) var(--ease-standard);
+    transition: transform var(--motion-fade) var(--ease-standard);
   }
 
   /* From the tail's far end (transparent) to the head (the accent), over --ring-tail degrees. */

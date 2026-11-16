@@ -1,7 +1,7 @@
 /**
  * The start / pause / resume and end buttons (plan, Decisions > Controls;
  * Design system > Motion: "Start morphs into pause and end fades in to its
- * right, over 200 ms").
+ * right, over 160 ms with a slight spring").
  *
  * The primary button keeps one element, so keyboard focus survives the morph.
  * It holds one face per label; the active face sets its width and the others

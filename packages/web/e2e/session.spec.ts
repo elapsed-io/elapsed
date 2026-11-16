@@ -207,3 +207,19 @@ test('a seconds digit that has blurred away stays away: it never starts over at 
     expect(time).toBeLessThan(23_000);
   }
 });
+
+test('start morphs into pause over 160 ms with a slight spring', async ({ page }) => {
+  await openApp(page);
+  await page.locator('.button--primary').click();
+  const faces = await page.locator('.button__face--pause').evaluate((face) => {
+    const style = getComputedStyle(face);
+    return { duration: style.transitionDuration, easing: style.transitionTimingFunction };
+  });
+  expect(faces.duration.split(', ')[0]).toBe('0.16s');
+  // A damped spring drawn through linear(): it passes 1 a little before settling there.
+  expect(faces.easing.startsWith('linear(0')).toBe(true);
+  const points = [...faces.easing.matchAll(/(-?[\d.]+)(?:\s+[\d.]+%)?/g)].map((match) => Number(match[1]));
+  expect(Math.max(...points)).toBeGreaterThan(1);
+  expect(Math.max(...points)).toBeLessThan(1.05);
+  expect(points.at(-1)).toBe(1);
+});

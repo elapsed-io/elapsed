@@ -141,13 +141,15 @@ export function designCustomProperties(): CustomProperties {
     '--results-fade': scaled(motion.resultsFadeIn),
     '--results-rise': px(motion.resultsRisePx),
     '--replay-delay': scaled(motion.replayDelay),
-    '--replay-duration': scaled(motion.replayDuration),
-    '--ease-replay': `cubic-bezier(${motion.replayEasing.join(', ')})`,
     '--copied-confirmation': ms(motion.copiedConfirmation),
     '--font-block': ms(CONFIG.settings.fontBlockMax),
 
     '--motion-morph': scaled(motion.startMorph),
+    '--motion-fade': scaled(motion.fade),
+    '--motion-control': scaled(motion.control),
     '--ease-standard': `cubic-bezier(${motion.standardEasing.join(', ')})`,
+    // The start morph's slight spring; where CSS has no linear() easing, the standard ease-out (springBlock).
+    '--ease-spring': 'var(--ease-standard)',
     '--ease-smoothstep': SMOOTHSTEP,
     '--held-blur': px(motion.heldBlurPx),
     '--held-opacity': String(motion.heldOpacity),
@@ -175,7 +177,7 @@ function block(selector: string, properties: CustomProperties): string {
  * crossfade as its window ends, and the time re-centres in one step.
  */
 function blurAwayKeyframes(): string {
-  const { blurAwayOpacityStart, blurAwayWidthStart, onesBlurWindow, tensBlurWindow, startMorph } = CONFIG.motion;
+  const { blurAwayOpacityStart, blurAwayWidthStart, onesBlurWindow, tensBlurWindow, blurAwayFade } = CONFIG.motion;
   const onesLength = onesBlurWindow.end - onesBlurWindow.start;
   const tensLength = tensBlurWindow.end - tensBlurWindow.start;
   const fadeFrom = percent(blurAwayOpacityStart);
@@ -183,7 +185,7 @@ function blurAwayKeyframes(): string {
   const shift = (name: string, variable: string): string =>
     `  @keyframes ${name} {\n    0% { transform: translateX(0); }\n    ${shiftFrom} { transform: translateX(0); animation-timing-function: ${SMOOTHSTEP}; }\n    100% { transform: translateX(var(${variable})); }\n  }`;
   const cut = (name: string, length: number): string =>
-    `  @keyframes ${name} {\n    0% { opacity: 1; }\n    ${percent(1 - startMorph / length)} { opacity: 1; }\n    100% { opacity: 0; }\n  }`;
+    `  @keyframes ${name} {\n    0% { opacity: 1; }\n    ${percent(1 - blurAwayFade / length)} { opacity: 1; }\n    100% { opacity: 0; }\n  }`;
   const jump = (name: string, variable: string): string =>
     `  @keyframes ${name} {\n    0%, 99.99% { transform: translateX(0); }\n    100% { transform: translateX(var(${variable})); }\n  }`;
   return [
@@ -208,7 +210,7 @@ function narrowBlock(): string {
 }
 
 /** Durations scaled by --motion-scale, registered as times so script reads them resolved ("0.2s"). */
-export const SCALED_DURATIONS = ['--motion-morph', '--tabulating-hold', '--tabulating-fade', '--results-fade-delay', '--results-fade', '--replay-delay', '--replay-duration'] as const;
+export const SCALED_DURATIONS = ['--motion-morph', '--motion-fade', '--motion-control', '--tabulating-hold', '--tabulating-fade', '--results-fade-delay', '--results-fade', '--replay-delay'] as const;
 
 function registeredProperties(): string {
   const time = SCALED_DURATIONS.map((name) => `@property ${name} {\n  syntax: "<time>";\n  inherits: true;\n  initial-value: 0s;\n}`);
@@ -216,12 +218,34 @@ function registeredProperties(): string {
 }
 
 /** The generated stylesheet: design tokens and keyframes in `base`, the default theme in `theme`. */
+/**
+ * The start morph's slight spring as CSS linear() points: a damped spring (CONFIG.motion.spring) that
+ * overshoots a little and settles by the end, which then lands exactly on 1.
+ */
+export function springEasing(): string {
+  const { dampingRatio: zeta, settle, points } = CONFIG.motion.spring;
+  const omega = settle / zeta;
+  const root = Math.sqrt(1 - zeta * zeta);
+  const values = Array.from({ length: points + 1 }, (_, i) => {
+    if (i === points) return 1;
+    const t = i / points;
+    const x = 1 - Math.exp(-settle * t) * (Math.cos(omega * root * t) + (zeta / root) * Math.sin(omega * root * t));
+    return Math.round(x * 10_000) / 10_000;
+  });
+  return `linear(${values.map(String).join(', ')})`;
+}
+
+/** The spring where the browser has CSS linear() easing (and so Web Animations accept it too). */
+function springBlock(): string {
+  return `  @supports (transition-timing-function: linear(0, 1)) {\n${block(':root', { '--ease-spring': springEasing() }).replace(/^/gm, '  ')}\n  }`;
+}
+
 export function renderTokensCss(): string {
   const theme = deriveTheme(getPreset(DEFAULT_PRESET_ID));
   return [
     '/* Generated from packages/core/src/config.ts and packages/web/src/theme at build time. */',
     registeredProperties(),
-    `@layer base {\n${block(':root', designCustomProperties())}\n${narrowBlock()}\n${blurAwayKeyframes()}\n}`,
+    `@layer base {\n${block(':root', designCustomProperties())}\n${narrowBlock()}\n${springBlock()}\n${blurAwayKeyframes()}\n}`,
     `@layer theme {\n${block(':root', themeCustomProperties(theme))}\n}`,
     '',
   ].join('\n');

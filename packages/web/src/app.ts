@@ -226,11 +226,11 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       setScreen('ending');
       start = currentTime();
       // The tabulating screen holds, then fades out (plan, Motion).
-      const { tabulatingHold, tabulatingFadeOut, startMorph } = CONFIG.motion;
+      const { tabulatingHold, tabulatingFadeOut, fade: fadeDuration } = CONFIG.motion;
       const scale = motionScale(doc);
       const fade = ending.element.animate([{ opacity: 1 }, { opacity: 0 }], {
-        duration: (reducedMotion() ? startMorph : tabulatingFadeOut) * scale,
-        easing: smoothstep(),
+        duration: (reducedMotion() ? fadeDuration : tabulatingFadeOut) * scale,
+        easing: standardEasing(),
         fill: 'forwards',
       });
       fade.startTime = start + tabulatingHold * scale;
@@ -576,7 +576,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     return typeof time === 'number' ? time : 0;
   }
 
-  function smoothstep(): string {
-    return win.getComputedStyle(doc.documentElement).getPropertyValue('--ease-smoothstep').trim() || 'ease-in-out';
+  function standardEasing(): string {
+    return win.getComputedStyle(doc.documentElement).getPropertyValue('--ease-standard').trim() || 'ease-out';
   }
 }

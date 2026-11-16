@@ -4,7 +4,7 @@
  * digits is built through it, not as a special case.
  */
 
-import type { SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
+import type { ReplayTiming, SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
 
 /**
  * What a mode reads from the site. The site owns this object and may change
@@ -23,6 +23,12 @@ export type ModeEvent = { readonly type: 'milestone.hour'; readonly payload: Tim
 
 export interface DisplayMode {
   readonly id: string;
+  /**
+   * The results replay's own length and curve at normal speed (plan, Design system > Motion). The results
+   * screen starts it after the shared delay, lengthens it for long sessions (core, replay.ts) and scales it
+   * by the animation speed.
+   */
+  readonly replayTiming: ReplayTiming;
   mount(root: HTMLElement, context: DisplayContext): void;
   /** Called only when the visible value changes. */
   render(view: TimerView): void;

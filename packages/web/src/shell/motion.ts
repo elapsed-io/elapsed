@@ -18,8 +18,8 @@ export function readMotion(doc: Document): Motion {
   const parsed = raw.endsWith('ms') ? Number.parseFloat(raw) : raw.endsWith('s') ? Number.parseFloat(raw) * 1000 : Number.NaN;
   return {
     reduced: view?.matchMedia('(prefers-reduced-motion: reduce)').matches ?? false,
-    duration: Number.isFinite(parsed) && parsed >= 0 ? parsed : 200,
-    easing: style?.getPropertyValue('--ease-standard').trim() || 'ease-out',
+    duration: Number.isFinite(parsed) && parsed >= 0 ? parsed : 160,
+    easing: style?.getPropertyValue('--ease-spring').trim() || 'ease-out',
   };
 }
 
