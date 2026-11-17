@@ -7,8 +7,9 @@ when the run stops; questions for the owner are collected below as they come up.
 
 Latest: changes 5 (2026-11-17). Rounds 2.8 (focus view, notices and fullscreen; the redesigned analog; ambient
 idle screens; replays that never stall) and 2.9 (interstellar as a recipe, behind the test-modes switch) are
-built, checked in all three browsers and pushed. Next is round 2.10, the layout editor and each mode's replaceable
-art.
+built, checked in all three browsers and pushed. The run stopped before round 2.10 (the layout editor, background
+images and each mode's replaceable art): what Release 2's users would see there is not settled by the frames or
+the plan (question 27).
 
 **Round 2.9, interstellar (changes 5, item 3)**
 
@@ -79,7 +80,7 @@ art.
   Proxima Centauri wait for accounts (Release 4).
 - Nothing was deployed, merged into Release 1, released, or changed on Cloudflare or GitHub settings.
 
-**Questions waiting for you:** 13 to 26 below, each built one way meanwhile. From round 2.8: the crown's dip
+**Questions waiting for you:** 27 first (round 2.10 waits on it); 13 to 26 below, each built one way meanwhile. From round 2.8: the crown's dip
 hidden by the countdown on E, the dial red on the eight other themes, focus view in figure modes, the tap that
 reveals hidden controls, fullscreen after a resume, the seconds hand when seconds never show, the outline's 2 s,
 the focus frames' 13 px, "change" dismissing the tip, and the depth line behind the display settings. From round
@@ -168,8 +169,8 @@ Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 an
 round 2.7 (decisions 327 to 330) and 2.8. Answered in changes 4: 1 (the hours hand glides, as built), 3 (CC0 for
 the placeholder art and slot templates), 10 (crossfade by stacked copies) and 11 (random arrivals now); built in
 decisions 332 to 334. Answered in changes 5 (2026-11-17): 12 (version 1 stays open until Release 2's public
-release; decision 338). Open: 13 to 22, from round 2.8, and 23 to 26, from round 2.9; each is built one way
-meanwhile and is easy to change.
+release; decision 338). Open: 13 to 22, from round 2.8, and 23 to 26, from round 2.9, each built one way meanwhile
+and easy to change; and 27, on which round 2.10 waits.
 
 1. **The analog hours hand (round 2.2).** The analog frame draws the hours subdial's hand at the whole hour
    (30° at 1 h 24 min). The plan's rule that anything moving with time glides puts it at 42°, which is what
@@ -273,3 +274,15 @@ meanwhile and is easy to change.
 26. **The Oort cloud and Proxima Centauri.** The plan keeps them for accounts' accumulated distance (Release 4);
     a guest's 16-hour session reaches about 116 AU, just short of the heliopause at 120. Nothing is drawn for
     them yet. (No action needed unless you want a hint of what lies beyond.)
+27. **Round 2.10 needs frames or answers before it starts (the run stopped here).** The canvas has one frame for
+    it, "layout editor: imported background, rotated timer, buttons moved" (in "later releases": the free-form
+    editor's toolbar, its dashed selection with corner handles, the rotate handle and its angle tag), which round
+    2.10 builds but keeps switched off until Release 3. Nothing settles what Release 2's users actually see:
+    (a) the preset positions everyone uses until the unlock: which presets each layer has (the time, the buttons,
+    the corner icons), and how they are chosen (in settings, or in the editor with snapping); (b) how customize
+    mode is entered: a settings row (which category), the long press on phones and what shows while pressing;
+    (c) hiding and reordering layers: a layer list, or per-layer controls in the toolbar; (d) background images:
+    where the import lives (the editor's "background" button, the display settings, or both), how a picked image
+    is placed and cropped, and how it is removed; (e) each mode's replaceable art: where its slots are listed, the
+    template download, and what a refused file says. Which of these should I build from the plan's words alone,
+    and which wait for frames?
