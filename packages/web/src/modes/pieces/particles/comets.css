@@ -1,0 +1,35 @@
+/* Comets (comets.ts): drawn in the scene's reference pixels, scaled like the time, as the paused frame draws them. */
+@layer mode {
+  .comets {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .comets__box {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+  }
+
+  .comet {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+  }
+
+  .comet__tail {
+    position: absolute;
+    left: 0;
+    border-radius: var(--comet-tail-radius);
+    transform-origin: 0 50%;
+  }
+
+  .comet__head {
+    position: absolute;
+    border-radius: 50%;
+  }
+}

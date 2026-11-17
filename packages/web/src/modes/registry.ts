@@ -18,6 +18,7 @@ const LOADERS: Readonly<Record<string, () => Promise<DisplayModeFactory>>> = {
   height: async () => (await import('./built-in/height.ts')).createHeightMode,
   tree: async () => (await import('./built-in/tree.ts')).createTreeMode,
   calendar: async () => (await import('./built-in/calendar.ts')).createCalendarMode,
+  interstellar: async () => (await import('./built-in/interstellar.ts')).createInterstellarMode,
 };
 
 export interface RegisteredMode {

@@ -58,7 +58,7 @@ export interface ReplaySurface {
 }
 
 /** The results card's layouts a replay may draw into (each as its frame draws it). */
-export type ReplayLayout = 'strip' | 'ring' | 'chart' | 'figure';
+export type ReplayLayout = 'strip' | 'ring' | 'chart' | 'figure' | 'map';
 
 /**
  * Events a mode may react to. Release 3 adds record.passed; round 4 adds checkin.due. `end.pressed` comes the
@@ -77,9 +77,16 @@ export interface DisplayMode {
   /**
    * How the results card is laid out around the replay's graphic (decision 302): `strip` (a strip over the
    * stats: digits, timeline), `ring` (the rings beside the stats: ring, analog), `chart` (a profile chart over
-   * the stats, 16 px apart: ocean depth, height) or `figure` (a drawing over the stats, 10 px apart: tree).
+   * the stats, 16 px apart: ocean depth, height), `figure` (a drawing over the stats, 10 px apart: tree) or `map`
+   * (a map over the stats, 14 px apart, on space from edge to edge: interstellar).
    */
   readonly replayLayout: ReplayLayout;
+  /**
+   * What the headline counts by while the replay runs: `session` (default), through the whole session so it rises
+   * only while the replay passes focus; `focus`, evenly with the replay, for a replay that draws distance by
+   * focused time only (interstellar), so the count never stalls while the journey moves.
+   */
+  readonly replayCounts?: 'session' | 'focus';
   mount(root: HTMLElement, context: DisplayContext): void;
   /** Called only when the visible value changes. */
   render(view: TimerView): void;

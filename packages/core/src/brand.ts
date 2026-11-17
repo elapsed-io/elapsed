@@ -118,6 +118,7 @@ export const BRAND = {
       height: 'height',
       tree: 'tree',
       calendar: 'perpetual calendar',
+      interstellar: 'interstellar',
     },
     ocean: {
       depth: '{depth} m',
@@ -186,6 +187,23 @@ export const BRAND = {
       side: 'a tree cycling through the seasons',
       isometric: 'an isometric tree on a grassy field, cycling through the seasons',
       replay: 'tree replay: the tree grows and cycles through the seasons of the session',
+    },
+    interstellar: {
+      /** The bodies on the map (the frames' own names); Earth, where the trip starts, is never named on it. */
+      bodies: {
+        earth: 'earth',
+        mars: 'mars',
+        jupiter: 'jupiter',
+        saturn: 'saturn',
+        uranus: 'uranus',
+        neptune: 'neptune',
+        pluto: 'pluto',
+        kuiper: 'kuiper belt edge',
+        'termination-shock': 'termination shock',
+        heliopause: 'heliopause',
+      },
+      /** The results map, read on request (the frame's own words). */
+      map: 'journey outward from the sun at light speed',
     },
     themes: {
       graphite: 'graphite',
@@ -310,6 +328,12 @@ export const BRAND = {
         help: 'cleaned when saved: @import, @font-face and outside links are removed. stays on this device.',
         removed: 'cleaned when saved: what isn’t allowed was removed, and the rest is kept. stays on this device.',
         tooLarge: 'that is over {size}. it was not saved.',
+      },
+      /** The test-modes switch (the Release 2 advanced frame) and the note under the tiles while it is on. */
+      testModes: {
+        label: 'test modes',
+        help: 'early modes that may change or disappear. shown after opening elapsed with ?test=interstellar.',
+        note: 'interstellar appears only while test modes are on.',
       },
       safeMode: {
         label: 'safe mode',

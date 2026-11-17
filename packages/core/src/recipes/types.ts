@@ -209,7 +209,10 @@ export interface ParticlesLayer extends LayerBase {
 }
 export interface StarfieldLayer extends LayerBase {
   readonly type: 'starfield';
+  /** The sky: a star catalog (or a ready-drawn field). */
   readonly slot: string;
+  /** A catalog shown while the sky stands still (the frames' own); the whole sky shows while it turns. */
+  readonly view?: string;
   readonly magnitudeMax?: number;
   readonly projection?: { readonly type?: 'gnomonic' | 'equirectangular'; readonly ra?: number; readonly dec?: number; readonly pxPerDegree?: number };
   readonly radius?: { readonly min?: number; readonly at0?: number; readonly perMagnitude?: number };

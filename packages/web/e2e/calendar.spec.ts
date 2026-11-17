@@ -34,23 +34,6 @@ const close = (actual: number, expected: number): void => {
   expect(Math.abs(actual - expected)).toBeLessThan(1e-3);
 };
 
-test('its tile shows only when asked for with ?test=calendar', async ({ page }) => {
-  await openApp(page, { width: 1280, height: 800 });
-  const openDisplay = async (): Promise<void> => {
-    await page.keyboard.press(',');
-    await page.locator('.settings').waitFor();
-    const display = page.locator('.settings__row', { hasText: /^display$/ });
-    if ((await display.getAttribute('aria-expanded')) !== 'true') await display.click();
-  };
-  await openDisplay();
-  await expect(page.getByRole('radio', { name: 'perpetual calendar' })).toHaveCount(0);
-  await page.goto('/?test=calendar');
-  await page.locator('.button--primary').waitFor();
-  await openDisplay();
-  await page.getByRole('radio', { name: 'perpetual calendar' }).click();
-  await expect(page.locator('.screen')).toHaveAttribute('data-mode', 'calendar');
-});
-
 test('its calendar steps a day a focused minute through months of their own lengths, and its moon is the date’s', async ({ page }) => {
   // 59 focused minutes: Thursday 29 February 2024, a leap year.
   await restoreAt(page, 59 * MINUTE + 30 * SECOND);

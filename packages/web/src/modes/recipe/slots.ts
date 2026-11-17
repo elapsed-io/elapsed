@@ -59,6 +59,11 @@ export class Slots {
     return this.#sources.data?.[this.key(id)]?.();
   }
 
+  /** A data slot's value that may load first (a whole star catalog, loaded only when the sky turns). */
+  async load(id: string): Promise<unknown> {
+    return await this.#sources.data?.[this.key(id)]?.();
+  }
+
   async #image(key: string): Promise<void> {
     if (key === '' || ART.has(key)) return;
     const prefix = Object.keys(this.#sources.art ?? {})

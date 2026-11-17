@@ -23,3 +23,54 @@
     fill: var(--height-star-warm);
   }
 }
+
+/* A projected sky (sky.ts): the still view and the strip that turns while paused, crossfading over 2 s. */
+@layer mode {
+  .sky,
+  .sky__turning {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .sky__box {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+  }
+
+  .sky__still {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transition: opacity var(--sky-crossfade) ease-in-out;
+  }
+
+  .sky__turning {
+    overflow: visible;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--sky-crossfade) ease-in-out,
+      visibility 0s linear var(--sky-crossfade);
+  }
+
+  .sky__strip {
+    position: absolute;
+    top: 0;
+    will-change: transform;
+  }
+
+  .sky--turning .sky__still {
+    opacity: 0;
+  }
+
+  .sky--turning .sky__turning {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--sky-crossfade) ease-in-out;
+  }
+}

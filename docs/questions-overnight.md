@@ -1,13 +1,38 @@
-# Overnight: Release 2, rounds 2.1 to 2.8
+# Overnight: Release 2, rounds 2.1 to 2.9
 
 Working unattended on `claude/release-2` (owner, 2026-11-16 evening). The morning summary goes at the top
 when the run stops; questions for the owner are collected below as they come up.
 
 ## Morning summary
 
-Latest: changes 5 (2026-11-17). Round 2.8 (focus view, notices and fullscreen; the redesigned analog; ambient
-idle screens; replays that never stall) is built, checked in all three browsers and pushed. Next is round 2.9,
-interstellar as a recipe with the test-modes switch.
+Latest: changes 5 (2026-11-17). Rounds 2.8 (focus view, notices and fullscreen; the redesigned analog; ambient
+idle screens; replays that never stall) and 2.9 (interstellar as a recipe, behind the test-modes switch) are
+built, checked in all three browsers and pushed. Next is round 2.10, the layout editor and each mode's replaceable
+art.
+
+**Round 2.9, interstellar (changes 5, item 3)**
+
+- **Test modes:** opening the site once with `?test=interstellar` offers a "test modes" switch in advanced
+  settings (the Release 2 advanced frame), off by default; on, interstellar's and the perpetual calendar's tiles
+  show with the note; off while one is chosen falls back to digits. Kept on the device only; nothing else in the
+  address is read.
+- **The map, as the frames draw it:** the Sun fixed near the bottom left, the traveller at light speed (0.12024 AU
+  a focused minute from Earth's orbit) about 85 % along the path, the camera pulling back as it goes; orbit rings
+  fading below a few pixels; each landmark drawn as itself once reached (Earth, Mars, Jupiter, Saturn, Uranus,
+  Neptune, Pluto, the Kuiper belt edge, the termination shock, the heliopause), fading as its orbit shrinks, Earth
+  folding into the Sun's glow, names only 70 px clear of the next. It glides continuously (steps with low power),
+  and blurs as one while paused with the sky sharp.
+- **The sky:** the canvas's own catalog (Orion, Taurus with the Pleiades and Hyades, Gemini, Sirius, Procyon) as
+  the frames draw it; while paused the whole sky turns once in 6 minutes from the HYG catalog to magnitude 5
+  (CC BY-SA, derived reproducibly, licence in its own folder), crossfading from the still view.
+- **Comets** while paused and on the results, about one every 5 s, at most two, tails away from the Sun.
+- **Results:** the journey replayed on space from edge to edge, the camera pulling back, the distance line counting,
+  the headline counting by focused time so nothing stalls; drawn as the "results: interstellar" frame as it lands.
+- **Recipe:** built directly as `docs/recipes/recipes/interstellar.json`; version 1 gains one optional field (a
+  starfield's still `view`), and the pieces' meanings the frames fixed are written down in `mode-recipes.md`.
+- **Where the frames disagreed or could not be matched exactly:** the paused frame's line says "past jupiter"
+  where its map has passed Saturn (built: "past saturn", question 25); Jupiter's bands and the results route differ
+  from the frames by a few anti-aliased pixels (decisions 358, 365).
 
 **Round 2.8, from your changes 5**
 
@@ -35,6 +60,11 @@ interstellar as a recipe with the test-modes switch.
 
 **Test results**
 
+- Round 2.9: `npm run check` (768 unit tests; core JavaScript 47.8 KB of 50 KB; interstellar 17.7 KB of code and
+  17.5 KB of art); the reference image in Chromium, Firefox and WebKit: 990 passed, 18 skipped as declared, 0
+  failed. The first reference run failed the seven interstellar frame comparisons in Chromium on text
+  anti-aliasing (decision 367) and one WebKit page that never finished loading; both passed on rerun before the
+  clean run.
 - Round 2.8: `npm run check` (736 unit tests; core JavaScript 44.6 KB of 50 KB); the reference image in Chromium,
   Firefox and WebKit: 936 passed, 18 skipped as declared, 0 failed (after three races the earlier reference runs
   showed were closed in the tests, decision 349).
@@ -44,13 +74,17 @@ interstellar as a recipe with the test-modes switch.
 
 **Skipped and why**
 
-- In the Release 2 display frame but later rounds: the interstellar tile (2.9) and picture-in-picture (2.11).
+- In the Release 2 display frame but a later round: picture-in-picture (2.11).
+- Not built until you say: a credit line for the HYG star data on the site (question 24); the Oort cloud and
+  Proxima Centauri wait for accounts (Release 4).
 - Nothing was deployed, merged into Release 1, released, or changed on Cloudflare or GitHub settings.
 
-**Questions waiting for you:** 13 to 22 below, each built one way meanwhile: the crown's dip hidden by the
-countdown on E, the dial red on the eight other themes, focus view in figure modes, the tap that reveals hidden
-controls, fullscreen after a resume, the seconds hand when seconds never show, the outline's 2 s, the focus
-frames' 13 px, "change" dismissing the tip, and the depth line behind the display settings.
+**Questions waiting for you:** 13 to 26 below, each built one way meanwhile. From round 2.8: the crown's dip
+hidden by the countdown on E, the dial red on the eight other themes, focus view in figure modes, the tap that
+reveals hidden controls, fullscreen after a resume, the seconds hand when seconds never show, the outline's 2 s,
+the focus frames' 13 px, "change" dismissing the tip, and the depth line behind the display settings. From round
+2.9: the paused sky's crossfade to the HYG strip, where the HYG credit shows, "past jupiter" in the paused frame,
+and the Oort cloud and Proxima Centauri (no action needed).
 
 ## Progress log
 
@@ -123,13 +157,19 @@ frames' 13 px, "change" dismissing the tip, and the depth line behind the displa
   brings it to 44.6 KB (decision 350). A selector list that a CSS insertion had split (the hidden notice showing
   on every screen) was caught by the frame tests before any commit.
 
+- Round 2.9: interstellar as a recipe behind the test-modes switch (decisions 351 to 366): the HYG catalog to
+  magnitude 5 derived reproducibly under CC BY-SA with its licence in its own folder; the canvas's own still sky
+  recovered from the frames; the camera's map, glides and blur; the bodies as art; comets; the journey replay;
+  the test-modes switch and the Release 2 advanced frame.
+
 ## Questions for the owner
 
 Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 and 9; their answers are built in
 round 2.7 (decisions 327 to 330) and 2.8. Answered in changes 4: 1 (the hours hand glides, as built), 3 (CC0 for
 the placeholder art and slot templates), 10 (crossfade by stacked copies) and 11 (random arrivals now); built in
 decisions 332 to 334. Answered in changes 5 (2026-11-17): 12 (version 1 stays open until Release 2's public
-release; decision 338). Open: 13 to 22, from round 2.8; each is built one way meanwhile and is easy to change.
+release; decision 338). Open: 13 to 22, from round 2.8, and 23 to 26, from round 2.9; each is built one way
+meanwhile and is easy to change.
 
 1. **The analog hours hand (round 2.2).** The analog frame draws the hours subdial's hand at the whole hour
    (30° at 1 h 24 min). The plan's rule that anything moving with time glides puts it at 42°, which is what
@@ -218,3 +258,18 @@ release; decision 338). Open: 13 to 22, from round 2.8; each is built one way me
 22. **The depth line behind the display settings (decision 347).** The Release 2 display frame shows "84 m ·
     sunlight zone" under the running ocean behind the panel; the ocean frames show that line only while paused,
     which is what is built.
+23. **The paused sky's turn (decision 353).** The running sky is the canvas's own 32-star catalog (as the plan says
+    and the frames draw it); the turning sky is the HYG strip, with many more stars and an equirectangular drawing
+    that departs from the still view by up to about 10 px toward the edges. Built: as a pause starts, the strip
+    starts turning from the still view's centre and the two crossfade over 2 s. Alternatives: turn the canvas
+    catalog alone (no HYG at all), or show HYG's stars on the running screen too (then the frames' sky changes).
+24. **Where the HYG credit shows (decision 353).** The derived star data carries its credit and licence inside the
+    file and in its folder's `LICENSE.md`; the site itself shows no credit yet. CC BY-SA asks for reasonable
+    attribution where the work is used: a line in the about or legal page ("star positions from the HYG database,
+    CC BY-SA 4.0"), or under interstellar's tile? Not built until you say where.
+25. **"past jupiter" in the paused frame (decision 351).** The paused frame's line reads "10.1 au travelled · past
+    jupiter" while its own map, at 11.1 AU from the Sun, has passed Saturn (and labels it); the results frame works
+    its line out ("past" the last landmark reached). Built as the results frame: "past saturn" there. Confirm.
+26. **The Oort cloud and Proxima Centauri.** The plan keeps them for accounts' accumulated distance (Release 4);
+    a guest's 16-hour session reaches about 116 AU, just short of the heliopause at 120. Nothing is drawn for
+    them yet. (No action needed unless you want a hint of what lies beyond.)

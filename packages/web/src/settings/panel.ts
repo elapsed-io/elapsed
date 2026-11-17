@@ -84,6 +84,8 @@ export interface PanelHost {
   close(): void;
   /** Asks to show system notifications, only when a notification setting is switched on. */
   requestNotifications(): Promise<NotificationAccess>;
+  /** The test-modes switch: offered on this device or not, and on or off (storage/test-modes-store.ts). */
+  readonly testModes: { readonly offered: boolean; readonly on: boolean; setOn(on: boolean): void };
 }
 
 interface Item {
@@ -119,6 +121,8 @@ export class SettingsPanel {
   readonly #reducedMotion: MediaQueryList | null;
   readonly #fontTiles = new Map<FontChoice, HTMLButtonElement>();
   #ownTile: HTMLButtonElement | null = null;
+  #modeTiles: ((mode: ModeChoice) => void) | null = null;
+  #renderModes: (() => void) | null = null;
   #fontNote: HTMLDivElement | null = null;
   #storageValue: HTMLDivElement | null = null;
   #downloadsGroup: HTMLDivElement | null = null;
@@ -499,23 +503,38 @@ export class SettingsPanel {
 
   #modes(): Item {
     const doc = this.#doc;
-    const grid = html(doc, 'div', { class: 'mode-tiles', attrs: { 'aria-label': copy.mode.label } });
-    // A test mode's tile shows only when the site was opened with ?test=<its id>, or while it is chosen.
-    const asked = new URLSearchParams(doc.defaultView?.location.search ?? '').getAll('test');
-    const chosen = this.#host.controller.current.mode;
-    const offered = MODE_CHOICES.filter((value) => !TEST_MODES.includes(value) || asked.includes(value) || chosen === value);
-    const tiles = offered.map((value) => ({
-      value,
-      element: html(doc, 'button', { class: 'mode-tile' }, [modePreview(doc, value), BRAND.copy.modes[value]]),
-    }));
-    grid.append(...tiles.map((tile) => tile.element));
-    const update = radioGroup<ModeChoice>(tiles, grid, (value) => {
-      this.#set('mode', value);
-    });
+    // The tiles re-render when the test-modes switch changes which modes are offered (refreshModes).
+    const box = html(doc, 'div', { class: 'mode-tiles-box' });
+    const render = (): void => {
+      const grid = html(doc, 'div', { class: 'mode-tiles', attrs: { 'aria-label': copy.mode.label } });
+      // A test mode's tile shows only while the test-modes switch is on (or while it is chosen).
+      const testModes = this.#host.testModes;
+      const chosen = this.#host.controller.current.mode;
+      const offered = MODE_CHOICES.filter((value) => !TEST_MODES.includes(value) || testModes.on || chosen === value);
+      const tiles = offered.map((value) => ({
+        value,
+        element: html(doc, 'button', { class: 'mode-tile' }, [modePreview(doc, value), BRAND.copy.modes[value]]),
+      }));
+      grid.append(...tiles.map((tile) => tile.element));
+      const update = radioGroup<ModeChoice>(tiles, grid, (value) => {
+        this.#set('mode', value);
+      });
+      update(chosen);
+      this.#modeTiles = update;
+      // While test modes are on, a note under the tiles says why their tiles are there (the Release 2 display frame).
+      box.replaceChildren(grid, ...(testModes.on ? [html(doc, 'div', { class: 'setting__help' }, [copy.testModes.note])] : []));
+    };
+    render();
+    this.#renderModes = render;
     this.#updates.push((settings) => {
-      update(settings.mode);
+      this.#modeTiles?.(settings.mode);
     });
-    return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.mode.label]), [grid]), search: searchText(copy.mode.label, ...MODE_CHOICES.map((value) => BRAND.copy.modes[value])) };
+    return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.mode.label]), [box]), search: searchText(copy.mode.label, ...MODE_CHOICES.map((value) => BRAND.copy.modes[value])) };
+  }
+
+  /** The test-modes switch changed which modes are offered: the tiles show it at once. */
+  refreshModes(): void {
+    this.#renderModes?.();
   }
 
   /**
@@ -986,6 +1005,18 @@ export class SettingsPanel {
     );
     const fileItem = html(doc, 'div', { class: 'setting-confirm' }, [fileRow, this.#importConfirm.element]);
 
+    // The test-modes switch: offered only once the address asked for it on this device.
+    const testModes = this.#host.testModes;
+    const testItems: Item[] = [];
+    if (testModes.offered) {
+      const testSwitch = toggle(doc, copy.testModes.label, (on) => {
+        testModes.setOn(on);
+        testSwitch.update(testModes.on);
+      });
+      testSwitch.update(testModes.on);
+      testItems.push({ element: settingRow(doc, html(doc, 'div', { class: 'setting__label' }, [copy.testModes.label]), testSwitch.element, copy.testModes.help), search: searchText(copy.testModes.label, copy.testModes.help) });
+    }
+
     const resetAll = confirmItem(doc, { ...copy.resetAll, cancel: copy.cancel, help: null }, () => {
       this.#host.controller.resetAll();
       this.#flashSaved();
@@ -995,6 +1026,7 @@ export class SettingsPanel {
       { element: css, search: searchText(copy.customCss.label, copy.customCss.help) },
       { element: safeItem, search: searchText(copy.safeMode.label, copy.safeMode.action, copy.safeMode.help) },
       { element: fileItem, search: searchText(copy.settingsFile.label, copy.settingsFile.export, copy.settingsFile.import, copy.settingsFile.help) },
+      ...testItems,
       { element: resetAll, search: searchText(copy.resetAll.label) },
     ];
   }
@@ -1186,6 +1218,15 @@ function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
       svg(doc, 'circle', { cx: 22.5, cy: 15, r: 4.5, fill: crown }),
       svg(doc, 'circle', { cx: 33.5, cy: 15, r: 4.5, fill: crown }),
       svg(doc, 'line', { class: 'mode-tile__muted', x1: 16, y1: 27.5, x2: 40, y2: 27.5, 'stroke-width': 1.5 }),
+    );
+  } else if (mode === 'interstellar') {
+    // The Release 2 display frame's interstellar tile: an accent sun in a muted orbit, a planet and two stars.
+    root.append(
+      svg(doc, 'circle', { class: 'mode-tile__head', cx: 28, cy: 16, r: 3 }),
+      svg(doc, 'ellipse', { class: 'mode-tile__muted', cx: 28, cy: 16, rx: 16, ry: 8, 'stroke-width': 1.2 }),
+      svg(doc, 'circle', { class: 'mode-tile__dot', cx: 43, cy: 18.5, r: 1.6 }),
+      svg(doc, 'circle', { class: 'mode-tile__dot', cx: 12, cy: 6, r: 0.9 }),
+      svg(doc, 'circle', { class: 'mode-tile__dot', cx: 46, cy: 5, r: 0.7 }),
     );
   } else {
     root.append(

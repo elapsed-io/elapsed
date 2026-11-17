@@ -515,6 +515,10 @@
     stroke: currentColor;
   }
 
+  .mode-tile__dot {
+    fill: currentColor;
+  }
+
   /* The chosen mode's options: a box on the page colour under the tiles (the Release 2 display frame). */
   .mode-options {
     display: flex;
@@ -1021,5 +1025,10 @@
     100% {
       opacity: 0;
     }
+  }
+
+  /* The tiles and their note re-render together (panel.ts, refreshModes); the box itself takes no place. */
+  .mode-tiles-box {
+    display: contents;
   }
 }

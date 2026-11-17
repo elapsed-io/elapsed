@@ -153,7 +153,7 @@ const COVER: Readonly<Record<(typeof BUILT_IN)[number], readonly Feature[]>> = {
     ],
   ],
   interstellar: [
-    ['light speed from Earth', (r) => r.measure.perMinute === 0.1202 && r.measure.start === 1],
+    ['light speed from Earth', (r) => Math.abs(r.measure.perMinute - (299_792_458 * 60) / 149_597_870_700) < 1e-5 && r.measure.start === 1],
     ['follow-and-zoom camera', (r) => r.camera?.type === 'follow-zoom' && r.camera.usable === 0.85],
     ['orbits fade below 6 px', (r) => first(r, 'circles').fadeBelowPx === 6],
     ['landmarks on the travel line', (r) => first(r, 'landmarks').anchor === 'path'],
@@ -162,6 +162,13 @@ const COVER: Readonly<Record<(typeof BUILT_IN)[number], readonly Feature[]>> = {
     ['paused caption with distance', (r) => r.states?.paused?.caption?.includes('{distance}') === true],
     ['test flag', (r) => r.visibility === 'test'],
     ['journey replay with the camera', (r) => r.results.view.type === 'scene' && r.results.view.camera === true],
+    // Changes 5: each landmark drawn as itself, a slot with its built-in body; bodies fade below 24 px.
+    [
+      'every body an art slot with its built-in default',
+      (r) => ['earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'kuiper', 'termination-shock', 'heliopause'].every((id) => r.slots?.some((slot) => slot.id === `space.body.${id}` && slot.kind === 'image' && slot.default === `builtin:space/${id}`) === true),
+    ],
+    ['bodies fade below 24 px', (r) => first(r, 'landmarks').fadeBelowPx === 24],
+    ['Pluto and the termination shock among the circles', (r) => [39.5, 94].every((at) => first(r, 'circles').items.some((item) => item.at === at && item.dashed === true))],
   ],
   // The perpetual calendar test mode (owner, changes 4), not in the checker: its working complications.
   calendar: [
@@ -181,8 +188,8 @@ describe('the features the plan gives each mode (recipe-check.py COVER)', () => 
   // Round 2.9 adds the tree's "your art": a four-frame season strip slot behind a sprite layer.
   it.todo('tree: your own season strip instead (round 2.10)');
 
-  it('checks the checker’s 49 features, one of them in round 2.10, and the test mode’s own', () => {
-    expect(Object.entries(COVER).reduce((sum, [id, features]) => sum + (id === 'calendar' ? 0 : features.length), 0) + 1).toBe(49);
+  it('checks the checker’s 49 features, one of them in round 2.10, interstellar’s three from changes 5, and the test mode’s own', () => {
+    expect(Object.entries(COVER).reduce((sum, [id, features]) => sum + (id === 'calendar' ? 0 : features.length), 0) + 1 - 3).toBe(49);
   });
 });
 

@@ -1,7 +1,7 @@
 /**
  * Results replays never stall (plan, Product principles; round 2.8): replays that draw time (the focus strip, the
  * rings, the profile charts) sweep evenly through the whole session, pauses drawn as blanks; the tree's, which
- * draws growth, advances by focused time only. Each replay here is of a session with a pause in its middle, and is
+ * draws growth, and interstellar's, which draws distance, advance by focused time only. Each replay here is of a session with a pause in its middle, and is
  * stepped through its own time a frame at a time, its drawn extent read at each: it never goes back, and wherever
  * the replay moves on, the drawing never stands still for more than one frame.
  */
@@ -19,6 +19,8 @@ const EXTENTS = {
   rings: '.rings__hand:last-of-type',
   // The tree grows (its scale).
   tree: '.tree__grow',
+  // Interstellar's route lengthens with every focused minute (its stretch along the heading, as the camera pulls back).
+  route: '.space-map__drawing line',
 } as const;
 
 const MODES = [
@@ -29,6 +31,7 @@ const MODES = [
   ['ocean', 'profile'],
   ['height', 'profile'],
   ['tree', 'tree'],
+  ['interstellar', 'route'],
 ] as const;
 
 /**
@@ -78,6 +81,8 @@ async function stepReplay(page: Page, selector: string, kind: keyof typeof EXTEN
         const transform = getComputedStyle(element).transform;
         const matrix = new DOMMatrixReadOnly(transform === 'none' ? undefined : transform);
         if (kind === 'tree') return matrix.a;
+        // Stretched along the heading only: the linear part's trace is the stretch plus one.
+        if (kind === 'route') return matrix.a + matrix.d;
         if (kind !== 'rings') return matrix.e;
         // Unwound: a hand never turns half a turn in one frame.
         const angle = (Math.atan2(matrix.b, matrix.a) * 180) / Math.PI;

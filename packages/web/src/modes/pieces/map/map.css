@@ -1,0 +1,10 @@
+/* The map pieces (map.ts): the bodies' art at its own size, and the names beside them (the frames': 11 px). */
+@layer mode {
+  .map__art {
+    overflow: visible;
+  }
+
+  .map__name {
+    font-family: var(--font-family);
+  }
+}

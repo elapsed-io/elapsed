@@ -115,6 +115,8 @@ export type { AtmosphereLayer, HeightLandmark, HeightLandmarkId } from './modes/
 export { pickByBand, spreadBy } from './modes/landmarks.ts';
 export { grassColour, grassWeights, leafColour, leafScale, leafState, mixColour, seasonPhase, shares, stackedColour, weather, yearPhase } from './modes/tree.ts';
 export type { LeafState, Weather } from './modes/tree.ts';
+export { SPACE_LANDMARKS, bodyOpacity, headingDirection, keptLabels, mapPoint, mapState, ringOpacity, spaceScale, startOpacity, usablePath } from './modes/space.ts';
+export type { MapState, SpaceBody, SpaceBodyId } from './modes/space.ts';
 export { checkRecipe, parseRecipe, recipeOrDigits } from './recipes/load.ts';
 export { DIGITS_RECIPE, builtInRecipe } from './recipes/built-in.ts';
 export type { LoadOptions, RecipeResult } from './recipes/load.ts';

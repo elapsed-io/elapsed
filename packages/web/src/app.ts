@@ -8,7 +8,7 @@
  * (after the tabulating screen); the session maximum notice.
  */
 
-import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, localDay, rulesFrom, summarise, systemTimeZone, withSetting } from '@stopwatch/core';
+import { BRAND, CONFIG, EventBus, TEST_MODES, TimerEngine, computeView, currentMode, localDay, rulesFrom, summarise, systemTimeZone, withSetting } from '@stopwatch/core';
 import type { SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
 import { CountClient } from './counts/client.ts';
 import { CrashReporter } from './crash/reporter.ts';
@@ -42,6 +42,7 @@ import { titleFor } from './shell/title.ts';
 import { FinishedStore, browserSessionStorage } from './storage/finished-store.ts';
 import { LocalCustomCssStore, watchCustomCss } from './storage/custom-css-store.ts';
 import { LocalNoticeStore } from './storage/notice-store.ts';
+import { TestModesStore, asksForTestModes } from './storage/test-modes-store.ts';
 import { IndexedDbMediaStore, browserIndexedDb } from './storage/media-store.ts';
 import { LocalSessionStore, browserLocalStorage, watchLocalStorage } from './storage/session-store.ts';
 import { LocalSettingsStore, watchSettings } from './storage/settings-store.ts';
@@ -80,6 +81,9 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   const settingsStore = new LocalSettingsStore(browserLocalStorage(win), report);
   const customCssStore = new LocalCustomCssStore(browserLocalStorage(win), report);
   const noticeStore = new LocalNoticeStore(browserLocalStorage(win), report);
+  // The test-modes switch: `?test=interstellar` offers it on this device, once and for good (nothing else does).
+  const testModes = new TestModesStore(browserLocalStorage(win), report);
+  if (asksForTestModes(win.location.search)) testModes.offer();
   const settings = new SettingsController({
     doc,
     store: settingsStore,
@@ -111,7 +115,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       },
     },
     onError: report,
-    alsoClears: [noticeStore],
+    alsoClears: [noticeStore, testModes],
   });
   setClockFormat(settings.current.clockFormat);
   const fontReady = settings.start();
@@ -161,6 +165,8 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   // The display mode is a setting; a restored session switches to it if another tab left it elsewhere.
   /** Settings' list of downloaded modes follows a mode's caching; set once the panel can exist. */
   let downloadsChanged = (): void => undefined;
+  // A test mode chosen while test modes are off (switched off in another tab, or cleared) shows digits.
+  if (TEST_MODES.includes(settings.current.mode) && !testModes.state.on) settings.change(withSetting(settings.current, 'mode', 'digits'));
   let registered: RegisteredMode = findMode(settings.current.mode) ?? fallbackMode();
   // Downloaded modes unused for 30 days go when the page loads, never on a timer (plan, Loading and performance).
   void removeUnusedModes(win, Date.now(), registered.manifest.id).catch(report);
@@ -617,6 +623,20 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       controller: settings,
       close: closeSettings,
       requestNotifications,
+      testModes: {
+        get offered() {
+          return testModes.state.offered;
+        },
+        get on() {
+          return testModes.state.on;
+        },
+        setOn: (on) => {
+          testModes.setOn(on);
+          // Turned off while a test mode is chosen: back to digits.
+          if (!on && TEST_MODES.includes(settings.current.mode)) settings.change(withSetting(settings.current, 'mode', 'digits'));
+          panel?.refreshModes();
+        },
+      },
     });
     if (!doc.body.contains(panel.element)) doc.body.append(panel.element);
     panel.open();

@@ -12,6 +12,7 @@ import type { StarfieldLayer } from '@stopwatch/core';
 import { ART } from '../../../art/registry.ts';
 import { html } from '../../../dom.ts';
 import type { Activity, Piece, PieceSetup } from '../../recipe/piece.ts';
+import { skyPiece } from './sky.ts';
 
 const MINUTE_MS = 60_000;
 const DRIFT_MS = 250;
@@ -23,7 +24,10 @@ export function drawField(doc: Document, key: string, className: string): SVGSVG
   return art;
 }
 
-export function starfieldPiece({ doc, layer, recipe, context, slots }: PieceSetup<StarfieldLayer>): Piece {
+export function starfieldPiece(setup: PieceSetup<StarfieldLayer>): Piece {
+  // A catalog to project (interstellar's sky): sky.ts. Otherwise a ready-drawn field (height's).
+  if (setup.layer.projection !== undefined) return skyPiece(setup);
+  const { doc, layer, recipe, context, slots } = setup;
   const element = html(doc, 'div', { class: 'starfield' });
   const opacity = (value: number): number => bindingAt(layer.opacity ?? 1, { measure: value });
   let glide: Animation | null = null;

@@ -178,7 +178,7 @@ export class ResultsScreen {
     const scale = motionScale(doc);
     const lengthMs = replayLengthMs(mode.replayTiming, summary.elapsedMs) * scale;
     await mode.replay({ graphic, backdrop, lengthMs, scale }, session, options);
-    this.#time(time, session, summary, timing, mode.replayTiming, [graphic, backdrop]);
+    this.#time(time, session, summary, timing, mode.replayTiming, [graphic, backdrop], mode.replayCounts ?? 'session');
     this.element.classList.remove('results--preparing');
     // Everything is drawn and timed (tests and custom CSS can rely on it).
     this.element.dataset['ready'] = '';
@@ -198,7 +198,7 @@ export class ResultsScreen {
     this.#retry = null;
   }
 
-  #time(time: HTMLElement, session: Session, summary: SessionSummary, timing: ResultsTiming, replayTiming: ReplayTiming, surface: readonly HTMLElement[]): void {
+  #time(time: HTMLElement, session: Session, summary: SessionSummary, timing: ResultsTiming, replayTiming: ReplayTiming, surface: readonly HTMLElement[], counts: 'session' | 'focus'): void {
     // Anything the replay animates besides its progress (contract, ReplaySurface): started with the replay,
     // or finished at once when there is no replay.
     const own = surface.flatMap((element) => element.getAnimations({ subtree: true }));
@@ -245,7 +245,9 @@ export class ResultsScreen {
     const counting = canCount();
     if (counting) {
       time.classList.add('results__time--counting');
-      time.style.setProperty('--results-focused', countExpression(countTerms(session, summary), Math.max(1, summary.elapsedMs) / 1000));
+      // A replay that draws distance counts with it, evenly through the focused time (contract, replayCounts).
+      const terms = counts === 'focus' ? [{ from: 0, length: summary.focusedMs / 1000 }] : countTerms(session, summary);
+      time.style.setProperty('--results-focused', countExpression(terms, Math.max(1, counts === 'focus' ? summary.focusedMs : summary.elapsedMs) / 1000));
     }
     // The replay: one property, from 0 to 1. Everything that moves is calculated from it.
     const replay = this.element.animate([{ '--replay-progress': 0 }, { '--replay-progress': 1 }], {

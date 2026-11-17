@@ -115,6 +115,7 @@ export function designCustomProperties(): CustomProperties {
     '--results-gap': px(results.gapPx),
     '--results-ring-gap': px(results.ringGapPx),
     '--results-figure-gap': px(results.figureGapPx),
+    '--results-map-gap': px(CONFIG.modes.interstellar.results.gapPx),
     '--results-figure-padding-y': px(results.figurePaddingYPx),
     '--results-label-size': px(results.labelPx),
     '--results-label-tracking': em(results.labelTrackingEm),
@@ -410,7 +411,7 @@ export function renderSettingsTokensCss(): string {
   return `/* Generated from packages/core/src/config.ts at build time. */\n@layer base {\n${block(':root', settingsCustomProperties())}\n}\n`;
 }
 
-export const MODE_TOKEN_IDS = ['ring', 'timeline', 'analog', 'ocean', 'height', 'tree'] as const;
+export const MODE_TOKEN_IDS = ['ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'interstellar'] as const;
 export type ModeTokenId = (typeof MODE_TOKEN_IDS)[number];
 
 export function isModeTokenId(value: string): value is ModeTokenId {
@@ -637,6 +638,42 @@ function heightTokens(): string {
   ].join('\n');
 }
 
+function interstellarTokens(): string {
+  const space = CONFIG.modes.interstellar;
+  const { palette, results } = space;
+  const tones: CustomProperties = Object.fromEntries(Object.entries(space.bodies).map(([tone, colour]) => [`--space-${tone}`, colour]));
+  const properties: CustomProperties = {
+    '--space-text': palette.text,
+    '--space-icon': palette.icon,
+    '--space-label': palette.label,
+    '--space-caption': palette.caption,
+    '--space-end': palette.end,
+    '--space-pause': palette.pause,
+    '--sky-crossfade': ms(space.sky.crossfadeMs),
+    '--comet-tail-radius': px(space.comets.tailRadiusPx),
+    ...tones,
+  };
+  const card: CustomProperties = {
+    '--space-background': space.background,
+    '--space-card-text': results.card.text,
+    '--space-card-muted': results.card.muted,
+    '--space-map-width': px(results.widthPx),
+    '--space-map-aspect': `${String(results.widthPx)} / ${String(results.heightPx)}`,
+    '--space-distance-left': px(results.distanceLeftPx),
+    '--space-distance-top': px(results.distanceTopPx),
+    '--space-distance-size': px(results.distancePx),
+    '--comet-tail-radius': px(space.comets.tailRadiusPx),
+    ...tones,
+  };
+  // Each body's colours by its art's tones: a fill, or a ring's stroke (art/space/bodies.ts).
+  const strokes = new Set<string>(space.bodyStrokes);
+  const toneRules = Object.keys(space.bodies)
+    .map((tone) => `  .map__art [data-tone="${tone}"] {\n    ${strokes.has(tone) ? `fill: none;\n    stroke: var(--space-${tone});` : `fill: var(--space-${tone});`}\n  }`)
+    .join('\n');
+  // The corner icons over the results card take the frame's colour (built-in/interstellar.css and views/space.css).
+  return [block('[data-mode="interstellar"]', properties), block('[data-replay="interstellar"]', card), block(':root', { '--space-card-icon': results.card.icon }), toneRules].join('\n');
+}
+
 function treeTokens(): string {
   const tree = CONFIG.modes.tree;
   // The leaves' colours and the trunk come from the tree's recipe (pieces/tree/tree.ts); these are the frames' own.
@@ -665,7 +702,7 @@ function treeTokens(): string {
   return `${block('[data-mode="tree"]', properties)}\n${block('[data-mode="tree"], [data-replay="tree"]', colours)}`;
 }
 
-const MODE_TOKENS: Readonly<Record<ModeTokenId, () => string>> = { ring: ringTokens, timeline: timelineTokens, analog: analogTokens, ocean: oceanTokens, height: heightTokens, tree: treeTokens };
+const MODE_TOKENS: Readonly<Record<ModeTokenId, () => string>> = { ring: ringTokens, timeline: timelineTokens, analog: analogTokens, ocean: oceanTokens, height: heightTokens, tree: treeTokens, interstellar: interstellarTokens };
 
 /** One display mode's tokens, in the `mode` layer. */
 export function renderModeTokensCss(mode: ModeTokenId): string {

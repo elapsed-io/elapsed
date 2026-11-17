@@ -15,18 +15,25 @@
  * - The results replay is the recipe's view, loaded with the results.
  */
 
-import { measureAt, replayTimingFor } from '@stopwatch/core';
+import { CONFIG, measureAt, replayTimingFor } from '@stopwatch/core';
 import type { Layer, Recipe, ResultsView as ViewSpec, Session, StateName, TimeLayer, TimerView } from '@stopwatch/core';
 import { html } from '../../dom.ts';
 import type { DisplayContext, DisplayMode, ModeEvent, ModeOptions, ReplayLayout, ReplaySurface } from '../contract.ts';
 import { TimeDisplay } from '../shared/time-display.ts';
 import type { Activity, Environment, Figure, Frame, Piece, PieceFactory, PieceLibrary } from './piece.ts';
 import { contrastSwitch } from './contrast.ts';
+import { CameraStage } from './camera.ts';
 import { Slots } from './slots.ts';
 import type { SlotSources } from './slots.ts';
 import './recipe.css';
 
 const LAYOUTS: Readonly<Record<ViewSpec['type'], ReplayLayout>> = { strip: 'strip', 'rings-per-hour': 'ring', profile: 'chart', scene: 'figure' };
+
+/** The results card's layout for a recipe's view: a scene with the camera is a map over the stats (interstellar). */
+export function replayLayoutFor(recipe: Recipe): ReplayLayout {
+  const view = recipe.results.view;
+  return view.type === 'scene' && view.camera === true ? 'map' : LAYOUTS[view.type];
+}
 
 /** The mode's option values: what the site holds, where the recipe offers it, else the recipe's default. */
 export function optionValues(recipe: Recipe, given: ModeOptions = {}): ModeOptions {
@@ -92,11 +99,30 @@ function shownIn(recipe: Recipe, layer: Layer, state: Exclude<StateName, 'result
 
 const grouped = (value: number): string => Math.round(value).toLocaleString('en-US');
 
+/** The distance travelled from the measure's start, to the measure's decimals ("10.1"). */
+export function distanceText(recipe: Recipe, value: number): string {
+  const decimals = recipe.measure.decimals ?? 0;
+  const travelled = Math.max(0, value - (recipe.measure.start ?? 0));
+  return travelled.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+/** The zone `value` is in, by its name as shown. */
+export function zoneName(recipe: Recipe, value: number): string {
+  return (recipe.zones ?? []).reduce<string>((name, [, label, from]) => (value >= from ? label : name), recipe.zones?.[0]?.[1] ?? '');
+}
+
 /** A state's caption from its template: only the recipe's placeholders, filled as text. */
 export function captionText(recipe: Recipe, template: string, value: number): string {
-  const zone = (recipe.zones ?? []).reduce<string>((name, [, label, from]) => (value >= from ? label : name), recipe.zones?.[0]?.[1] ?? '');
   const unit = recipe.measure.unitLabel ?? (recipe.measure.unit === 'time' ? '' : recipe.measure.unit);
-  return template.replace(/\{(value|unit|zone)\}/g, (_, name: string) => (name === 'value' ? grouped(value) : name === 'unit' ? unit : zone));
+  return template.replace(/\{(value|unit|zone|distance)\}/g, (_, name: string) =>
+    name === 'value' ? grouped(value) : name === 'unit' ? unit : name === 'distance' ? distanceText(recipe, value) : zoneName(recipe, value),
+  );
+}
+
+/** Whether a state blurs the camera's map: it blurs the whole display, or any camera-space layer. */
+function blursMap(recipe: Recipe): boolean {
+  const camera = new Set(recipe.layers.filter((layer) => layer.space === 'camera').map((layer) => layer.id));
+  return [recipe.states?.paused?.blur, recipe.states?.checkin?.blur].some((blur) => blur === 'display' || (blur ?? []).some((id) => camera.has(id)));
 }
 
 interface Built {
@@ -105,6 +131,7 @@ interface Built {
   readonly shade: TimeDisplay | null;
   readonly environment: Environment | null;
   readonly pieces: readonly { readonly layer: Layer; readonly piece: Piece }[];
+  readonly stage: CameraStage | null;
   readonly caption: { readonly element: HTMLElement; readonly parts: readonly HTMLElement[]; readonly template: string } | null;
   /** Which layers it drew, so a change of options that changes them rebuilds it. */
   readonly drawn: string;
@@ -135,12 +162,14 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
     const environment = recipe.environment !== undefined && recipe.environment.type !== 'theme' ? (library.environment?.({ doc, recipe, context: displayContext, slots }) ?? null) : null;
     const layers = displayLayers(recipe, values);
     const time = layers.find((layer): layer is TimeLayer => layer.type === 'time');
+    const camera = recipe.camera?.type === 'follow-zoom' && layers.some((layer) => layer.space === 'camera');
+    const stage = camera ? new CameraStage(doc, recipe, displayContext, CONFIG.design.reference.timer, blursMap(recipe)) : null;
     const pieces: { layer: Layer; piece: Piece }[] = [];
     for (const layer of layers) {
       if (layer.type === 'time') continue;
       const factory = library.pieces[layer.type] as PieceFactory<Layer> | undefined;
       if (factory === undefined) continue;
-      pieces.push({ layer, piece: factory({ doc, layer, recipe, context: displayContext, slots }) });
+      pieces.push({ layer, piece: factory({ doc, layer, recipe, context: displayContext, slots, ...(stage === null ? {} : { stage }) }) });
     }
     const figure: Figure | undefined = pieces.find(({ piece }) => piece.figure !== undefined)?.piece.figure;
     const display = new TimeDisplay(doc, displayContext, (shown) => {
@@ -161,7 +190,9 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
             html(doc, 'div', { class: 'contrast__lit' }, [display.element]),
             html(doc, 'div', { class: 'contrast__shade', attrs: { 'aria-hidden': 'true', inert: '' } }, [shade.element]),
           ]);
-    const backdrop = pieces.flatMap(({ piece }) => piece.backdrop ?? []);
+    // The camera's map goes where its first layer is, among the backdrop.
+    const firstCamera = pieces.findIndex(({ layer }) => layer.space === 'camera');
+    const backdrop = pieces.flatMap(({ piece }, index) => [...(index === firstCamera && stage !== null ? [stage.element] : []), ...(piece.backdrop ?? [])]);
     // The site crossfades one environment into the next when the mode changes (app.ts).
     environment?.element.classList.add('environment');
     if (environment !== null) environment.element.append(...backdrop);
@@ -175,20 +206,22 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
       display.measure();
       shade?.measure();
     });
-    return { display, shade, environment, pieces, caption, drawn: drawnKey(values) };
+    return { display, shade, environment, pieces, stage, caption, drawn: drawnKey(values) };
   };
 
   const teardown = (): void => {
     if (built === null) return;
     built.environment?.unmount?.();
     for (const { piece } of built.pieces) piece.unmount?.();
+    built.stage?.unmount();
     built = null;
   };
 
   return {
     id,
     replayTiming: replayTimingFor(recipe),
-    replayLayout: LAYOUTS[recipe.results.view.type],
+    replayLayout: replayLayoutFor(recipe),
+    replayCounts: replayLayoutFor(recipe) === 'map' ? 'focus' : 'session',
     mount(element: HTMLElement, displayContext: DisplayContext) {
       root = element;
       context = displayContext;
@@ -217,6 +250,7 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
         shownShare = share;
       }
       for (const { layer, piece } of built.pieces) piece.render({ ...frame, active: shownIn(recipe, layer, state, context) });
+      built.stage?.render(frame);
       if (built.caption !== null) {
         // The caption is ambient: shown while paused, never with low power.
         const shown = frame.paused && !context.lowPower;

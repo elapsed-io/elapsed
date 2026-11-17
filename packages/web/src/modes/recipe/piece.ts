@@ -9,6 +9,7 @@ import type { Layer, LayerOf, LayerType, Recipe, TimerView } from '@stopwatch/co
 import type { DisplayContext, ModeEvent, ReplaySurface, ModeOptions } from '../contract.ts';
 import type { Session } from '@stopwatch/core';
 import type { Slots } from './slots.ts';
+import type { CameraStage } from './camera.ts';
 
 /** What the timer is doing, as every piece reads it: stood still, running, or held (paused, or a check-in due). */
 export type Activity = 'idle' | 'running' | 'held';
@@ -35,6 +36,8 @@ export interface PieceSetup<L extends Layer = Layer> {
   /** The site's context: the seconds setting, reduced motion, low power and the mode's options, as they are now. */
   readonly context: DisplayContext;
   readonly slots: Slots;
+  /** The camera's map, for a recipe with a follow-zoom camera: its camera-space layers draw on it (camera.ts). */
+  readonly stage?: CameraStage;
 }
 
 /** A graphic the time sits in, above or below (the ring, the dial, the track, the tree). */

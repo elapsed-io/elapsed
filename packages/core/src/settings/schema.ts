@@ -28,12 +28,12 @@ export const SETTINGS_CATEGORIES = ['timer', 'display', 'appearance', 'notificat
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
 /** The display modes, in the tiles' order (Release 2 adds each in its round: analog in 2.2). */
-export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'calendar'] as const;
+export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'calendar', 'interstellar'] as const;
 /**
- * Test modes: early modes that may change or disappear (plan-release-2, round 2.9). Their tiles show only when the
- * site is opened with `?test=<id>` (round 2.9 adds the test-modes switch), or while one is chosen.
+ * Test modes: early modes that may change or disappear (plan-release-2, round 2.9). Their tiles show only while the
+ * test-modes switch is on (offered once the site has been opened with `?test=interstellar`), or while one is chosen.
  */
-export const TEST_MODES: readonly (typeof MODE_CHOICES)[number][] = ['calendar'];
+export const TEST_MODES: readonly (typeof MODE_CHOICES)[number][] = ['calendar', 'interstellar'];
 export type ModeChoice = (typeof MODE_CHOICES)[number];
 
 /** Focus view (plan, Interface): how long a running session waits untouched before the controls step aside. */

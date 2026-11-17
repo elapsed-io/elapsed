@@ -76,6 +76,24 @@ stays valid:
   at 12. A small dial's `labels` draw its numbers, the first at 12, in seconds, minutes or hours by its cycle's
   length (a minute's dial counts 10 to 60).
 
+## Additions for interstellar (2026-11-17)
+
+Interstellar (`recipes/interstellar.json`, a test mode) is built from the recipe as its frames draw it, which
+settled what some fields mean and added one optional field, so every recipe written before stays valid:
+
+- **A starfield's `view`**: a star-catalog slot shown while the sky stands still (the frames' own catalog); the
+  layer's `slot` is then the whole sky, drawn as a strip a full turn wide while `pan.when` turns it.
+- **Camera space** is one map: a `follow-zoom` camera's layers (`space: "camera"`) draw on one drawing in the
+  recipe's order, held behind one blur while paused. The anchor is a share of the screen in the frame's
+  reference pixels; the usable path runs `usable` of the way along the heading to 20 px short of the right edge.
+- **`circles`** fade as their radius shrinks through `fadeBelowPx` (gone at half of it, full at one and a half
+  times), at most the layer's `opacity`; **`landmarks`** on the path are gone at `fadeBelowPx` and full 14 px
+  further, each landmark-list entry naming its body's art slot (`art`), an entry at or before the measure's
+  start drawn last without a name; a **`path`** draws at its layer's `opacity`, its head over everything.
+- **`particles` with `shape: "comet"`**: tails away from the camera's anchor, travelling `distance` pixels.
+- **Captions** fill `{distance}` with the distance travelled from the measure's start, to its `decimals`, and
+  `{zone}` with the zone's name.
+
 ## Versions
 
 Recipe version 1 stays open until Release 2's public release, then freezes (owner, 2026-11-17; decision 338).

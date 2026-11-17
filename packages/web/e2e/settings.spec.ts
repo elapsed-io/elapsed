@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, test } from './test.ts';
 import type { Browser, Page } from '@playwright/test';
 import { FONT, MINUTE, SECOND, endThroughCountdown, finishResults, openApp, seedSettings, settle } from './helpers.ts';
-import { FRAME_FONTS, SETTINGS_FRAME_HEIGHT, settingsFrame } from './fixtures/settings-frames.ts';
+import { ADVANCED_TEST_MODES_HEIGHT, FRAME_FONTS, SETTINGS_FRAME_HEIGHT, settingsFrame } from './fixtures/settings-frames.ts';
 import type { Palette, SettingsFrameName } from './fixtures/settings-frames.ts';
 import { GRAPHITE, PAPER } from './fixtures/frames.ts';
 import { diffPngs, expectLikeFrame } from './pixels.ts';
@@ -35,8 +35,8 @@ function choiceFont(id: string, name = `${id}.name.woff2`): Buffer {
 
 type Clip = { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
 
-async function frameReference(browser: Browser, name: SettingsFrameName, palette: Palette, storage?: string, clip?: Clip, variant?: 'ocean' | 'notice'): Promise<Buffer> {
-  const height = SETTINGS_FRAME_HEIGHT[name];
+async function frameReference(browser: Browser, name: SettingsFrameName, palette: Palette, storage?: string, clip?: Clip, variant?: 'ocean' | 'notice' | 'test-modes'): Promise<Buffer> {
+  const height = variant === 'test-modes' ? ADVANCED_TEST_MODES_HEIGHT : SETTINGS_FRAME_HEIGHT[name];
   const reference = await browser.newPage({ viewport: { width: 1280, height } });
   await reference.route('http://frame.test/**', (route) => {
     const url = route.request().url();
@@ -117,6 +117,20 @@ test.describe('the panel matches its frames', () => {
       });
     });
   }
+
+  test('with advanced open and the test-modes switch offered, as the Release 2 advanced frame', async ({ page, browser, browserName }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('test-modes', '{"schema":1,"offered":true,"on":false}');
+    });
+    await openApp(page, { width: 1280, height: ADVANCED_TEST_MODES_HEIGHT });
+    await showLikeFrame(page, 'advanced');
+    const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: ADVANCED_TEST_MODES_HEIGHT } });
+    const reference = await frameReference(browser, 'advanced', GRAPHITE, undefined, undefined, 'test-modes');
+    const diff = await diffPngs(page, site, reference);
+    expectLikeFrame(diff, browserName, () => {
+      expect(diff.differing, JSON.stringify(diff)).toBe(0);
+    });
+  });
 
   test.describe('from the fullscreen tip', () => {
     test.use({ storageState: { cookies: [], origins: [] } });

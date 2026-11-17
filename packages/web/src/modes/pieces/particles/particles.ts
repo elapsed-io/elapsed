@@ -17,12 +17,14 @@
 
 import './drift.css';
 import './streaks.css';
+import './comets.css';
 import { CONFIG, zoneAt } from '@stopwatch/core';
 import type { ParticlesLayer, Range } from '@stopwatch/core';
 import { ART } from '../../../art/registry.ts';
 import { html } from '../../../dom.ts';
 import type { Piece, PieceSetup } from '../../recipe/piece.ts';
 import type { Slots } from '../../recipe/slots.ts';
+import { drawComets, scheduleComets } from './comets.ts';
 
 const LIFE = CONFIG.modes.ocean.life;
 const METEORS = CONFIG.modes.height.meteors;
@@ -241,7 +243,7 @@ function driftArt(layer: ParticlesLayer, slots: Slots, zone: string): readonly [
   return far === undefined || mid === undefined || near === undefined || bubble === undefined ? null : [far, mid, near, bubble];
 }
 
-export function particlesPiece({ doc, layer, recipe, slots }: PieceSetup<ParticlesLayer>): Piece {
+export function particlesPiece({ doc, layer, recipe, slots, stage }: PieceSetup<ParticlesLayer>): Piece {
   const container = html(doc, 'div', { class: 'particles' });
   let shown: HTMLElement | null = null;
 
@@ -266,6 +268,23 @@ export function particlesPiece({ doc, layer, recipe, slots }: PieceSetup<Particl
         element.replaceChildren(...drawArrivals(doc, scheduleArrivals(layer), art));
         element.classList.add('life--in');
       });
+      return;
+    }
+    if (layer.shape === 'comet') {
+      // In the scene's reference pixels, the tails away from the camera's anchor (the Sun).
+      const view = doc.defaultView;
+      const reference = CONFIG.design.reference.timer;
+      const layout = stage?.layout;
+      const scale = layout?.scale ?? Math.min((view?.innerWidth ?? reference.width) / reference.width, (view?.innerHeight ?? reference.height) / reference.height);
+      const width = layout?.width ?? reference.width;
+      const height = layout?.height ?? reference.height;
+      const anchor = layout?.sun ?? [width / 2, height / 2];
+      const box = html(doc, 'div', { class: 'comets__box' }, drawComets(doc, scheduleComets(layer, width, height, anchor)));
+      box.style.setProperty('width', `${String(width)}px`);
+      box.style.setProperty('height', `${String(height)}px`);
+      box.style.setProperty('transform', `scale(${String(scale)})`);
+      shown = html(doc, 'div', { class: 'comets' }, [box]);
+      container.append(shown);
       return;
     }
     shown = html(doc, 'div', { class: 'meteors' }, drawStreaks(doc, layer));

@@ -27,6 +27,16 @@ export async function seedSettings(page: Page, settings: Readonly<Record<string,
   }, JSON.stringify({ schema: 1, ...settings }));
 }
 
+/** The test modes (core TEST_MODES). */
+export const TEST_MODE_IDS: readonly string[] = ['calendar', 'interstellar'];
+
+/** The test-modes switch offered and on, as if the address had asked for it and the switch been turned on. */
+export async function switchTestModesOn(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    if (localStorage.getItem('test-modes') === null) localStorage.setItem('test-modes', '{"schema":1,"offered":true,"on":true}');
+  });
+}
+
 /**
  * Opens the site with a controllable clock (Date, performance.now and timers),
  * then holds the clock at T_READY so every later moment is exact. `mode`
@@ -38,6 +48,8 @@ export async function openApp(
 ): Promise<void> {
   await page.setViewportSize({ width: options.width ?? 720, height: options.height ?? 450 });
   if (options.mode !== undefined || options.settings !== undefined) await seedSettings(page, { ...options.settings, ...(options.mode === undefined ? {} : { mode: options.mode }) });
+  // A test mode shows only with the test-modes switch on (storage/test-modes-store.ts).
+  if (options.mode !== undefined && TEST_MODE_IDS.includes(options.mode)) await switchTestModesOn(page);
   await page.clock.install({ time: T0 });
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
@@ -61,7 +73,7 @@ export async function settle(page: Page): Promise<void> {
         .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
         // Motion with time is no transition: the glides a minute at a time, and the tree's endless year.
         .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
-        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .light__strip, .starfield') === true));
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .light__strip, .starfield, .camera *') === true));
       if (running.length === 0 && round > 0) return;
       await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
       await frames();
@@ -194,7 +206,7 @@ export async function finishResults(page: Page): Promise<void> {
         .getAnimations()
         .filter((animation) => !(animation instanceof CSSAnimation))
         .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
-        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .light__strip, .starfield') === true));
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .light__strip, .starfield, .camera *') === true));
       for (const animation of running) animation.finish();
       // Let finish handlers (which cancel spent animations and remove masks) run. The page's timers
       // may be held by the test clock, so only promises are awaited.
