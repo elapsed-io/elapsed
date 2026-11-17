@@ -1,7 +1,7 @@
 /**
  * The starfield piece (docs/recipes/mode-recipes.md): a star catalog slot drawn over the environment, its opacity
  * the layer's binding (height's stars fade in from 18 to 42 km). The catalog may be a ready-drawn field (height's
- * own, from its frames) or, from round 2.8, star positions to project. While a session runs, the opacity glides
+ * own, from its frames) or, from round 2.9, star positions to project. While a session runs, the opacity glides
  * over each minute in step with the environment, through a linear CSS animation set once a minute; standing still
  * it is set in place; with low power it steps once a minute.
  */

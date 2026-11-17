@@ -14,7 +14,7 @@
  * blur-away is compared once that is averaged away (pixels.ts).
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { GRAPHITE, PAPER, checkInFrame, idleFrame, inPalette, limitFrame, pausedFrame, pausedMissedFrame, runningFrame } from './fixtures/frames.ts';
 import { modeFrame, oceanFrame, oceanPausedFrame } from './fixtures/mode-frames.ts';
@@ -132,19 +132,19 @@ for (const [name, mode, focus, paused, limit] of [
   });
 }
 
-// The analog frame at 1 h 24 min. Its hands are the frame's own lines, each in a drawing that CSS turns (so the
-// compositor can glide it), where the frame turns the line itself: the long diagonal minute hand's
-// anti-aliased edges differ by a few levels along its length (262 pixels measured, smoothed 10). A hand 3° off
-// differs by 724 (smoothed 68), as the control below checks.
-const ANALOG_LIMIT = 300;
+// The redesigned analog frame at 1 h 24 min 10 s. Its hands are the frame's own lines, each in a drawing that CSS
+// turns (so the compositor can glide it), where the frame turns the line itself: the three hands' anti-aliased
+// edges differ by a few levels along their length (457 pixels measured, smoothed 9). The control below moves the
+// hands off the frame (the minute hand 3°, the seconds hand 180°): 1,005 pixels, smoothed 94.
+const ANALOG_LIMIT = 600;
 /** The most any ocean pixel may differ from its frame: the frames' two-stop water against the site's every metre. */
 const OCEAN_LEVELS = 10;
 /** At 5 m that difference passes the 8 levels the pixel check counts as visible, over a band of the screen (45,913 measured). */
 const OCEAN_SURFACE_LIMIT = 50_000;
 
-test('analog matches the "analog stopwatch" frame', async ({ page, browser, browserName }) => {
+test('analog matches the "analog" frame', async ({ page, browser, browserName }) => {
   await sessionAt(page, 'analog', 84 * MINUTE);
-  await freezeAnimations(page, { at: { '.analog__hand': 0 } });
+  await freezeAnimations(page, { at: { '.analog__hand': 10 * SECOND } });
   const diff = await compareWithReference(page, browser, modeFrame('analog', GRAPHITE));
   expectLikeFrame(diff, browserName, () => {
     expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(ANALOG_LIMIT);
@@ -200,7 +200,7 @@ test('control: ocean water 15 m off fails the running frame by far', async ({ pa
 test('control: analog hands 3° from the frame fail the analog frame by far', async ({ page, browser, browserName }) => {
   test.skip(browserName !== 'chromium' || process.env['PIXEL_REFERENCE'] !== '1', 'exact pixel rules hold only in the reference environment');
   await sessionAt(page, 'analog', 84 * MINUTE);
-  await freezeAnimations(page, { at: { '.analog__hand': 30 * SECOND } });
+  await freezeAnimations(page, { at: { '.analog__hand': 40 * SECOND } });
   const diff = await compareWithReference(page, browser, modeFrame('analog', GRAPHITE));
   expect(diff.visible).toBeGreaterThan(ANALOG_LIMIT);
   expect(diff.smoothedMaxDelta).toBeGreaterThan(SMOOTHED_LIMIT);

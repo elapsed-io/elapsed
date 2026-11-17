@@ -30,11 +30,18 @@ export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 /** The display modes, in the tiles' order (Release 2 adds each in its round: analog in 2.2). */
 export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'calendar'] as const;
 /**
- * Test modes: early modes that may change or disappear (plan-release-2, round 2.8). Their tiles show only when the
- * site is opened with `?test=<id>` (round 2.8 adds the test-modes switch), or while one is chosen.
+ * Test modes: early modes that may change or disappear (plan-release-2, round 2.9). Their tiles show only when the
+ * site is opened with `?test=<id>` (round 2.9 adds the test-modes switch), or while one is chosen.
  */
 export const TEST_MODES: readonly (typeof MODE_CHOICES)[number][] = ['calendar'];
 export type ModeChoice = (typeof MODE_CHOICES)[number];
+
+/** Focus view (plan, Interface): how long a running session waits untouched before the controls step aside. */
+export const FOCUS_HIDES = ['3s', '10s', 'never'] as const;
+export type FocusHide = (typeof FOCUS_HIDES)[number];
+/** When a session started in fullscreen leaves it (plan, Interface: "leave fullscreen", on end by default). */
+export const LEAVE_FULLSCREEN = ['never', 'pause-or-end', 'end'] as const;
+export type LeaveFullscreen = (typeof LEAVE_FULLSCREEN)[number];
 
 /** The tree's views (a mode option; plan, Settings catalog: "tree view (side or isometric)", side by default). */
 export const TREE_VIEWS = ['side', 'isometric'] as const;
@@ -94,6 +101,12 @@ export interface Settings {
   readonly resultsLandmarks: boolean;
   /** Mode option (height, its own options box; owner, changes 3): random landmarks on the results' climb profile. */
   readonly heightLandmarks: boolean;
+  /** Focus view: hide the controls after this long untouched while a session runs. */
+  readonly focusHide: FocusHide;
+  /** Focus view: go fullscreen when a session starts. */
+  readonly fullscreenOnStart: boolean;
+  /** Focus view: when to leave fullscreen. */
+  readonly leaveFullscreen: LeaveFullscreen;
   /** Mode option (tree): the side view or the isometric one. */
   readonly treeView: TreeView;
   // Appearance
@@ -125,7 +138,7 @@ export type SettingTarget =
   | { readonly css: `--${string}` }
   | { readonly theme: 'preset' | 'colors' }
   | { readonly engine: 'secondsDisplay' | 'checkInInterval' | 'pauseLimit' }
-  | { readonly site: 'mode' | 'modeOptions' | 'clockFormat' | 'lowPower' | 'notifications' | 'usageCounts' | 'crashReports' };
+  | { readonly site: 'mode' | 'modeOptions' | 'focusView' | 'clockFormat' | 'lowPower' | 'notifications' | 'usageCounts' | 'crashReports' };
 
 interface Declared<K extends SettingKey> {
   readonly key: K;
@@ -162,6 +175,9 @@ export type SettingDeclaration =
   | SwitchSetting<'oceanLife'>
   | SwitchSetting<'resultsLandmarks'>
   | SwitchSetting<'heightLandmarks'>
+  | ChoiceSetting<'focusHide'>
+  | SwitchSetting<'fullscreenOnStart'>
+  | ChoiceSetting<'leaveFullscreen'>
   | ChoiceSetting<'treeView'>
   | ChoiceSetting<'theme'>
   | ColorsSetting<'colors'>
@@ -205,6 +221,9 @@ export const SETTINGS: readonly SettingDeclaration[] = [
   { key: 'oceanLife', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
   { key: 'resultsLandmarks', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
   { key: 'heightLandmarks', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
+  { key: 'focusHide', kind: 'choice', category: 'display', options: FOCUS_HIDES, default: '3s', target: { site: 'focusView' } },
+  { key: 'fullscreenOnStart', kind: 'switch', category: 'display', default: false, target: { site: 'focusView' } },
+  { key: 'leaveFullscreen', kind: 'choice', category: 'display', options: LEAVE_FULLSCREEN, default: 'end', target: { site: 'focusView' } },
   { key: 'treeView', kind: 'choice', category: 'display', options: TREE_VIEWS, default: 'side', target: { site: 'modeOptions' } },
   { key: 'theme', kind: 'choice', category: 'appearance', options: THEME_IDS, default: 'graphite', target: { theme: 'preset' } },
   { key: 'colors', kind: 'colors', category: 'appearance', default: null, target: { theme: 'colors' } },

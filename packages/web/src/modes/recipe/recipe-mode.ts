@@ -18,7 +18,7 @@
 import { measureAt, replayTimingFor } from '@stopwatch/core';
 import type { Layer, Recipe, ResultsView as ViewSpec, Session, StateName, TimeLayer, TimerView } from '@stopwatch/core';
 import { html } from '../../dom.ts';
-import type { DisplayContext, DisplayMode, ModeOptions, ReplayLayout, ReplaySurface } from '../contract.ts';
+import type { DisplayContext, DisplayMode, ModeEvent, ModeOptions, ReplayLayout, ReplaySurface } from '../contract.ts';
 import { TimeDisplay } from '../shared/time-display.ts';
 import type { Activity, Environment, Figure, Frame, Piece, PieceFactory, PieceLibrary } from './piece.ts';
 import { contrastSwitch } from './contrast.ts';
@@ -162,6 +162,8 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
             html(doc, 'div', { class: 'contrast__shade', attrs: { 'aria-hidden': 'true', inert: '' } }, [shade.element]),
           ]);
     const backdrop = pieces.flatMap(({ piece }) => piece.backdrop ?? []);
+    // The site crossfades one environment into the next when the mode changes (app.ts).
+    environment?.element.classList.add('environment');
     if (environment !== null) environment.element.append(...backdrop);
     const template = recipe.states?.paused?.caption;
     const captionText = template === undefined ? null : [html(doc, 'span', { class: 'contrast__lit' }), ...(darkShare === null ? [] : [html(doc, 'span', { class: 'contrast__shade' })])];
@@ -191,6 +193,9 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
       root = element;
       context = displayContext;
       built = build(element, displayContext);
+    },
+    onEvent(event: ModeEvent) {
+      for (const { piece } of built?.pieces ?? []) piece.onEvent?.(event);
     },
     render(view: TimerView) {
       if (root === null || context === null || built === null) return;

@@ -58,10 +58,11 @@ bounds. The small device features come last before hardening, since nothing else
 | 2.5 | Height | Height; Results: height; its tile |
 | 2.6 | Tree | Tree: side and isometric; Results: tree; its tile |
 | 2.7 | Recipes: every mode as a recipe drawn by one piece library | every mode frame again, unchanged; the options boxes |
-| 2.8 | Interstellar, as a recipe, behind the test-modes switch | Interstellar: running, paused and results; its tile; Release 2 settings: advanced (test modes) |
-| 2.9 | Layout editor, background images, and each mode's replaceable art | Layout editor |
-| 2.10 | Picture-in-picture, wake lock, the check-ins switch | Release 2 settings: timer (check-ins, keep screen awake) and display (picture-in-picture) |
-| 2.11 | Hardening and the release review | every Release 2 frame |
+| 2.8 | Focus view, notices and fullscreen; the redesigned analog; ambient idle screens; replays that never stall | Running, recently touched; running, untouched; the motion, on a loop; the notice; "change" opens settings on it; Release 2 settings: display (focus view, the mode behind the panel); analog stopwatch (redesigned) |
+| 2.9 | Interstellar, as a recipe, behind the test-modes switch | Interstellar: running, paused and results; its tile; Release 2 settings: advanced (test modes) |
+| 2.10 | Layout editor, background images, and each mode's replaceable art | Layout editor |
+| 2.11 | Picture-in-picture, wake lock, the check-ins switch | Release 2 settings: timer (check-ins, keep screen awake) and display (picture-in-picture) |
+| 2.12 | Hardening and the release review | every Release 2 frame |
 
 Every round ends as Release 1's did: `npm run check`, the end-to-end suite in Chromium, Firefox and WebKit
 (through the reference image), the round's safety overview in `docs/safety/round-2.<n>.md` with every item
@@ -75,10 +76,10 @@ it, and each frame is checked pixel for pixel once all of its controls exist:
 
 | Frame | Controls | Round |
 | --- | --- | --- |
-| timer | check-ins switch with its warning; keep screen awake ("only while elapsed is the active tab") | 2.10 |
-| display | mode tiles in four columns with a preview icon for each new mode (analog, ocean depth, height, tree, interstellar); ocean depth options (ocean life, results landmarks); picture-in-picture; downloaded modes with size and remove | tiles in each mode's round; downloaded modes 2.1; results landmarks 2.3; ocean life 2.4; each mode's own options box 2.7; picture-in-picture 2.10 |
+| timer | check-ins switch with its warning; keep screen awake ("only while elapsed is the active tab") | 2.11 |
+| display | mode tiles in four columns with a preview icon for each new mode (analog, ocean depth, height, tree, interstellar); ocean depth options (ocean life, results landmarks); picture-in-picture; downloaded modes with size and remove | tiles in each mode's round; downloaded modes 2.1; results landmarks 2.3; ocean life 2.4; each mode's own options box 2.7; picture-in-picture 2.11 |
 | appearance | animation speed (slower, normal, faster: "every animation, including the results replay"); low power ("stops ambient animation and shows only the time. on when your system asks for reduced motion.") | 2.1 |
-| advanced | test modes ("early modes that may change or disappear. shown after opening elapsed with ?test=interstellar.") | 2.8 |
+| advanced | test modes ("early modes that may change or disappear. shown after opening elapsed with ?test=interstellar.") | 2.9 |
 
 The tile grid has three columns while there are three modes (the Release 1 frame) and four from round 2.2,
 when the fourth mode arrives (the Release 2 frame).
@@ -229,7 +230,50 @@ a failing recipe.
 "mode-only", its depth, height or distance records labelled with that mode and never counted for
 competitions.
 
-### 2.8 Interstellar, as a recipe, behind the test-modes switch
+### 2.8 Focus view, notices and fullscreen
+
+Owner, changes 5 (2026-11-17), inserted before interstellar. Frames: "running, recently touched", "running,
+untouched", "the motion, on a loop", the notice, "change opens settings on it", the Release 2 display settings
+frame and the redesigned analog stopwatch.
+
+**Builds:**
+
+1. **Focus view.** While a session runs and nobody has touched the page for 3 seconds, pause and end drop 10 px
+   while fading out over 180 ms, the corner icons fade with them, the pointer hides, and the time grows to 1.32
+   times its size and settles 25 px lower over 220 ms, so it stays centered. Any mouse move, click, tap or key
+   reverses it exactly and just as fast; the controls stay until the next 3 quiet seconds. A key that is also a
+   shortcut still does its job. Paused and check-in screens never hide their controls. Only transforms and
+   opacity animate.
+2. **Notices.** One reusable pill, 20 px tall with 11 px text, shown just above the time without moving it, with
+   a dismiss ×; a dismissed notice stays dismissed. A notice that points to a setting uses one universal link,
+   "change", which turns that setting on at once and opens settings on it, briefly outlined in the accent color.
+   The first notice is the fullscreen tip on the idle screen: "fullscreen hides your other tabs".
+3. **Settings,** a "focus view" group in display: hide controls while focusing (after 3 s, after 10 s, never;
+   default after 3 s); fullscreen when a session starts (default off); leave fullscreen (never, on pause or end,
+   on end; default on end). Esc always leaves fullscreen. On iPhones, which have no page fullscreen, the notice
+   and both fullscreen settings are hidden.
+4. **Ambient idle screens** (a tester's report): ocean depth, height and interstellar show their starting scene
+   and colors on the idle screen, so starting changes nothing abruptly, and any change of environment crossfades
+   over about 2 seconds.
+5. **The settings panel** shows whatever display mode is chosen behind it (the Release 2 display frame shows ocean
+   depth there).
+6. **Analog, redesigned** (a retrofit of round 2.2, exactly as its frame): a polished case with a ridged crown
+   that dips whenever end is pressed (by button or E); an outer track of sixty ticks with 5 to 60 every five,
+   each turned to follow the edge; slim batons at every five minutes except 30, those at 25 and 35 stopping short
+   of the seconds dial; the minute hand and a shorter, slightly thicker hours hand (52 px, 4.4 px wide), both in
+   the accent colour; a seconds subdial of about 0.3 of the dial's radius halfway between the centre and the
+   bottom edge, with sixty ticks and 10 to 60, its 60 in a red that meets 4.5:1 (#E5574B on dark themes, #B8332A
+   on light), no inner rings; every hand gliding.
+7. **Results replays never stall** (every results screen): replays that draw distance (interstellar) advance by
+   focused time only; replays that draw time (the focus strip, profile charts, rings) sweep evenly through the
+   whole session, drawing pauses as blanks. A test checks that the replay's drawn extent never decreases and
+   never stalls for more than one frame.
+
+**Records:** decisions 338 to 350 in `docs/decisions.md` (recipe schema version 1 stays open until Release 2's
+public release, decision 338; built-in recipes checked when the site is built, decision 350); the safety overview
+in `docs/safety/round-2.8.md`.
+
+### 2.9 Interstellar, as a recipe, behind the test-modes switch
 
 **Builds:** interstellar directly as a recipe (docs/recipes/recipes/interstellar.json) on the piece library:
 light-speed travel per session from Earth's orbit; the true-scale camera (the Sun near the bottom-left, the
@@ -254,7 +298,7 @@ unless it is on.
 **Safety overview:** the star catalog's source and licence (HYG, CC BY-SA); what the address parameter can do
 (show one switch, nothing else; any other `test` value is ignored).
 
-### 2.9 Layout editor, background images, and each mode's replaceable art
+### 2.10 Layout editor, background images, and each mode's replaceable art
 
 **Builds:** the customize mode, entered from settings or with a long press on phones; every layer
 (background, display mode, buttons, icons) moved, rotated, stretched, resized, hidden and reordered as
@@ -262,7 +306,7 @@ data; layouts saved per display mode and per screen size (desktop and phone, the
 for the phone), versioned, with reset to default; "time size" and the editor change the same value; each
 mode reports its rendered bounds (for Release 4's no-widget zones). The free-form editor is built in full
 and tested, but switched on only when the unlock arrives in Release 3; until then everyone places layers in
-preset positions, and the test-modes switch (round 2.8) turns free-form editing on for testing. Background
+preset positions, and the test-modes switch (round 2.9) turns free-form editing on for testing. Background
 images, one per display mode, imported from the device: JPEG, PNG, WebP or AVIF, detected from their
 contents (never the file name), at most 20 MB and 50 megapixels, re-encoded at the screen's size (which
 strips location and camera metadata), SVG refused, kept in the `MediaStore` on the device, never uploaded or
@@ -282,7 +326,7 @@ the editor.
 files), storage keys, abuse cases (decompression bombs, malformed images, layouts that hide every control
 with safe mode as the way back), tests.
 
-### 2.10 Picture-in-picture, wake lock, the check-ins switch
+### 2.11 Picture-in-picture, wake lock, the check-ins switch
 
 **Builds:**
 
@@ -309,7 +353,7 @@ due and the pause limit still applies; the timer and display frames; settings mi
 **Safety overview:** permissions used (none new in the Permissions-Policy; `screen-wake-lock` is allowed by
 default for the site's own pages), data (the switches are settings on the device), abuse cases.
 
-### 2.11 Hardening and the release review
+### 2.12 Hardening and the release review
 
 **Builds:** the accessibility pass for every new mode and the editor (WCAG 2.2 AA, axe-core, keyboard and
 screen readers, 44 px targets, reduced motion and low power), the performance pass (budgets, a long
@@ -319,7 +363,7 @@ sign-off.
 
 ## The owner's answers
 
-1. **Free-form layout before payments exist:** the free-form editor is built in full in round 2.9 but
+1. **Free-form layout before payments exist:** the free-form editor is built in full in round 2.10 but
    switched on only when the unlock arrives in Release 3; until then everyone gets preset positions. It is
    testable behind the test-modes switch.
 2. **The interstellar test flag:** opening the site once with `?test=interstellar` shows a "test modes"
@@ -328,7 +372,7 @@ sign-off.
 3. **Picture-in-picture:** a display setting, off by default, as drawn. When on, it adds a button to the
    timer's top-right icons (Tabler's picture-in-picture icon, the same size and colour as the other corner
    icons, left of settings) that opens the floating timer. The setting and the button appear only where
-   the browser offers a window for a page, and are hidden elsewhere. Built in round 2.10.
+   the browser offers a window for a page, and are hidden elsewhere. Built in round 2.11.
 4. **Background images:** JPEG, PNG, WebP or AVIF, detected from their contents, at most 20 MB and 50
    megapixels, re-encoded at screen size; SVG refused. They stay on the device, never uploaded or synced.
    One per display mode.
@@ -337,7 +381,7 @@ sign-off.
    separate from the GPL code.
 
 Also from the owner's review: the analog hand glides continuously (round 2.2), and the Permissions-Policy
-is confirmed not to block the wake lock (round 2.10).
+is confirmed not to block the wake lock (round 2.11).
 
 ## Open points
 

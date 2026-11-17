@@ -17,12 +17,13 @@ const load = (value: unknown): Recipe => {
 const ids = (layers: readonly { readonly id: string }[]): string[] => layers.map((layer) => layer.id);
 
 describe('a mode built from its recipe', () => {
-  it('falls back to digits when its recipe is refused', () => {
-    const refused = { ...RING, name: '<script>alert(1)</script>' };
-    const mode = builtInMode('ring', refused, { pieces: {}, view: DIGITS_LIBRARY.view })();
+  it('draws its built-in recipe as the build checked it (round 2.8: refused recipes stop the build, build/recipes.test.ts)', () => {
+    const mode = builtInMode('ring', RING, { pieces: {}, view: DIGITS_LIBRARY.view })();
     expect(mode.id).toBe('ring');
-    expect(mode.replayLayout).toBe('strip');
-    expect(mode.replayTiming.durationMs).toBe(DIGITS_RECIPE.results.replay.seconds * 1000);
+    expect(mode.replayLayout).toBe('ring');
+    expect(mode.replayTiming.durationMs).toBe(RING.results.replay.seconds * 1000);
+    expect(Object.isFrozen(RING.layers)).toBe(true);
+    expect(DIGITS_RECIPE.id).toBe('digits');
   });
 
   it('takes its replay and its results layout from the recipe', () => {

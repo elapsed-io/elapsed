@@ -93,8 +93,9 @@ describe('plan audit: performance', () => {
     };
     // Keyframes built away from the call are checked in these files as a whole.
     const BUILT_ELSEWHERE = ['packages/web/src/results/results.ts', 'packages/web/src/modes/pieces/light/light.ts', 'packages/web/src/modes/pieces/tree/tree.ts'];
+    // A keyframe's `offset` and `easing` time it; they are not properties that move.
     const allowed = (property: string, path: string): boolean =>
-      property === 'transform' || property === 'opacity' || property === 'offset' || (EXCEPTIONS[property]?.test(path) ?? false);
+      property === 'transform' || property === 'opacity' || property === 'offset' || property === 'easing' || (EXCEPTIONS[property]?.test(path) ?? false);
     for (const path of SITE_SOURCE) {
       const text = withoutComments(readFileSync(path, 'utf8'));
       for (const [, first = ''] of text.matchAll(/\.animate\(\s*(\S)/g)) {

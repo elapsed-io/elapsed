@@ -157,6 +157,26 @@ export const CONFIG = {
     control: 120,
     /** The contrast switch crossfades its two stacked copies over this long (owner, changes 4: about 220 ms). */
     contrastFade: 220,
+    /**
+     * Focus view (plan, Interface; the "the motion, on a loop" frame): after this long untouched while a session
+     * runs, pause and end drop 10 px while fading out over 180 ms (the corner icons fade with them), and the time
+     * grows to 1.32 times its size and settles 25 px lower over 220 ms; any touch reverses it just as fast.
+     */
+    focus: {
+      quietMs: { '3s': 3000, '10s': 10_000 },
+      controlsMs: 180,
+      controlsDropPx: 10,
+      timeMs: 220,
+      timeScale: 1.32,
+      timeDropPx: 25,
+      /** The frame's curves: hiding eases in (quadratic), the time and every return ease out (quartic). */
+      easeIn: [0.11, 0, 0.5, 0] as const,
+      easeOut: [0.25, 1, 0.5, 1] as const,
+    },
+    /** A notice's "change" outlines the setting it opened for this long, then the outline fades. */
+    highlightMs: 2000,
+    /** A change of environment (a mode's water or sky coming or going) crossfades over this long. */
+    environmentFade: 2000,
     /** The slight spring of the start morph: a damped spring drawn through CSS linear() at this many points. */
     spring: { dampingRatio: 0.75, settle: 5, points: 24 },
     /** Seconds blur-away: the ones digit clears over 0 to 10 s, the tens digit and colon over 10 to 60 s. */
@@ -354,6 +374,20 @@ export const CONFIG = {
       bodyLineHeight: 1.6,
       bodyMaxWidthPx: 400,
     },
+    /** The notice pill (plan, Interface; the "notice: fullscreen tip" frame): 20 px tall, 11 px text, 20 px above the time. */
+    pill: {
+      heightPx: 20,
+      textPx: 11,
+      gapPx: 7,
+      paddingStartPx: 9,
+      paddingEndPx: 2,
+      radiusPx: 10,
+      aboveTimePx: 20,
+      underlineOffsetPx: 2,
+      dismissPx: 16,
+      crossPx: 9,
+      crossStrokeWidth: 2.4,
+    },
     icons: {
       strokeWidth: 1.6,
       /** Settings and account: 16 px icons in 28 px boxes, 14 px from the top-right corner, 4 px apart. */
@@ -367,6 +401,8 @@ export const CONFIG = {
     },
     /** The settings panel, from the five Release 1 settings frames (1280 × 800). */
     settings: {
+      /** The outline "change" draws around a setting (the "change opens settings on it" frame). */
+      highlight: { insetYPx: 6, insetXPx: 8, radiusPx: 6, linePx: 1 },
       paddingYPx: 22,
       paddingXPx: 26,
       gapPx: 14,
@@ -464,21 +500,49 @@ export const CONFIG = {
     analog: {
       revolution: 1 * HOUR,
       labelEveryMinutes: 5,
-      /** The hours subdial's hand turns once in this long. */
+      /** The hours hand turns once in this long. */
       hoursRevolution: 12 * HOUR,
-      /** Geometry from the analog frame: a 290 × 300 drawing (its viewBox 0 −10 300 310) 16 px above the buttons. */
-      widthPx: 290,
-      heightPx: 300,
-      gapPx: 16,
-      /** In the drawing's own units: the dial's centre, the minute hand (tip to tail, about the centre), the pin. */
-      centre: { x: 150, y: 150 },
-      minuteHand: { tipY: 36, tailY: 168, width: 2.5 },
-      pinRadius: 5,
-      /** The hours subdial's centre and hand (tip to centre). */
-      subdial: { x: 150, y: 200 },
-      hoursHand: { tipY: 184, width: 2 },
-      labelPx: 12,
-      hoursLabelPx: 10,
+      /**
+       * Geometry from the redesigned "analog" frame (canvas version 1794927010-cb9d): a 340 × 336 drawing, 14 px
+       * above the buttons, in its own units (one a reference pixel at a radius of 150). Everything below is in
+       * those units.
+       */
+      widthPx: 340,
+      heightPx: 336,
+      gapPx: 14,
+      centre: { x: 170, y: 178 },
+      /** The polished case, its hairline rim, and the face. */
+      caseRadius: 150,
+      rimRadius: 146,
+      rimOpacity: 0.08,
+      faceRadius: 138,
+      /** The ridged crown at 12: its stem, its cap and the ridges across the cap; it dips this far, this fast, when end is pressed. */
+      crown: {
+        stem: { x: 165, y: 23, width: 10, height: 8 },
+        cap: { x: 155, y: 11, width: 30, height: 13, radius: 4 },
+        ridges: { firstX: 160, step: 4, count: 6, top: 14, bottom: 21 },
+        dip: 4,
+        dipMs: 180,
+      },
+      /** The outer track: sixty ticks from the edge inward, longer and heavier every five. */
+      ticks: { outer: 134, major: 127, minor: 130, majorWidth: 1.2, minorWidth: 0.8 },
+      /** The numbers 5 to 60, each turned to follow the edge. */
+      numbers: { radius: 116, letterSpacingEm: 0.04 },
+      /** Slim baton indices, stopping this far short of a small dial in their way. */
+      batons: { outer: 100, inner: 83, width: 2.6, opacity: 0.85, clearance: 5 },
+      minuteHand: { length: 114, tail: 18, width: 2.5 },
+      /** The pin over the hands: a disc in the hands' colour with a hole in the face's. */
+      pin: { radius: 5, hole: 1.6 },
+      /**
+       * A small dial, in shares of its radius (the seconds dial's 42): its face (the background over the dial at
+       * this opacity) and rim, ticks from the rim inward (long at each number), its numbers, and its hub.
+       */
+      subdialFill: 0.35,
+      // The long ticks' inner end and the numbers' radius are the frame's own (35.505 and 28.48 of 42 reproduce
+      // every coordinate it writes; 35.5 and 28.5 would put four of them 0.1 px off).
+      subdial: { rimWidth: 1, tickOuter: 40 / 42, longTick: 35.505 / 42, shortTick: 38 / 42, tickWidth: 0.6, numbers: 28.48 / 42, names: 0.6, hub: 2.4 },
+      labelPx: 11,
+      subdialLabelPx: 9.5,
       /** A small dial's marks' names (the perpetual calendar's dates, days and months). */
       subLabelPx: 6.5,
     },

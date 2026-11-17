@@ -1,6 +1,6 @@
 /** Height (round 2.5): the sky and its stars, the pause's effects, its frames, and its results. */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Browser, Page } from '@playwright/test';
 import { BRAND, CONFIG, createSession, serializeActiveState, skyColour, startState } from '@stopwatch/core';
 import { resultsHeightLitFrame } from './fixtures/frames.ts';

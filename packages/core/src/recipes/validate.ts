@@ -17,6 +17,7 @@ export interface SchemaProblem {
 type Schema = Readonly<Record<string, unknown>>;
 
 const KNOWN = new Set([
+  '$comment',
   '$schema',
   '$id',
   '$defs',

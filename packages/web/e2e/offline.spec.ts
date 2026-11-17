@@ -4,7 +4,7 @@
  * elsewhere, where it would answer requests out of the tests' reach).
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { corePaths } from './helpers.ts';
 

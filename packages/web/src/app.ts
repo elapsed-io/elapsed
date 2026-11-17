@@ -8,7 +8,7 @@
  * (after the tabulating screen); the session maximum notice.
  */
 
-import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, localDay, rulesFrom, summarise, systemTimeZone } from '@stopwatch/core';
+import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, localDay, rulesFrom, summarise, systemTimeZone, withSetting } from '@stopwatch/core';
 import type { SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
 import { CountClient } from './counts/client.ts';
 import { CrashReporter } from './crash/reporter.ts';
@@ -29,7 +29,10 @@ import { formatClockTime, setClockFormat } from './shell/clock-time.ts';
 import { answersCheckIn } from './shell/check-in.ts';
 import { Controls } from './shell/controls.ts';
 import { EndingCountdown } from './shell/ending.ts';
+import { FocusView } from './shell/focus-view.ts';
 import { MaximumNotice } from './shell/notice.ts';
+import { Pill } from './shell/pill.ts';
+import type { Notice } from './shell/pill.ts';
 import { motionScale } from './shell/motion.ts';
 import { Notifier } from './shell/notifier.ts';
 import { takeSafeMode } from './shell/safe-mode.ts';
@@ -38,6 +41,7 @@ import { shortcutFor } from './shell/shortcuts.ts';
 import { titleFor } from './shell/title.ts';
 import { FinishedStore, browserSessionStorage } from './storage/finished-store.ts';
 import { LocalCustomCssStore, watchCustomCss } from './storage/custom-css-store.ts';
+import { LocalNoticeStore } from './storage/notice-store.ts';
 import { IndexedDbMediaStore, browserIndexedDb } from './storage/media-store.ts';
 import { LocalSessionStore, browserLocalStorage, watchLocalStorage } from './storage/session-store.ts';
 import { LocalSettingsStore, watchSettings } from './storage/settings-store.ts';
@@ -75,6 +79,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   };
   const settingsStore = new LocalSettingsStore(browserLocalStorage(win), report);
   const customCssStore = new LocalCustomCssStore(browserLocalStorage(win), report);
+  const noticeStore = new LocalNoticeStore(browserLocalStorage(win), report);
   const settings = new SettingsController({
     doc,
     store: settingsStore,
@@ -106,6 +111,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       },
     },
     onError: report,
+    alsoClears: [noticeStore],
   });
   setClockFormat(settings.current.clockFormat);
   const fontReady = settings.start();
@@ -207,6 +213,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     controlsRoot.hidden = !timer;
     screenElement.classList.toggle('screen--bare', next === 'ending');
     if (timer) render(engine.view);
+    else focusView.update();
   };
 
   const notice = new MaximumNotice(doc, () => {
@@ -332,9 +339,18 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     setScreen('timer');
   };
 
+  // The display hears end the moment it is pressed (the analog crown dips): on the button's press, before its
+  // click, and on E. A display already answering the press ignores the second call.
+  const endPressed = (): void => {
+    if (current === 'timer' && (engine.status === 'running' || engine.status === 'paused')) mode.onEvent?.({ type: 'end.pressed' });
+  };
+  controlsRoot.addEventListener('pointerdown', (event) => {
+    if (event.target instanceof Element && event.target.closest('.button--end') !== null) endPressed();
+  });
   const beginEnding = (): void => {
     sync.pull();
     if (engine.status !== 'running' && engine.status !== 'paused') return;
+    endPressed();
     endPressedAt = engine.now();
     const takeFocus = focusIsOn(controlsRoot);
     setScreen('ending');
@@ -345,13 +361,48 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
 
   // ---- Timer -------------------------------------------------------------
 
+  // Fullscreen (plan, Interface: the focus view settings): entered as a session starts, if asked, within the
+  // start's own press; left on pause or end as the setting says. Esc always leaves it (the browser's own). Where
+  // the page has no fullscreen (iPhones), nothing here runs and settings hide both choices.
+  const fullscreenAvailable = (): boolean => doc.fullscreenEnabled && typeof doc.documentElement.requestFullscreen === 'function';
+  const enterFullscreen = (): void => {
+    if (!settings.current.fullscreenOnStart || !fullscreenAvailable() || doc.fullscreenElement !== null) return;
+    void doc.documentElement.requestFullscreen().catch(() => undefined);
+  };
+  const leaveFullscreen = (on: 'pause' | 'end'): void => {
+    const leave = settings.current.leaveFullscreen;
+    if (doc.fullscreenElement === null || leave === 'never' || (on === 'pause' && leave !== 'pause-or-end')) return;
+    void doc.exitFullscreen().catch(() => undefined);
+  };
+
   const toggle = (): void => {
     sync.pull();
-    if (engine.status === 'running') engine.pause();
-    else if (engine.status === 'paused') engine.resume();
-    else engine.start(registered.manifest.id);
+    if (engine.status === 'running') {
+      engine.pause();
+      leaveFullscreen('pause');
+    } else if (engine.status === 'paused') engine.resume();
+    else {
+      engine.start(registered.manifest.id);
+      enterFullscreen();
+    }
   };
   const controls = new Controls(controlsRoot, { primary: toggle, end: beginEnding });
+  let settingsShown = false;
+  const focusView = new FocusView(win, screenElement, {
+    quietMs: () => {
+      const hide = settings.current.focusHide;
+      return hide === 'never' ? null : CONFIG.motion.focus.quietMs[hide];
+    },
+    active: () =>
+      current === 'timer' && !settingsShown && doc.visibilityState === 'visible' && engine.view.status === 'running' && engine.view.checkInDueAt === null,
+    now: () => win.performance.now(),
+    wakeAfter: (delayMs, run) => {
+      engine.wakeAfter('focus-view', delayMs, run);
+    },
+    cancelWake: () => {
+      engine.cancelWake('focus-view');
+    },
+  });
 
   // An ended session shows the idle screen behind the results.
   const shown = (view: TimerView): TimerView => (view.status === 'ended' ? computeView(null, view.at, context.seconds) : view);
@@ -369,7 +420,43 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     behind = false;
     mode.render(visible);
     controls.update(visible.status === 'running' || visible.status === 'paused' ? visible.status : 'idle');
+    focusView.update();
+    showNotice();
   };
+
+  // Notices (plan, Interface): one pill above the time. The first is the fullscreen tip on the idle screen,
+  // shown where the page can go fullscreen, while the setting is off and until it is dismissed. "change" turns
+  // the setting on and opens settings on it; the tip has then done its job, so it counts as dismissed too.
+  const fullscreenTip: Notice = { id: 'fullscreen', text: BRAND.copy.notices.fullscreen, setting: 'fullscreenOnStart' };
+  const noticeNow = (): Notice | null => {
+    if (current !== 'timer' || shown(engine.view).status !== 'idle') return null;
+    if (!fullscreenAvailable() || settings.current.fullscreenOnStart || noticeStore.dismissed(fullscreenTip.id)) return null;
+    return fullscreenTip;
+  };
+  const pill = new Pill(doc, {
+    dismiss: (notice) => {
+      noticeStore.dismiss(notice.id);
+      showNotice();
+    },
+    change: (notice, setting) => {
+      noticeStore.dismiss(notice.id);
+      settings.change(withSetting(settings.current, setting, true));
+      void openSettings()
+        .then(() => panel?.openOn(setting, true))
+        .catch(report);
+    },
+  });
+  function showNotice(): void {
+    // The mode may have rebuilt its time (a mode switch, an option); the pill follows it.
+    const time = modeRoot.querySelector<HTMLElement>(':scope > .contrast, :scope > .time-stack');
+    const next = noticeNow();
+    // A pill that goes while one of its buttons has focus hands focus on to the next control, start.
+    if (next === null && pill.element.contains(doc.activeElement)) controlsRoot.querySelector('button')?.focus();
+    pill.show(next, time);
+  }
+  settings.subscribe(() => {
+    showNotice();
+  });
 
   bus.on('view.changed', ({ view }) => {
     render(view);
@@ -398,6 +485,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     counts.session();
   });
   bus.on('session.ended', ({ session, reason }) => {
+    leaveFullscreen('end');
     sync.ended(session);
     finished.save(session);
     lastFinished = session;
@@ -457,6 +545,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     void next.load().then((factory) => {
       usedMode(next);
       if (request !== modeRequest) return;
+      const leaving = keepEnvironment();
       mode.unmount();
       registered = next;
       mode = factory();
@@ -464,7 +553,38 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       context.options = modeOptions();
       mode.mount(modeRoot, context);
       render(engine.view);
+      crossfadeEnvironment(leaving);
     }, report);
+  };
+  // A change of environment crossfades over about 2 seconds (plan, Product principles): the old scene is kept,
+  // held where it was, behind the new one while it fades in, or fades out itself when no scene follows. Only
+  // opacity animates; with reduced motion the change is immediate.
+  const keepEnvironment = (): HTMLElement | null => {
+    const environment = modeRoot.querySelector<HTMLElement>(':scope > .environment');
+    if (environment === null || context.reducedMotion) return null;
+    // Its glides stop where they are; the mode's own unmount would otherwise set them back.
+    for (const animation of environment.getAnimations({ subtree: true })) {
+      if (animation instanceof CSSTransition) continue;
+      animation.commitStyles();
+      animation.cancel();
+    }
+    environment.classList.add('environment--leaving');
+    screenElement.prepend(environment);
+    return environment;
+  };
+  const crossfadeEnvironment = (leaving: HTMLElement | null): void => {
+    if (leaving === null) return;
+    const arriving = modeRoot.querySelector<HTMLElement>(':scope > .environment');
+    const fading = arriving ?? leaving;
+    const fade = fading.animate([{ opacity: arriving === null ? 1 : 0 }, { opacity: arriving === null ? 0 : 1 }], {
+      duration: CONFIG.motion.environmentFade * motionScale(doc),
+      easing: 'ease-in-out',
+    });
+    const done = (): void => {
+      leaving.remove();
+    };
+    fade.addEventListener('finish', done);
+    fade.addEventListener('cancel', done);
   };
   // Another tab's change applies here too, without being saved again.
   watchSettings(win, settingsStore, (next) => {
@@ -484,6 +604,10 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   const closeSettings = (): void => {
     if (panel === null || !panel.shown) return;
     panel.hide();
+    settingsShown = false;
+    focusView.update();
+    // Settings may have changed what the idle screen tells (clear device data brings dismissed notices back).
+    showNotice();
     settingsButton.focus({ preventScroll: true });
   };
   const openSettings = async (): Promise<void> => {
@@ -496,6 +620,8 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     });
     if (!doc.body.contains(panel.element)) doc.body.append(panel.element);
     panel.open();
+    settingsShown = true;
+    focusView.update();
   };
   const toggleSettings = (): void => {
     if (panel?.shown === true) closeSettings();
@@ -609,6 +735,8 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   doc.addEventListener('visibilitychange', () => {
     const hidden = doc.visibilityState === 'hidden';
     engine.setBackground(hidden);
+    // The focus view waits only while the tab is seen.
+    focusView.update();
     if (hidden) return;
     refresh();
     if (behind) render(engine.view);

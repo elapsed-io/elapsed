@@ -25,6 +25,8 @@ import {
   TEST_MODES,
   SECONDS_DISPLAYS,
   SETTINGS_CATEGORIES,
+  FOCUS_HIDES,
+  LEAVE_FULLSCREEN,
   THEME_IDS,
   TREE_VIEWS,
   declarationOf,
@@ -32,7 +34,7 @@ import {
   resetCategory,
   withSetting,
 } from '@stopwatch/core';
-import type { AnimationSpeed, ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId, TreeView } from '@stopwatch/core';
+import type { AnimationSpeed, ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId, TreeView, FocusHide, LeaveFullscreen } from '@stopwatch/core';
 import { parseSettingsFile, settingsFile, settingsFileName } from '@stopwatch/core/settings-file';
 import 'virtual:tokens/settings.css';
 import { html, svg } from '../dom.ts';
@@ -251,6 +253,25 @@ export class SettingsPanel {
     this.element.focus({ preventScroll: true });
   }
 
+  /**
+   * Opens the panel on one setting (a notice's "change"): its category open, the setting scrolled into view and
+   * briefly outlined in the accent colour (the "change opens settings on it" frame).
+   */
+  openOn(key: SettingKey, changed = false): void {
+    this.open();
+    // The site has just changed it (a notice's "change"): the panel says so, as after any change.
+    if (changed) this.#flashSaved();
+    const category = declarationOf(key).category;
+    if (this.#open !== category) this.#toggle(category);
+    const setting = this.element.querySelector<HTMLElement>(`[data-setting="${key}"]`);
+    if (setting === null) return;
+    setting.scrollIntoView({ block: 'nearest' });
+    // The outline is a CSS animation that fades itself out (panel.css); taken off and put back, it starts again.
+    for (const outlined of this.element.querySelectorAll('.setting--highlight')) outlined.classList.remove('setting--highlight');
+    setting.getBoundingClientRect();
+    setting.classList.add('setting--highlight');
+  }
+
   /** Tab from the last control goes to the first, and Shift+Tab from the first (or the panel itself) to the last. */
   #trapFocus(event: KeyboardEvent): void {
     const focusable = [...this.element.querySelectorAll<HTMLElement>('button, input, textarea, select, a[href], [tabindex]')].filter(
@@ -426,7 +447,7 @@ export class SettingsPanel {
       case 'timer':
         return [this.#seconds(), this.#rangeItem('checkInInterval', copy.checkIn, formatHoursMinutes), this.#rangeItem('pauseLimit', copy.pauseLimit, formatMinutes), this.#shortcuts()];
       case 'display':
-        return [this.#modes(), this.#modeOptions(), this.#downloads()];
+        return [this.#modes(), this.#modeOptions(), this.#focusView(), this.#downloads()];
       case 'appearance':
         return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat(), this.#animationSpeed(), this.#lowPower()];
       case 'notifications':
@@ -553,6 +574,50 @@ export class SettingsPanel {
         copy.treeView.label,
         ...views.map((option) => option.label),
       ),
+    };
+  }
+
+  /**
+   * The focus view group (the Release 2 display frame): hide controls while focusing, fullscreen when a session
+   * starts, and when to leave fullscreen, in a box like the modes' options. Where the page has no fullscreen
+   * (iPhones), both fullscreen choices are hidden.
+   */
+  #focusView(): Item {
+    const doc = this.#doc;
+    const text = copy.focusView;
+    const row = (label: string, control: HTMLElement, help: string | null, key: SettingKey): HTMLDivElement =>
+      html(doc, 'div', { class: 'setting', attrs: { 'data-setting': key } }, [
+        html(doc, 'div', { class: 'setting__row' }, [html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [label]), control]),
+        ...(help === null ? [] : [html(doc, 'div', { class: 'setting__help' }, [help])]),
+      ]);
+    const hides = FOCUS_HIDES.map((value) => ({ value, label: text.hide.options[value] }));
+    const hide = segmented<FocusHide>(doc, text.hide.label, hides, (value) => {
+      this.#set('focusHide', value);
+    });
+    const fullscreen = toggle(doc, text.fullscreen.label, (on) => {
+      this.#set('fullscreenOnStart', on);
+    });
+    const leaves = LEAVE_FULLSCREEN.map((value) => ({ value, label: text.leave.options[value] }));
+    const leave = segmented<LeaveFullscreen>(doc, text.leave.label, leaves, (value) => {
+      this.#set('leaveFullscreen', value);
+    });
+    this.#updates.push((settings) => {
+      hide.update(settings.focusHide);
+      fullscreen.update(settings.fullscreenOnStart);
+      leave.update(settings.leaveFullscreen);
+    });
+    const fullscreenRows = [row(text.fullscreen.label, fullscreen.element, text.fullscreen.help, 'fullscreenOnStart'), row(text.leave.label, leave.element, null, 'leaveFullscreen')];
+    // iPhones have no page fullscreen.
+    const available = doc.fullscreenEnabled && typeof doc.documentElement.requestFullscreen === 'function';
+    for (const element of fullscreenRows) element.hidden = !available;
+    const group = html(doc, 'div', { class: 'mode-options', attrs: { role: 'group', 'aria-label': text.title } }, [
+      html(doc, 'div', { class: 'mode-options__title' }, [text.title]),
+      row(text.hide.label, hide.element, text.hide.help, 'focusHide'),
+      ...fullscreenRows,
+    ]);
+    return {
+      element: html(doc, 'div', { class: 'settings__item-contents' }, [group]),
+      search: searchText(text.title, text.hide.label, text.hide.help, ...hides.map((option) => option.label), ...(available ? [text.fullscreen.label, text.fullscreen.help, text.leave.label, ...leaves.map((option) => option.label)] : [])),
     };
   }
 

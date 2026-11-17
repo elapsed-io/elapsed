@@ -1,6 +1,6 @@
 /** Tree (round 2.6): its year, its two views, its frames and its results. */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { resultsTreeFrame, treeIsoFrame, treeSideFrame } from './fixtures/tree-frames.ts';
 import { MINUTE, SECOND, compareWithReference, endThroughCountdown, finishResults, freezeAnimations, openApp, settle } from './helpers.ts';

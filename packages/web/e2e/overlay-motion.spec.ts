@@ -8,7 +8,7 @@
  * opened, so the painted time slid too far and jumped back when the slide ended (17 px at 1280 × 800).
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { SECOND, freezeAnimations, openApp } from './helpers.ts';
 

@@ -6,7 +6,7 @@
  */
 
 import type { Layer, LayerOf, LayerType, Recipe, TimerView } from '@stopwatch/core';
-import type { DisplayContext, ReplaySurface, ModeOptions } from '../contract.ts';
+import type { DisplayContext, ModeEvent, ReplaySurface, ModeOptions } from '../contract.ts';
 import type { Session } from '@stopwatch/core';
 import type { Slots } from './slots.ts';
 
@@ -55,6 +55,8 @@ export interface Piece {
   /** Drawn after the display (a caption). */
   readonly overlay?: readonly Node[];
   render(frame: Frame): void;
+  /** A mode event (end pressed), passed on to every piece. */
+  onEvent?(event: ModeEvent): void;
   unmount?(): void;
 }
 

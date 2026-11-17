@@ -1,8 +1,8 @@
 /*
- * Analog stopwatch, drawn as the analog frame: the dial is an SVG in the frame's own units (290 × 300 at
- * reference, viewBox 0 −10 300 310, so one unit is 290/300 of a reference pixel); the hands and the pin are
- * HTML over it, placed in the same units, so the compositor can turn them (analog.ts). Everything scales
- * with the window like the time.
+ * The dial (dial.ts), drawn as the redesigned "analog" frame: the dial is an SVG in the frame's own units (a
+ * 340 × 336 drawing, one unit a reference pixel at a radius of 150); each hand and the pin are HTML over it, each
+ * a drawing of the whole dial that CSS turns about the point it is pinned at, so the compositor can turn them.
+ * Everything scales with the window like the time.
  */
 @layer mode {
   .analog-stack {
@@ -11,9 +11,8 @@
 
   .analog {
     --analog-px: calc(var(--u) * var(--time-scale));
-    /* One unit of the drawing, and the half unit the drawing sits below the box's top (310 units in 300 px). */
+    /* One unit of the drawing. */
     --au: calc(var(--analog-px) * var(--analog-unit));
-    --analog-offset: calc(var(--analog-px) * var(--analog-top));
     position: relative;
     width: calc(var(--analog-width) * var(--analog-px));
     height: calc(var(--analog-height) * var(--analog-px));
@@ -26,32 +25,48 @@
     height: 100%;
   }
 
-  .analog__crown {
-    fill: var(--color-faint);
+  /* The polished case and the crown: the frame's gradients, from the pause button's grey to the track. */
+  .analog__stop--gray {
+    stop-color: var(--color-pause);
+  }
+
+  .analog__stop--faint {
+    stop-color: var(--color-faint);
+  }
+
+  .analog__stop--track {
+    stop-color: var(--color-track);
+  }
+
+  .analog__ridge {
+    stroke: var(--color-track);
+  }
+
+  .analog__rim {
+    fill: none;
+    stroke: var(--color-foreground);
   }
 
   .analog__face {
     fill: var(--color-track);
-    stroke: var(--color-faint);
   }
 
-  .analog__minute-ticks,
+  .analog__tick {
+    stroke: var(--color-muted);
+  }
+
+  .analog__baton {
+    stroke: var(--color-foreground);
+  }
+
   .analog__subdial {
-    fill: none;
+    fill: var(--color-background);
     stroke: var(--color-faint);
-  }
-
-  .analog__five-ticks {
-    fill: none;
-    stroke: var(--color-muted);
-  }
-
-  .analog__muted-line {
-    stroke: var(--color-muted);
   }
 
   .analog__label,
-  .analog__hours-label {
+  .analog__subnumber,
+  .analog__sublabel {
     font-family: var(--font-family);
     font-stretch: var(--font-stretch);
     fill: var(--color-muted);
@@ -59,18 +74,16 @@
 
   .analog__label {
     font-size: var(--analog-label-size);
+    letter-spacing: var(--analog-letter-spacing);
   }
 
-  .analog__hours-label {
-    font-size: var(--analog-hours-label-size);
+  .analog__subnumber {
+    font-size: var(--analog-subdial-label-size);
   }
 
   /* A small dial's marks' names (the perpetual calendar's dates, days and months). */
   .analog__sublabel {
-    font-family: var(--font-family);
-    font-stretch: var(--font-stretch);
     font-size: var(--analog-sublabel-size);
-    fill: var(--color-muted);
   }
 
   /*
@@ -80,7 +93,7 @@
   .dial__moon {
     position: absolute;
     left: calc(var(--moon-x) * var(--au));
-    top: calc(var(--moon-y) * var(--au) + var(--analog-offset));
+    top: calc(var(--moon-y) * var(--au));
     width: calc(2 * var(--moon-r) * var(--au));
     height: calc(var(--moon-r) * var(--au));
     overflow: hidden;
@@ -123,14 +136,17 @@
 
   .analog__hand {
     will-change: transform;
+    transform-origin: calc(var(--hand-x) * var(--au)) calc(var(--hand-y) * var(--au));
   }
 
   .analog--still .analog__hand {
     will-change: auto;
   }
 
-  /* Each hand is a drawing over the whole dial, turned about the dial's (or the subdial's) centre. */
+  /* Each hand, and the pin, is a drawing over the whole dial. */
   .analog__hand,
+  .analog__hubs,
+  .analog__pin,
   .analog__hand-drawing {
     position: absolute;
     inset: 0;
@@ -138,31 +154,16 @@
     height: 100%;
   }
 
-  .analog__hand--minute {
-    transform-origin: calc(var(--analog-centre-x) * var(--au)) calc(var(--analog-centre-y) * var(--au) + var(--analog-offset));
+  .analog__hand-line {
+    stroke: var(--hand-colour);
   }
 
-  .analog__hand--hours {
-    transform-origin: calc(var(--analog-subdial-x) * var(--au)) calc(var(--analog-subdial-y) * var(--au) + var(--analog-offset));
+  .analog__pin-disc {
+    fill: var(--hand-colour);
   }
 
-  .analog__hand-line--minute {
-    stroke: var(--dial-hand, var(--color-accent));
-  }
-
-  .analog__hand-line--hours {
-    stroke: var(--dial-subhand, var(--color-foreground));
-  }
-
-  /* The pin over the minute hand: a disc at the centre. */
-  .analog__pin {
-    position: absolute;
-    left: calc(var(--analog-pin-left) * var(--au));
-    top: calc(var(--analog-pin-top) * var(--au) + var(--analog-offset));
-    width: calc(var(--analog-pin-size) * var(--au));
-    height: calc(var(--analog-pin-size) * var(--au));
-    border-radius: 50%;
-    background: var(--dial-hand, var(--color-accent));
+  .analog__pin-hole {
+    fill: var(--color-track);
   }
 
   /*

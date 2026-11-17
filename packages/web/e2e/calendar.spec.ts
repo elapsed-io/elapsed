@@ -5,7 +5,7 @@
  * leap year and the real moon of the date shown.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { LUNATION_DAYS, createSession, moonAge, serializeActiveState, startState } from '@stopwatch/core';
 import { MINUTE, SECOND, T0, T_READY, openApp, settle } from './helpers.ts';

@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
-import { corePaths } from './helpers.ts';
+import { corePaths, settle } from './helpers.ts';
 import { diffPngs, expectLikeFrame } from './pixels.ts';
 
 const FIXTURE = readFileSync(fileURLToPath(new URL('fixtures/idle-frame.html', import.meta.url)));
@@ -23,6 +23,9 @@ async function watchViolations(page: Page): Promise<() => Promise<string[]>> {
 async function openIdle(page: Page): Promise<void> {
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
+  // The screen as it rests: a busy WebKit can still be finishing the first paint's fades.
+  await page.locator('.button--primary').waitFor();
+  await settle(page);
 }
 
 test('serves the security headers on the page', async ({ request }) => {
@@ -155,7 +158,8 @@ test('matches the idle frame pixel for pixel at 720 × 450', async ({ page, brow
 });
 
 test('paints the same idle frame before the script runs', async ({ browser, browserName }) => {
-  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 720, height: 450 } });
+  // No stored state: seeding local storage needs script, which this context has none of (Firefox would wait for it).
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 720, height: 450 }, storageState: { cookies: [], origins: [] } });
   const page = await context.newPage();
   // No script can be evaluated in this page (Firefox waits for one forever), so wait for the font to arrive.
   const font = page.waitForResponse((response) => response.url().endsWith('.woff2'));

@@ -1,4 +1,5 @@
 {
+  "$comment": "The source of truth for display-mode recipes, version 1. Version 1 stays open for changes until Release 2’s public release, then freezes. After that, optional additions with sensible defaults keep version 1; anything that would break an existing recipe (renaming or removing a field, changing a value’s meaning, renaming a slot) goes to version 2, with an automatic migration on load and a test for it. Slot ids are permanent once released. (Owner, 2026-11-17; docs/decisions.md 338.)",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://elapsed.io/schemas/mode-recipe-1.json",
   "title": "elapsed display-mode recipe, version 1",
@@ -20,6 +21,7 @@
             "theme.gray",
             "theme.end",
             "theme.pr",
+            "theme.red",
             "contrast.text",
             "contrast.muted"
           ]
@@ -157,6 +159,11 @@
         },
         "color": {
           "$ref": "#/$defs/color"
+        },
+        "tail": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
         }
       }
     }
@@ -739,6 +746,11 @@
                   }
                 }
               },
+              "batons": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
               "hand": {
                 "$ref": "#/$defs/hand"
               },
@@ -772,6 +784,14 @@
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 24
+                    },
+                    "ticks": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 120
+                    },
+                    "topColor": {
+                      "$ref": "#/$defs/color"
                     },
                     "hand": {
                       "$ref": "#/$defs/hand"

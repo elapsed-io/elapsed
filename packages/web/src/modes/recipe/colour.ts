@@ -14,6 +14,7 @@ const TOKENS: Readonly<Record<string, string>> = {
   'theme.gray': 'var(--color-muted)',
   'theme.end': 'var(--color-end)',
   'theme.pr': 'var(--color-accent)',
+  'theme.red': 'var(--color-red)',
   'contrast.text': 'var(--color-foreground)',
   'contrast.muted': 'var(--color-muted)',
 };

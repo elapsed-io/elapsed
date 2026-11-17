@@ -5,7 +5,7 @@
  * anonymous usage counts.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { BrowserContext, Page, Request } from '@playwright/test';
 import { BRAND, createSession, resumeSession, pauseSession, serializeActiveState, startState } from '@stopwatch/core';
 import type { ActiveState } from '@stopwatch/core';
@@ -37,8 +37,9 @@ async function shownTime(page: Page, selector = '.time--main'): Promise<string> 
   });
 }
 
+/** The keys the site stored, apart from the dismissed tip every test starts with (playwright.config.ts). */
 async function storedKeys(page: Page): Promise<string[]> {
-  return page.evaluate(() => Object.keys(localStorage).sort());
+  return page.evaluate(() => Object.keys(localStorage).filter((key) => key !== 'notices').sort());
 }
 
 /** Opens the site again in a new tab, `away` after the closed tab's last moment, with the clock held. */

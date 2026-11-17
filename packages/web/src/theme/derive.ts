@@ -12,6 +12,8 @@ import type { ThemeTokens } from './presets.ts';
 export const FIXED_COLOURS = {
   end: { dark: parseHex('#A8403D'), light: parseHex('#E28A86') },
   recordMarker: { dark: parseHex('#8C7A52'), light: parseHex('#8A6D2E') },
+  /** A red that reads at 4.5:1 on a dial's face (the analog seconds dial's 60). */
+  red: { dark: parseHex('#E5574B'), light: parseHex('#B8332A') },
 } as const;
 
 export interface DerivedTheme extends ThemeTokens {
@@ -28,6 +30,8 @@ export interface DerivedTheme extends ThemeTokens {
   readonly end: Hex;
   /** The personal record marker. */
   readonly recordMarker: Hex;
+  /** A red for marks on a dial. */
+  readonly red: Hex;
 }
 
 export function isLightBackground(background: Hex): boolean {
@@ -51,6 +55,24 @@ export function mutedColour(foreground: Hex, background: Hex, panel: Hex): Hex {
   return colour;
 }
 
+/**
+ * The dial's red (the analog seconds dial's 60): the plan's red for dark or light themes, stepped toward the
+ * foreground only where a theme's small dial needs it to keep text contrast (4.5:1), as the muted colour is.
+ * The small dial's face is the dial's track with the background over it at the frame's opacity.
+ */
+export function dialRed(scheme: 'dark' | 'light', foreground: Hex, background: Hex, track: Hex): Hex {
+  const minimum = CONFIG.theme.minContrast.text;
+  const face = mix(track, background, CONFIG.modes.analog.subdialFill);
+  const start = FIXED_COLOURS.red[scheme];
+  let fraction = 0;
+  let colour = start;
+  while (fraction < 1 && contrastRatio(colour, face) < minimum) {
+    fraction += CONFIG.theme.mutedStep;
+    colour = mix(start, foreground, fraction);
+  }
+  return colour;
+}
+
 export function deriveTheme(tokens: ThemeTokens): DerivedTheme {
   const { background, foreground, accent } = tokens;
   const scheme = isLightBackground(background) ? 'light' : 'dark';
@@ -67,6 +89,7 @@ export function deriveTheme(tokens: ThemeTokens): DerivedTheme {
     pause: toward(CONFIG.theme.mix.pause),
     end: FIXED_COLOURS.end[scheme],
     recordMarker: FIXED_COLOURS.recordMarker[scheme],
+    red: dialRed(scheme, foreground, background, track),
   };
 }
 
@@ -86,6 +109,7 @@ export function themeCustomProperties(theme: DerivedTheme): Readonly<Record<`--$
     '--color-pause': theme.pause,
     '--color-end': theme.end,
     '--color-record': theme.recordMarker,
+    '--color-red': theme.red,
     '--color-scheme': theme.scheme,
   };
 }

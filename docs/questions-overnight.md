@@ -5,87 +5,52 @@ when the run stops; questions for the owner are collected below as they come up.
 
 ## Morning summary
 
-Stopped after round 2.7 (recipes, the new round your changes 3 inserted): it is done, checked in all three
-browsers and pushed. Round 2.8 (interstellar, now as a recipe) is next and unblocked by your answer on the star
-catalog (HYG under CC BY-SA); I stopped here because the overnight run was scoped to end at round 2.7.
+Latest: changes 5 (2026-11-17). Round 2.8 (focus view, notices and fullscreen; the redesigned analog; ambient
+idle screens; replays that never stall) is built, checked in all three browsers and pushed. Next is round 2.9,
+interstellar as a recipe with the test-modes switch.
 
-**Tonight, round 2.7: recipes**
+**Round 2.8, from your changes 5**
 
-- **Every display mode is now its recipe**, drawn by one recipe mode and a piece library (ring, dial, track,
-  tree, the light-falloff water and sky, particles, the starfield, and the strip, rings-per-hour, profile and
-  scene results views); the modes' own code is gone. Each mode still matches its frames.
-- **The loader** checks every recipe on load (the schema through the site's own validator, then references,
-  tuples, colours, slot paths and the runtime limits) and refuses a failing one: the mode shows digits. The
-  checker's validation, reference checks and 49 features are unit tests (48 hold now; the tree's "your art" is
-  round 2.9), with 45 safety cases, each refused.
-- **Recipes corrected where the frames win** (decision 320), and two things the frames do not draw left out
-  until you say (the tree's falling snow; ocean life's random arrivals, question 11).
-- **Your answers built:** the contrast switch (navy over bright water and sky; question 10 asks about its
-  crossfade), every mode's own options box (height's landmarks switch, the tree's view as a segmented control),
-  height's landmarks to the Kármán line, and the corrected height paused frame.
+- **Question 12 answered and recorded:** recipe schema version 1 stays open until Release 2's public release, then
+  freezes; the policy is at the top of the schema file and in decision 338.
+- **Focus view:** while a session runs untouched for 3 s (a setting: 3 s, 10 s, never), pause and end drop and
+  fade, the corner icons fade, the pointer hides, and the time grows 1.32 times and settles 25 px lower; any touch
+  brings it all back as fast. Keys keep working; paused and check-in screens never hide. It waits on the engine's
+  one timer, never its own.
+- **Notices:** the pill, the dismiss × (kept on the device), "change" (turns the setting on, opens settings on it,
+  outlined for 2 s), and the fullscreen tip on the idle screen; none of it on iPhones, which have no page
+  fullscreen.
+- **Settings:** the focus view group in display (hide controls, fullscreen when a session starts, leave
+  fullscreen), matching the Release 2 display frame, which is now compared whole.
+- **Analog, redrawn** as its new frame: case, ridged crown that dips on end, the outer track and its turned
+  numbers, batons that make way for the seconds dial, the 52 px hours hand, the seconds dial with its red 60.
+  Five optional recipe fields carry it.
+- **Ambient idle screens** (they already drew their starting scene; now tested) and a 2-second crossfade
+  whenever the environment changes.
+- **Replays never stall:** the tree's replay stood still through pauses; it now advances by focused time. A test
+  reads every replay frame by frame.
+- **Found on the way:** the core's JavaScript had passed its 50 KB budget with the perpetual calendar (50.6 KB, a
+  warning I missed). Built-in recipes are now checked when the site is built (a refused one stops the build), so
+  the recipe checker no longer loads with the page: 44.6 KB (decision 350).
 
-**What each round built**
+**Test results**
 
-- **Release 1 (items 1 and 2):** plan version 6 adopted; interface motion runs 120 to 220 ms on one fast
-  ease-out, the start morph 160 ms with a slight spring (CSS `linear()`); the tabulating and results timings
-  are faster; each mode's replay has its own length and curve, and sessions over 2 hours replay longer
-  through one shared, unit-tested function. The countdown no longer leaves its finished animation behind
-  (which made a test press "end now" too early). Pushed to the Release 1 branch and merged into Release 2.
-- **Item 4:** `docs/display-mode-contract.md` documents the one contract every mode uses; the contract was
-  extended twice, for every mode (replays draw into a surface with a backdrop; the running context carries
-  the modes' options).
-- **Round 2.1, the mode platform** (pushed before tonight's changes): downloaded modes with their sizes and
-  removal, the asset registry, low power, animation speed and the ring's glide; tonight's follow-up keeps
-  time-based motion from jumping when settings or an overlay open.
-- **Round 2.2, analog stopwatch:** as the frame, the hands gliding on the compositor.
-- **Round 2.3, ocean depth:** the running mode as its frames (the water from the light model, never above the
-  surface, gliding); its results rebuilt to the new "build this one" frame: the card lit by the replay's
-  depth, the chart zooming out, the depth counting up, up to six landmarks on the path with popping labels
-  that fade and come back on hover, focus or a tap, things rising past, two sonar pings; the tile and the
-  "ocean depth options" box.
-- **Round 2.4, ocean life:** while paused, the frame's fish and bubbles drift in (CSS animations only), one
-  zone's catalog loaded at a time; the "ocean life" option.
-- **Round 2.5, height:** the sky from its light model gliding a minute at a time, the frame's stars fading in
-  from 18 km, stopping at 100 km; while paused, the altitude line, shooting stars and a rare meteor shower (CSS
-  only, drawn once per pause); its results as the new "build this one" frame (the card lit by the sky, stars and
-  Earth's horizon as the climb rises, things falling past, landmarks on the path); its tile. Ocean depth's
-  results now share one profile chart with height, and the display-mode contract gained `replayLayout`.
-- **Round 2.6, tree:** the tree as its frames draw it, side on and isometric, through a one-hour year
-  (leaves growing, deepening, turning and falling, snow in winter, the isometric field's grass), its colours
-  changed by opacity alone; its results growing the tree through the session's seasons from the one replay
-  progress; its tile. The view option exists in settings but has no control yet (no frame draws it).
-- **Round 2.7, recipes:** above.
-
-**Test results** (each round: `npm run check`, then the whole end-to-end suite in Chromium, Firefox and
-WebKit through the reference image)
-
-- Release 1 after the motion changes: 549 passed, 6 skipped (declared), 0 failed.
-- Release 2 after round 2.3: 693 passed, 12 skipped, 0 failed. After round 2.4: 711 passed, 13 skipped, and two
-  WebKit page loads that stalled once (see the progress log; both passed four times over when repeated). After
-  round 2.5: 779 passed, 16 skipped, 0 failed. After round 2.6: 822 passed, 18 skipped, 0 failed. After round
-  2.7: 825 passed, 18 skipped, 0 failed.
-- Unit tests: 528 on Release 1, 567 on Release 2 after round 2.6, 712 after round 2.7.
-- Along the way, intermittent failures were traced and fixed rather than retried: a test that re-created a
-  cache it was checking (2.2), CSP reports read before the browser fired them, a helper fooled by a leftover
-  countdown animation, transitions a busy WebKit starts a frame late, and Chromium's compositor drawing a
-  held glide in its old place. Pixel allowances added tonight are each measured, recorded in a decision, and
-  paired with a control that fails by far.
+- Round 2.8: `npm run check` (736 unit tests; core JavaScript 44.6 KB of 50 KB); the reference image in Chromium,
+  Firefox and WebKit: 936 passed, 18 skipped as declared, 0 failed (after three races the earlier reference runs
+  showed were closed in the tests, decision 349).
+- Earlier this release: after round 2.7, 825 passed, 18 skipped; after changes 4, 836 passed, 16 skipped; 0
+  failed each time. What rounds 2.1 to 2.7 built is in the progress log below (and the earlier summaries in this
+  file's history).
 
 **Skipped and why**
 
-- Round 2.8 (interstellar) not started: the run ends at round 2.7. It is unblocked.
-- Not built in 2.7, as the plan places them later: the tree's "your art" (round 2.9) and the slot controls
-  (replace, reset, download template; round 2.9).
+- In the Release 2 display frame but later rounds: the interstellar tile (2.9) and picture-in-picture (2.11).
 - Nothing was deployed, merged into Release 1, released, or changed on Cloudflare or GitHub settings.
 
-**Questions waiting for you** (details in "Questions for the owner" below)
-
-1. The analog hours hand: glide (built, 42° at 1 h 24 min) or whole hours as drawn (30°)?
-3. The placeholder art's licence (it is outside the GPL under its own licence file, with no licence granted
-   yet).
-10. The contrast switch: instant (built, as the motion rule allows) or a short colour crossfade?
-11. Ocean life: the frame's fixed arrangement (built) or the recipe's random arrivals, now or with the final art?
-- And to watch: an intermittent WebKit page-load stall in the reference image under full load (progress log).
+**Questions waiting for you:** 13 to 22 below, each built one way meanwhile: the crown's dip hidden by the
+countdown on E, the dial red on the eight other themes, focus view in figure modes, the tap that reveals hidden
+controls, fullscreen after a resume, the seconds hand when seconds never show, the outline's 2 s, the focus
+frames' 13 px, "change" dismissing the tip, and the depth line behind the display settings.
 
 ## Progress log
 
@@ -150,12 +115,21 @@ WebKit through the reference image)
   tests; core JavaScript 49.4 KB of 50 KB); the reference image in Chromium, Firefox and WebKit: 836 passed,
   16 skipped as declared, 0 failed.
 
+- Changes 5 (2026-11-17): plan version 9 adopted (the admin address redacted as before); question 12 answered
+  (decision 338); round 2.8 inserted before interstellar and the later rounds renumbered.
+- Round 2.8: focus view, notices and fullscreen, the redesigned analog, ambient idle screens, replays that never
+  stall (decisions 338 to 350). Found on the way: the core's JavaScript had passed its 50 KB budget with the
+  perpetual calendar (50.6 KB, a warning I missed); built-in recipes are now checked when the site is built, which
+  brings it to 44.6 KB (decision 350). A selector list that a CSS insertion had split (the hidden notice showing
+  on every screen) was caught by the frame tests before any commit.
+
 ## Questions for the owner
 
 Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 and 9; their answers are built in
 round 2.7 (decisions 327 to 330) and 2.8. Answered in changes 4: 1 (the hours hand glides, as built), 3 (CC0 for
 the placeholder art and slot templates), 10 (crossfade by stacked copies) and 11 (random arrivals now); built in
-decisions 332 to 334. Open: 12.
+decisions 332 to 334. Answered in changes 5 (2026-11-17): 12 (version 1 stays open until Release 2's public
+release; decision 338). Open: 13 to 22, from round 2.8; each is built one way meanwhile and is easy to change.
 
 1. **The analog hours hand (round 2.2).** The analog frame draws the hours subdial's hand at the whole hour
    (30° at 1 h 24 min). The plan's rule that anything moving with time glides puts it at 42°, which is what
@@ -215,4 +189,32 @@ decisions 332 to 334. Open: 12.
     dial's marks, and up to 8 subdials. I added them as optional fields, so every recipe written before stays
     valid, and kept the schema's name and version (`mode-recipe-1`). Keep them as version 1 additions, or call the
     schema version 2?
-
+13. **The analog crown's dip on E (round 2.8, decision 344).** The crown dips the moment end is pressed, but the
+    ending countdown takes the screen at once, so with E the dip happens out of sight (with the end button, part
+    of it shows while the button is held down). Should the countdown wait for the 180 ms dip in analog, or leave
+    it as built?
+14. **The dial red on the other themes (decision 345).** The plan's reds meet 4.5:1 on the seconds dial in
+    graphite (#E5574B, 4.71) and paper (#B8332A, 4.84); on the other eight presets they fall to 3.4 to 4.4. Built:
+    there the red steps toward the theme's text colour until it meets 4.5:1, as the muted colour does (deep sea
+    #E37E77, forest #E58273, oxblood #E76C61, plum #E76C65, lilac #A7302C, sky #AE322B, sand #AE3228, mint
+    #B4332A). Keep that, or use the two reds everywhere?
+15. **Focus view in modes drawn round their time (decision 341).** In ring, analog and tree the whole figure is
+    the time, so the whole figure grows 1.32 times (the analog dial nearly fills a 720 × 450 window). Is that
+    right, or should only the digits grow, or those modes not grow at all?
+16. **A tap on hidden controls (decision 339).** While they are hidden, a first tap only brings them back, so a
+    stray tap cannot pause or end by accident. Or should a tap where a hidden button was also press it?
+17. **Fullscreen after a resume (decision 343).** With "leave fullscreen: on pause or end", a pause leaves
+    fullscreen and resuming stays in the window ("fullscreen when a session starts" is taken literally). Should
+    resuming go back to fullscreen?
+18. **The analog seconds hand (decision 344).** It rests at its 60 when the seconds setting is "never" (and steps
+    with low power, so it rests there too); with "blur away" it glides throughout. Right?
+19. **How brief the outline is (decision 342).** After "change", the setting's row is outlined for 2 seconds
+    (fading in and out). The plan says "briefly"; is 2 s right?
+20. **The focus frames' 13 px (decision 341).** Both focus frames place the time 13 px lower than the running
+    frame (an empty wrapper around the corner icons takes a place in the column); built as the plan says, so the
+    grown time is centred. Confirm.
+21. **"change" and the tip (decision 342).** Using "change" also dismisses the tip, so it does not come back if
+    the setting is later turned off again. Right?
+22. **The depth line behind the display settings (decision 347).** The Release 2 display frame shows "84 m ·
+    sunlight zone" under the running ocean behind the panel; the ocean frames show that line only while paused,
+    which is what is built.

@@ -77,6 +77,8 @@ export interface Hand {
   readonly length?: number;
   readonly width?: number;
   readonly color?: RecipeColour;
+  /** How far it reaches back past the point it turns about. */
+  readonly tail?: number;
 }
 
 export interface TimeLayer extends LayerBase {
@@ -108,6 +110,8 @@ export interface DialLayer extends LayerBase {
   readonly radius?: number;
   readonly ticks?: { readonly major?: number; readonly minor?: number };
   readonly labels?: { readonly count?: number; readonly format?: 'minutes' | 'hours' | 'none' };
+  /** Slim baton indices, the first at 12; each stops short of a small dial in its way, or is left out. */
+  readonly batons?: number;
   readonly hand?: Hand;
   readonly subdials?: readonly Subdial[];
 }
@@ -115,7 +119,12 @@ export interface Subdial {
   readonly cycle: string;
   readonly radius?: number;
   readonly offset?: readonly [number, number];
+  /** Its numbers, the first at 12 (in seconds, minutes or hours, by its cycle's length). */
   readonly labels?: number;
+  /** Its ticks, longer at each number; without it, one a number (or a name, or an hour of its cycle). */
+  readonly ticks?: number;
+  /** The colour of the number at 12 (the seconds dial's red 60). */
+  readonly topColor?: RecipeColour;
   readonly hand?: Hand;
   /** `dial` (default): a small dial with its marks and hand; `hand`: the hand alone (another hand from the centre). */
   readonly face?: 'dial' | 'hand';

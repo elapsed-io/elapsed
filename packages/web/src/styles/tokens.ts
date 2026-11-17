@@ -33,7 +33,7 @@ const scaled = (value: number): string => `calc(${ms(value)} * var(--motion-scal
 const percent = (fraction: number): string => `${String(Math.round(fraction * 10_000) / 100)}%`;
 
 export function designCustomProperties(): CustomProperties {
-  const { reference, type, controls, icons, paused, checkIn, notice, ending, results } = CONFIG.design;
+  const { reference, type, controls, icons, paused, checkIn, notice, pill, ending, results } = CONFIG.design;
   const { motion } = CONFIG;
   return {
     '--font-family': `"${DEFAULT_FONT_FAMILY}", system-ui, sans-serif`,
@@ -74,6 +74,17 @@ export function designCustomProperties(): CustomProperties {
     '--notice-body-size': px(notice.bodyPx),
     '--notice-body-line-height': String(notice.bodyLineHeight),
     '--notice-body-width': px(notice.bodyMaxWidthPx),
+    '--pill-height': px(pill.heightPx),
+    '--pill-text': px(pill.textPx),
+    '--pill-gap': px(pill.gapPx),
+    '--pill-padding-start': px(pill.paddingStartPx),
+    '--pill-padding-end': px(pill.paddingEndPx),
+    '--pill-radius': px(pill.radiusPx),
+    '--pill-above': String(pill.aboveTimePx),
+    '--pill-underline-offset': px(pill.underlineOffsetPx),
+    '--pill-dismiss': px(pill.dismissPx),
+    '--pill-cross': px(pill.crossPx),
+    '--pill-cross-stroke': String(pill.crossStrokeWidth),
 
     '--button-height': px(controls.buttonHeightPx),
     '--button-padding-x': px(controls.buttonPaddingXPx),
@@ -151,8 +162,16 @@ export function designCustomProperties(): CustomProperties {
     '--motion-morph': scaled(motion.startMorph),
     '--motion-fade': scaled(motion.fade),
     '--motion-contrast': scaled(motion.contrastFade),
+    '--focus-controls': scaled(motion.focus.controlsMs),
+    '--focus-time': scaled(motion.focus.timeMs),
+    '--focus-controls-drop': String(motion.focus.controlsDropPx),
+    '--focus-time-drop': String(motion.focus.timeDropPx),
+    '--focus-time-scale': String(motion.focus.timeScale),
+    '--environment-fade': scaled(motion.environmentFade),
     '--motion-control': scaled(motion.control),
     '--ease-standard': `cubic-bezier(${motion.standardEasing.join(', ')})`,
+    '--ease-in-quad': `cubic-bezier(${motion.focus.easeIn.join(', ')})`,
+    '--ease-out-quart': `cubic-bezier(${motion.focus.easeOut.join(', ')})`,
     // The start morph's slight spring; where CSS has no linear() easing, the standard ease-out (springBlock).
     '--ease-spring': 'var(--ease-standard)',
     '--ease-smoothstep': SMOOTHSTEP,
@@ -215,7 +234,7 @@ function narrowBlock(): string {
 }
 
 /** Durations scaled by --motion-scale, registered as times so script reads them resolved ("0.2s"). */
-export const SCALED_DURATIONS = ['--motion-morph', '--motion-fade', '--motion-contrast', '--motion-control', '--tabulating-hold', '--tabulating-fade', '--results-fade-delay', '--results-fade', '--replay-delay'] as const;
+export const SCALED_DURATIONS = ['--motion-morph', '--motion-fade', '--motion-contrast', '--focus-controls', '--focus-time', '--environment-fade', '--highlight-duration', '--motion-control', '--tabulating-hold', '--tabulating-fade', '--results-fade-delay', '--results-fade', '--replay-delay'] as const;
 
 function registeredProperties(): string {
   const time = SCALED_DURATIONS.map((name) => `@property ${name} {\n  syntax: "<time>";\n  inherits: true;\n  initial-value: 0s;\n}`);
@@ -320,6 +339,11 @@ export function settingsCustomProperties(): CustomProperties {
     '--mode-options-padding': px(p.modeOptions.paddingPx),
     '--mode-options-gap': px(p.modeOptions.gapPx),
     '--mode-options-radius': px(p.modeOptions.radiusPx),
+    '--highlight-inset-y': px(CONFIG.design.settings.highlight.insetYPx),
+    '--highlight-inset-x': px(CONFIG.design.settings.highlight.insetXPx),
+    '--highlight-radius': px(CONFIG.design.settings.highlight.radiusPx),
+    '--highlight-line': px(CONFIG.design.settings.highlight.linePx),
+    '--highlight-duration': scaled(CONFIG.motion.highlightMs),
     '--mode-options-title': px(p.modeOptions.titlePx),
     '--tiles-gap': px(p.tiles.gapPx),
     '--tile-padding-top': px(p.tiles.paddingTopPx),
@@ -426,21 +450,13 @@ function timelineTokens(): string {
 
 function analogTokens(): string {
   const analog = CONFIG.modes.analog;
-  // The dial's size and its subdial's centre come from its recipe (pieces/dial/dial.ts); these are the frame's own.
-  const { centre, pinRadius } = analog;
-  // The drawing's own y runs from −10; the box's top is at y = −10.
-  const top = (y: number): string => String(y + 10);
+  // The dial's size comes from its recipe (pieces/dial/dial.ts); the hands carry the points they turn about.
   const properties: CustomProperties = {
     '--mode-time-size': String(CONFIG.design.type.ringTimePx),
     '--mode-gap': String(analog.gapPx),
-    // The hands turn about these points (the drawing's units, measured from the box's top).
-    '--analog-centre-x': String(centre.x),
-    '--analog-centre-y': top(centre.y),
-    '--analog-pin-left': String(centre.x - pinRadius),
-    '--analog-pin-top': top(centre.y - pinRadius),
-    '--analog-pin-size': String(2 * pinRadius),
     '--analog-label-size': px(analog.labelPx),
-    '--analog-hours-label-size': px(analog.hoursLabelPx),
+    '--analog-letter-spacing': em(analog.numbers.letterSpacingEm),
+    '--analog-subdial-label-size': px(analog.subdialLabelPx),
     '--analog-sublabel-size': px(analog.subLabelPx),
   };
   // The dial piece's tokens, for every mode drawn with it: the analog stopwatch and the perpetual calendar.

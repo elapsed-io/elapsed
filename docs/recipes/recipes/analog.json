@@ -18,6 +18,10 @@
     {
       "id": "half-day",
       "minutes": 720
+    },
+    {
+      "id": "minute",
+      "minutes": 1
     }
   ],
   "layers": [
@@ -34,26 +38,44 @@
         "count": 12,
         "format": "minutes"
       },
+      "batons": 12,
       "hand": {
         "length": 114,
+        "tail": 18,
         "width": 2.5,
         "color": "theme.accent"
       },
       "subdials": [
         {
           "cycle": "half-day",
-          "radius": 22,
+          "face": "hand",
           "offset": [
             0,
-            50
+            0
           ],
-          "labels": 0,
           "hand": {
-            "length": 16,
-            "width": 2,
+            "length": 52,
+            "tail": 12,
+            "width": 4.4,
+            "color": "theme.accent"
+          }
+        },
+        {
+          "cycle": "minute",
+          "radius": 42,
+          "offset": [
+            0,
+            69
+          ],
+          "labels": 6,
+          "ticks": 60,
+          "topColor": "theme.red",
+          "hand": {
+            "length": 39,
+            "tail": 5,
+            "width": 1.2,
             "color": "theme.text"
-          },
-          "title": "hours"
+          }
         }
       ]
     }

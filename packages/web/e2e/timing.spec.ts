@@ -8,7 +8,7 @@
  * taps are what it measures.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { seedSettings, untilEndNowAccepts } from './helpers.ts';
 

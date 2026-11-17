@@ -7,7 +7,7 @@
  * stored key against docs/data-inventory.md.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { MINUTE, SECOND, endThroughCountdown, finishResults, openApp } from './helpers.ts';
 
@@ -24,7 +24,7 @@ const ALLOWED_PATHS: readonly RegExp[] = [
 ];
 
 /** The only keys the inventory lists. */
-const LOCAL_KEYS = ['custom-css', 'settings', 'timer.active', 'timer.heartbeat'];
+const LOCAL_KEYS = ['custom-css', 'notices', 'settings', 'timer.active', 'timer.heartbeat'];
 const SESSION_KEYS = ['timer.finished'];
 
 interface Sent {
@@ -122,6 +122,7 @@ test('a live session sends and stores only what the data inventory lists', async
   expect(JSON.stringify(crash)).not.toContain('private');
 
   // Storage: only the inventory's keys; the finished session in this tab only; no database without a font file.
-  expect(await storedKeys(page)).toEqual({ local: ['custom-css', 'settings'], session: SESSION_KEYS, databases: [] });
+  // `notices` is the dismissed tip every test starts with (playwright.config.ts).
+  expect(await storedKeys(page)).toEqual({ local: ['custom-css', 'notices', 'settings'], session: SESSION_KEYS, databases: [] });
   expect(await context.cookies()).toEqual([]);
 });

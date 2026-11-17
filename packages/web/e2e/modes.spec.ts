@@ -1,6 +1,6 @@
 /** Display modes through the contract, chosen in settings, and lazy loading. */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { createSession, oceanColour, serializeActiveState, startState } from '@stopwatch/core';
 import { MINUTE, SECOND, T0, openApp, settle } from './helpers.ts';
@@ -122,7 +122,7 @@ interface AnalogHand {
   layer: string;
 }
 
-function analogHands(page: Page): Promise<{ minute: AnalogHand; hours: AnalogHand }> {
+function analogHands(page: Page): Promise<{ minute: AnalogHand; hours: AnalogHand; seconds: AnalogHand }> {
   return page.locator('.analog').evaluate((analog) => {
     const read = (element: Element | null) => {
       if (element === null) throw new Error('no hand');
@@ -138,22 +138,60 @@ function analogHands(page: Page): Promise<{ minute: AnalogHand; hours: AnalogHan
         layer: getComputedStyle(element).willChange,
       };
     };
-    return { minute: read(analog.querySelector('.analog__hand--minute')), hours: read(analog.querySelector('.analog__hand--hours')) };
+    return {
+      minute: read(analog.querySelector('.analog__hand--minute')),
+      hours: read(analog.querySelector('.analog__hand[data-cycle="half-day"]')),
+      seconds: read(analog.querySelector('.analog__hand[data-cycle="minute"]')),
+    };
   });
 }
 
-test('the analog hands glide on their own layers, 6° and 0.5° a minute, anchored once a minute', async ({ page }) => {
+test('the analog hands glide on their own layers, 6°, 0.5° and a whole turn a minute, anchored once a minute', async ({ page }) => {
   await openApp(page, { mode: 'analog' });
-  expect(await analogHands(page)).toMatchObject({ minute: { rest: 'rotate(0deg)', glide: null, layer: 'auto' }, hours: { rest: 'rotate(0deg)', glide: null } });
+  expect(await analogHands(page)).toMatchObject({
+    minute: { rest: 'rotate(0deg)', glide: null, layer: 'auto' },
+    hours: { rest: 'rotate(0deg)', glide: null },
+    seconds: { rest: 'rotate(0deg)', glide: null },
+  });
   await page.locator('.button--primary').click();
   await page.clock.runFor(30 * SECOND);
   expect(await analogHands(page)).toMatchObject({
     minute: { glide: { from: 'rotate(0deg)', to: 'rotate(6deg)', easing: 'linear', duration: 60_000, state: 'running' }, layer: 'transform' },
     hours: { glide: { from: 'rotate(0deg)', to: 'rotate(0.5deg)', easing: 'linear', duration: 60_000, state: 'running' } },
+    seconds: { glide: { from: 'rotate(0deg)', to: 'rotate(360deg)', easing: 'linear', duration: 60_000, state: 'running' } },
   });
   expect((await analogHands(page)).minute.glide?.at).toBeCloseTo(30_000, -3);
   await page.clock.runFor(84 * MINUTE - 30 * SECOND);
-  expect(await analogHands(page)).toMatchObject({ minute: { glide: { from: 'rotate(504deg)', to: 'rotate(510deg)' } }, hours: { glide: { from: 'rotate(42deg)', to: 'rotate(42.5deg)' } } });
+  expect(await analogHands(page)).toMatchObject({
+    minute: { glide: { from: 'rotate(504deg)', to: 'rotate(510deg)' } },
+    hours: { glide: { from: 'rotate(42deg)', to: 'rotate(42.5deg)' } },
+    seconds: { glide: { from: 'rotate(30240deg)', to: 'rotate(30600deg)' } },
+  });
+});
+
+test('with the seconds set never to show, the analog seconds hand rests at its 60', async ({ page }) => {
+  await openApp(page, { mode: 'analog', settings: { seconds: 'never' } });
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(30 * SECOND);
+  expect(await analogHands(page)).toMatchObject({ minute: { glide: { state: 'running' } }, seconds: { rest: 'rotate(0deg)', glide: null } });
+});
+
+test('the analog crown dips once, by transform alone, when end is pressed (button or E)', async ({ page }) => {
+  await openApp(page, { mode: 'analog' });
+  const dips = (): Promise<{ count: number; frames: string[]; duration: number }> =>
+    page.locator('.analog__crown').evaluate((crown) => {
+      const animations = crown.getAnimations();
+      const effect = animations[0]?.effect instanceof KeyframeEffect ? animations[0].effect : null;
+      return { count: animations.length, frames: (effect?.getKeyframes() ?? []).map((frame) => String(frame['transform'])), duration: Number(effect?.getTiming().duration ?? 0) };
+    });
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(MINUTE);
+  expect((await dips()).count).toBe(0);
+  await page.keyboard.press('e');
+  expect(await dips()).toEqual({ count: 1, frames: ['translateY(0px)', 'translateY(4px)', 'translateY(0px)'], duration: 180 });
+  await page.locator('.ending .button--secondary').click();
+  await page.getByRole('button', { name: 'end', exact: true }).dispatchEvent('pointerdown');
+  expect((await dips()).count).toBeGreaterThanOrEqual(1);
 });
 
 test('the analog hands hold where they reached while paused, and glide on from there', async ({ page }) => {
@@ -182,9 +220,9 @@ for (const [how, prepare] of [
     await prepare(page);
     await page.locator('.button--primary').click();
     await page.clock.runFor(59 * SECOND);
-    expect(await analogHands(page)).toMatchObject({ minute: { rest: 'rotate(0deg)', glide: null }, hours: { rest: 'rotate(0deg)', glide: null } });
+    expect(await analogHands(page)).toMatchObject({ minute: { rest: 'rotate(0deg)', glide: null }, hours: { rest: 'rotate(0deg)', glide: null }, seconds: { rest: 'rotate(0deg)', glide: null } });
     await page.clock.runFor(SECOND);
-    expect(await analogHands(page)).toMatchObject({ minute: { rest: 'rotate(6deg)', glide: null }, hours: { rest: 'rotate(0.5deg)', glide: null } });
+    expect(await analogHands(page)).toMatchObject({ minute: { rest: 'rotate(6deg)', glide: null }, hours: { rest: 'rotate(0.5deg)', glide: null }, seconds: { rest: 'rotate(360deg)', glide: null } });
   });
 }
 
@@ -519,7 +557,8 @@ test('ocean life arrives at random while paused, from the zone the dive is in, a
     expect(arrival.life).toBeLessThanOrEqual(20 + 1e-6);
     const next = arrivals[k + 1];
     if (next !== undefined) expect(next.start - arrival.start).toBeGreaterThanOrEqual(3 - 1e-6);
-    const atOnce = arrivals.filter((other) => other.start <= arrival.start && other.start + other.life > arrival.start).length;
+    // One leaving as another arrives is not both at once (the keyframes' offsets carry a little rounding).
+    const atOnce = arrivals.filter((other) => other.start <= arrival.start && other.start + other.life > arrival.start + 1e-6).length;
     expect(atOnce).toBeLessThanOrEqual(4);
   }
   // Fish at three distances, wiggling and bobbing by CSS; nothing else animates.

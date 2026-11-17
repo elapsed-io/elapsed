@@ -4,7 +4,7 @@
  * sessions that end on their own.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { BRAND, CONFIG, createSession, replayTimingFor, serializeActiveState, startState } from '@stopwatch/core';
 import { builtInRecipe } from './fixtures/recipes.ts';

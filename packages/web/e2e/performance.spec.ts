@@ -7,7 +7,7 @@
  * up at once; and memory and the page's size stay flat.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { MINUTE, SECOND, T0 } from './helpers.ts';
 
@@ -65,46 +65,52 @@ const hide = (page: Page, hidden: boolean): Promise<void> =>
     (window as unknown as { __perf: Perf }).__perf.hide(value);
   }, hidden);
 
-test('a two-hour session: one timer at a time, nothing drawn while hidden, the display caught up on return', async ({ page }) => {
-  await page.setViewportSize({ width: 720, height: 450 });
-  await page.clock.install({ time: T0 });
-  await instrument(page);
-  await page.goto('/');
-  await page.locator('.button--primary').click();
-  await page.clock.runFor(5 * MINUTE);
+test.describe('wakes', () => {
+  // The suite's pointer moves (e2e/test.ts) would wake the focus view's wait every few seconds, and the heartbeat
+  // joins nearby wakes: this test counts wakes, so it leaves the page untouched, as a person away from it would.
+  test.use({ awake: false });
 
-  // Hidden for 110 minutes: count what wakes and what is drawn.
-  await page.evaluate(() => {
-    const scope = window as unknown as { __drawn: number };
-    scope.__drawn = 0;
-    new MutationObserver((records) => {
-      scope.__drawn += records.length;
-    }).observe(document.querySelector('.mode-root') ?? document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+  test('a two-hour session: one timer at a time, nothing drawn while hidden, the display caught up on return', async ({ page }) => {
+    await page.setViewportSize({ width: 720, height: 450 });
+    await page.clock.install({ time: T0 });
+    await instrument(page);
+    await page.goto('/');
+    await page.locator('.button--primary').click();
+    await page.clock.runFor(5 * MINUTE);
+
+    // Hidden for 110 minutes: count what wakes and what is drawn.
+    await page.evaluate(() => {
+      const scope = window as unknown as { __drawn: number };
+      scope.__drawn = 0;
+      new MutationObserver((records) => {
+        scope.__drawn += records.length;
+      }).observe(document.querySelector('.mode-root') ?? document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+    });
+    const before = await wakes(page);
+    await hide(page, true);
+    const titles: string[] = [];
+    for (let minute = 0; minute < 110; minute += 1) {
+      await page.clock.runFor(MINUTE);
+      titles.push(await page.title());
+    }
+    // The only wake is the heartbeat, every 30 s (plan, Performance requirements > One scheduler), which also
+    // updates the title: two a minute, never closer together.
+    const times = await page.evaluate((from) => (window as unknown as { __perf: Perf }).__perf.wakes.slice(from), before);
+    expect(times.length).toBeLessThanOrEqual(110 * 2 + 1);
+    expect(times.length).toBeGreaterThanOrEqual(110 * 2 - 1);
+    const gaps = times.slice(1).map((time, index) => time - (times[index] ?? 0));
+    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(29_000);
+    expect(await page.evaluate(() => (window as unknown as { __drawn: number }).__drawn)).toBe(0);
+    // The title kept up: it is what a background tab shows.
+    expect(titles.at(-1)).toBe('01:55 · elapsed');
+    expect(await most(page)).toBe(1);
+
+    // Seen again: the display shows the right time at once.
+    await hide(page, false);
+    await expect(page.locator('.time--main')).toHaveAttribute('aria-label', '1 hour 55 minutes focused');
+    await page.clock.runFor(10 * SECOND);
+    expect(await pending(page)).toBe(1);
   });
-  const before = await wakes(page);
-  await hide(page, true);
-  const titles: string[] = [];
-  for (let minute = 0; minute < 110; minute += 1) {
-    await page.clock.runFor(MINUTE);
-    titles.push(await page.title());
-  }
-  // The only wake is the heartbeat, every 30 s (plan, Performance requirements > One scheduler), which also
-  // updates the title: two a minute, never closer together.
-  const times = await page.evaluate((from) => (window as unknown as { __perf: Perf }).__perf.wakes.slice(from), before);
-  expect(times.length).toBeLessThanOrEqual(110 * 2 + 1);
-  expect(times.length).toBeGreaterThanOrEqual(110 * 2 - 1);
-  const gaps = times.slice(1).map((time, index) => time - (times[index] ?? 0));
-  expect(Math.min(...gaps)).toBeGreaterThanOrEqual(29_000);
-  expect(await page.evaluate(() => (window as unknown as { __drawn: number }).__drawn)).toBe(0);
-  // The title kept up: it is what a background tab shows.
-  expect(titles.at(-1)).toBe('01:55 · elapsed');
-  expect(await most(page)).toBe(1);
-
-  // Seen again: the display shows the right time at once.
-  await hide(page, false);
-  await expect(page.locator('.time--main')).toHaveAttribute('aria-label', '1 hour 55 minutes focused');
-  await page.clock.runFor(10 * SECOND);
-  expect(await pending(page)).toBe(1);
 });
 
 test('memory and the page stay flat over two hours', async ({ page, browserName }) => {

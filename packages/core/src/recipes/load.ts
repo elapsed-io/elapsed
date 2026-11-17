@@ -1,6 +1,6 @@
 /**
- * The recipe loader (plan-release-2, round 2.7): every recipe, built in or not, is checked when it loads, against
- * the schema (docs/recipes/mode-recipe-1.schema.json) and then against what a schema cannot say: every id it
+ * The recipe loader (plan-release-2, round 2.7): a recipe is checked when it loads (built-in recipes when the site
+ * is built, built-in.ts), against the schema (docs/recipes/mode-recipe-1.schema.json) and then against what a schema cannot say: every id it
  * refers to exists, tuples hold what they should, colours inside them are colours, slot defaults are built-in
  * assets with no way out of their folder, and nothing exceeds the runtime limits (limits.ts). A recipe that fails
  * is refused whole; the site shows digits instead (recipeOrDigits).
@@ -9,7 +9,7 @@
  */
 
 import SCHEMA from '../../../../docs/recipes/mode-recipe-1.schema.json' with { type: 'json' };
-import DIGITS from '../../../../docs/recipes/recipes/digits.json' with { type: 'json' };
+import { DIGITS_RECIPE, deepFreeze } from './built-in.ts';
 import { CALENDAR_PLACES } from './calendar.ts';
 import { RECIPE_LIMITS as LIMITS } from './limits.ts';
 import type { Binding, Recipe } from './types.ts';
@@ -25,25 +25,18 @@ export interface LoadOptions {
   readonly builtIn?: boolean;
 }
 
-const validator = new SchemaValidator(SCHEMA);
+/** Built on first use, so a page that loads no recipe but its built-in ones never builds it. */
+let validator: SchemaValidator | null = null;
 
 const ID = /^[a-z][a-z0-9-]{0,31}$/;
 const COLOUR = /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/;
-const TOKENS = new Set(['theme.bg', 'theme.text', 'theme.accent', 'theme.muted', 'theme.faint', 'theme.track', 'theme.gray', 'theme.end', 'theme.pr', 'contrast.text', 'contrast.muted']);
+const TOKENS = new Set(['theme.bg', 'theme.text', 'theme.accent', 'theme.muted', 'theme.faint', 'theme.track', 'theme.gray', 'theme.end', 'theme.pr', 'theme.red', 'contrast.text', 'contrast.muted']);
 const LABEL = /^[^<>{}]{0,48}$/;
 /** A built-in asset's path: folders and a file name of lowercase letters, digits and hyphens, one extension at most. */
 const BUILTIN = /^builtin:([a-z0-9-]+\/){0,4}[a-z0-9-]+(\.[a-z0-9]+)?$/;
 
 const isColour = (value: unknown): boolean => typeof value === 'string' && (COLOUR.test(value) || TOKENS.has(value));
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
-
-function deepFreeze<T>(value: T): T {
-  if (typeof value === 'object' && value !== null) {
-    for (const item of Object.values(value)) deepFreeze(item);
-    Object.freeze(value);
-  }
-  return value;
-}
 
 /** The ids each kind of reference may name, collected once. */
 interface Names {
@@ -276,6 +269,7 @@ export function checkRecipe(value: unknown, options: LoadOptions = {}): RecipeRe
   } catch {
     return { ok: false, problems: ['not data'] };
   }
+  validator ??= new SchemaValidator(SCHEMA);
   const schemaProblems = validator.validate(copy);
   if (schemaProblems.length > 0) return { ok: false, problems: schemaProblems.map((problem) => `${where(problem.path)}: ${problem.message}`) };
   const recipe = copy as Recipe;
@@ -296,11 +290,6 @@ export function parseRecipe(text: string, options: LoadOptions = {}): RecipeResu
   }
   return checkRecipe(value, options);
 }
-
-const digits = checkRecipe(DIGITS, { builtIn: true });
-if (!digits.ok) throw new Error(`the digits recipe is refused: ${digits.problems.join('; ')}`);
-/** Digits, the recipe every refused recipe falls back to. */
-export const DIGITS_RECIPE: Recipe = digits.recipe;
 
 /**
  * The recipe to show for `value`: itself once checked, or digits when it is refused (plan-release-2, round 2.7).

@@ -57,6 +57,8 @@ export {
   CLOCK_FORMATS,
   FONT_CHOICES,
   MODE_CHOICES,
+  FOCUS_HIDES,
+  LEAVE_FULLSCREEN,
   TEST_MODES,
   TREE_VIEWS,
   SETTINGS,
@@ -82,6 +84,8 @@ export type {
   HexColor,
   ModeChoice,
   TreeView,
+  FocusHide,
+  LeaveFullscreen,
   SettingDeclaration,
   SettingKey,
   SettingTarget,
@@ -111,7 +115,8 @@ export type { AtmosphereLayer, HeightLandmark, HeightLandmarkId } from './modes/
 export { pickByBand, spreadBy } from './modes/landmarks.ts';
 export { grassColour, grassWeights, leafColour, leafScale, leafState, mixColour, seasonPhase, shares, stackedColour, weather, yearPhase } from './modes/tree.ts';
 export type { LeafState, Weather } from './modes/tree.ts';
-export { DIGITS_RECIPE, checkRecipe, parseRecipe, recipeOrDigits } from './recipes/load.ts';
+export { checkRecipe, parseRecipe, recipeOrDigits } from './recipes/load.ts';
+export { DIGITS_RECIPE, builtInRecipe } from './recipes/built-in.ts';
 export type { LoadOptions, RecipeResult } from './recipes/load.ts';
 export { RECIPE_LIMITS } from './recipes/limits.ts';
 export { CALENDAR_PLACES, LUNATION_DAYS, calendarDay, calendarShare, moonAge } from './recipes/calendar.ts';

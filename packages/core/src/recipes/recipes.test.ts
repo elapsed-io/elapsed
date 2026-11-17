@@ -6,7 +6,8 @@
 
 import { describe, expect, it } from 'vitest';
 import SCHEMA from '../../../../docs/recipes/mode-recipe-1.schema.json' with { type: 'json' };
-import { DIGITS_RECIPE, checkRecipe, parseRecipe, recipeOrDigits } from './load.ts';
+import { DIGITS_RECIPE } from './built-in.ts';
+import { checkRecipe, parseRecipe, recipeOrDigits } from './load.ts';
 import { RECIPE_LIMITS } from './limits.ts';
 import { bindingAt, focusFor } from './measure.ts';
 import type { Binding, LayerOf, LayerType, Recipe } from './types.ts';
@@ -80,7 +81,7 @@ describe('the built-in recipes', () => {
 /**
  * recipe-check.py's COVER table: every feature the plan gives each mode. Two differ from the checker, as the plan and
  * the frames win over the recipes (decision 320): ocean depth's paused screen has no caption in its frame, and the
- * tree's "your art" comes in round 2.9.
+ * tree's "your art" comes in round 2.10.
  */
 const stopsOf = (binding: Binding | undefined): readonly (readonly [number, number])[] => (typeof binding === 'object' ? binding.stops : []);
 type Feature = readonly [string, (recipe: Recipe) => boolean];
@@ -178,9 +179,9 @@ describe('the features the plan gives each mode (recipe-check.py COVER)', () => 
         expect(test(load(id))).toBe(true);
       });
   // Round 2.9 adds the tree's "your art": a four-frame season strip slot behind a sprite layer.
-  it.todo('tree: your own season strip instead (round 2.9)');
+  it.todo('tree: your own season strip instead (round 2.10)');
 
-  it('checks the checker’s 49 features, one of them in round 2.9, and the test mode’s own', () => {
+  it('checks the checker’s 49 features, one of them in round 2.10, and the test mode’s own', () => {
     expect(Object.entries(COVER).reduce((sum, [id, features]) => sum + (id === 'calendar' ? 0 : features.length), 0) + 1).toBe(49);
   });
 });

@@ -3,7 +3,7 @@
  * Low power; the Release 2 appearance frame).
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { CONFIG, DIGITS_RECIPE } from '@stopwatch/core';
 import { MINUTE, SECOND, TIMER_END, endThroughCountdown, openApp, settle } from './helpers.ts';

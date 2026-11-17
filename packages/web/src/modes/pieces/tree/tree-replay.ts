@@ -4,7 +4,8 @@
  * 15 focused minutes, standing still while paused), resting where the session ended.
  *
  * Like every replay it is driven by the results' one progress value: the session's focused minutes so far are a
- * CSS expression of --replay-progress (--tree-focus), and each cluster's presence, its five colours' shares, the
+ * CSS expression of --replay-progress (--tree-focus), advancing by focused time only so the replay never stands
+ * still through a pause (round 2.8), and each cluster's presence, its five colours' shares, the
  * snow, the falling and fallen leaves and the tree's size are all derived from it in tree.css, by the same
  * formulas as core's tree.ts. At rest the expression is the session's own focused minutes.
  */
@@ -36,7 +37,6 @@ export const sceneView: ResultsView = async (surface, session, recipe) => {
   const layer = recipe.layers.find((candidate): candidate is TreeLayer => candidate.type === 'tree' && named.has(candidate.id));
   if (layer === undefined) return;
   const summary = summarise(session);
-  const minutes = Math.max(summary.elapsedMs / MINUTE_MS, 1 / 60);
   const stretches = focusStretches(session.segments, summary.startedAt);
   const focused = stretches.reduce((sum, { from, to }) => sum + (to - from), 0);
   const drawing = await buildTree(doc, layer.view, BRAND.copy.tree.replay);
@@ -49,9 +49,9 @@ export const sceneView: ResultsView = async (surface, session, recipe) => {
   }
   const replay = html(doc, 'div', { class: canDerive() ? 'tree-replay' : 'tree-replay tree-replay--still' }, [drawing.element]);
   for (const [name, value] of Object.entries(treeColours(layer))) replay.style.setProperty(name, value);
-  // Focused minutes so far: each stretch of focus counted as the replay's time sweeps the session.
-  const terms = stretches.map(({ from, to }) => `clamp(0, var(--replay-progress) * ${String(minutes)} - ${String(from)}, ${String(to - from)})`);
-  replay.style.setProperty('--tree-focus-replay', terms.length === 0 ? '0' : `calc(${terms.join(' + ')})`);
+  // Focused minutes so far: the replay advances by focused time only, so the tree never stands still through a
+  // pause (plan, Product principles: results replays never stall; round 2.8).
+  replay.style.setProperty('--tree-focus-replay', `calc(var(--replay-progress) * ${String(focused)})`);
   // Its size as the replay runs: the growth binding of the measure, the measure being the focused minutes so far.
   const growth = layer.growth ?? 1;
   replay.style.setProperty('--tree-grow-replay', bindingCss(growth, `var(--tree-focus) * ${String(recipe.measure.perMinute)}`));

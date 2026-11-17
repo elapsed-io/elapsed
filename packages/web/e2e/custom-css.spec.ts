@@ -7,7 +7,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { FONT, openApp, seedSettings } from './helpers.ts';
 import { LOCKOUT_CSS, MALICIOUS_CSS } from './fixtures/malicious-css.ts';

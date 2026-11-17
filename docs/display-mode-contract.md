@@ -49,7 +49,7 @@ one that fails; the mode then shows digits (decision 319). What a recipe may hol
   changes: `status` (idle, running, paused, ended), `focusedMs` and `shownMs` (what the time shows, at
   `precisionMs`), `pausedForMs` while paused, `checkInDueAt` while a check-in waits, the session's `mode`,
   and its `endReason`. A mode never runs its own timer or loop.
-- **`onEvent(event)`**, optional: `milestone.hour` so far (Release 3 adds record events).
+- **`onEvent(event)`**, optional: `milestone.hour`, and `end.pressed` the moment end is pressed (its button's press, or E), before the ending countdown takes the screen (round 2.8: the analog crown dips). A recipe mode passes each event to its pieces (`Piece.onEvent`). Release 3 adds record events.
 - **`replay(surface, session, options)`**: on the results screen, a surface to draw into (`graphic`, the
   replay's own place on the card; `backdrop`, an empty layer behind the whole card; `lengthMs`, how long the
   replay runs; `scale`, the animation speed's multiplier), the finished session (its segments and mode
@@ -86,7 +86,8 @@ commissioned art replaces placeholders file for file.
 What the site gives every mode, on `:root` (generated from the config module, so custom CSS can change them):
 
 - Colours: `--color-background`, `--color-foreground`, `--color-accent`, `--color-muted`, `--color-faint`,
-  `--color-track`, `--color-end`, `--color-pause`.
+  `--color-track`, `--color-end`, `--color-pause`, `--color-red` (a red for marks on a dial, 4.5:1 on a small
+  dial's face; round 2.8).
 - Type: `--font-family`, `--font-weight-time`, `--font-stretch`, `--time-scale` (the time size setting).
 - Motion: `--motion-scale` (the animation speed), `--motion-morph`, `--motion-fade`, `--motion-control`,
   `--ease-standard`, `--ease-spring`; on the results screen, `--replay-progress`.

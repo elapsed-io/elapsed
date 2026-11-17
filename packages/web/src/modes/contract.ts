@@ -60,8 +60,11 @@ export interface ReplaySurface {
 /** The results card's layouts a replay may draw into (each as its frame draws it). */
 export type ReplayLayout = 'strip' | 'ring' | 'chart' | 'figure';
 
-/** Events a mode may react to. Release 3 adds record.passed; round 4 adds checkin.due. */
-export type ModeEvent = { readonly type: 'milestone.hour'; readonly payload: TimerEvents['milestone.hour'] };
+/**
+ * Events a mode may react to. Release 3 adds record.passed; round 4 adds checkin.due. `end.pressed` comes the
+ * moment end is pressed (by its button or E), before the ending countdown takes the screen (the analog crown dips).
+ */
+export type ModeEvent = { readonly type: 'milestone.hour'; readonly payload: TimerEvents['milestone.hour'] } | { readonly type: 'end.pressed' };
 
 export interface DisplayMode {
   readonly id: string;

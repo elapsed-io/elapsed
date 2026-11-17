@@ -62,9 +62,31 @@ recipe system, needed four things version 1 lacked. They are optional, so every 
   unnamed); `title` puts a word under it (the analog dial's "hours").
 - **More subdials:** up to 8 (from 3).
 
+## Additions for the redesigned analog stopwatch (2026-11-17)
+
+The analog stopwatch redrawn as its new frame needed five more optional fields, so every recipe written before
+stays valid:
+
+- **`theme.red`**, a colour token: a red for marks on a dial that meets 4.5:1 on the small dial's face in every
+  theme (the seconds dial's 60).
+- **A hand's `tail`**: how far it reaches back past the point it turns about.
+- **A dial's `batons`**: slim baton indices, the first at 12. One that would touch a small dial stops short of it,
+  or is left out when even its outer end would; an outer number that would crowd one is left out too.
+- **A small dial's `ticks` and `topColor`**: its ticks, longer at each of its numbers, and the colour of the number
+  at 12. A small dial's `labels` draw its numbers, the first at 12, in seconds, minutes or hours by its cycle's
+  length (a minute's dial counts 10 to 60).
+
+## Versions
+
+Recipe version 1 stays open until Release 2's public release, then freezes (owner, 2026-11-17; decision 338).
+After that, optional additions with sensible defaults keep version 1; anything that would break an existing recipe
+(renaming or removing a field, changing a value's meaning, renaming a slot) goes to version 2, with an automatic
+migration on load and a test for it. Slot ids are permanent once released. The schema in this folder is the source
+of truth, and says so at its top.
+
 ## Safety
 
-The schema enforces all of the following, and the runtime checks them again on load:
+The schema enforces all of the following, and the loader checks them again: the site's own recipes when the site is built (a refused one stops the build), and any other recipe when it loads:
 - Data only. Unknown fields and unknown piece types are rejected, so there is nowhere to put code, event handlers or markup.
 - Colours are hex values or theme tokens; no `url()`. Templates allow only `{value}`, `{unit}`, `{zone}`, `{time}`, `{pause}`, `{landmark}` and `{distance}`. Labels refuse `<`, `>` and braces.
 - Slot defaults are `builtin:` assets only. User images enter through the existing image import (detected by content, re-encoded, size-capped, kept on the device); recipes never name a file or address.

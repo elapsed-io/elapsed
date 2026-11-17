@@ -63,6 +63,15 @@ export const BRAND = {
       body: 'a single session can hold up to {hours} hours of focus. this one has ended; start a new one whenever you’re ready.',
       action: 'view results',
     },
+    /**
+     * Notices: one small reusable pill above the time (plan, Interface; the "notice: fullscreen tip" frame).
+     * Each notice that points to a setting uses the one universal link, "change".
+     */
+    notices: {
+      change: 'change',
+      dismiss: 'dismiss',
+      fullscreen: 'fullscreen hides your other tabs',
+    },
     /** The ending countdown and results frames. */
     ending: {
       tabulating: 'tabulating results',
@@ -109,10 +118,6 @@ export const BRAND = {
       height: 'height',
       tree: 'tree',
       calendar: 'perpetual calendar',
-    },
-    analog: {
-      /** Under the hours subdial (the analog frame). */
-      hours: 'hours',
     },
     ocean: {
       depth: '{depth} m',
@@ -247,6 +252,16 @@ export const BRAND = {
       oceanLife: { label: 'ocean life', help: 'sea life drifts in while you’re paused' },
       resultsLandmarks: { label: 'results landmarks', help: { ocean: 'up to two per 1,000 m on the results', height: 'up to two per 10 km on the results' } },
       treeView: { label: 'tree view', options: { side: 'side', isometric: 'isometric' } },
+      focusView: {
+        title: 'focus view',
+        hide: {
+          label: 'hide controls while focusing',
+          help: 'while a session runs, the buttons and icons step aside and the time grows. any key, click or mouse move brings them back.',
+          options: { '3s': 'after 3 s', '10s': 'after 10 s', never: 'never' },
+        },
+        fullscreen: { label: 'fullscreen when a session starts', help: 'hides your other tabs. press esc to leave at any time.' },
+        leave: { label: 'leave fullscreen', options: { never: 'never', 'pause-or-end': 'on pause or end', end: 'on end' } },
+      },
       theme: { label: 'theme' },
       colors: { label: 'theme colors', background: 'background', foreground: 'foreground', accent: 'accent', hex: '{name} hex code' },
       font: {
