@@ -1,5 +1,5 @@
 /**
- * The dial piece (the analog stopwatch's and the perpetual calendar's recipes; plan, Design system > Display
+ * The dial piece (the analog stopwatch's recipe; plan, Design system > Display
  * modes > Analog stopwatch; the redesigned "analog" frame).
  *
  * The dial is the frame's own drawing, an SVG of 340 × 336 units (one a reference pixel at a radius of 150),
@@ -19,14 +19,14 @@
 
 import 'virtual:tokens/analog.css';
 import './dial.css';
-import { CALENDAR_PLACES, CONFIG, calendarShare } from '@stopwatch/core';
+import { ANALOG_CONFIG } from '@stopwatch/core';
 import type { Cycle, DialLayer, Subdial } from '@stopwatch/core';
 import { html, svg } from '../../../dom.ts';
 import { motionScale } from '../../../shell/motion.ts';
 import { colourCss } from '../../recipe/colour.ts';
 import type { Activity, Piece, PieceSetup } from '../../recipe/piece.ts';
 
-const ANALOG = CONFIG.modes.analog;
+const ANALOG = ANALOG_CONFIG;
 const MINUTE_MS = 60_000;
 /** A glide this far from focused time is set right (after the device slept, or the tab was hidden). */
 const DRIFT_MS = 250;
@@ -62,7 +62,7 @@ interface SubdialShape {
   readonly hand: number;
   readonly tail: number;
   readonly width: number;
-  /** A small dial of its own (its marks, numbers or names), not a hand alone. */
+  /** A small dial of its own (its marks and numbers), not a hand alone. */
   readonly face: boolean;
 }
 
@@ -76,11 +76,9 @@ interface DialShape {
   readonly subdials: readonly SubdialShape[];
 }
 
-/** How many marks a small dial has: its ticks, else one a named place, a place of its calendar part, a number, or an hour of its cycle. */
+/** How many marks a small dial has: its ticks, else one a number, or an hour of its cycle. */
 function marksOf(sub: SubdialShape): number {
   if (sub.spec.ticks !== undefined) return sub.spec.ticks;
-  if (sub.spec.names !== undefined) return sub.spec.names.length;
-  if (sub.spec.part !== undefined && sub.spec.part !== 'moon') return CALENDAR_PLACES[sub.spec.part];
   if ((sub.spec.labels ?? 0) > 0) return sub.spec.labels ?? 0;
   return Math.max(1, Math.round((sub.cycle?.minutes ?? 720) / 60));
 }
@@ -167,9 +165,9 @@ function dial(doc: Document, shape: DialShape): { readonly drawing: SVGSVGElemen
 
   const sub = ANALOG.subdial;
   const small = shape.subdials.flatMap((dialShape) => {
-    if (!dialShape.face || dialShape.spec.part === 'moon') return [];
+    if (!dialShape.face) return [];
     const count = marksOf(dialShape);
-    const labels = dialShape.spec.names === undefined ? (dialShape.spec.labels ?? 0) : 0;
+    const labels = dialShape.spec.labels ?? 0;
     // Long ticks at each number when a dial has more ticks than numbers; every mark long otherwise.
     const longEvery = labels > 0 && count > labels && count % labels === 0 ? count / labels : 1;
     const marks = Array.from({ length: count }, (_, index) =>
@@ -178,11 +176,6 @@ function dial(doc: Document, shape: DialShape): { readonly drawing: SVGSVGElemen
         'stroke-width': sub.tickWidth,
       }),
     );
-    const names = (dialShape.spec.names ?? []).flatMap((name, index, all) => {
-      if (name === '') return [];
-      const { x, y } = around(dialShape, dialShape.radius * sub.names, (index * 360) / all.length);
-      return [svg(doc, 'text', { class: 'analog__sublabel', x, y, 'text-anchor': 'middle', 'dominant-baseline': 'central' }, [name])];
-    });
     const values = numbersOf(labels, dialShape.cycle?.minutes ?? 1);
     const numberText = values.map((value, index) => {
       const { x, y } = around(dialShape, dialShape.radius * sub.numbers, (index * 360) / labels);
@@ -196,10 +189,6 @@ function dial(doc: Document, shape: DialShape): { readonly drawing: SVGSVGElemen
       svg(doc, 'circle', { class: 'analog__subdial', cx: dialShape.x, cy: dialShape.y, r: dialShape.radius, 'fill-opacity': ANALOG.subdialFill, 'stroke-width': sub.rimWidth }),
       ...marks,
       ...orderedValues,
-      ...names,
-      ...(dialShape.spec.title === undefined
-        ? []
-        : [svg(doc, 'text', { class: 'analog__subnumber', x: dialShape.x, y: dialShape.y + dialShape.radius + 10, 'text-anchor': 'middle' }, [dialShape.spec.title])]),
     ];
   });
 
@@ -217,28 +206,9 @@ function dial(doc: Document, shape: DialShape): { readonly drawing: SVGSVGElemen
   return { drawing, crown };
 }
 
-/**
- * The moon (a calendar subdial's `moon` part): a disc with two moons turning half a turn a lunation behind a
- * semicircular window whose two humps hide the moon when it is new, as a moon-phase watch shows it.
- */
-function moon(doc: Document, sub: SubdialShape): { readonly window: HTMLElement; readonly disc: HTMLElement } {
-  const disc = html(doc, 'div', { class: 'dial__moon-disc' }, [
-    svg(doc, 'svg', { viewBox: '-1 -1 2 2', ...SVG_HIDDEN }, [
-      svg(doc, 'circle', { class: 'dial__moon-sky', cx: 0, cy: 0, r: 1 }),
-      svg(doc, 'circle', { class: 'dial__moon-body', cx: -0.6, cy: 0, r: 0.3 }),
-      svg(doc, 'circle', { class: 'dial__moon-body', cx: 0.6, cy: 0, r: 0.3 }),
-    ]),
-  ]);
-  const humps = svg(doc, 'svg', { class: 'dial__moon-humps', viewBox: '-1 -1 2 1', ...SVG_HIDDEN }, [svg(doc, 'circle', { cx: -0.6, cy: 0, r: 0.36 }), svg(doc, 'circle', { cx: 0.6, cy: 0, r: 0.36 })]);
-  const window = html(doc, 'div', { class: 'dial__moon' }, [disc, humps]);
-  for (const [name, value] of Object.entries({ '--moon-x': sub.x - sub.radius, '--moon-y': sub.y - sub.radius, '--moon-r': sub.radius })) window.style.setProperty(name, String(value));
-  if (sub.spec.hand?.color !== undefined) window.style.setProperty('--moon-colour', colourCss(sub.spec.hand.color, 'var(--color-accent)'));
-  return { window, disc };
-}
-
 interface Hand {
   readonly element: HTMLElement;
-  /** Where it points after `minutes` of focus, in degrees; stepped (a calendar's jump at midnight) or gliding. */
+  /** Where it points after `minutes` of focus, in degrees. */
   readonly angle: (minutes: number) => number;
   readonly glides: boolean;
   /** A seconds hand (a turn a minute or faster): it rests at its 60 when the seconds are set never to show. */
@@ -248,10 +218,9 @@ interface Hand {
 
 /**
  * The dial (the `dial` piece): its case, track, numbers and batons drawn once, a hand turning once a cycle, and up
- * to eight subdials: small dials with their own hands (the seconds dial), further hands from the centre (the hours
- * hand, a sweeping seconds hand), and a calendar's parts (the date, the weekday, the month, the leap year, each
- * stepping as a perpetual calendar does, and the moon). The time is in the page for screen readers only, as the
- * frames show no digits.
+ * to eight subdials: small dials with their own hands (the seconds dial) and further hands from the centre (the
+ * hours hand, a sweeping seconds hand). The time is in the page for screen readers only, as the frames show no
+ * digits.
  */
 export function dialPiece({ doc, layer, recipe, context }: PieceSetup<DialLayer>): Piece {
   const cycleOf = (id: string): Cycle | undefined => recipe.cycles?.find((cycle) => cycle.id === id);
@@ -310,19 +279,11 @@ export function dialPiece({ doc, layer, recipe, context }: PieceSetup<DialLayer>
     seconds: mainMinutes <= 1,
     glide: null,
   };
-  const windows: HTMLElement[] = [];
   const hubs: SVGCircleElement[] = [];
-  // Drawn bottom to top: a calendar's parts, then the small dials' hands, then the hands from the centre, the
-  // slowest underneath (the frame: seconds, hours, minutes, then the pin).
+  // Drawn bottom to top: the small dials' hands, then the hands from the centre, the slowest underneath (the
+  // frame: seconds, hours, minutes, then the pin).
   const subHands: { readonly hand: Hand; readonly layer: number; readonly turn: number }[] = subdials.map((sub) => {
     const cycle = sub.cycle;
-    const dayMinutes = cycle?.minutes ?? 1;
-    const part = sub.spec.part;
-    if (cycle?.calendar !== undefined && part === 'moon') {
-      const { window, disc } = moon(doc, sub);
-      windows.push(window);
-      return { hand: { element: disc, angle: (minutes) => calendarShare('moon', minutes / dayMinutes) * 360, glides: true, seconds: false, glide: null }, layer: 0, turn: 0 };
-    }
     const atCentre = sub.x === CENTRE.x && sub.y === CENTRE.y;
     const colour = colourCss(sub.spec.hand?.color, 'var(--color-foreground)');
     const element = handDrawing(atCentre ? 'centre' : 'sub', sub, sub.hand, sub.tail, sub.width, colour);
@@ -333,11 +294,6 @@ export function dialPiece({ doc, layer, recipe, context }: PieceSetup<DialLayer>
       hubs.push(hub);
     }
     element.dataset['cycle'] = sub.spec.cycle;
-    if (cycle?.calendar !== undefined && part !== undefined) {
-      // A calendar's part jumps at the turn of each of its days.
-      element.dataset['part'] = part;
-      return { hand: { element, angle: (minutes) => calendarShare(part, Math.floor(minutes / dayMinutes)) * 360, glides: false, seconds: false, glide: null }, layer: 0, turn: 0 };
-    }
     const turn = cycle?.minutes ?? ANALOG.hoursRevolution / MINUTE_MS;
     return { hand: { element, angle: (minutes) => (minutes * 360) / turn, glides: true, seconds: turn <= 1, glide: null }, layer: atCentre ? 2 : 1, turn };
   });
@@ -358,8 +314,7 @@ export function dialPiece({ doc, layer, recipe, context }: PieceSetup<DialLayer>
   pin.style.setProperty('--hand-colour', pinColour);
   const face = html(doc, 'div', { class: 'analog analog--still', attrs: { 'aria-hidden': 'true' } }, [
     drawing,
-    ...windows,
-    ...underHubs.filter((hand) => !windows.some((window) => window.contains(hand.element))).map((hand) => hand.element),
+    ...underHubs.map((hand) => hand.element),
     ...hubLayer,
     ...overHubs.map((hand) => hand.element),
     pin,
@@ -407,7 +362,7 @@ export function dialPiece({ doc, layer, recipe, context }: PieceSetup<DialLayer>
       return;
     }
     // Gliding: each hand turns its share of a minute over the rest of this minute, set afresh when it turns; a
-    // calendar's hands stand at their day, and a seconds hand with the seconds set never to show at its 60.
+    // seconds hand with the seconds set never to show stands at its 60.
     still = '';
     const minute = Math.floor(exact);
     const into = Math.max(0, focusedMs) - minute * MINUTE_MS;

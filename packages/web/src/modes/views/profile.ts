@@ -7,7 +7,7 @@
  */
 
 import './profile.css';
-import { BRAND, CONFIG, bindingAt, environmentColour, pickByBand } from '@stopwatch/core';
+import { bindingAt, environmentColour, HEIGHT_CONFIG, HEIGHT_COPY, OCEAN_CONFIG, OCEAN_COPY, pickByBand } from '@stopwatch/core';
 import type { Recipe, ShapeLayer, StarfieldLayer } from '@stopwatch/core';
 import { ART } from '../../art/registry.ts';
 import { html, svg } from '../../dom.ts';
@@ -19,8 +19,8 @@ import { drawProfile, grouped, percent } from '../shared/profile-chart.ts';
 import type { FinaleContext, ProfileLandmark, ProfileSpec } from '../shared/profile-chart.ts';
 import { drawField } from '../pieces/starfield/starfield.ts';
 
-const OCEAN = CONFIG.modes.ocean.results;
-const HEIGHT = CONFIG.modes.height.results;
+const OCEAN = OCEAN_CONFIG.results;
+const HEIGHT = HEIGHT_CONFIG.results;
 
 /** Each frame's own chart geometry, as the profile spec reads it. */
 interface Tuning {
@@ -50,7 +50,7 @@ const TUNING: Readonly<Record<string, Tuning>> = {
     landmark: OCEAN.landmark,
     lit: { near: OCEAN.lit.aboveMetres, far: OCEAN.lit.belowMetres, blackFrom: OCEAN.lit.blackFromMetres, step: 1 },
     passing: OCEAN.passing,
-    copy: BRAND.copy.ocean,
+    copy: OCEAN_COPY,
   },
   height: {
     chart: chartOf(HEIGHT, HEIGHT.valueBaselinePx, HEIGHT.zoneLines.heights),
@@ -58,7 +58,7 @@ const TUNING: Readonly<Record<string, Tuning>> = {
     landmark: { ...OCEAN.landmark, ...HEIGHT.landmark },
     lit: { near: HEIGHT.lit.belowMetres, far: HEIGHT.lit.aboveMetres, blackFrom: HEIGHT.lit.blackFromMetres, step: HEIGHT.lit.stepMetres },
     passing: HEIGHT.passing,
-    copy: BRAND.copy.height,
+    copy: HEIGHT_COPY,
   },
 };
 

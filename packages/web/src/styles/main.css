@@ -393,6 +393,17 @@
   }
 
   /*
+   * The next display mode getting ready (shell/mode-stage.ts): mounted out of sight and out of the layout, over the
+   * screen, until it is whole; then it takes the live mode's place on one frame.
+   */
+  .mode-stage {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /*
    * The notice pill (shell/pill.ts; the "notice: fullscreen tip" frame). It hangs from the top of the time,
    * so the time never moves when a notice comes or goes.
    */

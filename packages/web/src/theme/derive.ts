@@ -62,7 +62,7 @@ export function mutedColour(foreground: Hex, background: Hex, panel: Hex): Hex {
  */
 export function dialRed(scheme: 'dark' | 'light', foreground: Hex, background: Hex, track: Hex): Hex {
   const minimum = CONFIG.theme.minContrast.text;
-  const face = mix(track, background, CONFIG.modes.analog.subdialFill);
+  const face = mix(track, background, CONFIG.theme.dialFaceFill);
   const start = FIXED_COLOURS.red[scheme];
   let fraction = 0;
   let colour = start;

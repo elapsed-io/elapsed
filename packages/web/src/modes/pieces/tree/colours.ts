@@ -1,8 +1,8 @@
-import { CONFIG, mixColour } from '@stopwatch/core';
+import { mixColour, TREE_CONFIG } from '@stopwatch/core';
 import type { TreeLayer } from '@stopwatch/core';
 import { colourCss } from '../../recipe/colour.ts';
 
-const TREE = CONFIG.modes.tree;
+const TREE = TREE_CONFIG;
 
 /**
  * The tree's colours from its layer, as its stylesheet reads them: the five leaf colours in the year's order

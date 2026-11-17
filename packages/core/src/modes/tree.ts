@@ -9,10 +9,10 @@
  * frames' mix, and only opacity ever changes (plan, the motion audit). These are the frames' own formulas.
  */
 
-import { CONFIG } from '../config.ts';
 import { hex, parseHexColour } from './light.ts';
+import { TREE_CONFIG } from './tree-config.ts';
 
-const TREE = CONFIG.modes.tree;
+const TREE = TREE_CONFIG;
 
 function smoothstep(x: number): number {
   return x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);

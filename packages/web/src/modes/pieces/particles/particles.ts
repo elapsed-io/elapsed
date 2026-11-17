@@ -18,7 +18,7 @@
 import './drift.css';
 import './streaks.css';
 import './comets.css';
-import { CONFIG, zoneAt } from '@stopwatch/core';
+import { CONFIG, HEIGHT_METEORS_CONFIG, OCEAN_LIFE_CONFIG, zoneAt } from '@stopwatch/core';
 import type { ParticlesLayer, Range } from '@stopwatch/core';
 import { ART } from '../../../art/registry.ts';
 import { html } from '../../../dom.ts';
@@ -26,8 +26,8 @@ import type { Piece, PieceSetup } from '../../recipe/piece.ts';
 import type { Slots } from '../../recipe/slots.ts';
 import { drawComets, scheduleComets } from './comets.ts';
 
-const LIFE = CONFIG.modes.ocean.life;
-const METEORS = CONFIG.modes.height.meteors;
+const LIFE = OCEAN_LIFE_CONFIG;
+const METEORS = HEIGHT_METEORS_CONFIG;
 
 /** A resolved CSS time ("0.18s", "180ms") in milliseconds; 0 when unreadable. */
 function timeMs(value: string): number {

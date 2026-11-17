@@ -5,11 +5,11 @@
  * two random landmarks per 1,000 m band.
  */
 
-import { CONFIG } from '../config.ts';
 import { attenuated, hex } from './light.ts';
 import { pickByBand, spreadBy } from './landmarks.ts';
+import { OCEAN_CONFIG } from './ocean-config.ts';
 
-const OCEAN = CONFIG.modes.ocean;
+const OCEAN = OCEAN_CONFIG;
 const MINUTE = 60_000;
 
 export type OceanZone = 'sunlight' | 'twilight' | 'midnight' | 'abyssal' | 'hadal';

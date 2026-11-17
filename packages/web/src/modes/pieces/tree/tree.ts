@@ -17,15 +17,16 @@
 
 import 'virtual:tokens/tree.css';
 import './tree.css';
-import { BRAND, CONFIG, grassWeights, leafScale, leafState, shares, weather } from '@stopwatch/core';
+import { grassWeights, leafScale, leafState, shares, TREE_CONFIG, TREE_COPY, weather } from '@stopwatch/core';
 import type { TreeLayer, TreeView } from '@stopwatch/core';
 import { ART } from '../../../art/registry.ts';
 import type { ArtCatalog } from '../../../art/registry.ts';
 import { html, svg } from '../../../dom.ts';
+import { nextTask } from '../../shared/next-task.ts';
 import type { Activity, Piece, PieceSetup } from '../../recipe/piece.ts';
 import { treeColours } from './colours.ts';
 
-const TREE = CONFIG.modes.tree;
+const TREE = TREE_CONFIG;
 const MINUTE_MS = 60_000;
 const SEASON_MINUTES = TREE.season / MINUTE_MS;
 const YEAR_MINUTES = 4 * SEASON_MINUTES;
@@ -203,15 +204,33 @@ export function treePiece({ doc, layer, context }: PieceSetup<TreeLayer>): Piece
     }
   };
 
-  void buildTree(doc, view, view === 'side' ? BRAND.copy.tree.side : BRAND.copy.tree.isometric).then((drawing) => {
-    if (gone) return;
+  // Read through a function: unmount sets it while the drawing loads, where TypeScript cannot see it.
+  const stopped = (): boolean => gone;
+  const drawn = buildTree(doc, view, view === 'side' ? TREE_COPY.side : TREE_COPY.isometric).then(async (drawing) => {
+    // The year's animations, a slice at a time, each slice a task of its own (round 2.10: never blocking the main
+    // thread); the tree shows once all are made.
+    const parts = seasonParts(drawing);
+    const made: Animation[] = [];
+    for (let start = 0; start < parts.length; start += TREE.animationsPerTask) {
+      if (start > 0) await nextTask(doc.defaultView ?? window);
+      if (stopped()) break;
+      for (const { element, at } of parts.slice(start, start + TREE.animationsPerTask)) {
+        const animation = element.animate(yearKeyframes(at), { duration: YEAR_MS, iterations: Infinity, easing: 'linear' });
+        animation.pause();
+        made.push(animation);
+      }
+    }
+    if (stopped()) {
+      for (const animation of made) animation.cancel();
+      return;
+    }
     holder.replaceChildren(drawing.element);
-    year = seasonParts(drawing).map(({ element, at }) => element.animate(yearKeyframes(at), { duration: YEAR_MS, iterations: Infinity, easing: 'linear' }));
-    for (const animation of year) animation.pause();
+    year = made;
     place(last.focusedMs, last.state);
   });
 
   return {
+    ready: drawn,
     figure: { className: 'tree', nodes: [holder], style: treeColours(layer) },
     render({ view: timer, activity }) {
       place(timer.focusedMs, activity);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { contrastRatio, mix, parseHex } from './color.ts';
-import { CONFIG } from '@stopwatch/core';
+import { ANALOG_CONFIG } from '@stopwatch/core';
 import { deriveTheme, isLightBackground, themeCustomProperties } from './derive.ts';
 import { getPreset, PRESETS } from './presets.ts';
 
@@ -10,7 +10,7 @@ describe('the dial red (round 2.8)', () => {
     expect(deriveTheme(getPreset('paper')).red).toBe('#b8332a');
     for (const preset of PRESETS) {
       const theme = deriveTheme(preset);
-      const face = mix(theme.track, theme.background, CONFIG.modes.analog.subdialFill);
+      const face = mix(theme.track, theme.background, ANALOG_CONFIG.subdialFill);
       expect(contrastRatio(theme.red, face), preset.id).toBeGreaterThanOrEqual(4.5);
     }
   });

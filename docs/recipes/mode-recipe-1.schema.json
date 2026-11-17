@@ -288,11 +288,6 @@
               "minItems": 3,
               "maxItems": 3
             }
-          },
-          "calendar": {
-            "enum": [
-              "gregorian"
-            ]
           }
         }
       }
@@ -801,27 +796,6 @@
                         "dial",
                         "hand"
                       ]
-                    },
-                    "part": {
-                      "enum": [
-                        "date",
-                        "weekday",
-                        "month",
-                        "leap-year",
-                        "moon"
-                      ]
-                    },
-                    "names": {
-                      "type": "array",
-                      "maxItems": 31,
-                      "items": {
-                        "type": "string",
-                        "maxLength": 48,
-                        "pattern": "^[^<>{}]*$"
-                      }
-                    },
-                    "title": {
-                      "$ref": "#/$defs/label"
                     }
                   }
                 }

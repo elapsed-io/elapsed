@@ -34,7 +34,7 @@ describe('downloaded modes in the build', () => {
         chunk('assets/ring-art.js', { assets: ['assets/art.svg'] }),
         chunk('assets/timeline.js', { facade: '/src/timeline.ts', imports: ['assets/dom.js'], dynamicImports: ['assets/strip.js'], css: ['assets/timeline.css'] }),
       ),
-      { ring: '/src/ring.ts', timeline: '/src/timeline.ts' },
+      { ring: ['/src/ring.ts'], timeline: ['/src/timeline.ts'] },
     );
     expect(files).toEqual({
       ring: ['/assets/art.svg', '/assets/ring-art.js', '/assets/ring.css', '/assets/ring.js'],
@@ -42,7 +42,26 @@ describe('downloaded modes in the build', () => {
     });
   });
 
+  it('send the pieces a mode’s recipe fetches with the mode, each with every mode that draws it, but none the core holds', () => {
+    const files = modeFiles(
+      bundle(
+        chunk('assets/index.js', { entry: true, imports: ['assets/dom.js'], dynamicImports: ['assets/ocean.js', 'assets/space.js', 'assets/particles.js', 'assets/strip.js'] }),
+        chunk('assets/dom.js'),
+        chunk('assets/ocean.js', { facade: '/src/ocean.ts' }),
+        chunk('assets/space.js', { facade: '/src/space.ts' }),
+        chunk('assets/particles.js', { facade: '/src/particles.ts', imports: ['assets/dom.js'], css: ['assets/ring.css'] }),
+        chunk('assets/strip.js', { facade: '/src/strip.ts' }),
+      ),
+      { ocean: ['/src/ocean.ts', '/src/particles.ts', '/src/ring-piece.ts'], interstellar: ['/src/space.ts', '/src/particles.ts', '/src/strip.ts'] },
+      new Set(['/src/ring-piece.ts', '/src/strip.ts']),
+    );
+    expect(files).toEqual({
+      ocean: ['/assets/ocean.js', '/assets/particles.js', '/assets/ring.css'],
+      interstellar: ['/assets/particles.js', '/assets/ring.css', '/assets/space.js'],
+    });
+  });
+
   it('refuses a build without a mode the manifests name', () => {
-    expect(() => modeFiles(bundle(chunk('assets/index.js', { entry: true })), { ring: '/src/ring.ts' })).toThrow(/ring/);
+    expect(() => modeFiles(bundle(chunk('assets/index.js', { entry: true })), { ring: ['/src/ring.ts'] })).toThrow(/ring/);
   });
 });

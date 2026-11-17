@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CONFIG } from '../config.ts';
 import { bodyOpacity, keptLabels, mapState, ringOpacity, spaceScale, startOpacity, usablePath } from './space.ts';
+import { SPACE_CONFIG } from './space-config.ts';
 
-const SPACE = CONFIG.modes.interstellar;
+const SPACE = SPACE_CONFIG;
 const sm = (x: number): number => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 
 /** The "interstellar, running" frame's own arithmetic (its renderVals), as the strings it draws. */

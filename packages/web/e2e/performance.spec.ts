@@ -8,8 +8,9 @@
  */
 
 import { expect, test } from './test.ts';
+import { CONFIG } from '@stopwatch/core';
 import type { Page } from '@playwright/test';
-import { MINUTE, SECOND, T0 } from './helpers.ts';
+import { MINUTE, SECOND, T0, TEST_MODE_IDS, seedSettings, switchTestModesOn } from './helpers.ts';
 
 /** Counts timers and wake-ups, and lets the test hide and show the tab. Runs after the test clock is installed. */
 async function instrument(page: Page): Promise<void> {
@@ -134,4 +135,80 @@ test('memory and the page stay flat over two hours', async ({ page, browserName 
   expect(late.nodes).toBe(early.nodes);
   // Allow for the engine's own bookkeeping; a leak per wake would grow by megabytes over 2 hours.
   expect(late.heap - early.heap).toBeLessThan(512 * 1024);
+});
+
+/** Opens the site in `mode` on the test's clock (a test mode with the test-modes switch on). */
+async function openIn(page: Page, mode: string): Promise<void> {
+  await page.setViewportSize({ width: 720, height: 450 });
+  // Check-ins as far apart as the setting allows (3 hours); the long run answers each one.
+  await seedSettings(page, { mode, checkInInterval: CONFIG.session.checkInInterval.max });
+  if (TEST_MODE_IDS.includes(mode)) await switchTestModesOn(page);
+  await page.clock.install({ time: T0 });
+  await page.goto('/');
+  await page.locator('html[data-ready]').waitFor({ state: 'attached' });
+  await expect(page.locator('.screen')).toHaveAttribute('data-mode', mode);
+}
+
+// Round 2.10: every mode, not digits alone, holds over a long session and draws nothing in a hidden tab.
+for (const mode of ['ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'interstellar']) {
+  test(`${mode}: seven hours running keep the page and its animations flat`, async ({ page, browserName }) => {
+    await openIn(page, mode);
+    await page.locator('.button--primary').click();
+    const measure = async (): Promise<{ nodes: number; animations: number }> =>
+      page.evaluate(() => ({ nodes: document.getElementsByTagName('*').length, animations: document.getAnimations().filter((animation) => !(animation instanceof CSSTransition)).length }));
+    // Half an hour at a time, then a key: any key answers a check-in that has come due, so the session runs on.
+    const run = async (): Promise<void> => {
+      await page.clock.runFor(30 * MINUTE);
+      await page.keyboard.press('Shift');
+    };
+    // Past the first check-in (3 hours), so what it adds once (interstellar's blurred still copy of the map) is in both.
+    for (let step = 0; step < 7; step += 1) await run();
+    const early = await measure();
+    const cdp = browserName === 'chromium' ? await page.context().newCDPSession(page) : null;
+    const heap = async (): Promise<number> => {
+      if (cdp === null) return 0;
+      await cdp.send('HeapProfiler.collectGarbage');
+      return (await cdp.send('Runtime.getHeapUsage')).usedSize;
+    };
+    const heapEarly = await heap();
+    // Three hours more, through the second check-in.
+    for (let step = 0; step < 7; step += 1) await run();
+    await expect(page.locator('.button--primary')).toHaveAccessibleName('pause');
+    const late = await measure();
+    // The same page: nothing added each minute, and no animation left behind when the next minute's starts.
+    expect(late.nodes, 'elements').toBe(early.nodes);
+    expect(late.animations, 'animations').toBeLessThanOrEqual(early.animations);
+    if (cdp !== null) expect((await heap()) - heapEarly).toBeLessThan(1024 * 1024);
+  });
+}
+
+test.describe('hidden', () => {
+  test.use({ awake: false });
+
+  for (const mode of ['analog', 'ocean', 'height', 'tree', 'interstellar']) {
+    test(`${mode}: a hidden tab draws nothing and wakes only for the heartbeat, and catches up on return`, async ({ page }) => {
+      await page.clock.install({ time: T0 });
+      await instrument(page);
+      await openIn(page, mode);
+      await page.locator('.button--primary').click();
+      await page.clock.runFor(5 * MINUTE);
+      await page.evaluate(() => {
+        const scope = window as unknown as { __drawn: number; __animations: number };
+        scope.__drawn = 0;
+        scope.__animations = document.getAnimations().length;
+        new MutationObserver((records) => {
+          scope.__drawn += records.length;
+        }).observe(document.querySelector('.mode-root') ?? document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+      });
+      const before = await wakes(page);
+      await hide(page, true);
+      for (let minute = 0; minute < 30; minute += 1) await page.clock.runFor(MINUTE);
+      const woke = (await wakes(page)) - before;
+      expect(woke).toBeLessThanOrEqual(30 * 2 + 1);
+      expect(await page.evaluate(() => (window as unknown as { __drawn: number }).__drawn)).toBe(0);
+      expect(await page.evaluate(() => document.getAnimations().length)).toBeLessThanOrEqual(await page.evaluate(() => (window as unknown as { __animations: number }).__animations));
+      await hide(page, false);
+      await expect(page.locator('.time--main').first()).toHaveAttribute('aria-label', '35 minutes focused');
+    });
+  }
 });

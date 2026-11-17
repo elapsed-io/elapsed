@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MODE_MANIFESTS } from '../modes/manifests.ts';
+import { MODE_ART } from '../modes/mode-art.ts';
 import { ArtRegistry, artProblems, isArtKey, placeholderArt } from './registry.ts';
 import type { ArtCatalog, ArtEntry } from './registry.ts';
 
@@ -72,8 +73,9 @@ describe('the asset registry', () => {
 
   it('is what every mode declares its art through', () => {
     for (const manifest of MODE_MANIFESTS) {
-      expect(new Set(manifest.art).size, manifest.id).toBe(manifest.art.length);
-      for (const key of manifest.art) expect(isArtKey(key), `${manifest.id}: ${key}`).toBe(true);
+      const art = MODE_ART[manifest.id] ?? [];
+      expect(new Set(art).size, manifest.id).toBe(art.length);
+      for (const key of art) expect(isArtKey(key), `${manifest.id}: ${key}`).toBe(true);
     }
   });
 });

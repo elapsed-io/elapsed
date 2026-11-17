@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { BRAND } from '../brand.ts';
-import { CONFIG } from '../config.ts';
 import { attenuated, contrast, hex, parseHexColour } from './light.ts';
 import { OCEAN_LANDMARKS, oceanColour, oceanDepth, oceanLitColour, oceanZone, pickLandmarks, spreadLandmarks } from './ocean.ts';
+import { OCEAN_CONFIG } from './ocean-config.ts';
+import { OCEAN_COPY } from '../copy/ocean.ts';
 
 const MINUTE = 60_000;
-const OCEAN = CONFIG.modes.ocean;
+const OCEAN = OCEAN_CONFIG;
 
 /** The frames' own formula (ModeOcean.dc.html), written out again so the module is checked against it. */
 function frameColour(z: number): string {
@@ -45,7 +45,7 @@ describe('ocean depth', () => {
 
   it('names the zone at each depth', () => {
     expect([0, 199, 200, 999, 1000, 3999, 4000, 5999, 6000, 10_935].map(oceanZone)).toEqual(['sunlight', 'sunlight', 'twilight', 'twilight', 'midnight', 'midnight', 'abyssal', 'abyssal', 'hadal', 'hadal']);
-    for (const zone of ['sunlight', 'twilight', 'midnight', 'abyssal', 'hadal'] as const) expect(BRAND.copy.ocean.zones[zone]).toMatch(/^[a-z ]+ zone$/);
+    for (const zone of ['sunlight', 'twilight', 'midnight', 'abyssal', 'hadal'] as const) expect(OCEAN_COPY.zones[zone]).toMatch(/^[a-z ]+ zone$/);
   });
 
   it('keeps the time readable over the water at every depth (large text, at least 3:1)', () => {
@@ -66,7 +66,7 @@ describe('ocean depth', () => {
   });
 
   it('names every landmark in the brand module, at most two per 1,000 m band, only from the catalog', () => {
-    for (const landmark of OCEAN_LANDMARKS) expect(BRAND.copy.ocean.landmarks[landmark.id]).toMatch(/^[a-z’ ,]+$/);
+    for (const landmark of OCEAN_LANDMARKS) expect(OCEAN_COPY.landmarks[landmark.id]).toMatch(/^[a-z’ ,]+$/);
     let seed = 1;
     const random = (): number => {
       seed = (seed * 16807) % 2147483647;

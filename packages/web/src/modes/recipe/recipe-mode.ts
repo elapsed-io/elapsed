@@ -22,7 +22,7 @@ import type { DisplayContext, DisplayMode, ModeEvent, ModeOptions, ReplayLayout,
 import { TimeDisplay } from '../shared/time-display.ts';
 import type { Activity, Environment, Figure, Frame, Piece, PieceFactory, PieceLibrary } from './piece.ts';
 import { contrastSwitch } from './contrast.ts';
-import { CameraStage } from './camera.ts';
+import type { CameraStage } from './camera.ts';
 import { Slots } from './slots.ts';
 import type { SlotSources } from './slots.ts';
 import './recipe.css';
@@ -163,7 +163,7 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
     const layers = displayLayers(recipe, values);
     const time = layers.find((layer): layer is TimeLayer => layer.type === 'time');
     const camera = recipe.camera?.type === 'follow-zoom' && layers.some((layer) => layer.space === 'camera');
-    const stage = camera ? new CameraStage(doc, recipe, displayContext, CONFIG.design.reference.timer, blursMap(recipe)) : null;
+    const stage = camera && library.stage !== undefined ? library.stage(doc, recipe, displayContext, CONFIG.design.reference.timer, blursMap(recipe)) : null;
     const pieces: { layer: Layer; piece: Piece }[] = [];
     for (const layer of layers) {
       if (layer.type === 'time') continue;
@@ -227,6 +227,10 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
       context = displayContext;
       built = build(element, displayContext);
     },
+    async ready() {
+      // A piece whose art failed to load shows its placeholder; it never holds the mode back.
+      await Promise.all((built?.pieces ?? []).map(async ({ piece }) => Promise.resolve(piece.ready).catch(() => undefined)));
+    },
     onEvent(event: ModeEvent) {
       for (const { piece } of built?.pieces ?? []) piece.onEvent?.(event);
     },
@@ -275,6 +279,8 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
       if (shownShare > 0) context?.chrome?.(0, dark);
       shownShare = -1;
       root?.style.removeProperty('--mode-time-size');
+      // Anything still moving in the mode's subtree (a fade a piece left running) stops with it.
+      for (const animation of root?.getAnimations({ subtree: true }) ?? []) animation.cancel();
       root?.replaceChildren();
       root = null;
       context = null;

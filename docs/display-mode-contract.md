@@ -25,16 +25,17 @@ one that fails; the mode then shows digits (decision 319). What a recipe may hol
 | --- | --- |
 | `id` | Lowercase name, stored in settings and in a session's mode spans. |
 | `name` | Its name in settings (from the brand module). |
-| `tier` | `core`: shipped with the first visit (digits only). `on-choice`: downloaded the first time it is shown, kept for offline use, removed after 30 days unused (plan, Loading and performance). |
+| `tier` | `core`: shipped with the first visit, ready without a download (digits, ring and timeline, from round 2.10). `on-choice`: downloaded the first time it is shown (its recipe, the pieces it draws with, its environment, view and art), kept for offline use, removed after 30 days unused (plan, Loading and performance). |
 | `budget` | Compressed size budgets the CI size check enforces: `codeBytes` (30 KB, failing at 60 KB) and `artBytes` (150 KB, failing at 300 KB). |
-| `source` | The module that holds the mode; the size check and the offline cache find its files by this. |
-| `art` | The asset-registry keys it draws: its recipe's slot defaults, and the tree piece's own drawing (see Art). |
+| `source` | The module that holds the mode's recipe and slot sources; with the modules its recipe fetches (`modes/sources.ts`, for the build alone), the size check and the offline cache find its files by this. |
 | `options` | Which setting holds each of its recipe's options, by option id. |
 
 ## What a mode receives
 
-- **`mount(root, context)`**: an empty element to draw into, inside the timer screen, between the corner
-  icons and the controls, and a `DisplayContext` the site owns:
+- **`mount(root, context)`**: an empty element to draw into, and a `DisplayContext` the site owns. The first
+  mode mounts straight into the timer screen; every later one mounts out of sight in a root of its own beside the
+  live one (round 2.10, `shell/mode-stage.ts`), with its own context, and takes the live root's place on one
+  frame once it is ready. The context:
   - `seconds`: how much of the seconds shows (`blur-away`, `always`, `never`);
   - `reducedMotion`: the system asks for reduced motion;
   - `lowPower`: low power is on (by hand, or because of reduced motion): ambient animation stops and only
@@ -56,7 +57,33 @@ one that fails; the mode then shows digits (decision 319). What a recipe may hol
   spans), and the mode's options as they are when the results appear (the mode drawing the replay may never
   have been mounted: it is the mode shown longest).
 - **`relayout()`**, optional: the font changed; measure again.
-- **`unmount()`**: the mode is leaving; cancel its animations and empty its root.
+- **`ready()`**, optional (round 2.10): settles once the mounted mode's first view is whole: its art loaded and
+  its images decoded. The site swaps a staged mode in only then. A piece says the same through `Piece.ready`; a
+  piece whose art fails shows its placeholder and never holds the mode back.
+- **`unmount()`**: the mode is leaving: take it down completely (round 2.10). Everything it put in its root,
+  every animation, timer, listener and observer it started, and any layer it cached go with it; nothing it made
+  outlives it, and the site may mount another mode into the same place at once. The recipe mode also cancels
+  anything still animating in its root's subtree. A test switches to every mode and back and finds the page as
+  digits alone left it (`e2e/mode-switch.spec.ts`).
+
+## How a mode loads (round 2.10)
+
+One pipeline, which any newer choice or any of the session's controls cancels (`shell/mode-stage.ts`):
+
+1. The session records the choice at once (`TimerEngine.switchMode`); it never waits on the drawing.
+2. The mode's code is fetched (`modes/registry.ts` and `modes/recipe/library.ts`, with an `AbortSignal`): its
+   recipe, then in parallel the pieces its layers name, its environment and, for a follow-zoom camera, the stage.
+   Digits, ring and timeline are in the core, so for them this settles in the same task as the choice.
+3. It mounts out of sight: at once for a core mode, so the switch lands on the frame of the choice; for a
+   download, in a background task of its own (`scheduler.postTask` at background priority, or a message to
+   itself where there is none). Long work inside a piece goes in slices, each a task of its own
+   (`modes/shared/next-task.ts`: the tree's year).
+4. `ready()` settles; for a download, its layout is worked out in a task of its own.
+5. The swap, on one frame: the leaving mode's environment is held behind for a crossfade of at most 120 ms
+   (never more than one at a time), the leaving mode unmounts, and the staged root takes its place.
+
+Start, pause and end cancel a load still running (whatever of it mounted is taken down); after pause or start
+the chosen mode loads again in a background task, and after end when the timer shows again.
 
 ## What a mode provides
 
@@ -69,8 +96,8 @@ one that fails; the mode then shows digits (decision 319). What a recipe may hol
 | Replay layout | How the results card is laid out around the replay. | `replayLayout`: `strip` (a strip over the stats: digits, timeline), `ring` (rings beside the stats: ring, analog), `chart` (a profile chart over the stats: ocean depth, height), `figure` (a drawing over the stats: tree) or `map` (a map over the stats, 14 px apart, on space from edge to edge: interstellar). Decisions 302, 316 and 360. |
 | Replay count | What the results headline counts by while the replay runs. | `replayCounts`: `session` (the default: through the whole session, rising only while the replay passes focus) or `focus` (evenly with the replay, for a replay that draws distance by focused time only: interstellar). Decision 361. |
 | Options | Settings of its own (results landmarks, ocean life, the tree's view: `DisplayContext.options.treeView`). | Declared in the settings schema under display; shown in a box under the mode tiles while the mode is chosen; passed to `replay()` and in the context. |
-| Art | Its creatures, landmarks and scenery. | Through the asset registry: keys declared in the manifest, drawn as placeholders until the mode's catalog registers them. |
-| Size | Within its budget. | The size check fails the build past the budget. |
+| Art | Its creatures, landmarks and scenery. | Through the asset registry: keys listed for the build and the tests (`modes/mode-art.ts`, never loaded by the site), drawn as placeholders until the mode's catalog registers them. A projected sky is drawn by the build as images (`build/sky.ts`). |
+| Size | Within its budget. | The size check warns past the plan's budget and fails past twice it, and fails past the download's own ceiling (`scripts/download-budgets.ts`, round 2.10). |
 
 ## Art
 

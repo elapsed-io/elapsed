@@ -20,6 +20,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import type { Plugin, Rollup } from 'vite';
 import { cssReferences, htmlReferences } from '../scripts/size-budget.ts';
+import { coreModeSources, modeDownloads } from '../scripts/mode-downloads.ts';
 import { MODE_MANIFESTS } from '../src/modes/manifests.ts';
 import { ICON_FILES, MANIFEST_FILE } from './web-app.ts';
 
@@ -77,31 +78,38 @@ function chunkFiles(bundle: Rollup.OutputBundle, starts: readonly string[], stop
 }
 
 /**
- * Each downloaded mode's own files, as paths: everything its chunk brings (its code, styles, art, and the
- * replay it loads), less anything the rest of the site also loads (the core, the settings panel, results, a
- * replay digits shares). Those stay in the version's own cache; only a mode's own files go with the mode.
+ * Each downloaded mode's own files, as paths: everything its download brings (its descriptor, and the pieces,
+ * environment, results view and camera its recipe fetches, with their styles and art), less anything the rest of
+ * the site also loads (the core, the settings panel, results, what core modes draw with). Those stay in the
+ * version's own cache; only a mode's own files go with the mode. A piece two modes draw goes with each.
  */
-export function modeFiles(bundle: Rollup.OutputBundle, sources: Readonly<Record<string, string>>): Record<string, string[]> {
+export function modeFiles(bundle: Rollup.OutputBundle, downloads: Readonly<Record<string, readonly string[]>>, coreSources: ReadonlySet<string> = new Set()): Record<string, string[]> {
   const chunks = Object.values(bundle).filter((output): output is Rollup.OutputChunk => output.type === 'chunk');
-  const entries = new Map<string, string>();
-  for (const [id, source] of Object.entries(sources)) {
-    const chunk = chunks.find((candidate) => candidate.facadeModuleId === source);
-    if (chunk === undefined) throw new Error(`the ${id} mode (${source}) is not in the build`);
-    entries.set(id, chunk.fileName);
+  const starts = new Map<string, string[]>();
+  for (const [id, sources] of Object.entries(downloads)) {
+    const files: string[] = [];
+    for (const source of sources) {
+      if (coreSources.has(source)) continue;
+      const chunk = chunks.find((candidate) => candidate.facadeModuleId === source);
+      if (chunk === undefined) throw new Error(`the ${id} mode (${source}) is not in the build`);
+      files.push(chunk.fileName);
+    }
+    starts.set(id, files);
   }
-  const modeEntries = new Set(entries.values());
+  const modeEntries = new Set([...starts.values()].flat());
   const siteEntries = chunks.filter((chunk) => chunk.isEntry && chunk.fileName !== SERVICE_WORKER_FILE).map((chunk) => chunk.fileName);
   const site = chunkFiles(bundle, siteEntries, (file) => modeEntries.has(file));
   const result: Record<string, string[]> = {};
-  for (const [id, entry] of entries) {
-    result[id] = [...chunkFiles(bundle, [entry], (file) => site.has(file))].sort().map((file) => `/${file}`);
+  for (const [id, files] of starts) {
+    result[id] = [...chunkFiles(bundle, files, (file) => site.has(file))].sort().map((file) => `/${file}`);
   }
   return result;
 }
 
-const ON_CHOICE_SOURCES = Object.fromEntries(
-  MODE_MANIFESTS.filter((manifest) => manifest.tier === 'on-choice').map((manifest) => [manifest.id, fileURLToPath(new URL(`../${manifest.source}`, import.meta.url))]),
-);
+const absolute = (source: string): string => fileURLToPath(new URL(`../${source}`, import.meta.url));
+const DOWNLOADS = modeDownloads();
+const ON_CHOICE_DOWNLOADS = Object.fromEntries(MODE_MANIFESTS.filter((manifest) => manifest.tier === 'on-choice').map((manifest) => [manifest.id, (DOWNLOADS[manifest.id] ?? []).map(absolute)]));
+const CORE_SOURCES = new Set([...coreModeSources()].map(absolute));
 
 function replaceOnce(code: string, placeholder: string, value: string): string {
   const parts = code.split(placeholder);
@@ -133,7 +141,7 @@ export function serviceWorker(): Plugin {
         const version = hash.digest('hex').slice(0, 16);
         worker.code = replaceOnce(worker.code, '__SW_PRECACHE__', JSON.stringify(precache));
         worker.code = replaceOnce(worker.code, '__SW_VERSION__', JSON.stringify(version));
-        worker.code = replaceOnce(worker.code, '__SW_MODES__', JSON.stringify(modeFiles(bundle, ON_CHOICE_SOURCES)));
+        worker.code = replaceOnce(worker.code, '__SW_MODES__', JSON.stringify(modeFiles(bundle, ON_CHOICE_DOWNLOADS, CORE_SOURCES)));
       },
     },
   };

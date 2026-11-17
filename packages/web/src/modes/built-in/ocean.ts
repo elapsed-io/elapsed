@@ -6,17 +6,15 @@
 
 import 'virtual:tokens/ocean.css';
 import './ocean.css';
-import { BRAND, CONFIG, OCEAN_LANDMARKS } from '@stopwatch/core';
+import { OCEAN_CONFIG, OCEAN_COPY, OCEAN_LANDMARKS } from '@stopwatch/core';
 import RECIPE from '../../../../../docs/recipes/recipes/ocean-depth.json' with { type: 'json' };
-import { lightEnvironment } from '../pieces/light/light.ts';
-import { particlesPiece } from '../pieces/particles/particles.ts';
-import { builtInMode } from './built-in.ts';
+import type { BuiltInMode } from './built-in.ts';
 
-export const createOceanMode = builtInMode('ocean', RECIPE, {
-  environment: lightEnvironment,
-  pieces: { particles: particlesPiece },
-  view: async () => (await import('../views/profile.ts')).profileView,
-  chrome: { text: CONFIG.modes.ocean.palette.text, icon: CONFIG.modes.ocean.palette.icon, label: CONFIG.modes.ocean.palette.icon },
+export const OCEAN: BuiltInMode = {
+  id: 'ocean',
+  recipe: RECIPE,
+  environment: false,
+  chrome: { text: OCEAN_CONFIG.palette.text, icon: OCEAN_CONFIG.palette.icon, label: OCEAN_CONFIG.palette.icon },
   slots: {
     art: {
       'sunlight/': async () => (await import('../../art/ocean/life-sunlight.ts')).LIFE,
@@ -27,7 +25,7 @@ export const createOceanMode = builtInMode('ocean', RECIPE, {
       'passing/': async () => (await import('../../art/ocean/passing.ts')).OCEAN_PASSING,
     },
     data: {
-      'ocean/landmarks': () => OCEAN_LANDMARKS.map((landmark) => ({ at: landmark.depth, id: landmark.id, name: BRAND.copy.ocean.landmarks[landmark.id] })),
+      'ocean/landmarks': () => OCEAN_LANDMARKS.map((landmark) => ({ at: landmark.depth, id: landmark.id, name: OCEAN_COPY.landmarks[landmark.id] })),
     },
   },
-});
+};

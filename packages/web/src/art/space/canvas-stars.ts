@@ -1,8 +1,9 @@
 /**
  * Interstellar's still sky (plan, Display modes > Interstellar; the interstellar frames): the design canvas's own
  * star catalog (Orion, Taurus with the Pleiades and the Hyades, Gemini, Sirius, Procyon and their neighbours) as
- * right ascension in hours, declination in degrees, magnitude and whether the star is warm, which the site
- * projects about the view's centre (RA 5.5 h, Dec +6°, 8 px a degree), and the faint stars scattered over the
+ * right ascension in hours, declination in degrees, magnitude and whether the star is warm, which the site's build
+ * projects about the view's centre (RA 5.5 h, Dec +6°, 8 px a degree) into images (build/sky.ts, round 2.10; the
+ * device never loads this module), and the faint stars scattered over the
  * frames, in reference pixels: the timer's (720 × 450, tiled past it) and the results card's (720 × 520). The
  * canvas's positions are its own, not a catalog's: drawn as the frames draw them. The turning sky while paused is
  * the HYG catalog (art/stars). Placeholder art from the design canvas; art, not code: see LICENSE in this folder

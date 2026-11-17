@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { BRAND } from '../brand.ts';
-import { CONFIG } from '../config.ts';
 import { contrast, parseHexColour } from './light.ts';
 import { HEIGHT_LANDMARKS, atmosphereLayer, heightReached, pickHeightLandmarks, skyColour, skyLitColour, spreadHeightLandmarks, starsOpacity } from './height.ts';
+import { HEIGHT_CONFIG } from './height-config.ts';
+import { HEIGHT_COPY } from '../copy/height.ts';
 
 const MINUTE = 60_000;
-const HEIGHT = CONFIG.modes.height;
+const HEIGHT = HEIGHT_CONFIG;
 
 /** The frames' own formula (ModeHeight.dc.html's sky(); the results frame's col() with its 0.65), written out again. */
 function frameColour(z: number, dim = 1): string {
@@ -69,7 +69,7 @@ describe('height', () => {
       'thermosphere',
       'thermosphere',
     ]);
-    for (const layer of ['troposphere', 'stratosphere', 'mesosphere', 'thermosphere'] as const) expect(BRAND.copy.height.layers[layer]).toMatch(/^[a-z]+$/);
+    for (const layer of ['troposphere', 'stratosphere', 'mesosphere', 'thermosphere'] as const) expect(HEIGHT_COPY.layers[layer]).toMatch(/^[a-z]+$/);
   });
 
   it('shows the stars between 18 and 42 km, as the frames fade them', () => {
@@ -95,7 +95,7 @@ describe('height', () => {
   });
 
   it('names every landmark in the brand module, at most two per 10 km band, only from the catalog', () => {
-    for (const landmark of HEIGHT_LANDMARKS) expect(BRAND.copy.height.landmarks[landmark.id]).toMatch(/^[\p{Ll}’ ,:]+$/u);
+    for (const landmark of HEIGHT_LANDMARKS) expect(HEIGHT_COPY.landmarks[landmark.id]).toMatch(/^[\p{Ll}’ ,:]+$/u);
     let seed = 7;
     const random = (): number => {
       seed = (seed * 16807) % 2147483647;

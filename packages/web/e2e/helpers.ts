@@ -27,8 +27,15 @@ export async function seedSettings(page: Page, settings: Readonly<Record<string,
   }, JSON.stringify({ schema: 1, ...settings }));
 }
 
+/**
+ * Why the tests of ocean depth's water and height's sky are set aside (owner, round 2.10): while the two are in
+ * testing they keep the theme's background at all times, so neither environment is ever drawn. The tests return
+ * with the environments, when their graphics are agreed (plan, Principles).
+ */
+export const ENVIRONMENT_IN_TESTING = "ocean depth and height keep the theme's background while in testing (owner, round 2.10)";
+
 /** The test modes (core TEST_MODES). */
-export const TEST_MODE_IDS: readonly string[] = ['calendar', 'interstellar'];
+export const TEST_MODE_IDS: readonly string[] = ['ocean', 'height', 'tree', 'interstellar'];
 
 /** The test-modes switch offered and on, as if the address had asked for it and the switch been turned on. */
 export async function switchTestModesOn(page: Page): Promise<void> {
@@ -54,6 +61,8 @@ export async function openApp(
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
   await page.locator('.button--primary').waitFor();
+  // The page's own markup shows before the script runs: the site answers input once it says it is ready.
+  await page.locator('html[data-ready]').waitFor({ state: 'attached' });
   await page.clock.pauseAt(T_READY);
 }
 
@@ -63,6 +72,11 @@ export async function openApp(
  * tests freeze them.
  */
 export async function settle(page: Page): Promise<void> {
+  // A mode's art and images arrive after it mounts (its art catalogs, the build's sky images): until every
+  // placeholder is drawn over and every image decoded, within a few seconds.
+  await page
+    .waitForFunction(() => document.querySelector('.mode-root [data-tone="placeholder"]') === null && [...document.images].every((image) => image.complete), undefined, { timeout: 5000, polling: 50 })
+    .catch(() => undefined);
   await page.evaluate(async () => {
     // A short real-time wait: the tests' clock holds timers and animation frames, but not animations.
     const frames = (): Promise<unknown> => document.documentElement.animate([], { duration: 40 }).finished;

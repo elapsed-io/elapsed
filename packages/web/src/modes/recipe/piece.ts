@@ -57,6 +57,8 @@ export interface Piece {
   readonly figure?: Figure;
   /** Drawn after the display (a caption). */
   readonly overlay?: readonly Node[];
+  /** Settles once the piece's first view is whole (its art loaded, its images decoded); the site shows the mode then. */
+  readonly ready?: Promise<unknown>;
   render(frame: Frame): void;
   /** A mode event (end pressed), passed on to every piece. */
   onEvent?(event: ModeEvent): void;
@@ -76,9 +78,14 @@ export type EnvironmentFactory = (setup: Omit<PieceSetup, 'layer'>) => Environme
 /** A results view (strip, rings per hour, profile, scene): loaded with the results, drawing into their surface. */
 export type ResultsView = (surface: ReplaySurface, session: Session, recipe: Recipe, options: ModeOptions, slots: Slots) => void | Promise<void>;
 
-/** The pieces one mode uses, by layer type; a built-in mode imports only its own (built-in/*.ts). */
+/** The camera's map for a recipe with a follow-zoom camera (camera.ts), fetched only for such a recipe. */
+export type StageFactory = (doc: Document, recipe: Recipe, context: DisplayContext, reference: { readonly width: number; readonly height: number }, blurs: boolean) => CameraStage;
+
+/** The pieces one mode uses, by layer type, fetched by the library's registry (library.ts). */
 export interface PieceLibrary {
   readonly pieces: { readonly [T in LayerType]?: PieceFactory<LayerOf<T>> };
+  /** The camera's map, when the recipe has a follow-zoom camera. */
+  readonly stage?: StageFactory;
   readonly environment?: EnvironmentFactory;
   /** The results view, loaded when the results appear, not with the timer. */
   readonly view: () => Promise<ResultsView>;

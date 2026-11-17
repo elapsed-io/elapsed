@@ -34,7 +34,7 @@ export function starfieldPiece(setup: PieceSetup<StarfieldLayer>): Piece {
   let glidingMinute: number | null = null;
   let gone = false;
 
-  void slots.images([layer.slot]).then(() => {
+  const ready = slots.images([layer.slot]).then(() => {
     if (!gone) element.replaceChildren(drawField(doc, slots.key(layer.slot), 'starfield__art'));
   });
 
@@ -69,6 +69,7 @@ export function starfieldPiece(setup: PieceSetup<StarfieldLayer>): Piece {
 
   return {
     backdrop: [element],
+    ready,
     render({ view, activity }) {
       place(view.focusedMs, activity);
     },

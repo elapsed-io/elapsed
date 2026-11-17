@@ -5,7 +5,7 @@ import HEIGHT from '../../../../../docs/recipes/recipes/height.json' with { type
 import OCEAN from '../../../../../docs/recipes/recipes/ocean-depth.json' with { type: 'json' };
 import RING from '../../../../../docs/recipes/recipes/ring.json' with { type: 'json' };
 import TREE from '../../../../../docs/recipes/recipes/tree.json' with { type: 'json' };
-import { DIGITS_LIBRARY, builtInMode } from '../built-in/built-in.ts';
+import { prepareMode } from './library.ts';
 import { bindingCss } from './binding-css.ts';
 import { captionText, displayLayers, optionValues, resultsLayers } from './recipe-mode.ts';
 
@@ -17,8 +17,8 @@ const load = (value: unknown): Recipe => {
 const ids = (layers: readonly { readonly id: string }[]): string[] => layers.map((layer) => layer.id);
 
 describe('a mode built from its recipe', () => {
-  it('draws its built-in recipe as the build checked it (round 2.8: refused recipes stop the build, build/recipes.test.ts)', () => {
-    const mode = builtInMode('ring', RING, { pieces: {}, view: DIGITS_LIBRARY.view })();
+  it('draws its built-in recipe as the build checked it (round 2.8: refused recipes stop the build, build/recipes.test.ts)', async () => {
+    const mode = (await prepareMode({ id: 'ring', recipe: RING }))();
     expect(mode.id).toBe('ring');
     expect(mode.replayLayout).toBe('ring');
     expect(mode.replayTiming.durationMs).toBe(RING.results.replay.seconds * 1000);
@@ -26,10 +26,18 @@ describe('a mode built from its recipe', () => {
     expect(DIGITS_RECIPE.id).toBe('digits');
   });
 
-  it('takes its replay and its results layout from the recipe', () => {
-    const mode = builtInMode('ocean', OCEAN, { pieces: {}, view: DIGITS_LIBRARY.view })();
+  it('takes its replay and its results layout from the recipe', async () => {
+    const mode = (await prepareMode({ id: 'ocean', recipe: OCEAN, environment: false }))();
     expect(mode.replayTiming).toEqual({ durationMs: 3000, easing: [0.33, 1, 0.68, 1], longSessionExtra: true });
     expect(mode.replayLayout).toBe('chart');
+  });
+});
+
+describe('loading', () => {
+  it('stops at its next step when cancelled, building nothing', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(prepareMode({ id: 'ring', recipe: RING }, controller.signal)).rejects.toThrow(/stopped loading/);
   });
 });
 
@@ -99,7 +107,8 @@ describe('bindings as CSS', () => {
 
 describe('the manifests', () => {
   it('declare the art each recipe’s slots hold, and the tree piece’s own drawing', async () => {
-    const { MODE_MANIFESTS, recipeArt } = await import('../manifests.ts');
+    const { MODE_MANIFESTS } = await import('../manifests.ts');
+    const { MODE_ART, recipeArt } = await import('../mode-art.ts');
     const files: Record<string, unknown> = {
       digits: (await import('../../../../../docs/recipes/recipes/digits.json', { with: { type: 'json' } })).default,
       ring: RING,
@@ -108,12 +117,11 @@ describe('the manifests', () => {
       ocean: OCEAN,
       height: HEIGHT,
       tree: TREE,
-      calendar: (await import('../../../../../docs/recipes/recipes/calendar.json', { with: { type: 'json' } })).default,
       interstellar: (await import('../../../../../docs/recipes/recipes/interstellar.json', { with: { type: 'json' } })).default,
     };
     for (const manifest of MODE_MANIFESTS) {
       const own = recipeArt(files[manifest.id] as object);
-      expect([...manifest.art].sort().filter((key) => manifest.id !== 'tree' || !key.startsWith('tree/')), manifest.id).toEqual(own.sort());
+      expect([...(MODE_ART[manifest.id] ?? [])].sort().filter((key) => manifest.id !== 'tree' || !key.startsWith('tree/')), manifest.id).toEqual(own.sort());
     }
   });
 });

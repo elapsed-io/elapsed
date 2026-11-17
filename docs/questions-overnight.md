@@ -1,9 +1,134 @@
-# Overnight: Release 2, rounds 2.1 to 2.9
+# Overnight: Release 2, rounds 2.1 to 2.10
 
 Working unattended on `claude/release-2` (owner, 2026-11-16 evening). The morning summary goes at the top
 when the run stops; questions for the owner are collected below as they come up.
 
-## Morning summary
+## Round 2.10 summary: Lighter and faster (stopped for your review)
+
+Built on `claude/release-2` from your round 2.10 message (plan version 10 in `docs/plan.md`; the round written into
+`docs/plan-release-2.md` and the later rounds renumbered: 2.11 the layout editor, 2.12 picture-in-picture, 2.13
+hardening). The frontend looks and behaves as before apart from the four fixes. Decisions 368 to 383; safety
+overview `docs/safety/round-2.10.md`; size reports before and after in `docs/size/`.
+
+### 1. Answers
+
+**Does the recipe system still express every mode with nothing mode-specific outside the piece library and the
+recipes?** Every built-in mode (digits, ring, timeline, analog) and every test mode (ocean depth, height, the tree,
+interstellar) is its recipe drawn with the shared piece library, through one mode implementation and one loading
+pipeline; no mode has code of its own that the others route around. What still sits outside the recipes, and why:
+
+1. **Each mode's descriptor** (`modes/built-in/<mode>.ts`, a few lines): where its slots' built-in art and data
+   load from (ocean life by zone, height's and interstellar's landmark lists, the bodies), its colours over its
+   environment for the contrast switch, and, while in testing, "no environment". They are data, kept beside the
+   recipe so each catalog stays its own lazy download; an asset manifest keyed by slot could replace them.
+2. **Tunings the frames fixed below the recipe's grain**, in per-mode config modules the pieces read: ocean life's
+   rows and drift, the shooting stars' shapes, the comets', the orbits' and names' fades, the dial's geometry, the
+   tree's colours. A recipe chooses and tunes these pieces but cannot reach every number; putting them in version 1
+   would grow the schema field by field while it is still open.
+3. **Results views shaped by one mode:** the profile chart knows ocean depth from height (their card layouts, lit
+   art and copy), the camera scene is interstellar's, the scene replay is the tree's. The recipe picks the view by
+   type; the view carries its mode's specifics.
+4. **The tree piece** draws one procedural tree (as documented in round 2.7); `sprite` would give anyone's own art.
+5. **Stylesheets, tokens and copy** by `data-mode` (palettes, sizes, names), and the settings tiles' small drawings.
+6. **Build-time skies** (`build/sky.ts`) know interstellar's two star slots; a recipe from elsewhere cannot bring a
+   catalog to project, only a ready-drawn field.
+
+**Case 1, an IWC dial as the background with recipe-made hands and working complications:** not today. The pieces
+that draw images over the screen (`sprite`, `reveal`, `image-path`) are in the schema but not built, environments
+are colours (theme, light, stops) not images, and the image import fills no slot before the layout editor
+(round 2.11). The dial piece draws hands as bars (length, width, tail, colour), not shaped ones, and its hands sit
+in the dial's own box, not on a point of a picture. Running seconds, minutes and hours subdials work (cycles of
+focused time); date, day, month and moon left with the perpetual calendar (decision 368). Needed: an image
+environment or layer, hands placed in the image's coordinates, shaped hands, slots filled from the import, and the
+calendar cycles back as dial options (question 30).
+
+**Case 2, a cinematic backdrop with the F1 Rolex clock, arms removed with AI, recipe hands like analog:** not
+today, for the same first three reasons: no image backdrop, no placing hands on a point of a cover-fitted picture so
+they stay on the clock at every screen shape, and no user image in a slot. The analog-style hands themselves are
+the dial piece's and would work. Removing the arms happens outside the site; the import would take the result.
+
+**Size report** (gzip level 9; `docs/size/round-2.10-before.md` and `-after.md`, every module, chunk and download):
+
+| | Before | After |
+| --- | ---: | ---: |
+| Core JavaScript (budget 50 KB, unchanged) | 47.78 KB | 39.79 KB |
+| Core in all (budget 150 KB) | 76.85 KB | 68.85 KB |
+| Largest core modules | config 5.42, app 3.83, brand 3.08, engine 2.60, session validation 2.09, recipe mode 2.03, settings schema 1.86, camera 1.42, time display 1.19, art registry 1.05 | app 4.13, engine 2.59, config 2.58, recipe mode 1.79, session validation 1.59, settings schema 1.44, brand 1.20, time display 1.02, settings 1.00, track piece 0.94 |
+| Ring, timeline | downloads of 4.73 and 4.33 KB | in the core, no download |
+| Analog | 7.83 KB | 4.66 KB |
+| Ocean depth | 19.42 + 1.22 art | 26.65 + 1.22 art |
+| Height | 18.95 + 3.35 art | 26.58 + 3.35 art |
+| Tree | 5.75 + 10.11 art | 7.69 + 10.11 art |
+| Interstellar | 17.67 + 17.46 art | 22.94 + 17.83 art |
+| Perpetual calendar | 8.01 | removed |
+
+Each figure is everything the mode fetches (recipe, pieces, environment, results view, art) less what the core
+holds. Before, the core held every mode's numbers (the config module, 5.42 KB) and copy (the brand module, 3.08
+KB), the camera and the art registry, so the modes' figures left those out; now each travels only with the modes
+that use it, which is why the test modes' figures rose while the core fell by 8 KB. Each piece on its own: dial
+4.19, tree 6.00 (+10.11 art), particles 6.38, starfield 3.88, circles 2.69, shape 2.43, path 2.71, landmarks 4.89;
+views: strip 1.47, rings 2.25, profile 15.66, scene 7.07, camera scene 11.30; environments 1.42 and 0.35; the
+camera 1.95; parts: settings 18.35, results 3.64, custom CSS editor 3.22, test modes 0.46, downloaded modes 0.92,
+image store 0.93, service worker 2.40 (KB). Each has a ceiling CI enforces (decision 380).
+
+### 2. What was built
+
+- **Modes:** ocean depth, height and the tree are test modes with interstellar (`?test=modes`; `?test=interstellar`
+  still works); chosen while the switch is off, digits shows and the choice is kept. The perpetual calendar is gone
+  completely, recorded as having proved the recipe system (368, 369).
+- **Debloat:** the core holds the timer, digits, ring and timeline; every piece, view, environment and the camera
+  is its own download, fetched only by a mode that uses it; every mode's numbers and copy in modules of their own;
+  the settings panel, results, CSS editor, test-modes store, downloaded-modes list and image store outside the
+  core (370 to 372). Dead code and four unused exports removed; no dependency unused; still no framework (381).
+- **Build time:** interstellar's star catalogs are projected by the build into four SVG images (the still view,
+  its faint tile, the results card's sky, the whole sky's strip), which the device only places and slides (373).
+  Static layers are drawn once and only moved; the outer orbit rings are no longer drawn while wholly off screen,
+  which was costing every frame 200 to 300 ms of rasterising (374).
+- **Fix 1 (lag, and end during it):** one cancellable loading pipeline; the next mode mounts out of sight in a
+  background task and swaps in on one frame once whole; start, pause and end cancel it and apply at once; the
+  session never waits on a mode (375, 376).
+- **Fix 2 (quick switching):** a switched-away mode goes completely; at most one leaving environment; the tree's
+  animations made in slices; the orbit fix (374, 377).
+- **Fix 3 (white to blue):** ocean depth and height keep the theme's background at all times while in testing (378).
+- **Fix 4 (delay leaving ocean depth):** switches start on the frame of the choice, crossfades last at most 120 ms,
+  digits, ring and timeline need no download (379).
+- **Internals:** the session machine knows a mode only as an id (an audit test); one mount and teardown contract
+  with `ready()` (377, `docs/display-mode-contract.md`); performance tests for switching, long sessions and the
+  hidden tab (382); a per-download budget check in CI (380).
+
+### 3. Test results
+
+- `npm run check`: typecheck, lint, 768 unit tests (1 to do), contrast (all 10 presets), build, and the size
+  check: core JavaScript 39.8 KB of the 50 KB budget and of its own 42 KB ceiling; every download within its
+  ceiling.
+- The end-to-end suite through the reference image in Chromium, Firefox and WebKit: **971 passed, 100 skipped, 0
+  failed** (14.7 minutes). Of the skipped, 84 are the water and sky tests set aside while ocean depth and height
+  are in testing (28 in each browser); the other 16 are declared as before (Chromium-only measurements, controls
+  that hold only in the reference image).
+- Before the clean run: the first reference run failed the four interstellar running frames on text anti-aliasing
+  alone (the map's names; decision 384) and the appearance frame on a reference page caught mid-paint (1 to 4
+  levels at tile corners, 3 runs in 8; the site's screenshot never changed; decision 385). Both were fixed in the
+  tests and the whole suite rerun clean.
+- Bugs found on the way, fixed: the interstellar map redrew its outer orbits' dashes off screen every frame (200
+  to 300 ms of rasterising in the test browser, the cause of fix 2's lag there); the tree made a few hundred
+  animations in one task (120 to 150 ms); the generic art rule could override a mode's colours once pieces loaded
+  on their own (decision 383); the end-to-end helper could press keys before the site took input when a mode had
+  to download (decision 382).
+
+### 4. Skipped and why
+
+- The water's and the sky's tests, and the ocean and height timer frames, are set aside with their reason
+  (`ENVIRONMENT_IN_TESTING`): those environments are not drawn while the two are in testing; they return with them.
+- The layout editor is not in this round (it is round 2.11; question 27 still stands).
+- Nothing was deployed, merged into Release 1, released, or changed on Cloudflare or GitHub settings.
+
+### 5. Questions waiting for you
+
+28 to 31 (new): the pieces ocean depth and height still draw over the theme; what a cancelled load leaves behind;
+what the two watch cases need and when; the tree's year computed on the device. 27 (the layout editor, now round
+2.11) and 13 to 26 from earlier rounds still stand.
+
+## Earlier summary: rounds 2.8 and 2.9
 
 Latest: changes 5 (2026-11-17). Rounds 2.8 (focus view, notices and fullscreen; the redesigned analog; ambient
 idle screens; replays that never stall) and 2.9 (interstellar as a recipe, behind the test-modes switch) are
@@ -274,10 +399,11 @@ and easy to change; and 27, on which round 2.10 waits.
 26. **The Oort cloud and Proxima Centauri.** The plan keeps them for accounts' accumulated distance (Release 4);
     a guest's 16-hour session reaches about 116 AU, just short of the heliopause at 120. Nothing is drawn for
     them yet. (No action needed unless you want a hint of what lies beyond.)
-27. **Round 2.10 needs frames or answers before it starts (the run stopped here).** The canvas has one frame for
+27. **Round 2.11 (the layout editor, numbered 2.10 until you inserted "Lighter and faster") needs frames or answers
+    before it starts.** The canvas has one frame for
     it, "layout editor: imported background, rotated timer, buttons moved" (in "later releases": the free-form
     editor's toolbar, its dashed selection with corner handles, the rotate handle and its angle tag), which round
-    2.10 builds but keeps switched off until Release 3. Nothing settles what Release 2's users actually see:
+    2.11 builds but keeps switched off until Release 3. Nothing settles what Release 2's users actually see:
     (a) the preset positions everyone uses until the unlock: which presets each layer has (the time, the buttons,
     the corner icons), and how they are chosen (in settings, or in the editor with snapping); (b) how customize
     mode is entered: a settings row (which category), the long press on phones and what shows while pressing;
@@ -286,3 +412,25 @@ and easy to change; and 27, on which round 2.10 waits.
     is placed and cropped, and how it is removed; (e) each mode's replaceable art: where its slots are listed, the
     template download, and what a refused file says. Which of these should I build from the plan's words alone,
     and which wait for frames?
+28. **Ocean depth's and height's pieces over the theme while they are in testing (round 2.10, decision 378).** They
+    now keep the theme's background at all times, with no environment colours, as you asked. Their pieces still
+    draw over it in their own colours: ocean life while paused (navy and blue fish and bubbles), the depth and
+    altitude lines while paused, height's stars from 18 km and its shooting stars, and the landmarks on the
+    results. On a light theme the white stars and the navy fish are faint or lost. Built: kept as they were. Should
+    the pieces go too while the two are in testing, or take the theme's colours?
+29. **What "cancels" leaves behind (decision 376).** Start, pause and end cancel a mode still loading; the control
+    applies at once and the screen keeps the mode it had. Built: the chosen mode then loads again, in a background
+    task right after a pause or start, and when the timer shows again after an end, so what you picked still
+    arrives. The other reading would leave the old mode showing until you pick again. Confirm.
+30. **The two watch cases from your section 1 (round 2.10 summary).** Neither can be made with recipes today. Both
+    need a background image drawn by the piece library (an image environment, cover-fitted, or an image layer),
+    hands placed in that image's own coordinates so they stay on the printed dial at every screen shape, and the
+    user's own image in a slot (the image import reaches slots only with the layout editor, round 2.11). The IWC
+    case also needs shaped hands (the dial piece draws bars) and its complications: running seconds, minutes and
+    hours work today, but the date, day, month and moon left with the perpetual calendar (in git history, decision
+    368). Should these join round 2.11, or a round of their own, and should the calendar complications come back as
+    dial options?
+31. **The tree's year stays computed on the device (decision 374).** You asked for heavy preparation at build time;
+    the tree's few hundred season animations are sampled from its model when it mounts, now in slices of 40 a task
+    so none holds the main thread past 50 ms. Precomputed by the build they would be a large file to save a few
+    milliseconds a slice. Built: kept on the device. Confirm, or move them to the build.

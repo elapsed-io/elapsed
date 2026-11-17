@@ -16,24 +16,7 @@
  * category first opens (On choice).
  */
 
-import {
-  ANIMATION_SPEEDS,
-  BRAND,
-  CLOCK_FORMATS,
-  CONFIG,
-  MODE_CHOICES,
-  TEST_MODES,
-  SECONDS_DISPLAYS,
-  SETTINGS_CATEGORIES,
-  FOCUS_HIDES,
-  LEAVE_FULLSCREEN,
-  THEME_IDS,
-  TREE_VIEWS,
-  declarationOf,
-  normaliseHex,
-  resetCategory,
-  withSetting,
-} from '@stopwatch/core';
+import { ANIMATION_SPEEDS, BRAND, CLOCK_FORMATS, CONFIG, declarationOf, FOCUS_HIDES, LEAVE_FULLSCREEN, MODE_CHOICES, normaliseHex, OCEAN_CONFIG, resetCategory, SECONDS_DISPLAYS, SETTINGS_CATEGORIES, SETTINGS_COPY, TEST_MODES, THEME_IDS, TREE_CONFIG, TREE_VIEWS, withSetting } from '@stopwatch/core';
 import type { AnimationSpeed, ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId, TreeView, FocusHide, LeaveFullscreen } from '@stopwatch/core';
 import { parseSettingsFile, settingsFile, settingsFileName } from '@stopwatch/core/settings-file';
 import 'virtual:tokens/settings.css';
@@ -66,7 +49,7 @@ import type * as CssEditorModule from './css-editor.ts';
 import type { CssEditor } from './css-editor.ts';
 import './panel.css';
 
-const copy = BRAND.copy.settings;
+const copy = SETTINGS_COPY;
 
 /** The schema's categories, then advanced, whose custom CSS lives apart from the choices (owner changes, items 5 and 10). */
 type CategoryId = SettingsCategory | 'advanced';
@@ -85,7 +68,7 @@ export interface PanelHost {
   /** Asks to show system notifications, only when a notification setting is switched on. */
   requestNotifications(): Promise<NotificationAccess>;
   /** The test-modes switch: offered on this device or not, and on or off (storage/test-modes-store.ts). */
-  readonly testModes: { readonly offered: boolean; readonly on: boolean; setOn(on: boolean): void };
+  readonly testModes: { readonly offered: boolean; readonly on: boolean; setOn(on: boolean): void; shown(chosen: ModeChoice): ModeChoice };
 }
 
 interface Item {
@@ -379,7 +362,7 @@ export class SettingsPanel {
         if (category.reset !== null) category.reset.hidden = false;
         continue;
       }
-      const whole = BRAND.copy.settings.categories[category.id].name.includes(query);
+      const whole = SETTINGS_COPY.categories[category.id].name.includes(query);
       let matches = false;
       for (const item of category.items) {
         const hit = whole || item.search.includes(query);
@@ -507,10 +490,11 @@ export class SettingsPanel {
     const box = html(doc, 'div', { class: 'mode-tiles-box' });
     const render = (): void => {
       const grid = html(doc, 'div', { class: 'mode-tiles', attrs: { 'aria-label': copy.mode.label } });
-      // A test mode's tile shows only while the test-modes switch is on (or while it is chosen).
+      // A test mode's tile shows only while the test-modes switch is on; while it is off, a test mode chosen shows
+      // digits, and its tile is digits'.
       const testModes = this.#host.testModes;
-      const chosen = this.#host.controller.current.mode;
-      const offered = MODE_CHOICES.filter((value) => !TEST_MODES.includes(value) || testModes.on || chosen === value);
+      const chosen = testModes.shown(this.#host.controller.current.mode);
+      const offered = MODE_CHOICES.filter((value) => !TEST_MODES.includes(value) || testModes.on);
       const tiles = offered.map((value) => ({
         value,
         element: html(doc, 'button', { class: 'mode-tile' }, [modePreview(doc, value), BRAND.copy.modes[value]]),
@@ -527,7 +511,7 @@ export class SettingsPanel {
     render();
     this.#renderModes = render;
     this.#updates.push((settings) => {
-      this.#modeTiles?.(settings.mode);
+      this.#modeTiles?.(this.#host.testModes.shown(settings.mode));
     });
     return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.mode.label]), [box]), search: searchText(copy.mode.label, ...MODE_CHOICES.map((value) => BRAND.copy.modes[value])) };
   }
@@ -1179,8 +1163,8 @@ function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
       ...RING_TILE_TAIL.map(([d, opacity]) => svg(doc, 'path', { class: 'mode-tile__accent', d, 'stroke-width': 3, 'stroke-opacity': opacity, 'stroke-linecap': 'butt' })),
       svg(doc, 'circle', { class: 'mode-tile__head', cx: 38.39, cy: 22, r: 2.2 }),
     );
-  } else if (mode === 'analog' || mode === 'calendar') {
-    // The Release 2 display frame's analog tile (the perpetual calendar, a test mode, borrows it): a muted dial with twelve ticks, an accent hand and pin.
+  } else if (mode === 'analog') {
+    // The Release 2 display frame's analog tile: a muted dial with twelve ticks, an accent hand and pin.
     root.append(
       svg(doc, 'circle', { class: 'mode-tile__muted', cx: 28, cy: 16, r: 12, 'stroke-width': 1.5 }),
       ...ANALOG_TILE_TICKS.map(([x1, y1, x2, y2]) => svg(doc, 'line', { class: 'mode-tile__muted', x1, y1, x2, y2, 'stroke-width': 1.2 })),
@@ -1190,7 +1174,7 @@ function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
   } else if (mode === 'ocean') {
     // The Release 2 display frame's ocean depth tile: water darkening downward, a wave and two bubbles, in
     // the frame's own colours whatever the theme.
-    const { top, bottom, wave } = CONFIG.modes.ocean.tile;
+    const { top, bottom, wave } = OCEAN_CONFIG.tile;
     const id = uniqueId('ocean-tile');
     root.append(
       svg(doc, 'defs', {}, [
@@ -1210,8 +1194,8 @@ function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
     );
   } else if (mode === 'tree') {
     // The Release 2 display frame's tree tile: a trunk and a summer crown in the tree's own colours, on muted ground.
-    const { trunk } = CONFIG.modes.tree.colours;
-    const crown = CONFIG.modes.tree.leaves[2];
+    const { trunk } = TREE_CONFIG.colours;
+    const crown = TREE_CONFIG.leaves[2];
     root.append(
       svg(doc, 'line', { x1: 28, y1: 27, x2: 28, y2: 16, stroke: trunk, 'stroke-width': 2.5 }),
       svg(doc, 'circle', { cx: 28, cy: 12, r: 7, fill: crown }),

@@ -1,7 +1,9 @@
 /**
- * Ambient idle screens and environment changes (round 2.8; plan, Product principles: "modes with their own
- * environment show their starting scene and colors on the idle screen, so starting changes nothing abruptly,
- * and any change of environment crossfades over about 2 seconds"), and the settings panel over the chosen mode.
+ * Ambient idle screens and environment changes (round 2.8; plan, Product principles: modes with their own
+ * environment show their starting scene and colours on the idle screen, so starting changes nothing abruptly), and
+ * the settings panel over the chosen mode. Round 2.10 (plan, Principles): any crossfade of a mode switch lasts
+ * 120 ms or less, and while ocean depth and height are in testing they draw no environment
+ * (mode-switch.spec.ts), so interstellar's space is the one environment there is.
  */
 
 import { expect, test } from './test.ts';
@@ -32,65 +34,50 @@ async function backdrop(page: Page): Promise<string[]> {
 /** The time's and the corner icons' colours. */
 const chrome = (page: Page): Promise<{ contrast: string | undefined }> => page.locator('.screen').evaluate((screen) => ({ contrast: (screen as HTMLElement).dataset['contrast'] }));
 
-for (const mode of ['ocean', 'height'] as const) {
-  test(`${mode}: the idle screen shows the starting scene and colours, and starting changes nothing at once`, async ({ page }) => {
-    await openApp(page, { mode });
-    await settle(page);
-    const idle = { scene: await backdrop(page), chrome: await chrome(page) };
-    // The environment is drawn at idle, not the theme's background.
-    await expect(page.locator('.mode-root > .environment')).toBeVisible();
-    expect(idle.scene.every((colour) => colour !== '14,15,17')).toBe(true);
-    await page.locator('.button--primary').click();
-    await page.clock.runFor(SECOND);
-    await settle(page);
-    // A second in, the scene has moved on by a level at most; nothing jumped.
-    const running = await backdrop(page);
-    const levels = running.flatMap((colour, index) => colour.split(',').map((value, channel) => Math.abs(Number(value) - Number(idle.scene[index]?.split(',')[channel]))));
-    expect(Math.max(...levels), JSON.stringify({ idle: idle.scene, running })).toBeLessThanOrEqual(3);
-    expect(await chrome(page)).toEqual(idle.chrome);
-  });
-}
+test('interstellar: the idle screen shows the starting scene and colours, and starting changes nothing at once', async ({ page }) => {
+  await openApp(page, { mode: 'interstellar' });
+  await settle(page);
+  const idle = { scene: await backdrop(page), chrome: await chrome(page) };
+  // The environment is drawn at idle, not the theme's background.
+  await expect(page.locator('.mode-root > .environment')).toBeVisible();
+  expect(idle.scene.every((colour) => colour !== '14,15,17')).toBe(true);
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(SECOND);
+  await settle(page);
+  // A second in, the scene has moved on by a level at most; nothing jumped.
+  const running = await backdrop(page);
+  const levels = running.flatMap((colour, index) => colour.split(',').map((value, channel) => Math.abs(Number(value) - Number(idle.scene[index]?.split(',')[channel]))));
+  expect(Math.max(...levels), JSON.stringify({ idle: idle.scene, running })).toBeLessThanOrEqual(3);
+  expect(await chrome(page)).toEqual(idle.chrome);
+});
 
-test('a change of environment crossfades over about 2 seconds, by opacity alone', async ({ page }) => {
-  await openApp(page, { mode: 'ocean', width: 1280, height: 800 });
+test('leaving an environment crossfades over 120 ms, by opacity alone, held where it was', async ({ page }) => {
+  await openApp(page, { mode: 'interstellar', width: 1280, height: 800 });
   await page.locator('.button--primary').click();
   await page.clock.runFor(5 * MINUTE);
   await page.keyboard.press(',');
   await page.locator('.settings__row', { hasText: /^display$/ }).click();
-  await page.getByRole('radio', { name: 'height' }).click();
-  await expect(page.locator('.screen[data-mode="height"]')).toHaveCount(1);
-  // The water stays, held where it was, behind the sky fading in over it.
-  const fade = await page.evaluate(() => {
-    const leaving = document.querySelector('.environment--leaving');
-    const arriving = document.querySelector('.mode-root > .environment');
-    const animation = arriving?.getAnimations().find((candidate) => candidate instanceof Animation && !(candidate instanceof CSSAnimation) && !(candidate instanceof CSSTransition));
-    const effect = animation?.effect instanceof KeyframeEffect ? animation.effect : null;
-    return {
-      leaving: leaving !== null,
-      leavingMoves: leaving?.getAnimations({ subtree: true }).length ?? -1,
-      frames: (effect?.getKeyframes() ?? []).map((frame) => ({ opacity: frame['opacity'], transform: frame['transform'] })),
-      duration: effect?.getTiming().duration,
-    };
-  });
-  expect(fade).toEqual({ leaving: true, leavingMoves: 0, frames: [{ opacity: '0', transform: undefined }, { opacity: '1', transform: undefined }], duration: 2000 });
-  // Once faded in, the old scene is gone.
-  await expect(page.locator('.environment--leaving')).toHaveCount(0, { timeout: 5000 });
-  // To a mode without an environment, the scene fades out on its own.
   await page.getByRole('radio', { name: 'digits' }).click();
   await expect(page.locator('.screen[data-mode="digits"]')).toHaveCount(1);
+  // To a mode without an environment, space fades out on its own, held still.
   const out = await page.evaluate(() => {
     const leaving = document.querySelector('.environment--leaving');
-    const animation = leaving?.getAnimations()[0];
+    const animation = leaving?.getAnimations().find((candidate) => !(candidate instanceof CSSAnimation) && !(candidate instanceof CSSTransition));
     const effect = animation?.effect instanceof KeyframeEffect ? animation.effect : null;
-    return (effect?.getKeyframes() ?? []).map((frame) => frame['opacity']);
+    return {
+      frames: (effect?.getKeyframes() ?? []).map((frame) => ({ opacity: frame['opacity'], transform: frame['transform'] })),
+      duration: effect?.getTiming().duration,
+      leavingMoves: (leaving?.getAnimations({ subtree: true }).length ?? 0) - (animation === undefined ? 0 : 1),
+    };
   });
-  expect(out).toEqual(['1', '0']);
-  await expect(page.locator('.environment--leaving')).toHaveCount(0, { timeout: 5000 });
+  expect(out).toEqual({ frames: [{ opacity: '1', transform: undefined }, { opacity: '0', transform: undefined }], duration: 120, leavingMoves: 0 });
+  await expect(page.locator('.environment--leaving')).toHaveCount(0, { timeout: 2000 });
+  await expect(page.locator('.environment')).toHaveCount(0);
 });
 
 test('with reduced motion an environment changes at once', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await openApp(page, { mode: 'ocean', width: 1280, height: 800 });
+  await openApp(page, { mode: 'interstellar', width: 1280, height: 800 });
   await page.keyboard.press(',');
   await page.locator('.settings__row', { hasText: /^display$/ }).click();
   await page.getByRole('radio', { name: 'digits' }).click();
@@ -99,12 +86,12 @@ test('with reduced motion an environment changes at once', async ({ page }) => {
 });
 
 test('the settings panel opens over the chosen mode, which shows behind it', async ({ page }) => {
-  await openApp(page, { mode: 'ocean', width: 1280, height: 800 });
+  await openApp(page, { mode: 'interstellar', width: 1280, height: 800 });
   await page.keyboard.press(',');
   await page.locator('.settings__row', { hasText: /^display$/ }).click();
   await expect(page.locator('.mode-root > .environment')).toBeVisible();
-  // The water fills the screen to the panel's edge.
-  const water = await page.locator('.mode-root > .environment').boundingBox();
-  expect(water).toMatchObject({ x: 0, y: 0 });
-  expect(water?.width ?? 0).toBeGreaterThanOrEqual(840);
+  // Space fills the screen to the panel's edge.
+  const space = await page.locator('.mode-root > .environment').boundingBox();
+  expect(space).toMatchObject({ x: 0, y: 0 });
+  expect(space?.width ?? 0).toBeGreaterThanOrEqual(840);
 });

@@ -5,7 +5,7 @@
  */
 
 import { CONFIG } from '../config.ts';
-import { lastSegment, sessionStatus } from './derive.ts';
+import { lastSegment } from './derive.ts';
 import { SessionError, isTime, freezeSession } from './session.ts';
 import type { Gap, Session } from './session.ts';
 import { shiftSession } from './commands.ts';
@@ -68,10 +68,6 @@ export function recordGap(session: Session, gap: Gap): Session {
   if (gap.start < floor) throw new SessionError('gaps cannot overlap or precede the session');
   if (session.gaps.length >= CONFIG.session.limits.maxGaps) return session;
   return freezeSession({ ...session, gaps: [...session.gaps, { start: gap.start, end: gap.end }] });
-}
-
-export function isOpen(session: Session): boolean {
-  return sessionStatus(session) !== 'ended';
 }
 
 /**

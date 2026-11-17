@@ -10,11 +10,11 @@
  * that then repeat; each comet is one animation of opacity and transform, so nothing runs per frame.
  */
 
-import { CONFIG } from '@stopwatch/core';
+import { SPACE_COMETS_CONFIG } from '@stopwatch/core';
 import type { ParticlesLayer, Range } from '@stopwatch/core';
 import { html } from '../../../dom.ts';
 
-const COMETS = CONFIG.modes.interstellar.comets;
+const COMETS = SPACE_COMETS_CONFIG;
 
 export interface Comet {
   /** Seconds into the cycle it arrives, and how long it stays. */

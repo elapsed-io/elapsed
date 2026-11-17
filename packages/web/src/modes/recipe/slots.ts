@@ -9,7 +9,6 @@
  */
 
 import type { Recipe, Slot } from '@stopwatch/core';
-import { ART } from '../../art/registry.ts';
 import type { ArtCatalog } from '../../art/registry.ts';
 
 export type CatalogLoader = () => Promise<ArtCatalog>;
@@ -49,11 +48,6 @@ export class Slots {
     await Promise.all(ids.map(async (id) => this.#image(this.key(id))));
   }
 
-  /** Whether a slot's image can be drawn now (its catalog registered); otherwise it draws the placeholder. */
-  ready(id: string): boolean {
-    return ART.has(this.key(id));
-  }
-
   /** A data slot's built-in value (a landmark list), or undefined. */
   data(id: string): unknown {
     return this.#sources.data?.[this.key(id)]?.();
@@ -65,7 +59,10 @@ export class Slots {
   }
 
   async #image(key: string): Promise<void> {
-    if (key === '' || ART.has(key)) return;
+    if (key === '') return;
+    // The asset registry is fetched with the first mode that draws art (digits, ring and timeline draw none).
+    const { ART } = await import('../../art/registry.ts');
+    if (ART.has(key)) return;
     const prefix = Object.keys(this.#sources.art ?? {})
       .filter((start) => key.startsWith(start))
       .sort((a, b) => b.length - a.length)[0];

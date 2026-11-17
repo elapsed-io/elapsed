@@ -9,7 +9,8 @@
     overflow: visible;
   }
 
-  .art [data-tone] {
+  /* Weaker than any mode's tone rule, whichever stylesheet loads first (the registry loads with a mode's pieces). */
+  .art :where([data-tone]) {
     fill: currentColor;
   }
 

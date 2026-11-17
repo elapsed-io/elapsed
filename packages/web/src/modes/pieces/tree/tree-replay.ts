@@ -10,7 +10,7 @@
  * formulas as core's tree.ts. At rest the expression is the session's own focused minutes.
  */
 
-import { BRAND, bindingAt, measureAt, seasonPhase, summarise, yearPhase } from '@stopwatch/core';
+import { bindingAt, measureAt, seasonPhase, summarise, TREE_COPY, yearPhase } from '@stopwatch/core';
 import type { TreeLayer } from '@stopwatch/core';
 import { html } from '../../../dom.ts';
 import { bindingCss } from '../../recipe/binding-css.ts';
@@ -39,7 +39,7 @@ export const sceneView: ResultsView = async (surface, session, recipe) => {
   const summary = summarise(session);
   const stretches = focusStretches(session.segments, summary.startedAt);
   const focused = stretches.reduce((sum, { from, to }) => sum + (to - from), 0);
-  const drawing = await buildTree(doc, layer.view, BRAND.copy.tree.replay);
+  const drawing = await buildTree(doc, layer.view, TREE_COPY.replay);
   // Each cluster's own centre and season offset, for its formulas.
   for (const cluster of drawing.clusters) {
     const style = (cluster.element as SVGElement).style;

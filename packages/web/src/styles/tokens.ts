@@ -11,7 +11,7 @@
  *   only with that mode.
  */
 
-import { CONFIG, mixColour } from '@stopwatch/core';
+import { ANALOG_CONFIG, CONFIG, HEIGHT_CONFIG, mixColour, OCEAN_CONFIG, RING_CONFIG, SPACE_CONFIG, TIMELINE_CONFIG, TREE_CONFIG } from '@stopwatch/core';
 import { deriveTheme, themeCustomProperties } from '../theme/derive.ts';
 import { DEFAULT_PRESET_ID, getPreset } from '../theme/presets.ts';
 
@@ -115,7 +115,7 @@ export function designCustomProperties(): CustomProperties {
     '--results-gap': px(results.gapPx),
     '--results-ring-gap': px(results.ringGapPx),
     '--results-figure-gap': px(results.figureGapPx),
-    '--results-map-gap': px(CONFIG.modes.interstellar.results.gapPx),
+    '--results-map-gap': px(SPACE_CONFIG.results.gapPx),
     '--results-figure-padding-y': px(results.figurePaddingYPx),
     '--results-label-size': px(results.labelPx),
     '--results-label-tracking': em(results.labelTrackingEm),
@@ -419,7 +419,7 @@ export function isModeTokenId(value: string): value is ModeTokenId {
 }
 
 function ringTokens(): string {
-  const ring = CONFIG.modes.ring;
+  const ring = RING_CONFIG;
   const [far, near] = ring.tailStops;
   // The ring's radius, thickness and head come from its recipe (pieces/ring/ring.ts); these are the frame's own.
   const properties: CustomProperties = {
@@ -436,7 +436,7 @@ function ringTokens(): string {
 }
 
 function timelineTokens(): string {
-  const timeline = CONFIG.modes.timeline;
+  const timeline = TIMELINE_CONFIG;
   const properties: CustomProperties = {
     '--mode-time-size': String(CONFIG.design.type.timelineTimePx),
     '--mode-gap': String(timeline.gapPx),
@@ -450,7 +450,7 @@ function timelineTokens(): string {
 }
 
 function analogTokens(): string {
-  const analog = CONFIG.modes.analog;
+  const analog = ANALOG_CONFIG;
   // The dial's size comes from its recipe (pieces/dial/dial.ts); the hands carry the points they turn about.
   const properties: CustomProperties = {
     '--mode-time-size': String(CONFIG.design.type.ringTimePx),
@@ -458,14 +458,13 @@ function analogTokens(): string {
     '--analog-label-size': px(analog.labelPx),
     '--analog-letter-spacing': em(analog.numbers.letterSpacingEm),
     '--analog-subdial-label-size': px(analog.subdialLabelPx),
-    '--analog-sublabel-size': px(analog.subLabelPx),
   };
-  // The dial piece's tokens, for every mode drawn with it: the analog stopwatch and the perpetual calendar.
-  return block('[data-mode="analog"], [data-mode="calendar"]', properties);
+  // The dial piece's tokens (the analog stopwatch's).
+  return block('[data-mode="analog"]', properties);
 }
 
 function oceanTokens(): string {
-  const ocean = CONFIG.modes.ocean;
+  const ocean = OCEAN_CONFIG;
   const properties: CustomProperties = {
     '--mode-time-size': String(ocean.timePx),
     '--mode-gap': String(ocean.gapPx),
@@ -512,7 +511,7 @@ interface ProfileTokenSource {
     readonly timesGapPx: number;
     readonly zoneLines: { readonly opacity: number; readonly scaleShare: number; readonly minYPx: number };
   };
-  readonly landmark: Widened<(typeof CONFIG.modes.ocean.results)['landmark']>;
+  readonly landmark: Widened<(typeof OCEAN_CONFIG.results)['landmark']>;
   readonly near: number;
   readonly far: number;
   readonly passing: { readonly fromPx: number; readonly travelPx: number; readonly cardHeightPx: number };
@@ -564,9 +563,9 @@ function profileTokens({ origin, chart, landmark: mark, near, far, passing }: Pr
   };
 }
 
-/** Ocean life's colours and motions (the "ocean depth, paused" frame), from CONFIG.modes.ocean.life. */
+/** Ocean life's colours and motions (the "ocean depth, paused" frame), from OCEAN_CONFIG.life. */
 function lifeTokens(): string {
-  const life = CONFIG.modes.ocean.life;
+  const life = OCEAN_CONFIG.life;
   const sine = (axis: 'X' | 'Y'): string => {
     const steps = 24;
     const frames = Array.from({ length: steps + 1 }, (_, i) => `    ${String((i / steps) * 100)}% { transform: translate${axis}(calc(var(--sine-amp) * ${String(Math.round(Math.sin((2 * Math.PI * i) / steps) * 1e6) / 1e6)})); }`);
@@ -588,7 +587,7 @@ function lifeTokens(): string {
 }
 
 function heightTokens(): string {
-  const height = CONFIG.modes.height;
+  const height = HEIGHT_CONFIG;
   const stars: CustomProperties = { '--height-star-faint': height.stars.faint, '--height-star-white': height.stars.white, '--height-star-warm': height.stars.warm };
   const { meteors } = height;
   const properties: CustomProperties = {
@@ -613,7 +612,7 @@ function heightTokens(): string {
       origin: 1,
       chart,
       // The same markers as ocean depth's (both frames draw them alike), passed over the climb's own distances.
-      landmark: { ...CONFIG.modes.ocean.results.landmark, ...chart.landmark },
+      landmark: { ...OCEAN_CONFIG.results.landmark, ...chart.landmark },
       near: chart.lit.belowMetres,
       far: chart.lit.aboveMetres,
       passing,
@@ -639,7 +638,7 @@ function heightTokens(): string {
 }
 
 function interstellarTokens(): string {
-  const space = CONFIG.modes.interstellar;
+  const space = SPACE_CONFIG;
   const { palette, results } = space;
   const tones: CustomProperties = Object.fromEntries(Object.entries(space.bodies).map(([tone, colour]) => [`--space-${tone}`, colour]));
   const properties: CustomProperties = {
@@ -675,7 +674,7 @@ function interstellarTokens(): string {
 }
 
 function treeTokens(): string {
-  const tree = CONFIG.modes.tree;
+  const tree = TREE_CONFIG;
   // The leaves' colours and the trunk come from the tree's recipe (pieces/tree/tree.ts); these are the frames' own.
   const colours: Record<`--${string}`, string> = {
     '--tree-side-width': String(tree.side.widthPx),

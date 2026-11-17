@@ -23,13 +23,13 @@
 
 import 'virtual:tokens/ring.css';
 import './ring.css';
-import { CONFIG } from '@stopwatch/core';
+import { RING_CONFIG } from '@stopwatch/core';
 import type { RingLayer } from '@stopwatch/core';
 import { html } from '../../../dom.ts';
 import { colourCss } from '../../recipe/colour.ts';
 import type { Activity, Piece, PieceSetup } from '../../recipe/piece.ts';
 
-const RING = CONFIG.modes.ring;
+const RING = RING_CONFIG;
 const MINUTE_MS = 60_000;
 /** A glide this far from focused time is set right (after the device slept, or the tab was hidden). */
 const DRIFT_MS = 250;

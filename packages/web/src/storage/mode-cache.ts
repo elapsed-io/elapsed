@@ -15,13 +15,13 @@
  */
 
 import { CONFIG } from '@stopwatch/core';
-import { OFFLINE_CACHE_PREFIX } from './offline-cache.ts';
+import { MODE_CACHE_PREFIX } from './offline-cache.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // The worker's own names (src/sw/logic.ts), repeated here because the worker must stay one script that shares
 // no chunk with the page; a test checks they match.
-export const MODE_CACHE_PREFIX = `${OFFLINE_CACHE_PREFIX}mode-`;
+export { MODE_CACHE_PREFIX };
 export const LAST_USE_PATH = '/mode-last-use';
 export const MODE_USED_MESSAGE = 'mode-used';
 

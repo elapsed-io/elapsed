@@ -7,7 +7,6 @@
  * reads as nothing dismissed, so a damaged record can only bring a notice back, never hide anything else.
  */
 
-import { browserLocalStorage } from './session-store.ts';
 
 export const NOTICES_KEY = 'notices';
 export const NOTICES_SCHEMA = 1;
@@ -84,8 +83,4 @@ export class LocalNoticeStore implements NoticeStore {
       this.#onError(error);
     }
   }
-}
-
-export function browserNoticeStore(win: Window, onError: (error: unknown) => void): NoticeStore {
-  return new LocalNoticeStore(browserLocalStorage(win), onError);
 }

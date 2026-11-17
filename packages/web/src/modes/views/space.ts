@@ -15,21 +15,20 @@
  */
 
 import './space.css';
-import { BRAND, CONFIG, headingDirection, keptLabels, smoothstep, summarise } from '@stopwatch/core';
+import { headingDirection, keptLabels, smoothstep, SPACE_CONFIG, SPACE_COPY, summarise } from '@stopwatch/core';
 import type { Recipe, Session } from '@stopwatch/core';
 import { html, svg } from '../../dom.ts';
 import type { ModeOptions, ReplaySurface } from '../contract.ts';
-import { drawBody, isMapLandmarks } from '../pieces/map/map.ts';
-import type { MapLandmark } from '../pieces/map/map.ts';
+import { drawBody, isMapLandmarks } from '../pieces/map/landmarks.ts';
+import type { MapLandmark } from '../pieces/map/landmarks.ts';
 import { drawComets, scheduleComets } from '../pieces/particles/comets.ts';
-import { drawStill, isStillSky, projectionOf, sizesOf } from '../pieces/starfield/sky.ts';
+import { decoded, isStillSky } from '../pieces/starfield/sky.ts';
 import { colourCss } from '../recipe/colour.ts';
 import { distanceText, zoneName } from '../recipe/recipe-mode.ts';
 import type { Slots } from '../recipe/slots.ts';
 
-const SPACE = CONFIG.modes.interstellar;
+const SPACE = SPACE_CONFIG;
 const MAP = SPACE.results;
-const CARD = CONFIG.design.reference.results;
 const MINUTE_MS = 60_000;
 
 const find = <T extends Recipe['layers'][number]['type']>(recipe: Recipe, type: T, ids: readonly string[]): Extract<Recipe['layers'][number], { type: T }>[] =>
@@ -93,13 +92,15 @@ export async function spaceView(surface: ReplaySurface, session: Session, recipe
 
   // The card: space from edge to edge, the faint star field behind it.
   const stars = find(recipe, 'starfield', ids)[0];
-  const backdrop = svg(doc, 'svg', { class: 'space-card__stars', viewBox: `0 0 ${String(CARD.width)} ${String(CARD.height)}`, preserveAspectRatio: 'xMidYMid slice', 'aria-hidden': 'true', focusable: 'false' });
+  // The card's sky, drawn by the build (720 × 520), covering the card as the frame's does.
   const sky = stars?.view === undefined ? undefined : slots.data(stars.view);
-  if (stars !== undefined && isStillSky(sky)) backdrop.append(drawStill(doc, sky, sky.faintResults, CARD, CARD.width, CARD.height, projectionOf(stars), sizesOf(stars), SPACE.sky.resultsOpacity));
-  surface.backdrop.append(html(doc, 'div', { class: 'space-card' }, [backdrop]));
+  const backdrop = isStillSky(sky) ? [html(doc, 'img', { class: 'space-card__stars', attrs: { src: sky.card.url, alt: '', decoding: 'async', draggable: 'false' } })] : [];
+  for (const image of backdrop) image.style.setProperty('opacity', String(SPACE.sky.resultsOpacity));
+  surface.backdrop.append(html(doc, 'div', { class: 'space-card' }, backdrop));
+  const skyReady = decoded(backdrop);
 
   // The map, in the frame's pixels.
-  const map = svg(doc, 'svg', { class: 'space-map__drawing', viewBox: `0 0 ${String(MAP.widthPx)} ${String(MAP.heightPx)}`, role: 'img', 'aria-label': BRAND.copy.interstellar.map });
+  const map = svg(doc, 'svg', { class: 'space-map__drawing', viewBox: `0 0 ${String(MAP.widthPx)} ${String(MAP.heightPx)}`, role: 'img', 'aria-label': SPACE_COPY.map });
   const box = html(doc, 'div', { class: 'space-map' }, [map]);
   const decimals = recipe.measure.decimals ?? 0;
   box.style.setProperty('--space-r', `calc(${n(start)} + ${n(travelled)} * var(--replay-progress))`);
@@ -275,4 +276,6 @@ export async function spaceView(surface: ReplaySurface, session: Session, recipe
       cometBox.style.setProperty('transform', `scale(${String(width / MAP.widthPx)})`);
     }).observe(box);
   }
+  // The card shows its sky whole: the replay starts once the image is decoded.
+  await skyReady;
 }

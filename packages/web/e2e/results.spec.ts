@@ -6,7 +6,7 @@
 
 import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
-import { BRAND, CONFIG, createSession, replayTimingFor, serializeActiveState, startState } from '@stopwatch/core';
+import { BRAND, CONFIG, createSession, OCEAN_CONFIG, OCEAN_COPY, replayTimingFor, serializeActiveState, startState } from '@stopwatch/core';
 import { builtInRecipe } from './fixtures/recipes.ts';
 import { PAPER, endingFrame, inPalette, resultsDepthLitFrame, resultsRingFrame, resultsStripFrame } from './fixtures/frames.ts';
 import type { FrameLandmark, ResultsData } from './fixtures/frames.ts';
@@ -202,8 +202,8 @@ test('results for ocean depth match the frame exactly with the landmarks they pi
 
 test('the dive profile shows at most six landmarks, at most two from each 1,000 m band, only from the catalog and only where the dive went', async ({ page }) => {
   await playSampleSession(page, 'ocean');
-  const catalog = new Map<number, string>(CONFIG.modes.ocean.landmarks.map(([depth, id]): [number, string] => [depth, BRAND.copy.ocean.landmarks[id]]));
-  const reached = (167 + 40 / 60) * CONFIG.modes.ocean.metresPerFocusedMinute;
+  const catalog = new Map<number, string>(OCEAN_CONFIG.landmarks.map(([depth, id]): [number, string] => [depth, OCEAN_COPY.landmarks[id]]));
+  const reached = (167 + 40 / 60) * OCEAN_CONFIG.metresPerFocusedMinute;
   const landmarks = await drawnLandmarks(page);
   expect(landmarks.length).toBeGreaterThan(0);
   expect(landmarks.length).toBeLessThanOrEqual(6);
@@ -307,7 +307,7 @@ test('the ocean results card is lit by the dive: it opens in the colour the sess
     const timing = fade?.effect?.getComputedTiming();
     return { duration: timing?.duration, fill: fade?.effect?.getTiming().fill, from: (fade?.effect as KeyframeEffect | undefined)?.getKeyframes()[0]?.['opacity'] };
   });
-  expect(end).toEqual({ duration: CONFIG.modes.ocean.results.lit.crossfadeMs, fill: 'backwards', from: '1' });
+  expect(end).toEqual({ duration: OCEAN_CONFIG.results.lit.crossfadeMs, fill: 'backwards', from: '1' });
   // At the start of the replay the card shows the surface: no shift, stretched to 0–60 m.
   await page.evaluate(() => {
     document.querySelector('.results')?.animate([{ '--replay-progress': 0 }, { '--replay-progress': 0 }], { duration: 1000, fill: 'forwards' }).pause();
@@ -318,7 +318,7 @@ test('the ocean results card is lit by the dive: it opens in the colour the sess
   // Two sonar pings, timed from the replay's start to its end, and gone after.
   const pings = await page.locator('.profile__ping').evaluateAll((elements) => elements.map((element) => element.getAnimations()[0]?.effect?.getTiming().delay));
   const length = replayTimingFor(builtInRecipe('ocean-depth')).durationMs;
-  expect(pings).toEqual([length, length + CONFIG.modes.ocean.results.pings.lagMs]);
+  expect(pings).toEqual([length, length + OCEAN_CONFIG.results.pings.lagMs]);
 });
 
 test('the dive profile replays from one progress: the depth counts on the final text\'s baseline, the zone follows and the chart zooms', async ({ page }) => {
@@ -341,7 +341,7 @@ test('the dive profile replays from one progress: the depth counts on the final 
   // scale is 517.5 m against its final 1,725 m.
   expect(state).toMatchObject({ zones: ['twilight'], count: '1', depth: '0' });
   expect(state.zoom).toMatch(/^matrix\(1, 0, 0, 3\.333/);
-  expect(Math.abs(state.baseline - CONFIG.modes.ocean.results.depthBaselinePx)).toBeLessThanOrEqual(1);
+  expect(Math.abs(state.baseline - OCEAN_CONFIG.results.depthBaselinePx)).toBeLessThanOrEqual(1);
 });
 
 test('with reduced motion the ocean results show their final state at once: lit, dots without labels, no pings', async ({ page }) => {

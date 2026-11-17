@@ -60,9 +60,10 @@ bounds. The small device features come last before hardening, since nothing else
 | 2.7 | Recipes: every mode as a recipe drawn by one piece library | every mode frame again, unchanged; the options boxes |
 | 2.8 | Focus view, notices and fullscreen; the redesigned analog; ambient idle screens; replays that never stall | Running, recently touched; running, untouched; the motion, on a loop; the notice; "change" opens settings on it; Release 2 settings: display (focus view, the mode behind the panel); analog stopwatch (redesigned) |
 | 2.9 | Interstellar, as a recipe, behind the test-modes switch | Interstellar: running, paused and results; its tile; Release 2 settings: advanced (test modes) |
-| 2.10 | Layout editor, background images, and each mode's replaceable art | Layout editor |
-| 2.11 | Picture-in-picture, wake lock, the check-ins switch | Release 2 settings: timer (check-ins, keep screen awake) and display (picture-in-picture) |
-| 2.12 | Hardening and the release review | every Release 2 frame |
+| 2.10 | Lighter and faster: debloat, test modes, instant mode switches, the internals | no new frame; every frame again, unchanged but for the four fixes |
+| 2.11 | Layout editor, background images, and each mode's replaceable art | Layout editor |
+| 2.12 | Picture-in-picture, wake lock, the check-ins switch | Release 2 settings: timer (check-ins, keep screen awake) and display (picture-in-picture) |
+| 2.13 | Hardening and the release review | every Release 2 frame |
 
 Every round ends as Release 1's did: `npm run check`, the end-to-end suite in Chromium, Firefox and WebKit
 (through the reference image), the round's safety overview in `docs/safety/round-2.<n>.md` with every item
@@ -76,10 +77,10 @@ it, and each frame is checked pixel for pixel once all of its controls exist:
 
 | Frame | Controls | Round |
 | --- | --- | --- |
-| timer | check-ins switch with its warning; keep screen awake ("only while elapsed is the active tab") | 2.11 |
-| display | mode tiles in four columns with a preview icon for each new mode (analog, ocean depth, height, tree, interstellar); ocean depth options (ocean life, results landmarks); picture-in-picture; downloaded modes with size and remove | tiles in each mode's round; downloaded modes 2.1; results landmarks 2.3; ocean life 2.4; each mode's own options box 2.7; picture-in-picture 2.11 |
+| timer | check-ins switch with its warning; keep screen awake ("only while elapsed is the active tab") | 2.12 |
+| display | mode tiles in four columns with a preview icon for each new mode (analog, ocean depth, height, tree, interstellar); ocean depth options (ocean life, results landmarks); picture-in-picture; downloaded modes with size and remove | tiles in each mode's round; downloaded modes 2.1; results landmarks 2.3; ocean life 2.4; each mode's own options box 2.7; picture-in-picture 2.12 |
 | appearance | animation speed (slower, normal, faster: "every animation, including the results replay"); low power ("stops ambient animation and shows only the time. on when your system asks for reduced motion.") | 2.1 |
-| advanced | test modes ("early modes that may change or disappear. shown after opening elapsed with ?test=interstellar.") | 2.9 |
+| advanced | test modes ("early modes that may change or disappear. shown after opening elapsed with ?test=interstellar.") | 2.9 (and ?test=modes, 2.10) |
 
 The tile grid has three columns while there are three modes (the Release 1 frame) and four from round 2.2,
 when the fourth mode arrives (the Release 2 frame).
@@ -298,7 +299,51 @@ unless it is on.
 **Safety overview:** the star catalog's source and licence (HYG, CC BY-SA); what the address parameter can do
 (show one switch, nothing else; any other `test` value is ignored).
 
-### 2.10 Layout editor, background images, and each mode's replaceable art
+### 2.10 Lighter and faster
+
+**Goal:** debloat the site and strengthen the internals while the site looks and behaves exactly as it does now,
+apart from four fixes (owner, 2026-11-17).
+
+**First, answered in the round's summary:** whether the recipe system still expresses every built-in mode
+(digits, ring, timeline, analog) and every test mode (ocean depth, height, tree, interstellar) with nothing
+mode-specific outside the piece library and the recipes, tried also on two users' own watch faces (a favourite
+IWC dial as the background, with hands and working complications from recipes; a cinematic backdrop with the
+F1 Rolex clock, its hands removed with AI, with hands from recipes as in analog), listing anything still outside
+and why; and a size report: the core bundle by module, compressed, against the 50 KB budget, and what each mode
+and piece costs, before and after.
+
+**Builds:**
+- **Modes:** ocean depth, height and tree join interstellar as test modes. Opening the site once with
+  `?test=modes` (and still `?test=interstellar`) offers the "test modes" switch in advanced settings, off by
+  default, which adds all four to the mode tiles. A user who had one chosen sees digits, their setting kept for
+  when testing ends. The perpetual calendar test mode is removed completely (recipe, pieces used only by it,
+  assets, tests, settings); it proved the recipe system.
+- **Debloat, within the 50 KB core budget (not raised):** the core holds only what the timer, digits, ring and
+  timeline need; the piece library is split so each piece type is its own small download, fetched only when a
+  chosen mode uses it; the settings panel, the results, the custom CSS editor and the test modes leave the core.
+  Heavy preparation happens at build time (interstellar's star catalogs projected into ready-made files; any
+  other catalog or geometry a mode computes on load). Static layers (star fields, orbit rings, backgrounds) are
+  drawn once as images and only moved. Dead code and unused dependencies go. A per-download budget check in CI
+  fails the round any download creeps past its budget. No UI framework.
+- **Fixes:** (1) a mode that needs loading loads in the background while the current mode stays on screen, then
+  swaps when fully ready; end, pause or start cancels any mode still loading, and the session never depends on a
+  mode's loading; (2) a switched-away mode is torn down completely (its DOM, timers, listeners and cached layers);
+  (3) while in testing, ocean depth and height keep the theme's background at all times, with no environment
+  colours and no transition; (4) mode switches start on the same frame as the choice, any crossfade lasts 120 ms
+  or less, and digits, ring and timeline are ready without a download.
+- **Internals:** the session state machine is fully independent of display modes; mode loading is one
+  cancellable pipeline; every mode follows the same mount and teardown contract.
+
+**Tests:** ending a session mid-switch; twenty quick switches between modes on the idle screen, the main thread
+never blocked over 50 ms and memory back to its baseline; performance tests for mode switching, long sessions
+and the hidden tab; the per-download budgets; every existing frame unchanged but for the four fixes.
+
+**Safety overview:** what moved out of the core and how it is fetched; the test-modes address (one more value,
+still only a switch); the calendar's removal from settings (a stored calendar choice reads as digits).
+
+**Stop:** for the owner's review, with the summary, the size report before and after, and the answers above.
+
+### 2.11 Layout editor, background images, and each mode's replaceable art
 
 **Builds:** the customize mode, entered from settings or with a long press on phones; every layer
 (background, display mode, buttons, icons) moved, rotated, stretched, resized, hidden and reordered as
@@ -326,7 +371,7 @@ the editor.
 files), storage keys, abuse cases (decompression bombs, malformed images, layouts that hide every control
 with safe mode as the way back), tests.
 
-### 2.11 Picture-in-picture, wake lock, the check-ins switch
+### 2.12 Picture-in-picture, wake lock, the check-ins switch
 
 **Builds:**
 
@@ -353,7 +398,7 @@ due and the pause limit still applies; the timer and display frames; settings mi
 **Safety overview:** permissions used (none new in the Permissions-Policy; `screen-wake-lock` is allowed by
 default for the site's own pages), data (the switches are settings on the device), abuse cases.
 
-### 2.12 Hardening and the release review
+### 2.13 Hardening and the release review
 
 **Builds:** the accessibility pass for every new mode and the editor (WCAG 2.2 AA, axe-core, keyboard and
 screen readers, 44 px targets, reduced motion and low power), the performance pass (budgets, a long
@@ -363,7 +408,7 @@ sign-off.
 
 ## The owner's answers
 
-1. **Free-form layout before payments exist:** the free-form editor is built in full in round 2.10 but
+1. **Free-form layout before payments exist:** the free-form editor is built in full in round 2.11 but
    switched on only when the unlock arrives in Release 3; until then everyone gets preset positions. It is
    testable behind the test-modes switch.
 2. **The interstellar test flag:** opening the site once with `?test=interstellar` shows a "test modes"
@@ -372,7 +417,7 @@ sign-off.
 3. **Picture-in-picture:** a display setting, off by default, as drawn. When on, it adds a button to the
    timer's top-right icons (Tabler's picture-in-picture icon, the same size and colour as the other corner
    icons, left of settings) that opens the floating timer. The setting and the button appear only where
-   the browser offers a window for a page, and are hidden elsewhere. Built in round 2.11.
+   the browser offers a window for a page, and are hidden elsewhere. Built in round 2.12.
 4. **Background images:** JPEG, PNG, WebP or AVIF, detected from their contents, at most 20 MB and 50
    megapixels, re-encoded at screen size; SVG refused. They stay on the device, never uploaded or synced.
    One per display mode.
@@ -381,7 +426,7 @@ sign-off.
    separate from the GPL code.
 
 Also from the owner's review: the analog hand glides continuously (round 2.2), and the Permissions-Policy
-is confirmed not to block the wake lock (round 2.11).
+is confirmed not to block the wake lock (round 2.12).
 
 ## Open points
 

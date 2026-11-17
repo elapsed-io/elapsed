@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from './test.ts';
 import type { Browser, Page } from '@playwright/test';
-import { FONT, MINUTE, SECOND, endThroughCountdown, finishResults, openApp, seedSettings, settle } from './helpers.ts';
+import { FONT, MINUTE, SECOND, endThroughCountdown, finishResults, openApp, seedSettings, settle, switchTestModesOn } from './helpers.ts';
 import { ADVANCED_TEST_MODES_HEIGHT, FRAME_FONTS, SETTINGS_FRAME_HEIGHT, settingsFrame } from './fixtures/settings-frames.ts';
 import type { Palette, SettingsFrameName } from './fixtures/settings-frames.ts';
 import { GRAPHITE, PAPER } from './fixtures/frames.ts';
@@ -49,6 +49,14 @@ async function frameReference(browser: Browser, name: SettingsFrameName, palette
   });
   await reference.goto('http://frame.test/');
   await reference.evaluate(() => document.fonts.ready);
+  // Painted afresh once, as the site's panel is (showLikeFrame): in the reference image the frame's tiles were
+  // sometimes caught re-rastered piecemeal, their corners a few levels off, while the site's never differed.
+  await reference.evaluate(() => {
+    document.body.style.setProperty('display', 'none');
+    document.body.getBoundingClientRect();
+    document.body.style.removeProperty('display');
+  });
+  await reference.waitForTimeout(100);
   const image = await reference.screenshot({ clip: clip ?? { ...PANEL, y: 0, height } });
   await reference.close();
   return image;
@@ -107,6 +115,8 @@ test.describe('the panel matches its frames', () => {
 
   for (const name of ['timer', 'display', 'notifications', 'appearance', 'advanced'] as const) {
     test(`with ${name} open`, async ({ page, browser, browserName }) => {
+      // The display frame draws every mode's tile: from round 2.10 all but four are test modes'.
+      if (name === 'display') await switchTestModesOn(page);
       await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT[name] });
       await showLikeFrame(page, name);
       const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: SETTINGS_FRAME_HEIGHT[name] } });
@@ -203,6 +213,7 @@ test.describe('the panel matches its frames', () => {
     ['paper', PAPER],
   ] as const) {
     test(`the ocean depth tile matches the Release 2 display frame's, in ${theme}`, async ({ page, browser, browserName }) => {
+      await switchTestModesOn(page);
       await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT.display, settings: { theme } });
       await showLikeFrame(page, 'display');
       const box = await page.getByRole('radio', { name: 'ocean depth' }).boundingBox();
@@ -216,7 +227,7 @@ test.describe('the panel matches its frames', () => {
     });
 
     test(`with ocean depth chosen, its options box matches the Release 2 display frame's, in ${theme}`, async ({ page, browser, browserName }) => {
-      await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT.display, settings: { theme, mode: 'ocean' } });
+      await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT.display, mode: 'ocean', settings: { theme } });
       await showLikeFrame(page, 'display');
       await page.mouse.move(0, 0);
       const options = page.getByRole('group', { name: 'ocean depth options' });
@@ -236,6 +247,7 @@ test.describe('the panel matches its frames', () => {
   }
 
   test('each mode with options has its own box, shown only while it is chosen; height keeps its own landmarks switch', async ({ page }) => {
+    await switchTestModesOn(page);
     await openApp(page, { width: 1280, height: 800 });
     await openPanel(page);
     await openCategory(page, 'display');

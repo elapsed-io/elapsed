@@ -3,8 +3,9 @@
  * the paused labels, the results card's text in the sky, and the colours of the stars and the things that pass.
  */
 @layer mode {
-  .screen[data-mode="height"] > :is(.mode-root, .controls),
-  .screen[data-mode="height"]:has(> .mode-root:not([hidden])) > .corner {
+  /* Only over its environment: while it is in testing the mode keeps the theme's background and colours (round 2.10). */
+  .screen[data-mode="height"]:has(> .mode-root > .environment) > :is(.mode-root, .controls),
+  .screen[data-mode="height"]:has(> .mode-root:not([hidden]) > .environment) > .corner {
     --color-foreground: var(--height-text);
     --color-muted: var(--height-icon);
     --color-accent: var(--height-accent);
@@ -20,7 +21,7 @@
 
   /* "paused for" and the altitude line take the paused frame's label colour: set on the mode root's children,
      so it holds whatever the specificity of the palette rule above (the build merges its selectors). */
-  .screen[data-mode="height"] > .mode-root > * {
+  .screen[data-mode="height"] > .mode-root:has(> .environment) > * {
     --color-muted: var(--height-label);
   }
 

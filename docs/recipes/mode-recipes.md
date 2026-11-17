@@ -30,7 +30,7 @@ Files:
 | `time` | The clock, with the seconds setting | all |
 | `text` | A caption from a template | any |
 | `ring` | Track, fading tail that can grow in, round head | ring |
-| `dial` | Ticks, labels, hand, up to 8 subdials: small dials, further hands from the centre, a calendar's parts (date, weekday, month, leap year) and the moon | analog, perpetual calendar (a test mode) |
+| `dial` | Ticks, labels, hand, batons, up to 8 subdials: small dials and further hands from the centre | analog |
 | `track` | Scrolling time scale with faded ends and the personal-record marker | timeline |
 | `sprite` | An image strip; the frame follows a cycle, a zone or the measure, with crossfades | tree (your own art) |
 | `tree` | The procedural tree, side or isometric, with growth, leaf colours per season, cluster offsets, snow and ground | tree |
@@ -46,21 +46,32 @@ Files:
 
 **Bindings** let any number follow the measure, a cycle or the replay's progress through 2 to 16 stops, linear or smooth. There are no formulas; the light model and the camera are presets with a few knobs.
 
-## Additions from the first new mode (2026-11-16)
+**Loading (round 2.10).** Each piece type is its own small download, fetched only when a chosen mode's recipe uses
+it (`packages/web/src/modes/recipe/library.ts`); results views, environments and the camera load the same way, by the
+recipe's view, environment and camera types. The core holds only what digits, ring and timeline draw with (the
+`time`, `ring` and `track` pieces). A mode is then its recipe, its slots' sources and its colours; mode loading is
+one cancellable pipeline (the site's mode stage), and every mode mounts and comes down through the same contract
+(`docs/display-mode-contract.md`).
 
-The perpetual calendar test mode (`recipes/calendar.json`), made after a perpetual-calendar watch as a test of the
-recipe system, needed four things version 1 lacked. They are optional, so every recipe written before stays valid:
+**Prepared when the site is built (round 2.10).** A `starfield` with a `projection` in a built-in recipe is drawn by
+the build, not the device: the `view` catalog projected about the view's centre, its faint stars as one tile, the
+results card's sky, and the whole catalog in `slot` as a strip a full turn wide, each an SVG image with the
+recipe's projection and star sizes (`packages/web/build/sky.ts`). The device only places these images and slides
+the strip. A recipe from anywhere else cannot yet bring a catalog to project: its starfield needs a ready-drawn
+field (an image slot), as height's is.
 
-- **Calendar cycles.** A cycle with `"calendar": "gregorian"` counts days of its `minutes` each on a Gregorian
-  perpetual calendar from Monday 1 January 2024 (a leap year): months of their own lengths, the four-year leap
-  cycle (2100 a common year), and the real moon of the date shown.
-- **Subdial faces and parts.** A subdial's `face` is `dial` (a small dial with its marks and hand, the default) or
-  `hand` (its hand alone, from wherever it sits: an hours hand or a sweeping seconds hand from the centre). On a
-  calendar cycle its `part` says what it shows: `date`, `weekday`, `month`, `leap-year` (each stepping at the turn
-  of its day, as a perpetual calendar jumps at midnight) or `moon` (a disc with two moons turning behind a window).
-- **Names and titles.** `names` gives a small dial's marks their words, one a place (an empty name leaves a mark
-  unnamed); `title` puts a word under it (the analog dial's "hours").
+## Additions from the first new mode (2026-11-16), and its removal (round 2.10)
+
+The perpetual calendar test mode, made after a perpetual-calendar watch as a test of the recipe system, was built
+from a recipe and the `dial` piece alone, with nothing of its own outside them: it proved the system (decision 368)
+and was then removed completely, with what only it used. What it added that other dials use stays:
+
+- **Subdial faces.** A subdial's `face` is `dial` (a small dial with its marks and hand, the default) or `hand` (its
+  hand alone, from wherever it sits: an hours hand or a sweeping seconds hand from the centre).
 - **More subdials:** up to 8 (from 3).
+
+Gone with it: calendar cycles (`"calendar": "gregorian"`), a subdial's calendar `part` (date, weekday, month, leap
+year, moon), and its `names` and `title`. A recipe that names one is refused as any unknown field is.
 
 ## Additions for the redesigned analog stopwatch (2026-11-17)
 
@@ -116,4 +127,4 @@ The checker's negative tests (script in a name, unknown placeholders, `url()` co
 
 ## Coverage
 
-All eight built-in modes are expressed as recipes, and all 49 features the plan gives them pass the check, including the ring's growing tail, the timeline's record marker, the analog subdial, ocean life by zone at three distances, the lit results that start from the session's colour, both finales, shooting stars with meteor showers, the tree's seasons and both views, and interstellar's camera, orbits, comets and turning sky. The tree's procedural drawing is the one piece specific to a mode; the `sprite` piece gives the same mode a path for anyone's own season strip.
+All eight built-in modes (four of them test modes from round 2.10: ocean depth, height, the tree and interstellar) are expressed as recipes, and all 49 features the plan gives them pass the check, including the ring's growing tail, the timeline's record marker, the analog subdial, ocean life by zone at three distances, the lit results that start from the session's colour, both finales, shooting stars with meteor showers, the tree's seasons and both views, and interstellar's camera, orbits, comets and turning sky. The tree's procedural drawing is the one piece specific to a mode; the `sprite` piece gives the same mode a path for anyone's own season strip.

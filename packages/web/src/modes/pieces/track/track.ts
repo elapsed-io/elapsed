@@ -21,14 +21,14 @@
 
 import 'virtual:tokens/timeline.css';
 import './track.css';
-import { CONFIG } from '@stopwatch/core';
+import { TIMELINE_CONFIG } from '@stopwatch/core';
 import type { TrackLayer } from '@stopwatch/core';
 import { html, svg } from '../../../dom.ts';
 import { colourCss } from '../../recipe/colour.ts';
 import type { Activity, Piece, PieceSetup } from '../../recipe/piece.ts';
 import { timelineStripMinutes } from './strip.ts';
 
-const T = CONFIG.modes.timeline;
+const T = TIMELINE_CONFIG;
 const MINUTE_MS = 60_000;
 /** A gliding layer that has drifted this far from focused time (after sleep, say) is set right. */
 const DRIFT_MS = 250;

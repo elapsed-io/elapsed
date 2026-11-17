@@ -26,11 +26,14 @@ async function restoreAt(page: Page, focusMs: number, settings?: Readonly<Record
  * Text: in the reference image Chromium draws the site's small text over space (the button labels, "paused for",
  * the distance line, the names, the results' headline and stats) with subpixel anti-aliasing and the frame's page
  * with greyscale, as over height's sky (decision 310): measured 326 to 332 pixels past 8 levels on the running
- * frames, 378 on the paused one and 5,068 on the results card, smoothed at most 37.6, all on glyph edges. So each
- * frame is compared twice: whole, within that, and with every glyph transparent on both sides, which must match
- * within the drawing's own edges below (Firefox and WebKit, and Chromium elsewhere, match whole).
+ * frames, 378 on the paused one and 5,068 on the results card, smoothed at most 37.6, all on glyph edges. Since
+ * round 2.10 (the page layered anew: the sky as images, the pieces on their own) the map's names are drawn so
+ * too, not only the buttons: 461 to 1,487 on the running frames, more the more names the map shows, smoothed at
+ * most 38.3, still only on glyph edges (decision 384). So each frame is compared twice: whole, within that, and with every glyph transparent on both
+ * sides, which must match within the drawing's own edges below (Firefox and WebKit, and Chromium elsewhere, match
+ * whole).
  */
-const TEXT_EDGES = 400;
+const TEXT_EDGES = 2000;
 const PAUSED_TEXT_EDGES = 600;
 const RESULTS_TEXT_EDGES = 6000;
 const TEXT_SMOOTHED = 40;
@@ -252,11 +255,17 @@ test('while paused the sky turns once in 6 minutes from the still view; never wi
     const animation = strip.getAnimations()[0];
     const timing = animation?.effect?.getTiming();
     const frames = animation?.effect instanceof KeyframeEffect ? animation.effect.getKeyframes() : [];
-    return { duration: Number(timing?.duration), iterations: timing?.iterations, from: String(frames[0]?.['transform']), to: String(frames.at(-1)?.['transform']), stars: strip.querySelectorAll('circle').length };
+    const images = [...strip.querySelectorAll('img')].map((image) => ({ src: image.getAttribute('src') ?? '', decoded: image.complete && image.naturalWidth > 0 }));
+    return { duration: Number(timing?.duration), iterations: timing?.iterations, from: String(frames[0]?.['transform']), to: String(frames.at(-1)?.['transform']), images };
   });
   // One turn of the strip (360° at 8 px a degree) in 6 minutes, from where the still view stands.
   expect(turn).toMatchObject({ duration: 6 * MINUTE, iterations: Infinity, from: 'translateX(0px)', to: 'translateX(2880px)' });
-  expect(turn.stars).toBeGreaterThan(1000);
+  // The whole sky, drawn by the build (round 2.10): one image, twice side by side, decoded before it shows.
+  expect(turn.images).toHaveLength(2);
+  expect(turn.images.every((image) => image.decoded && image.src === turn.images[0]?.src && /interstellar-stars-turning-[\w-]+\.svg$/.test(image.src))).toBe(true);
+  // Every star of the catalog is in it (1,637 to magnitude 5, a few twice across its edges).
+  const stars = await page.evaluate(async (src) => (await (await fetch(src)).text()).match(/<circle /g)?.length ?? 0, turn.images[0]?.src ?? '');
+  expect(stars).toBeGreaterThan(1637);
   await primary(page).click();
   await expect(page.locator('.sky')).not.toHaveClass(/sky--turning/);
 });

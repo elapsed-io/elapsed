@@ -1,7 +1,7 @@
 /**
- * The test-modes switch (plan, Display modes > Interstellar; plan-release-2, round 2.9): opening the site once with
- * `?test=interstellar` offers a "test modes" switch in advanced settings, off by default; on, it adds the test
- * modes (interstellar, the perpetual calendar) to the mode tiles. Kept in this browser's local storage under
+ * The test-modes switch (plan, Display modes > Interstellar; plan-release-2, rounds 2.9 and 2.10): opening the site
+ * once with `?test=modes` (or the older `?test=interstellar`) offers a "test modes" switch in advanced settings, off
+ * by default; on, it adds the test modes (ocean depth, height, tree and interstellar) to the mode tiles. Kept in this browser's local storage under
  * `test-modes`, apart from `settings`: the switch, once offered, stays offered on this device, and neither it nor
  * its state is a setting that syncs or goes into a settings file. "Clear device data" removes it.
  *
@@ -9,12 +9,10 @@
  * offered and off.
  */
 
-import { browserLocalStorage } from './session-store.ts';
+import { TEST_MODES_KEY } from './test-modes-ask.ts';
 
-export const TEST_MODES_KEY = 'test-modes';
+export { TEST_MODES_ASK, TEST_MODES_KEY, asksForTestModes } from './test-modes-ask.ts';
 export const TEST_MODES_SCHEMA = 1;
-/** The one address that offers the switch; any other `test` value is ignored. */
-export const TEST_MODES_ASK = 'interstellar';
 
 export interface TestModesState {
   readonly offered: boolean;
@@ -40,11 +38,6 @@ export function parseTestModesRecord(text: string | null): TestModesState {
 
 export function testModesRecord(state: TestModesState): string {
   return JSON.stringify({ schema: TEST_MODES_SCHEMA, offered: state.offered, on: state.on });
-}
-
-/** Whether an address asks for the switch: `?test=interstellar`, and nothing else. */
-export function asksForTestModes(search: string): boolean {
-  return new URLSearchParams(search).getAll('test').includes(TEST_MODES_ASK);
 }
 
 export class TestModesStore {
@@ -99,8 +92,4 @@ export class TestModesStore {
       this.#onError(error);
     }
   }
-}
-
-export function browserTestModesStore(win: Window, onError: (error: unknown) => void): TestModesStore {
-  return new TestModesStore(browserLocalStorage(win), onError);
 }

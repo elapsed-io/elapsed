@@ -7,10 +7,10 @@
  * Everything here is the frames' own arithmetic; the timer's map and the results' map both draw from it.
  */
 
-import { CONFIG } from '../config.ts';
 import { smoothstep } from '../recipes/measure.ts';
+import { SPACE_CONFIG } from './space-config.ts';
 
-const SPACE = CONFIG.modes.interstellar;
+const SPACE = SPACE_CONFIG;
 
 export type SpaceBodyId = (typeof SPACE.landmarks)[number]['id'] | (typeof SPACE.start)['id'];
 

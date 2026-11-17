@@ -3,8 +3,9 @@
  * card's text in the light, and the colours of the things that pass on it.
  */
 @layer mode {
-  .screen[data-mode="ocean"] > :is(.mode-root, .controls),
-  .screen[data-mode="ocean"]:has(> .mode-root:not([hidden])) > .corner {
+  /* Only over its environment: while it is in testing the mode keeps the theme's background and colours (round 2.10). */
+  .screen[data-mode="ocean"]:has(> .mode-root > .environment) > :is(.mode-root, .controls),
+  .screen[data-mode="ocean"]:has(> .mode-root:not([hidden]) > .environment) > .corner {
     --color-foreground: var(--ocean-text);
     --color-muted: var(--ocean-icon);
     --color-accent: var(--ocean-accent);

@@ -179,3 +179,23 @@ describe('plan audit: design', () => {
     }
   });
 });
+
+describe('plan audit: internals (round 2.10)', () => {
+  it('keeps the session state machine independent of display modes: it knows a mode only as an id', () => {
+    const machine = CORE_SOURCE.filter((path) => /\/core\/src\/(session|engine)\//.test(path));
+    expect(machine.length).toBeGreaterThan(0);
+    for (const path of machine) {
+      const imports = [...readFileSync(path, 'utf8').matchAll(/from '([^']+)'/g)].map((match) => match[1] ?? '');
+      // Its own modules, the event bus, time, the config and the test clock: never modes, recipes, settings or the brand.
+      expect(imports.filter((source) => !/^\.\.?\/(?:(?:\.\.\/)?(?:session|engine|events|time|testing)\/[\w-]+|[\w-]+|\.\.\/config)\.ts$/.test(source)), rel(path)).toEqual([]);
+      expect(imports.filter((source) => /modes|recipes|settings|brand/.test(source)), rel(path)).toEqual([]);
+    }
+  });
+
+  it('mounts a mode only through the stage, which the session never waits on', () => {
+    const app = readFileSync(join(root, 'packages/web/src/app.ts'), 'utf8');
+    // The first mount is the one direct mount; every switch goes through the stage's one pipeline.
+    expect(app.match(/\.mount\(/g)?.length).toBe(1);
+    expect(withoutComments(app)).not.toMatch(/await\s+stage\b|await\s+[\w.]*\.ready\(/);
+  });
+});

@@ -28,12 +28,21 @@ export const SETTINGS_CATEGORIES = ['timer', 'display', 'appearance', 'notificat
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
 /** The display modes, in the tiles' order (Release 2 adds each in its round: analog in 2.2). */
-export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'calendar', 'interstellar'] as const;
+export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'interstellar'] as const;
 /**
- * Test modes: early modes that may change or disappear (plan-release-2, round 2.9). Their tiles show only while the
- * test-modes switch is on (offered once the site has been opened with `?test=interstellar`), or while one is chosen.
+ * Test modes: early modes that may change or disappear, in testing until their graphics are agreed and they meet
+ * the performance budgets (plan-release-2, rounds 2.9 and 2.10). Their tiles show only while the test-modes switch
+ * is on (offered once the site has been opened with `?test=modes` or `?test=interstellar`).
  */
-export const TEST_MODES: readonly (typeof MODE_CHOICES)[number][] = ['calendar', 'interstellar'];
+export const TEST_MODES: readonly (typeof MODE_CHOICES)[number][] = ['ocean', 'height', 'tree', 'interstellar'];
+
+/**
+ * The mode shown for a chosen one: a test mode chosen while the test-modes switch is off shows digits, the choice
+ * itself kept for when testing ends (owner, 2026-11-17).
+ */
+export function shownMode(chosen: (typeof MODE_CHOICES)[number], testModesOn: boolean): (typeof MODE_CHOICES)[number] {
+  return TEST_MODES.includes(chosen) && !testModesOn ? 'digits' : chosen;
+}
 export type ModeChoice = (typeof MODE_CHOICES)[number];
 
 /** Focus view (plan, Interface): how long a running session waits untouched before the controls step aside. */

@@ -1,7 +1,22 @@
 export { CONFIG } from './config.ts';
 export type { Adjustable, Config } from './config.ts';
+export { ANALOG_CONFIG } from './modes/analog-config.ts';
+export { HEIGHT_CONFIG } from './modes/height-config.ts';
+export { OCEAN_CONFIG } from './modes/ocean-config.ts';
+export { RING_CONFIG } from './modes/ring-config.ts';
+export { SPACE_CONFIG } from './modes/space-config.ts';
+export { TIMELINE_CONFIG } from './modes/timeline-config.ts';
+export { TREE_CONFIG } from './modes/tree-config.ts';
+export { HEIGHT_METEORS_CONFIG } from './modes/height-meteors-config.ts';
+export { OCEAN_LIFE_CONFIG } from './modes/ocean-life-config.ts';
+export { SPACE_COMETS_CONFIG } from './modes/space-comets-config.ts';
 export { BRAND } from './brand.ts';
 export type { Brand } from './brand.ts';
+export { HEIGHT_COPY } from './copy/height.ts';
+export { OCEAN_COPY } from './copy/ocean.ts';
+export { SETTINGS_COPY } from './copy/settings.ts';
+export { SPACE_COPY } from './copy/space.ts';
+export { TREE_COPY } from './copy/tree.ts';
 export { COUNT_EVENTS, COUNT_PATH, countBody, isCountEvent, parseCountBody } from './counts.ts';
 export type { CountEvent } from './counts.ts';
 
@@ -61,6 +76,7 @@ export {
   LEAVE_FULLSCREEN,
   TEST_MODES,
   TREE_VIEWS,
+  shownMode,
   SETTINGS,
   SETTINGS_CATEGORIES,
   SETTINGS_SCHEMA,
@@ -121,8 +137,6 @@ export { checkRecipe, parseRecipe, recipeOrDigits } from './recipes/load.ts';
 export { DIGITS_RECIPE, builtInRecipe } from './recipes/built-in.ts';
 export type { LoadOptions, RecipeResult } from './recipes/load.ts';
 export { RECIPE_LIMITS } from './recipes/limits.ts';
-export { CALENDAR_PLACES, LUNATION_DAYS, calendarDay, calendarShare, moonAge } from './recipes/calendar.ts';
-export type { CalendarDay, CalendarPart } from './recipes/calendar.ts';
 export {
   RECIPE_MINUTE_MS,
   TEXT_CONTRAST,

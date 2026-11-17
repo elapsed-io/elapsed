@@ -65,8 +65,7 @@
   }
 
   .analog__label,
-  .analog__subnumber,
-  .analog__sublabel {
+  .analog__subnumber {
     font-family: var(--font-family);
     font-stretch: var(--font-stretch);
     fill: var(--color-muted);
@@ -79,59 +78,6 @@
 
   .analog__subnumber {
     font-size: var(--analog-subdial-label-size);
-  }
-
-  /* A small dial's marks' names (the perpetual calendar's dates, days and months). */
-  .analog__sublabel {
-    font-size: var(--analog-sublabel-size);
-  }
-
-  /*
-   * The moon (dial.ts): a window over the upper half of its small dial, a disc with two moons turning behind it,
-   * and two humps that hide the moon when it is new. Only the disc turns, by transform.
-   */
-  .dial__moon {
-    position: absolute;
-    left: calc(var(--moon-x) * var(--au));
-    top: calc(var(--moon-y) * var(--au));
-    width: calc(2 * var(--moon-r) * var(--au));
-    height: calc(var(--moon-r) * var(--au));
-    overflow: hidden;
-    border-radius: calc(var(--moon-r) * var(--au)) calc(var(--moon-r) * var(--au)) 0 0;
-    box-shadow: inset 0 0 0 calc(var(--au) * 1.5) var(--color-faint);
-  }
-
-  .dial__moon-disc {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 200%;
-    will-change: transform;
-  }
-
-  .analog--still .dial__moon-disc {
-    will-change: auto;
-  }
-
-  .dial__moon-disc svg,
-  .dial__moon-humps {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  .dial__moon-sky {
-    fill: var(--color-background);
-  }
-
-  .dial__moon-body {
-    fill: var(--moon-colour, var(--color-accent));
-  }
-
-  .dial__moon-humps {
-    fill: var(--color-track);
   }
 
   .analog__hand {

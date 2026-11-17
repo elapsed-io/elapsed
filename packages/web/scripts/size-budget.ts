@@ -101,15 +101,13 @@ export interface ChunkSize {
 }
 
 /**
- * What one lazily loaded package (a display mode, later a widget) adds on top
- * of the core: its own chunk, its stylesheets, its art, and any chunk it
- * imports, now or later (its results replay and art catalogs load when used),
- * that the core does not already load. Images and art catalogs count as art.
+ * What one lazily loaded package (a display mode, a piece, later a widget) adds on top of the core: the chunks of
+ * its source modules (a mode's descriptor and the pieces, environment and view its recipe fetches), their
+ * stylesheets, their art, and any chunk they import, now or later (art catalogs load when used), that the core does
+ * not already load. Images and art catalogs count as art.
  */
-export function packageSize(distDir: string, source: string): ChunkSize {
+export function packageSize(distDir: string, sources: string | readonly string[], bundledInCore: ReadonlySet<string> = new Set(), follow: 'all' | 'static' = 'all'): ChunkSize {
   const manifest = JSON.parse(readFileSync(join(distDir, '.vite', 'manifest.json'), 'utf8')) as Manifest;
-  const entry = Object.values(manifest).find((chunk) => chunk.src === source);
-  if (entry === undefined) throw new Error(`${source} is not in the build`);
   const core = new Set(coreFiles(distDir).map((file) => file.path));
   const files = new Set<string>();
   const catalogs = new Set<string>();
@@ -118,12 +116,18 @@ export function packageSize(distDir: string, source: string): ChunkSize {
     files.add(chunk.file);
     if (chunk.src !== undefined && CATALOG.test(chunk.src)) catalogs.add(chunk.file);
     for (const path of [...(chunk.css ?? []), ...(chunk.assets ?? [])]) if (!core.has(path)) files.add(path);
-    for (const imported of [...(chunk.imports ?? []), ...(chunk.dynamicImports ?? [])]) {
+    // `static`: what loading it fetches at once; `all`: and whatever it loads later (its art, its replay).
+    for (const imported of [...(chunk.imports ?? []), ...(follow === 'all' ? (chunk.dynamicImports ?? []) : [])]) {
       const next = manifest[imported];
       if (next !== undefined) visit(next);
     }
   };
-  visit(entry);
+  for (const source of typeof sources === 'string' ? [sources] : sources) {
+    const entry = Object.values(manifest).find((chunk) => chunk.src === source);
+    // A module the core imports statically (the ring and track pieces, drawn by core modes) has no chunk of its own.
+    if (entry === undefined && !bundledInCore.has(source)) throw new Error(`${source} is not in the build`);
+    if (entry !== undefined) visit(entry);
+  }
   let codeBytes = 0;
   let artBytes = 0;
   for (const path of files) {
@@ -133,4 +137,3 @@ export function packageSize(distDir: string, source: string): ChunkSize {
   }
   return { codeBytes, artBytes, files: [...files].sort() };
 }
-

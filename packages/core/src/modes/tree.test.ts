@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { CONFIG } from '../config.ts';
 import { parseHexColour } from './light.ts';
 import { grassColour, grassWeights, leafColour, leafScale, leafState, seasonPhase, shares, stackedColour, weather, yearPhase } from './tree.ts';
 import TREE_RECIPE from '../../../../docs/recipes/recipes/tree.json' with { type: 'json' };
 import { checkRecipe } from '../recipes/load.ts';
 import { bindingAt, measureAt } from '../recipes/measure.ts';
+import { TREE_CONFIG } from './tree-config.ts';
 
 const MINUTE = 60_000;
-const TREE = CONFIG.modes.tree;
+const TREE = TREE_CONFIG;
 
 // The frames' own functions (ModeTree.dc.html: sm, mix, season, weather), written out again so the module is
 // checked against them.

@@ -3,18 +3,29 @@
 import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { createSession, oceanColour, serializeActiveState, startState } from '@stopwatch/core';
-import { MINUTE, SECOND, T0, openApp, settle } from './helpers.ts';
+import { ENVIRONMENT_IN_TESTING, MINUTE, SECOND, T0, openApp, settle } from './helpers.ts';
 
-test('loads ring and timeline only when asked for', async ({ page }) => {
+test('digits, ring and timeline are in the core: shown without another download; a downloaded mode loads only when chosen', async ({ page }) => {
   const scripts: string[] = [];
   page.on('request', (request) => {
     if (request.resourceType() === 'script') scripts.push(new URL(request.url()).pathname);
   });
-  await openApp(page, { mode: 'ring' });
+  await openApp(page, { mode: 'ring', width: 1280, height: 800 });
   await expect(page.locator('.ring')).toBeVisible();
   await expect(page.locator('.screen')).toHaveAttribute('data-mode', 'ring');
-  expect(scripts.some((path) => path.includes('/assets/ring-'))).toBe(true);
-  expect(scripts.some((path) => path.includes('/assets/timeline-'))).toBe(false);
+  // Round 2.10: the core holds what the timer, digits, ring and timeline need; nothing else loads for them.
+  const atStart = [...scripts];
+  expect(atStart.some((path) => /\/assets\/(?:ring|timeline|track|dial|analog)-/.test(path))).toBe(false);
+  await page.keyboard.press(',');
+  await page.locator('.settings__row', { hasText: /^display$/ }).click();
+  await page.getByRole('radio', { name: 'timeline', exact: true }).click();
+  await expect(page.locator('.screen')).toHaveAttribute('data-mode', 'timeline');
+  expect(scripts.some((path) => /\/assets\/(?:timeline|track)-/.test(path))).toBe(false);
+  expect(scripts.some((path) => /\/assets\/(?:dial|analog)-/.test(path))).toBe(false);
+  await page.getByRole('radio', { name: 'analog', exact: true }).click();
+  await expect(page.locator('.screen')).toHaveAttribute('data-mode', 'analog');
+  expect(scripts.some((path) => path.includes('/assets/analog-'))).toBe(true);
+  expect(scripts.some((path) => path.includes('/assets/dial-'))).toBe(true);
 });
 
 for (const value of ['Ring', 'Analog', 'sundial', '../ring', '', 42]) {
@@ -355,158 +366,168 @@ test('modes record the mode a session started in', async ({ page }) => {
 
 
 
-/** The ocean's water: still or gliding, the window it shows, and its glide's keyframes. */
-interface Water {
-  readonly still: boolean;
-  readonly height: string;
-  /** The first and last colours of the drawn gradient, as rgb(). */
-  readonly top: string;
-  readonly bottom: string;
-  readonly layer: string;
-  readonly glide: { readonly frames: number; readonly first: string; readonly last: string; readonly duration: number; readonly easing: string } | null;
-}
+/*
+ * Ocean depth's water and its palette over it (the ocean frames). While ocean depth is in testing it keeps the
+ * theme's background at all times, idle and running, with no environment colours (owner, round 2.10; test-modes.spec.ts
+ * holds that), so the water is never drawn: these return when testing ends and the mode draws its environment again
+ * (modes/built-in/ocean.ts, `environment`).
+ */
+test.describe('ocean depth\'s water (drawn again when testing ends)', () => {
+  test.skip(true, ENVIRONMENT_IN_TESTING);
 
-/** A transform with its percentages to four decimals (WebKit writes six). */
-const fourDecimals = (transform: string): string => transform.replace(/-?\d+\.\d+/g, (number) => String(Number(Number(number).toFixed(4))));
+  /** The ocean's water: still or gliding, the window it shows, and its glide's keyframes. */
+  interface Water {
+    readonly still: boolean;
+    readonly height: string;
+    /** The first and last colours of the drawn gradient, as rgb(). */
+    readonly top: string;
+    readonly bottom: string;
+    readonly layer: string;
+    readonly glide: { readonly frames: number; readonly first: string; readonly last: string; readonly duration: number; readonly easing: string } | null;
+  }
 
-async function water(page: Page): Promise<Water> {
-  const drawn = await page.locator('.light__strip').evaluate((strip) => {
-    const colours = /rgb\([^)]*\)/g;
-    const found = strip.style.backgroundImage.match(colours) ?? [];
-    const animation = strip.getAnimations()[0];
-    const effect = animation?.effect instanceof KeyframeEffect ? animation.effect : null;
-    const frames = effect?.getKeyframes() ?? [];
-    return {
-      still: strip.classList.contains('light__strip--still'),
-      height: strip.style.height,
-      top: found[0] ?? '',
-      bottom: found.at(-1) ?? '',
-      layer: getComputedStyle(strip).willChange,
-      glide:
-        effect === null
-          ? null
-          : {
-              frames: frames.length,
-              first: String(frames[0]?.['transform']),
-              last: String(frames.at(-1)?.['transform']),
-              duration: Number(effect.getTiming().duration),
-              easing: String(effect.getTiming().easing),
-            },
-    };
-  });
-  return drawn.glide === null ? drawn : { ...drawn, glide: { ...drawn.glide, first: fourDecimals(drawn.glide.first), last: fourDecimals(drawn.glide.last) } };
-}
+  /** A transform with its percentages to four decimals (WebKit writes six). */
+  const fourDecimals = (transform: string): string => transform.replace(/-?\d+\.\d+/g, (number) => String(Number(Number(number).toFixed(4))));
 
-/** A light-model colour as the browser writes it in a gradient. */
-function rgb(depth: number): string {
-  const hex = oceanColour(depth);
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  return `rgb(${String(r)}, ${String(g)}, ${String(b)})`;
-}
-
-test('before a session, ocean depth shows the water from the surface to 6 m, still', async ({ page }) => {
-  await openApp(page, { mode: 'ocean' });
-  expect(await water(page)).toMatchObject({ still: true, height: '100%', top: rgb(0), bottom: rgb(6), glide: null });
-});
-
-test('the water glides up the screen on its own layer, 15 m a minute, set afresh each minute', async ({ page }) => {
-  await openApp(page, { mode: 'ocean' });
-  await page.locator('.button--primary').click();
-  await page.clock.runFor(6 * MINUTE + 30 * SECOND);
-  // Minute 6: from 90 m to 105 m, the strip drawn from 84 m to 111 m (27 m, so 225 % of the screen).
-  expect(await water(page)).toMatchObject({
-    still: false,
-    height: '225%',
-    top: rgb(84),
-    bottom: rgb(111),
-    layer: 'transform',
-    glide: { frames: 2, first: 'translateY(0%) scaleY(1)', last: 'translateY(-55.5556%) scaleY(1)', duration: MINUTE, easing: 'linear' },
-  });
-  await page.clock.runFor(MINUTE);
-  expect(await water(page)).toMatchObject({ top: rgb(99), bottom: rgb(126), glide: { frames: 2, first: 'translateY(0%) scaleY(1)' } });
-});
-
-test('in its first metres the water stretches from the surface, never showing above it', async ({ page }) => {
-  await openApp(page, { mode: 'ocean' });
-  await page.locator('.button--primary').click();
-  await page.clock.runFor(30 * SECOND);
-  // Minute 0: the window grows from 0–6 m to 0–12 m by 6 m, then moves down to 9–21 m.
-  const glide = (await water(page)).glide;
-  expect(glide).toMatchObject({ first: 'translateY(0%) scaleY(2)', last: 'translateY(-42.8571%) scaleY(1)' });
-  expect(glide?.frames).toBeGreaterThan(40);
-  expect(await water(page)).toMatchObject({ top: rgb(0), bottom: rgb(21) });
-});
-
-test('paused, the water holds where it reached, and glides on from there', async ({ page }) => {
-  await openApp(page, { mode: 'ocean' });
-  await page.locator('.button--primary').click();
-  await page.clock.runFor(6 * MINUTE + 30 * SECOND);
-  await page.locator('.button--primary').click();
-  await settle(page);
-  // 97.5 m: 91.5 m to 103.5 m, filling the screen.
-  expect(await water(page)).toMatchObject({ still: true, height: '100%', top: rgb(91.5), bottom: rgb(103.5), glide: null });
-  await page.clock.runFor(5 * MINUTE);
-  expect(await water(page)).toMatchObject({ still: true, top: rgb(91.5) });
-  await page.locator('.button--primary').click();
-  expect(await water(page)).toMatchObject({ still: false, top: rgb(84), glide: { frames: 2 } });
-});
-
-for (const [how, prepare] of [
-  ['low power', async (page: Page) => openApp(page, { mode: 'ocean', settings: { lowPower: true } })],
-  [
-    'reduced motion',
-    async (page: Page) => {
-      await page.emulateMedia({ reducedMotion: 'reduce' });
-      await openApp(page, { mode: 'ocean' });
-    },
-  ],
-] as const) {
-  test(`with ${how}, the water steps once a minute instead of gliding`, async ({ page }) => {
-    await prepare(page);
-    await page.locator('.button--primary').click();
-    await page.clock.runFor(59 * SECOND);
-    expect(await water(page)).toMatchObject({ still: true, top: rgb(0), bottom: rgb(6), glide: null });
-    await page.clock.runFor(SECOND);
-    expect(await water(page)).toMatchObject({ still: true, top: rgb(9), bottom: rgb(21), glide: null });
-  });
-}
-
-test('ocean depth stops at 10,935 m', async ({ page }) => {
-  // A session 728 focused minutes in: its last minute down.
-  const session = createSession({ id: '7d3e9a1c-2b4f-4e8a-9c6d-5f1a2b3c4d5e', mode: 'ocean', at: T0 - 728 * MINUTE, timeZone: 'UTC' });
-  await page.goto('/sw-control.json');
-  await page.evaluate((text) => {
-    localStorage.setItem('timer.active', text);
-  }, serializeActiveState({ ...startState(session), presenceAt: T0 - 10 * MINUTE }));
-  await openApp(page, { mode: 'ocean' });
-  expect(await water(page)).toMatchObject({ still: false, top: rgb(10_914), bottom: rgb(10_941), glide: { frames: 2 } });
-  await page.clock.runFor(MINUTE);
-  // At the bottom: still, the deepest water filling the screen below it.
-  expect(await water(page)).toMatchObject({ still: false, height: '100%', top: rgb(10_929), bottom: rgb(10_935), glide: null });
-  await page.clock.runFor(10 * MINUTE);
-  expect(await water(page)).toMatchObject({ height: '100%', top: rgb(10_929), glide: null });
-});
-
-test('the ocean palette keeps its text and buttons readable over the water: deep navy near the surface', async ({ page }) => {
-  await openApp(page, { mode: 'ocean' });
-  // Two stacked copies of the time and of each corner icon, the frames' colours and deep navy; one shows.
-  const colours = (): Promise<{ time: string; icon: string; button: string }> =>
-    page.locator('.screen').evaluate((screen) => {
-      const navy = screen.querySelector('.contrast__shade');
-      const dark = navy !== null && getComputedStyle(navy).opacity === '1';
-      const time = screen.querySelector(dark ? '.contrast__shade .time--main' : '.contrast__lit .time--main');
-      const icon = screen.querySelector(dark ? '.icon-button--settings .icon-shade' : '.icon-button--settings > svg');
-      const button = screen.querySelector('.controls button');
-      return { time: time === null ? '' : getComputedStyle(time).color, icon: icon === null ? '' : getComputedStyle(icon).color, button: button === null ? '' : getComputedStyle(button).color };
+  async function water(page: Page): Promise<Water> {
+    const drawn = await page.locator('.light__strip').evaluate((strip) => {
+      const colours = /rgb\([^)]*\)/g;
+      const found = strip.style.backgroundImage.match(colours) ?? [];
+      const animation = strip.getAnimations()[0];
+      const effect = animation?.effect instanceof KeyframeEffect ? animation.effect : null;
+      const frames = effect?.getKeyframes() ?? [];
+      return {
+        still: strip.classList.contains('light__strip--still'),
+        height: strip.style.height,
+        top: found[0] ?? '',
+        bottom: found.at(-1) ?? '',
+        layer: getComputedStyle(strip).willChange,
+        glide:
+          effect === null
+            ? null
+            : {
+                frames: frames.length,
+                first: String(frames[0]?.['transform']),
+                last: String(frames.at(-1)?.['transform']),
+                duration: Number(effect.getTiming().duration),
+                easing: String(effect.getTiming().easing),
+              },
+      };
     });
-  await settle(page);
-  // At the surface the water is bright: the time and the icons are deep navy (owner, changes 3); the buttons keep theirs.
-  expect(await colours()).toEqual({ time: 'rgb(14, 36, 64)', icon: 'rgb(14, 36, 64)', button: 'rgb(220, 232, 238)' });
-  // Past 4.3 m (17 seconds of focus), the frames' own colours, from the next redraw.
-  await page.locator('.button--primary').click();
-  await page.clock.runFor(MINUTE);
-  await settle(page);
-  expect(await colours()).toMatchObject({ time: 'rgb(220, 232, 238)', icon: 'rgb(158, 195, 214)' });
+    return drawn.glide === null ? drawn : { ...drawn, glide: { ...drawn.glide, first: fourDecimals(drawn.glide.first), last: fourDecimals(drawn.glide.last) } };
+  }
+
+  /** A light-model colour as the browser writes it in a gradient. */
+  function rgb(depth: number): string {
+    const hex = oceanColour(depth);
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+    return `rgb(${String(r)}, ${String(g)}, ${String(b)})`;
+  }
+
+  test('before a session, ocean depth shows the water from the surface to 6 m, still', async ({ page }) => {
+    await openApp(page, { mode: 'ocean' });
+    expect(await water(page)).toMatchObject({ still: true, height: '100%', top: rgb(0), bottom: rgb(6), glide: null });
+  });
+
+  test('the water glides up the screen on its own layer, 15 m a minute, set afresh each minute', async ({ page }) => {
+    await openApp(page, { mode: 'ocean' });
+    await page.locator('.button--primary').click();
+    await page.clock.runFor(6 * MINUTE + 30 * SECOND);
+    // Minute 6: from 90 m to 105 m, the strip drawn from 84 m to 111 m (27 m, so 225 % of the screen).
+    expect(await water(page)).toMatchObject({
+      still: false,
+      height: '225%',
+      top: rgb(84),
+      bottom: rgb(111),
+      layer: 'transform',
+      glide: { frames: 2, first: 'translateY(0%) scaleY(1)', last: 'translateY(-55.5556%) scaleY(1)', duration: MINUTE, easing: 'linear' },
+    });
+    await page.clock.runFor(MINUTE);
+    expect(await water(page)).toMatchObject({ top: rgb(99), bottom: rgb(126), glide: { frames: 2, first: 'translateY(0%) scaleY(1)' } });
+  });
+
+  test('in its first metres the water stretches from the surface, never showing above it', async ({ page }) => {
+    await openApp(page, { mode: 'ocean' });
+    await page.locator('.button--primary').click();
+    await page.clock.runFor(30 * SECOND);
+    // Minute 0: the window grows from 0–6 m to 0–12 m by 6 m, then moves down to 9–21 m.
+    const glide = (await water(page)).glide;
+    expect(glide).toMatchObject({ first: 'translateY(0%) scaleY(2)', last: 'translateY(-42.8571%) scaleY(1)' });
+    expect(glide?.frames).toBeGreaterThan(40);
+    expect(await water(page)).toMatchObject({ top: rgb(0), bottom: rgb(21) });
+  });
+
+  test('paused, the water holds where it reached, and glides on from there', async ({ page }) => {
+    await openApp(page, { mode: 'ocean' });
+    await page.locator('.button--primary').click();
+    await page.clock.runFor(6 * MINUTE + 30 * SECOND);
+    await page.locator('.button--primary').click();
+    await settle(page);
+    // 97.5 m: 91.5 m to 103.5 m, filling the screen.
+    expect(await water(page)).toMatchObject({ still: true, height: '100%', top: rgb(91.5), bottom: rgb(103.5), glide: null });
+    await page.clock.runFor(5 * MINUTE);
+    expect(await water(page)).toMatchObject({ still: true, top: rgb(91.5) });
+    await page.locator('.button--primary').click();
+    expect(await water(page)).toMatchObject({ still: false, top: rgb(84), glide: { frames: 2 } });
+  });
+
+  for (const [how, prepare] of [
+    ['low power', async (page: Page) => openApp(page, { mode: 'ocean', settings: { lowPower: true } })],
+    [
+      'reduced motion',
+      async (page: Page) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await openApp(page, { mode: 'ocean' });
+      },
+    ],
+  ] as const) {
+    test(`with ${how}, the water steps once a minute instead of gliding`, async ({ page }) => {
+      await prepare(page);
+      await page.locator('.button--primary').click();
+      await page.clock.runFor(59 * SECOND);
+      expect(await water(page)).toMatchObject({ still: true, top: rgb(0), bottom: rgb(6), glide: null });
+      await page.clock.runFor(SECOND);
+      expect(await water(page)).toMatchObject({ still: true, top: rgb(9), bottom: rgb(21), glide: null });
+    });
+  }
+
+  test('ocean depth stops at 10,935 m', async ({ page }) => {
+    // A session 728 focused minutes in: its last minute down.
+    const session = createSession({ id: '7d3e9a1c-2b4f-4e8a-9c6d-5f1a2b3c4d5e', mode: 'ocean', at: T0 - 728 * MINUTE, timeZone: 'UTC' });
+    await page.goto('/sw-control.json');
+    await page.evaluate((text) => {
+      localStorage.setItem('timer.active', text);
+    }, serializeActiveState({ ...startState(session), presenceAt: T0 - 10 * MINUTE }));
+    await openApp(page, { mode: 'ocean' });
+    expect(await water(page)).toMatchObject({ still: false, top: rgb(10_914), bottom: rgb(10_941), glide: { frames: 2 } });
+    await page.clock.runFor(MINUTE);
+    // At the bottom: still, the deepest water filling the screen below it.
+    expect(await water(page)).toMatchObject({ still: false, height: '100%', top: rgb(10_929), bottom: rgb(10_935), glide: null });
+    await page.clock.runFor(10 * MINUTE);
+    expect(await water(page)).toMatchObject({ height: '100%', top: rgb(10_929), glide: null });
+  });
+
+  test('the ocean palette keeps its text and buttons readable over the water: deep navy near the surface', async ({ page }) => {
+    await openApp(page, { mode: 'ocean' });
+    // Two stacked copies of the time and of each corner icon, the frames' colours and deep navy; one shows.
+    const colours = (): Promise<{ time: string; icon: string; button: string }> =>
+      page.locator('.screen').evaluate((screen) => {
+        const navy = screen.querySelector('.contrast__shade');
+        const dark = navy !== null && getComputedStyle(navy).opacity === '1';
+        const time = screen.querySelector(dark ? '.contrast__shade .time--main' : '.contrast__lit .time--main');
+        const icon = screen.querySelector(dark ? '.icon-button--settings .icon-shade' : '.icon-button--settings > svg');
+        const button = screen.querySelector('.controls button');
+        return { time: time === null ? '' : getComputedStyle(time).color, icon: icon === null ? '' : getComputedStyle(icon).color, button: button === null ? '' : getComputedStyle(button).color };
+      });
+    await settle(page);
+    // At the surface the water is bright: the time and the icons are deep navy (owner, changes 3); the buttons keep theirs.
+    expect(await colours()).toEqual({ time: 'rgb(14, 36, 64)', icon: 'rgb(14, 36, 64)', button: 'rgb(220, 232, 238)' });
+    // Past 4.3 m (17 seconds of focus), the frames' own colours, from the next redraw.
+    await page.locator('.button--primary').click();
+    await page.clock.runFor(MINUTE);
+    await settle(page);
+    expect(await colours()).toMatchObject({ time: 'rgb(220, 232, 238)', icon: 'rgb(158, 195, 214)' });
+  });
 });
 
 /** The life chunks the page fetched (art/ocean/life-<zone>). */

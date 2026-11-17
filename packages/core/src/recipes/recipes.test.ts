@@ -14,7 +14,6 @@ import type { Binding, LayerOf, LayerType, Recipe } from './types.ts';
 import { SchemaValidator } from './validate.ts';
 
 import ANALOG from '../../../../docs/recipes/recipes/analog.json' with { type: 'json' };
-import CALENDAR from '../../../../docs/recipes/recipes/calendar.json' with { type: 'json' };
 import DIGITS from '../../../../docs/recipes/recipes/digits.json' with { type: 'json' };
 import HEIGHT from '../../../../docs/recipes/recipes/height.json' with { type: 'json' };
 import INTERSTELLAR from '../../../../docs/recipes/recipes/interstellar.json' with { type: 'json' };
@@ -23,8 +22,8 @@ import RING from '../../../../docs/recipes/recipes/ring.json' with { type: 'json
 import TIMELINE from '../../../../docs/recipes/recipes/timeline.json' with { type: 'json' };
 import TREE from '../../../../docs/recipes/recipes/tree.json' with { type: 'json' };
 
-const RAW: Readonly<Record<string, unknown>> = { digits: DIGITS, ring: RING, timeline: TIMELINE, analog: ANALOG, 'ocean-depth': OCEAN, height: HEIGHT, tree: TREE, interstellar: INTERSTELLAR, calendar: CALENDAR };
-const BUILT_IN = ['digits', 'ring', 'timeline', 'analog', 'ocean-depth', 'height', 'tree', 'interstellar', 'calendar'] as const;
+const RAW: Readonly<Record<string, unknown>> = { digits: DIGITS, ring: RING, timeline: TIMELINE, analog: ANALOG, 'ocean-depth': OCEAN, height: HEIGHT, tree: TREE, interstellar: INTERSTELLAR };
+const BUILT_IN = ['digits', 'ring', 'timeline', 'analog', 'ocean-depth', 'height', 'tree', 'interstellar'] as const;
 
 function load(id: string): Recipe {
   const result = checkRecipe(RAW[id], { builtIn: true });
@@ -170,13 +169,6 @@ const COVER: Readonly<Record<(typeof BUILT_IN)[number], readonly Feature[]>> = {
     ['bodies fade below 24 px', (r) => first(r, 'landmarks').fadeBelowPx === 24],
     ['Pluto and the termination shock among the circles', (r) => [39.5, 94].every((at) => first(r, 'circles').items.some((item) => item.at === at && item.dashed === true))],
   ],
-  // The perpetual calendar test mode (owner, changes 4), not in the checker: its working complications.
-  calendar: [
-    ['hours, minutes and a sweeping seconds hand on focused time', (r) => first(r, 'dial').cycle === 'hour' && (first(r, 'dial').subdials ?? []).filter((sub) => sub.face === 'hand').map((sub) => sub.cycle).join() === 'half-day,minute'],
-    ['a perpetual calendar a day a focused minute', (r) => r.cycles?.find((cycle) => cycle.calendar === 'gregorian')?.minutes === 1],
-    ['date, weekday, month, leap year and moon', (r) => (first(r, 'dial').subdials ?? []).map((sub) => sub.part ?? '').filter(Boolean).sort().join() === 'date,leap-year,month,moon,weekday'],
-    ['behind the test flag', (r) => r.visibility === 'test'],
-  ],
 };
 
 describe('the features the plan gives each mode (recipe-check.py COVER)', () => {
@@ -186,10 +178,10 @@ describe('the features the plan gives each mode (recipe-check.py COVER)', () => 
         expect(test(load(id))).toBe(true);
       });
   // Round 2.9 adds the tree's "your art": a four-frame season strip slot behind a sprite layer.
-  it.todo('tree: your own season strip instead (round 2.10)');
+  it.todo('tree: your own season strip instead (round 2.11)');
 
-  it('checks the checker’s 49 features, one of them in round 2.10, interstellar’s three from changes 5, and the test mode’s own', () => {
-    expect(Object.entries(COVER).reduce((sum, [id, features]) => sum + (id === 'calendar' ? 0 : features.length), 0) + 1 - 3).toBe(49);
+  it('checks the checker’s 49 features, one of them in round 2.11, and interstellar’s three from changes 5', () => {
+    expect(Object.entries(COVER).reduce((sum, [, features]) => sum + features.length, 0) + 1 - 3).toBe(49);
   });
 });
 

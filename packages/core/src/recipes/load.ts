@@ -10,7 +10,6 @@
 
 import SCHEMA from '../../../../docs/recipes/mode-recipe-1.schema.json' with { type: 'json' };
 import { DIGITS_RECIPE, deepFreeze } from './built-in.ts';
-import { CALENDAR_PLACES } from './calendar.ts';
 import { RECIPE_LIMITS as LIMITS } from './limits.ts';
 import type { Binding, Recipe } from './types.ts';
 import { SchemaValidator } from './validate.ts';
@@ -100,7 +99,6 @@ function semanticProblems(recipe: Recipe): string[] {
   unique('option', (recipe.options ?? []).map((option) => option.id));
   unique('slot', (recipe.slots ?? []).map((slot) => slot.id));
 
-  const calendars = new Set((recipe.cycles ?? []).filter((entry) => entry.calendar !== undefined).map((entry) => entry.id));
   const layer = (where: string, id: string): void => {
     if (!names.layers.has(id)) fail(`${where} names a layer that does not exist: ${id}`);
   };
@@ -172,15 +170,7 @@ function semanticProblems(recipe: Recipe): string[] {
         break;
       case 'dial':
         cycle(where, item.cycle);
-        if (calendars.has(item.cycle)) fail(`${where} turns its main hand by a calendar`);
-        for (const subdial of item.subdials ?? []) {
-          cycle(`${where} subdial`, subdial.cycle);
-          const calendar = calendars.has(subdial.cycle);
-          // A calendar subdial says which part it shows, and only a calendar subdial does.
-          if (calendar !== (subdial.part !== undefined)) fail(`${where} has a subdial whose part and cycle do not agree`);
-          const places = subdial.part === undefined || subdial.part === 'moon' ? undefined : CALENDAR_PLACES[subdial.part];
-          if (subdial.names !== undefined && places !== undefined && subdial.names.length !== places) fail(`${where} names ${String(subdial.names.length)} places where its part has ${String(places)}`);
-        }
+        for (const subdial of item.subdials ?? []) cycle(`${where} subdial`, subdial.cycle);
         break;
       case 'tree':
         cycle(where, item.year);

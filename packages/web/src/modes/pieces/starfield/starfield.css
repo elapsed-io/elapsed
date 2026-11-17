@@ -24,7 +24,7 @@
   }
 }
 
-/* A projected sky (sky.ts): the still view and the strip that turns while paused, crossfading over 2 s. */
+/* A projected sky (sky.ts): the build's images of the still view and of the strip that turns while paused, crossfading over 2 s. */
 @layer mode {
   .sky,
   .sky__turning {
@@ -44,9 +44,22 @@
   .sky__still {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
     transition: opacity var(--sky-crossfade) ease-in-out;
+  }
+
+  /* The faint stars: the build's tile of the frame, repeated from its corner. */
+  .sky__faint {
+    position: absolute;
+    inset: 0;
+    background-repeat: repeat;
+    background-position: 0 0;
+  }
+
+  /* An image the build drew, placed in reference pixels (sky.ts). */
+  .sky__image {
+    position: absolute;
+    display: block;
+    max-width: none;
   }
 
   .sky__turning {

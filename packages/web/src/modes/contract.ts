@@ -87,7 +87,13 @@ export interface DisplayMode {
    * focused time only (interstellar), so the count never stalls while the journey moves.
    */
   readonly replayCounts?: 'session' | 'focus';
+  /**
+   * Mounts the mode into `root`, which the site may keep out of sight until `ready` settles (round 2.10: the
+   * current mode stays on screen while the next one gets ready, then they swap on one frame).
+   */
   mount(root: HTMLElement, context: DisplayContext): void;
+  /** Settles once the mounted mode's first view is whole: its art loaded and its images decoded. */
+  ready?(): Promise<void>;
   /** Called only when the visible value changes. */
   render(view: TimerView): void;
   onEvent?(event: ModeEvent): void;
@@ -101,6 +107,11 @@ export interface DisplayMode {
   replay(surface: ReplaySurface, session: Session, options?: ModeOptions): void | Promise<void>;
   /** The font changed: measure anything that depends on it (the blur-away widths). */
   relayout?(): void;
+  /**
+   * Takes the mode down completely (round 2.10's mount and teardown contract): everything it put in `root`, every
+   * animation, timer, listener and observer it started, and any layer it cached. Nothing it made outlives it, and
+   * the site may mount another mode, or the same one again, into the same root at once.
+   */
   unmount(): void;
 }
 

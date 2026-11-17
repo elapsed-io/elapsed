@@ -5,12 +5,12 @@
  * profile with layer bands and at most two random landmarks per 10 km band.
  */
 
-import { CONFIG } from '../config.ts';
 import { attenuated, hex } from './light.ts';
 import type { LinearRgb } from './light.ts';
 import { pickByBand, spreadBy } from './landmarks.ts';
+import { HEIGHT_CONFIG } from './height-config.ts';
 
-const HEIGHT = CONFIG.modes.height;
+const HEIGHT = HEIGHT_CONFIG;
 const MINUTE = 60_000;
 
 export type AtmosphereLayer = 'troposphere' | 'stratosphere' | 'mesosphere' | 'thermosphere';
