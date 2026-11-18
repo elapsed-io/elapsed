@@ -378,6 +378,19 @@ export class TimerEngine {
     if (!this.#disposed) this.sync();
   }
 
+  /**
+   * A wake for the site's own use (the focus view's quiet spell), on the one shared timer (plan, Performance
+   * requirements > One scheduler). A wake with the same key replaces the last; the engine never looks at it.
+   */
+  wakeAfter(key: string, delayMs: number, run: () => void): void {
+    if (this.#disposed) return;
+    this.#scheduler.set(`site:${key}`, delayMs, run);
+  }
+
+  cancelWake(key: string): void {
+    this.#scheduler.clear(`site:${key}`);
+  }
+
   /** Stops all timers. The engine emits nothing afterwards. */
   dispose(): void {
     this.#disposed = true;

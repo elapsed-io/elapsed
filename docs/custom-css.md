@@ -42,6 +42,7 @@ Set them on `.screen` (or `:scope`). Colours are any CSS colour.
 | `--color-pause` | The pause and cancel buttons |
 | `--color-end` | The end button |
 | `--color-record` | The personal-record marker |
+| `--color-red` | Marks on a dial: the analog seconds dial's 60 (round 2.8) |
 | `--font-family` | The font of the time and the timer view |
 | `--font-stretch` | Its width (`92%` for the default font) |
 | `--font-weight-time` | The time's weight (300) |

@@ -83,8 +83,47 @@
    * whose own blur is fixed and only whose opacity moves (time-display.ts); at rest, the display carries
    * the blur itself. The veil reaches well past the display, so the blur's soft edge is never cut.
    */
+  /*
+   * Inside the time, the one layer order again (styles/main.css): the dialog's frost on the art layer, the
+   * display, then the veil and the dialogs' text, then a notice's pill.
+   */
   .time-stack__body {
+    position: relative;
+    z-index: var(--layer-display);
     transition: opacity var(--motion-fade) var(--ease-standard);
+  }
+
+  /*
+   * Held (paused, a check-in), the dialog sits above the mode's art (plan v11, Design system): what the art draws
+   * behind the display (interstellar's stars and map, ocean life) is blurred at the display's own radius under a
+   * soft-edged frost, never crisp through the 40 % display. It fades with the held state; the blur never animates.
+   */
+  .time-stack__frost {
+    position: absolute;
+    inset: calc(-3 * var(--held-blur));
+    z-index: var(--layer-art);
+    pointer-events: none;
+    opacity: 0;
+    -webkit-backdrop-filter: blur(var(--held-blur));
+    backdrop-filter: blur(var(--held-blur));
+    -webkit-mask-image: radial-gradient(closest-side, black var(--frost-solid), transparent);
+    mask-image: radial-gradient(closest-side, black var(--frost-solid), transparent);
+    /* Unseen, it is not drawn at all: a backdrop filter at no opacity still changes how its neighbours are drawn. */
+    visibility: hidden;
+    transition:
+      opacity var(--motion-fade) var(--ease-standard),
+      visibility 0s linear var(--motion-fade);
+  }
+
+  .time-stack__frost--on {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--motion-fade) var(--ease-standard);
+  }
+
+  /* Only where the mode draws art behind the time: over the theme's plain background there is nothing to blur. */
+  .mode-root:not(:has(> :is(.environment, .mode-art))) .time-stack__frost {
+    display: none;
   }
 
   .time-stack__body--held {
@@ -97,6 +136,7 @@
 
   .time-stack__veil {
     position: absolute;
+    z-index: var(--layer-dialog);
     inset: calc(-3 * var(--held-blur));
     pointer-events: none;
     opacity: 0;
@@ -110,6 +150,7 @@
   /* Text centred over the held display: the pause length, or the check-in line. */
   .overlay {
     position: absolute;
+    z-index: var(--layer-dialog);
     inset: 0;
     display: flex;
     align-items: center;

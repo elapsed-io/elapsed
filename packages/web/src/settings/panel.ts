@@ -16,24 +16,13 @@
  * category first opens (On choice).
  */
 
-import {
-  BRAND,
-  CLOCK_FORMATS,
-  CONFIG,
-  MODE_CHOICES,
-  SECONDS_DISPLAYS,
-  SETTINGS_CATEGORIES,
-  THEME_IDS,
-  declarationOf,
-  normaliseHex,
-  resetCategory,
-  withSetting,
-} from '@stopwatch/core';
-import type { ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId } from '@stopwatch/core';
+import { ANIMATION_SPEEDS, BRAND, CLOCK_FORMATS, CONFIG, declarationOf, FOCUS_HIDES, LEAVE_FULLSCREEN, MODE_CHOICES, normaliseHex, OCEAN_CONFIG, resetCategory, SECONDS_DISPLAYS, SETTINGS_CATEGORIES, SETTINGS_COPY, TEST_MODES, THEME_IDS, TREE_CONFIG, TREE_VIEWS, withSetting } from '@stopwatch/core';
+import type { AnimationSpeed, ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId, TreeView, FocusHide, LeaveFullscreen } from '@stopwatch/core';
 import { parseSettingsFile, settingsFile, settingsFileName } from '@stopwatch/core/settings-file';
 import 'virtual:tokens/settings.css';
 import { html, svg } from '../dom.ts';
 import { formatBytes } from '../fonts/font-file.ts';
+import { listDownloadedModes, removeDownloadedMode } from '../storage/mode-cache.ts';
 import { BUILT_IN_FONTS, OWN_FONT_FAMILY, familyStack, previewFamily } from '../fonts/registry.ts';
 import { iconElement } from '../icons/icon-element.ts';
 import { restartInSafeMode } from '../shell/safe-mode.ts';
@@ -60,7 +49,7 @@ import type * as CssEditorModule from './css-editor.ts';
 import type { CssEditor } from './css-editor.ts';
 import './panel.css';
 
-const copy = BRAND.copy.settings;
+const copy = SETTINGS_COPY;
 
 /** The schema's categories, then advanced, whose custom CSS lives apart from the choices (owner changes, items 5 and 10). */
 type CategoryId = SettingsCategory | 'advanced';
@@ -78,6 +67,8 @@ export interface PanelHost {
   close(): void;
   /** Asks to show system notifications, only when a notification setting is switched on. */
   requestNotifications(): Promise<NotificationAccess>;
+  /** The test-modes switch: offered on this device or not, and on or off (storage/test-modes-store.ts). */
+  readonly testModes: { readonly offered: boolean; readonly on: boolean; setOn(on: boolean): void; shown(chosen: ModeChoice): ModeChoice };
 }
 
 interface Item {
@@ -109,10 +100,16 @@ export class SettingsPanel {
   readonly #back: HTMLButtonElement;
   readonly #empty: HTMLDivElement;
   readonly #phone: MediaQueryList;
+  /** The system's reduced-motion preference, which also turns low power on. */
+  readonly #reducedMotion: MediaQueryList | null;
   readonly #fontTiles = new Map<FontChoice, HTMLButtonElement>();
   #ownTile: HTMLButtonElement | null = null;
+  #modeTiles: ((mode: ModeChoice) => void) | null = null;
+  #renderModes: (() => void) | null = null;
   #fontNote: HTMLDivElement | null = null;
   #storageValue: HTMLDivElement | null = null;
+  #downloadsGroup: HTMLDivElement | null = null;
+  #downloadsList: HTMLDivElement | null = null;
   #blocked: HTMLDivElement | null = null;
   /** Custom CSS: the editor's place, its note, and the editor once its code has loaded. */
   #cssSlot: HTMLDivElement | null = null;
@@ -133,6 +130,7 @@ export class SettingsPanel {
   constructor(doc: Document, host: PanelHost) {
     this.#doc = doc;
     this.#host = host;
+    this.#reducedMotion = doc.defaultView?.matchMedia('(prefers-reduced-motion: reduce)') ?? null;
 
     this.#savedText = doc.createTextNode('');
     this.#saved = html(doc, 'div', { class: 'settings__saved', attrs: { role: 'status' } }, [iconElement(doc, 'check', 'settings__saved-icon'), this.#savedText]);
@@ -242,6 +240,25 @@ export class SettingsPanel {
     this.element.focus({ preventScroll: true });
   }
 
+  /**
+   * Opens the panel on one setting (a notice's "change"): its category open, the setting scrolled into view and
+   * briefly outlined in the accent colour (the "change opens settings on it" frame).
+   */
+  openOn(key: SettingKey, changed = false): void {
+    this.open();
+    // The site has just changed it (a notice's "change"): the panel says so, as after any change.
+    if (changed) this.#flashSaved();
+    const category = declarationOf(key).category;
+    if (this.#open !== category) this.#toggle(category);
+    const setting = this.element.querySelector<HTMLElement>(`[data-setting="${key}"]`);
+    if (setting === null) return;
+    setting.scrollIntoView({ block: 'nearest' });
+    // The outline is a CSS animation that fades itself out (panel.css); taken off and put back, it starts again.
+    for (const outlined of this.element.querySelectorAll('.setting--highlight')) outlined.classList.remove('setting--highlight');
+    setting.getBoundingClientRect();
+    setting.classList.add('setting--highlight');
+  }
+
   /** Tab from the last control goes to the first, and Shift+Tab from the first (or the panel itself) to the last. */
   #trapFocus(event: KeyboardEvent): void {
     const focusable = [...this.element.querySelectorAll<HTMLElement>('button, input, textarea, select, a[href], [tabindex]')].filter(
@@ -345,7 +362,7 @@ export class SettingsPanel {
         if (category.reset !== null) category.reset.hidden = false;
         continue;
       }
-      const whole = BRAND.copy.settings.categories[category.id].name.includes(query);
+      const whole = SETTINGS_COPY.categories[category.id].name.includes(query);
       let matches = false;
       for (const item of category.items) {
         const hit = whole || item.search.includes(query);
@@ -369,6 +386,7 @@ export class SettingsPanel {
       this.#requestPreviews();
       void this.#refreshOwnTile();
     }
+    if (visible('display')) void this.refreshDownloads();
     if (visible('privacy')) void this.#refreshStorage();
     if (visible('advanced')) void this.#loadEditor().catch(() => undefined);
   }
@@ -416,9 +434,9 @@ export class SettingsPanel {
       case 'timer':
         return [this.#seconds(), this.#rangeItem('checkInInterval', copy.checkIn, formatHoursMinutes), this.#rangeItem('pauseLimit', copy.pauseLimit, formatMinutes), this.#shortcuts()];
       case 'display':
-        return [this.#modes()];
+        return [this.#modes(), this.#modeOptions(), this.#focusView(), this.#downloads()];
       case 'appearance':
-        return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat()];
+        return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat(), this.#animationSpeed(), this.#lowPower()];
       case 'notifications':
         return this.#notifications();
       case 'privacy':
@@ -468,19 +486,176 @@ export class SettingsPanel {
 
   #modes(): Item {
     const doc = this.#doc;
-    const grid = html(doc, 'div', { class: 'mode-tiles', attrs: { 'aria-label': copy.mode.label } });
-    const tiles = MODE_CHOICES.map((value) => ({
-      value,
-      element: html(doc, 'button', { class: 'mode-tile' }, [modePreview(doc, value), BRAND.copy.modes[value]]),
-    }));
-    grid.append(...tiles.map((tile) => tile.element));
-    const update = radioGroup<ModeChoice>(tiles, grid, (value) => {
-      this.#set('mode', value);
+    // The tiles re-render when the test-modes switch changes which modes are offered (refreshModes).
+    const box = html(doc, 'div', { class: 'mode-tiles-box' });
+    const render = (): void => {
+      const grid = html(doc, 'div', { class: 'mode-tiles', attrs: { 'aria-label': copy.mode.label } });
+      // A test mode's tile shows only while the test-modes switch is on; while it is off, a test mode chosen shows
+      // digits, and its tile is digits'.
+      const testModes = this.#host.testModes;
+      const chosen = testModes.shown(this.#host.controller.current.mode);
+      const offered = MODE_CHOICES.filter((value) => !TEST_MODES.includes(value) || testModes.on);
+      const tiles = offered.map((value) => ({
+        value,
+        element: html(doc, 'button', { class: 'mode-tile' }, [modePreview(doc, value), BRAND.copy.modes[value]]),
+      }));
+      grid.append(...tiles.map((tile) => tile.element));
+      const update = radioGroup<ModeChoice>(tiles, grid, (value) => {
+        this.#set('mode', value);
+      });
+      update(chosen);
+      this.#modeTiles = update;
+      // While test modes are on, a note under the tiles says why their tiles are there (the Release 2 display frame).
+      box.replaceChildren(grid, ...(testModes.on ? [html(doc, 'div', { class: 'setting__help' }, [copy.testModes.note])] : []));
+    };
+    render();
+    this.#renderModes = render;
+    this.#updates.push((settings) => {
+      this.#modeTiles?.(this.#host.testModes.shown(settings.mode));
+    });
+    return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.mode.label]), [box]), search: searchText(copy.mode.label, ...MODE_CHOICES.map((value) => BRAND.copy.modes[value])) };
+  }
+
+  /** The test-modes switch changed which modes are offered: the tiles show it at once. */
+  refreshModes(): void {
+    this.#renderModes?.();
+  }
+
+  /**
+   * Each mode's own options, in its own box under the tiles, as the Release 2 display frame draws "ocean depth
+   * options" (owner, changes 3: every mode has its own options box); shown only while that mode is chosen (plan,
+   * Interface: "each display mode's options live in the display mode section"): ocean depth's ocean life and
+   * results landmarks, height's own results landmarks, and the tree's view as a segmented control.
+   */
+  #modeOptions(): Item {
+    const doc = this.#doc;
+    const text = copy.resultsLandmarks;
+    const row = (label: string, control: HTMLElement, help: string | null): HTMLDivElement =>
+      html(doc, 'div', { class: 'setting' }, [
+        html(doc, 'div', { class: 'setting__row' }, [html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [label]), control]),
+        ...(help === null ? [] : [html(doc, 'div', { class: 'setting__help' }, [help])]),
+      ]);
+    const box = (mode: ModeChoice, title: string, rows: readonly HTMLElement[]): HTMLDivElement => {
+      const group = html(doc, 'div', { class: 'mode-options', attrs: { role: 'group', 'aria-label': title, 'data-options': mode } }, [html(doc, 'div', { class: 'mode-options__title' }, [title]), ...rows]);
+      this.#updates.push((settings) => {
+        group.hidden = settings.mode !== mode;
+      });
+      return group;
+    };
+    const switchRow = (key: 'oceanLife' | 'resultsLandmarks' | 'heightLandmarks', label: string, help: string): HTMLDivElement => {
+      const control = toggle(doc, label, (on) => {
+        this.#set(key, on);
+      });
+      this.#updates.push((settings) => {
+        control.update(settings[key]);
+      });
+      return row(label, control.element, help);
+    };
+    const views = TREE_VIEWS.map((value) => ({ value, label: copy.treeView.options[value] }));
+    const view = segmented<TreeView>(doc, copy.treeView.label, views, (value) => {
+      this.#set('treeView', value);
     });
     this.#updates.push((settings) => {
-      update(settings.mode);
+      view.update(settings.treeView);
     });
-    return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.mode.label]), [grid]), search: searchText(copy.mode.label, ...MODE_CHOICES.map((value) => BRAND.copy.modes[value])) };
+    const boxes = [
+      box('ocean', copy.modeOptions.ocean, [switchRow('oceanLife', copy.oceanLife.label, copy.oceanLife.help), switchRow('resultsLandmarks', text.label, text.help.ocean)]),
+      box('height', copy.modeOptions.height, [switchRow('heightLandmarks', text.label, text.help.height)]),
+      box('tree', copy.modeOptions.tree, [row(copy.treeView.label, view.element, null)]),
+    ];
+    return {
+      element: html(doc, 'div', { class: 'settings__item-contents' }, boxes),
+      search: searchText(
+        copy.modeOptions.ocean,
+        copy.oceanLife.label,
+        copy.oceanLife.help,
+        text.label,
+        text.help.ocean,
+        copy.modeOptions.height,
+        text.help.height,
+        copy.modeOptions.tree,
+        copy.treeView.label,
+        ...views.map((option) => option.label),
+      ),
+    };
+  }
+
+  /**
+   * The focus view group (the Release 2 display frame): hide controls while focusing, fullscreen when a session
+   * starts, and when to leave fullscreen, in a box like the modes' options. Where the page has no fullscreen
+   * (iPhones), both fullscreen choices are hidden.
+   */
+  #focusView(): Item {
+    const doc = this.#doc;
+    const text = copy.focusView;
+    const row = (label: string, control: HTMLElement, help: string | null, key: SettingKey): HTMLDivElement =>
+      html(doc, 'div', { class: 'setting', attrs: { 'data-setting': key } }, [
+        html(doc, 'div', { class: 'setting__row' }, [html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [label]), control]),
+        ...(help === null ? [] : [html(doc, 'div', { class: 'setting__help' }, [help])]),
+      ]);
+    const hides = FOCUS_HIDES.map((value) => ({ value, label: text.hide.options[value] }));
+    const hide = segmented<FocusHide>(doc, text.hide.label, hides, (value) => {
+      this.#set('focusHide', value);
+    });
+    const fullscreen = toggle(doc, text.fullscreen.label, (on) => {
+      this.#set('fullscreenOnStart', on);
+    });
+    const leaves = LEAVE_FULLSCREEN.map((value) => ({ value, label: text.leave.options[value] }));
+    const leave = segmented<LeaveFullscreen>(doc, text.leave.label, leaves, (value) => {
+      this.#set('leaveFullscreen', value);
+    });
+    this.#updates.push((settings) => {
+      hide.update(settings.focusHide);
+      fullscreen.update(settings.fullscreenOnStart);
+      leave.update(settings.leaveFullscreen);
+    });
+    const fullscreenRows = [row(text.fullscreen.label, fullscreen.element, text.fullscreen.help, 'fullscreenOnStart'), row(text.leave.label, leave.element, null, 'leaveFullscreen')];
+    // iPhones have no page fullscreen.
+    const available = doc.fullscreenEnabled && typeof doc.documentElement.requestFullscreen === 'function';
+    for (const element of fullscreenRows) element.hidden = !available;
+    const group = html(doc, 'div', { class: 'mode-options', attrs: { role: 'group', 'aria-label': text.title } }, [
+      html(doc, 'div', { class: 'mode-options__title' }, [text.title]),
+      row(text.hide.label, hide.element, text.hide.help, 'focusHide'),
+      ...fullscreenRows,
+    ]);
+    return {
+      element: html(doc, 'div', { class: 'settings__item-contents' }, [group]),
+      search: searchText(text.title, text.hide.label, text.hide.help, ...hides.map((option) => option.label), ...(available ? [text.fullscreen.label, text.fullscreen.help, text.leave.label, ...leaves.map((option) => option.label)] : [])),
+    };
+  }
+
+  /**
+   * Downloaded modes, as the Release 2 display frame draws them: each with its size and a remove button.
+   * The item is a wrapper laid out as its contents, so the list takes no room while nothing is downloaded.
+   */
+  #downloads(): Item {
+    const doc = this.#doc;
+    const text = copy.downloadedModes;
+    this.#downloadsList = html(doc, 'div', { class: 'downloads' });
+    this.#downloadsGroup = settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [text.label]), [this.#downloadsList, html(doc, 'div', { class: 'setting__help' }, [text.help])]);
+    this.#downloadsGroup.hidden = true;
+    return { element: html(doc, 'div', { class: 'settings__item-contents' }, [this.#downloadsGroup]), search: searchText(text.label, text.help) };
+  }
+
+  /** Lists the modes on this device again (a mode was just cached, or removed). */
+  async refreshDownloads(): Promise<void> {
+    const view = this.#doc.defaultView;
+    const list = this.#downloadsList;
+    const group = this.#downloadsGroup;
+    if (view === null || list === null || group === null) return;
+    const modes = await listDownloadedModes(view, MODE_CHOICES);
+    const doc = this.#doc;
+    list.replaceChildren(
+      ...modes.map((mode) => {
+        const name = (MODE_CHOICES as readonly string[]).includes(mode.id) ? BRAND.copy.modes[mode.id as ModeChoice] : mode.id;
+        const remove = html(doc, 'button', { class: 'downloads__remove', attrs: { type: 'button', 'aria-label': copy.downloadedModes.removeName.replace('{mode}', name) } }, [copy.downloadedModes.remove]);
+        remove.addEventListener('click', () => {
+          void removeDownloadedMode(view, mode.id).then(() => this.refreshDownloads());
+        });
+        return html(doc, 'div', { class: 'downloads__row' }, [html(doc, 'div', {}, [name]), html(doc, 'div', { class: 'downloads__end' }, [html(doc, 'div', { class: 'setting__value' }, [formatBytes(mode.bytes)]), remove])]);
+      }),
+    );
+    group.hidden = modes.length === 0;
   }
 
   // ---- Appearance --------------------------------------------------------
@@ -658,6 +833,41 @@ export class SettingsPanel {
     });
     return { element: settingRow(this.#doc, label(this.#doc, copy.clockFormat.label), control.element, null), search: searchText(copy.clockFormat.label, ...options.map((option) => option.label)) };
   }
+  #animationSpeed(): Item {
+    const text = copy.animationSpeed;
+    const options = ANIMATION_SPEEDS.map((value) => ({ value, label: text.options[value] }));
+    const control = segmented<AnimationSpeed>(this.#doc, text.label, options, (value) => {
+      this.#set('animationSpeed', value);
+    });
+    this.#updates.push((settings) => {
+      control.update(settings.animationSpeed);
+    });
+    return { element: settingRow(this.#doc, label(this.#doc, text.label), control.element, text.help), search: searchText(text.label, text.help, ...options.map((option) => option.label)) };
+  }
+
+  /**
+   * Low power: on by hand, and also whenever the system asks for reduced motion (plan, Loading and
+   * performance). While the system asks, the switch shows on and cannot be turned off here.
+   */
+  #lowPower(): Item {
+    const doc = this.#doc;
+    const text = copy.lowPower;
+    const control = toggle(doc, text.label, (on) => {
+      if (this.#reducedMotion?.matches === true) return;
+      this.#set('lowPower', on);
+    });
+    const show = (settings: Settings): void => {
+      const system = this.#reducedMotion?.matches === true;
+      control.update(settings.lowPower || system);
+      control.element.toggleAttribute('aria-disabled', system);
+    };
+    this.#updates.push(show);
+    this.#reducedMotion?.addEventListener('change', () => {
+      show(this.#host.controller.current);
+    });
+    return { element: settingRow(doc, html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [text.label]), control.element, text.help), search: searchText(text.label, text.help) };
+  }
+
 
   // ---- Notifications -----------------------------------------------------
 
@@ -779,6 +989,18 @@ export class SettingsPanel {
     );
     const fileItem = html(doc, 'div', { class: 'setting-confirm' }, [fileRow, this.#importConfirm.element]);
 
+    // The test-modes switch: offered only once the address asked for it on this device.
+    const testModes = this.#host.testModes;
+    const testItems: Item[] = [];
+    if (testModes.offered) {
+      const testSwitch = toggle(doc, copy.testModes.label, (on) => {
+        testModes.setOn(on);
+        testSwitch.update(testModes.on);
+      });
+      testSwitch.update(testModes.on);
+      testItems.push({ element: settingRow(doc, html(doc, 'div', { class: 'setting__label' }, [copy.testModes.label]), testSwitch.element, copy.testModes.help), search: searchText(copy.testModes.label, copy.testModes.help) });
+    }
+
     const resetAll = confirmItem(doc, { ...copy.resetAll, cancel: copy.cancel, help: null }, () => {
       this.#host.controller.resetAll();
       this.#flashSaved();
@@ -788,6 +1010,7 @@ export class SettingsPanel {
       { element: css, search: searchText(copy.customCss.label, copy.customCss.help) },
       { element: safeItem, search: searchText(copy.safeMode.label, copy.safeMode.action, copy.safeMode.help) },
       { element: fileItem, search: searchText(copy.settingsFile.label, copy.settingsFile.export, copy.settingsFile.import, copy.settingsFile.help) },
+      ...testItems,
       { element: resetAll, search: searchText(copy.resetAll.label) },
     ];
   }
@@ -911,6 +1134,22 @@ const RING_TILE_TAIL: readonly (readonly [string, string])[] = [
   ['M39.05 20.69 A12 12 0 0 1 38.29 22.18', '1.00'],
 ];
 
+/** The analog tile's twelve ticks (the Release 2 display frame's own numbers). */
+const ANALOG_TILE_TICKS: readonly (readonly [number, number, number, number])[] = [
+  [28.0, 5.5, 28.0, 4.0],
+  [33.3, 6.9, 34.0, 5.6],
+  [37.1, 10.8, 38.4, 10.0],
+  [38.5, 16.0, 40.0, 16.0],
+  [37.1, 21.3, 38.4, 22.0],
+  [33.2, 25.1, 34.0, 26.4],
+  [28.0, 26.5, 28.0, 28.0],
+  [22.7, 25.1, 22.0, 26.4],
+  [18.9, 21.2, 17.6, 22.0],
+  [17.5, 16.0, 16.0, 16.0],
+  [18.9, 10.7, 17.6, 10.0],
+  [22.8, 6.9, 22.0, 5.6],
+];
+
 function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
   const { previewWidthPx: width, previewHeightPx: height } = CONFIG.design.settings.tiles;
   const root = svg(doc, 'svg', { class: 'mode-tile__preview', width, height, viewBox: `0 0 ${String(width)} ${String(height)}`, fill: 'none', 'stroke-linecap': 'round', 'aria-hidden': 'true' });
@@ -923,6 +1162,55 @@ function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
       svg(doc, 'circle', { class: 'mode-tile__faint', cx: 28, cy: 16, r: 12, 'stroke-width': 3 }),
       ...RING_TILE_TAIL.map(([d, opacity]) => svg(doc, 'path', { class: 'mode-tile__accent', d, 'stroke-width': 3, 'stroke-opacity': opacity, 'stroke-linecap': 'butt' })),
       svg(doc, 'circle', { class: 'mode-tile__head', cx: 38.39, cy: 22, r: 2.2 }),
+    );
+  } else if (mode === 'analog') {
+    // The Release 2 display frame's analog tile: a muted dial with twelve ticks, an accent hand and pin.
+    root.append(
+      svg(doc, 'circle', { class: 'mode-tile__muted', cx: 28, cy: 16, r: 12, 'stroke-width': 1.5 }),
+      ...ANALOG_TILE_TICKS.map(([x1, y1, x2, y2]) => svg(doc, 'line', { class: 'mode-tile__muted', x1, y1, x2, y2, 'stroke-width': 1.2 })),
+      svg(doc, 'line', { class: 'mode-tile__accent', x1: 28, y1: 16, x2: 35, y2: 10, 'stroke-width': 2 }),
+      svg(doc, 'circle', { class: 'mode-tile__head', cx: 28, cy: 16, r: 1.6 }),
+    );
+  } else if (mode === 'ocean') {
+    // The Release 2 display frame's ocean depth tile: water darkening downward, a wave and two bubbles, in
+    // the frame's own colours whatever the theme.
+    const { top, bottom, wave } = OCEAN_CONFIG.tile;
+    const id = uniqueId('ocean-tile');
+    root.append(
+      svg(doc, 'defs', {}, [
+        svg(doc, 'linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, [svg(doc, 'stop', { offset: 0, 'stop-color': top }), svg(doc, 'stop', { offset: 1, 'stop-color': bottom })]),
+      ]),
+      svg(doc, 'rect', { x: 10, y: 6, width: 36, height: 22, rx: 4, fill: `url(#${id})` }),
+      svg(doc, 'path', { d: 'M10 10 q4.5 -3 9 0 t9 0 t9 0 t9 0', stroke: wave, 'stroke-width': 1.5 }),
+      svg(doc, 'circle', { cx: 24, cy: 20, r: 1.4, fill: wave }),
+      svg(doc, 'circle', { cx: 30, cy: 23, r: 1, fill: wave }),
+    );
+  } else if (mode === 'height') {
+    // The Release 2 display frame's height tile: a muted mountain, its summit in the text colour, an accent star.
+    root.append(
+      svg(doc, 'path', { class: 'mode-tile__muted', d: 'M8 27 L22 9 L29 18 L34 13 L48 27 Z', 'stroke-width': 1.5, 'stroke-linejoin': 'round' }),
+      svg(doc, 'path', { class: 'mode-tile__text', d: 'M19.5 12.2 L22 9 L24.6 12.3', 'stroke-width': 1.5 }),
+      svg(doc, 'circle', { class: 'mode-tile__head', cx: 42, cy: 7, r: 1.3 }),
+    );
+  } else if (mode === 'tree') {
+    // The Release 2 display frame's tree tile: a trunk and a summer crown in the tree's own colours, on muted ground.
+    const { trunk } = TREE_CONFIG.colours;
+    const crown = TREE_CONFIG.leaves[2];
+    root.append(
+      svg(doc, 'line', { x1: 28, y1: 27, x2: 28, y2: 16, stroke: trunk, 'stroke-width': 2.5 }),
+      svg(doc, 'circle', { cx: 28, cy: 12, r: 7, fill: crown }),
+      svg(doc, 'circle', { cx: 22.5, cy: 15, r: 4.5, fill: crown }),
+      svg(doc, 'circle', { cx: 33.5, cy: 15, r: 4.5, fill: crown }),
+      svg(doc, 'line', { class: 'mode-tile__muted', x1: 16, y1: 27.5, x2: 40, y2: 27.5, 'stroke-width': 1.5 }),
+    );
+  } else if (mode === 'interstellar') {
+    // The Release 2 display frame's interstellar tile: an accent sun in a muted orbit, a planet and two stars.
+    root.append(
+      svg(doc, 'circle', { class: 'mode-tile__head', cx: 28, cy: 16, r: 3 }),
+      svg(doc, 'ellipse', { class: 'mode-tile__muted', cx: 28, cy: 16, rx: 16, ry: 8, 'stroke-width': 1.2 }),
+      svg(doc, 'circle', { class: 'mode-tile__dot', cx: 43, cy: 18.5, r: 1.6 }),
+      svg(doc, 'circle', { class: 'mode-tile__dot', cx: 12, cy: 6, r: 0.9 }),
+      svg(doc, 'circle', { class: 'mode-tile__dot', cx: 46, cy: 5, r: 0.7 }),
     );
   } else {
     root.append(

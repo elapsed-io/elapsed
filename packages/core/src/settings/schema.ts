@@ -11,6 +11,14 @@
  *
  * Release 1 categories (owner changes, item 5): timer, display, appearance,
  * notifications, privacy and data. Advanced arrives in round 7.
+ *
+ * Schema 2 (Release 2, round 2.1) adds animation speed and low power, and the
+ * mode options (round 2.3 on: results landmarks for ocean depth and height; 2.4: ocean life). Older
+ * settings migrate field by field: what they lack takes its default.
+ *
+ * Schema 3 (round 2.11): "leave fullscreen" defaults to never, so leaving fullscreen never delays the results.
+ * Stored settings hold every field, so the only sign a person never changed it is that it still holds the old
+ * default (end): an older record with end reads as never; any other choice is kept (owner, round 2.11).
  */
 
 import { CONFIG } from '../config.ts';
@@ -18,14 +26,42 @@ import { SECONDS_DISPLAYS } from '../engine/view.ts';
 import type { SecondsDisplay } from '../engine/view.ts';
 import type { RuleSettings } from '../session/rules.ts';
 
-export const SETTINGS_SCHEMA = 1;
+export const SETTINGS_SCHEMA = 3;
+
+/** The default "leave fullscreen" had before schema 3, which an older record holding it never chose. */
+const LEAVE_FULLSCREEN_BEFORE_3 = 'end';
 
 export const SETTINGS_CATEGORIES = ['timer', 'display', 'appearance', 'notifications', 'privacy'] as const;
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
-/** The Release 1 display modes. */
-export const MODE_CHOICES = ['digits', 'ring', 'timeline'] as const;
+/** The display modes, in the tiles' order (Release 2 adds each in its round: analog in 2.2). */
+export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'interstellar'] as const;
+/**
+ * Test modes: early modes that may change or disappear, in testing until their graphics are agreed and they meet
+ * the performance budgets (plan-release-2, rounds 2.9 and 2.10). Their tiles show only while the test-modes switch
+ * is on (offered once the site has been opened with `?test=modes` or `?test=interstellar`).
+ */
+export const TEST_MODES: readonly (typeof MODE_CHOICES)[number][] = ['ocean', 'height', 'tree', 'interstellar'];
+
+/**
+ * The mode shown for a chosen one: a test mode chosen while the test-modes switch is off shows digits, the choice
+ * itself kept for when testing ends (owner, 2026-11-17).
+ */
+export function shownMode(chosen: (typeof MODE_CHOICES)[number], testModesOn: boolean): (typeof MODE_CHOICES)[number] {
+  return TEST_MODES.includes(chosen) && !testModesOn ? 'digits' : chosen;
+}
 export type ModeChoice = (typeof MODE_CHOICES)[number];
+
+/** Focus view (plan, Interface): how long a running session waits untouched before the controls step aside. */
+export const FOCUS_HIDES = ['3s', '10s', 'never'] as const;
+export type FocusHide = (typeof FOCUS_HIDES)[number];
+/** When a session started in fullscreen leaves it (plan, Interface: "leave fullscreen", on end by default). */
+export const LEAVE_FULLSCREEN = ['never', 'pause-or-end', 'end'] as const;
+export type LeaveFullscreen = (typeof LEAVE_FULLSCREEN)[number];
+
+/** The tree's views (a mode option; plan, Settings catalog: "tree view (side or isometric)", side by default). */
+export const TREE_VIEWS = ['side', 'isometric'] as const;
+export type TreeView = (typeof TREE_VIEWS)[number];
 
 /** The preset themes, in the frames' order (Design system > Color). */
 export const THEME_IDS = ['graphite', 'paper', 'deep-sea', 'forest', 'oxblood', 'plum', 'lilac', 'sky', 'sand', 'mint'] as const;
@@ -54,6 +90,10 @@ export type BuiltInFont = Exclude<FontChoice, 'own'>;
 export const CLOCK_FORMATS = ['12h', '24h', 'region'] as const;
 export type ClockFormat = (typeof CLOCK_FORMATS)[number];
 
+/** Animation speed (Release 2): multiplies every interface animation's duration (CONFIG.motion.speeds). */
+export const ANIMATION_SPEEDS = ['slower', 'normal', 'faster'] as const;
+export type AnimationSpeed = (typeof ANIMATION_SPEEDS)[number];
+
 /** A colour as #rrggbb in lowercase. */
 export type HexColor = `#${string}`;
 
@@ -71,6 +111,20 @@ export interface Settings {
   readonly pauseLimit: number;
   // Display
   readonly mode: ModeChoice;
+  /** Mode option (ocean depth): sea life drifts in while a session is paused. */
+  readonly oceanLife: boolean;
+  /** Mode option (ocean depth): random landmarks on the results' dive profile. */
+  readonly resultsLandmarks: boolean;
+  /** Mode option (height, its own options box; owner, changes 3): random landmarks on the results' climb profile. */
+  readonly heightLandmarks: boolean;
+  /** Focus view: hide the controls after this long untouched while a session runs. */
+  readonly focusHide: FocusHide;
+  /** Focus view: go fullscreen when a session starts. */
+  readonly fullscreenOnStart: boolean;
+  /** Focus view: when to leave fullscreen. */
+  readonly leaveFullscreen: LeaveFullscreen;
+  /** Mode option (tree): the side view or the isometric one. */
+  readonly treeView: TreeView;
   // Appearance
   readonly theme: ThemeId;
   /** The theme's colours when the user has changed them; null means the preset's own. */
@@ -78,6 +132,9 @@ export interface Settings {
   readonly font: FontChoice;
   readonly timeSize: number;
   readonly clockFormat: ClockFormat;
+  readonly animationSpeed: AnimationSpeed;
+  /** Freezes ambient animation and shows only the time; the system's reduced-motion preference also turns it on. */
+  readonly lowPower: boolean;
   // Notifications
   readonly notifyCheckIns: boolean;
   readonly notifyPauseLimit: boolean;
@@ -97,7 +154,7 @@ export type SettingTarget =
   | { readonly css: `--${string}` }
   | { readonly theme: 'preset' | 'colors' }
   | { readonly engine: 'secondsDisplay' | 'checkInInterval' | 'pauseLimit' }
-  | { readonly site: 'mode' | 'clockFormat' | 'notifications' | 'usageCounts' | 'crashReports' };
+  | { readonly site: 'mode' | 'modeOptions' | 'focusView' | 'clockFormat' | 'lowPower' | 'notifications' | 'usageCounts' | 'crashReports' };
 
 interface Declared<K extends SettingKey> {
   readonly key: K;
@@ -131,11 +188,20 @@ export type SettingDeclaration =
   | RangeSetting<'checkInInterval'>
   | RangeSetting<'pauseLimit'>
   | ChoiceSetting<'mode'>
+  | SwitchSetting<'oceanLife'>
+  | SwitchSetting<'resultsLandmarks'>
+  | SwitchSetting<'heightLandmarks'>
+  | ChoiceSetting<'focusHide'>
+  | SwitchSetting<'fullscreenOnStart'>
+  | ChoiceSetting<'leaveFullscreen'>
+  | ChoiceSetting<'treeView'>
   | ChoiceSetting<'theme'>
   | ColorsSetting<'colors'>
   | ChoiceSetting<'font'>
   | RangeSetting<'timeSize'>
   | ChoiceSetting<'clockFormat'>
+  | ChoiceSetting<'animationSpeed'>
+  | SwitchSetting<'lowPower'>
   | SwitchSetting<'notifyCheckIns'>
   | SwitchSetting<'notifyPauseLimit'>
   | SwitchSetting<'usageCounts'>
@@ -168,6 +234,13 @@ export const SETTINGS: readonly SettingDeclaration[] = [
     target: { engine: 'pauseLimit' },
   },
   { key: 'mode', kind: 'choice', category: 'display', options: MODE_CHOICES, default: 'digits', target: { site: 'mode' } },
+  { key: 'oceanLife', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
+  { key: 'resultsLandmarks', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
+  { key: 'heightLandmarks', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
+  { key: 'focusHide', kind: 'choice', category: 'display', options: FOCUS_HIDES, default: '3s', target: { site: 'focusView' } },
+  { key: 'fullscreenOnStart', kind: 'switch', category: 'display', default: false, target: { site: 'focusView' } },
+  { key: 'leaveFullscreen', kind: 'choice', category: 'display', options: LEAVE_FULLSCREEN, default: 'never', target: { site: 'focusView' } },
+  { key: 'treeView', kind: 'choice', category: 'display', options: TREE_VIEWS, default: 'side', target: { site: 'modeOptions' } },
   { key: 'theme', kind: 'choice', category: 'appearance', options: THEME_IDS, default: 'graphite', target: { theme: 'preset' } },
   { key: 'colors', kind: 'colors', category: 'appearance', default: null, target: { theme: 'colors' } },
   { key: 'font', kind: 'choice', category: 'appearance', options: FONT_CHOICES, default: 'archivo', target: { css: '--font-family' } },
@@ -182,6 +255,8 @@ export const SETTINGS: readonly SettingDeclaration[] = [
     target: { css: '--time-size-setting' },
   },
   { key: 'clockFormat', kind: 'choice', category: 'appearance', options: CLOCK_FORMATS, default: 'region', target: { site: 'clockFormat' } },
+  { key: 'animationSpeed', kind: 'choice', category: 'appearance', options: ANIMATION_SPEEDS, default: 'normal', target: { css: '--motion-scale' } },
+  { key: 'lowPower', kind: 'switch', category: 'appearance', default: false, target: { site: 'lowPower' } },
   { key: 'notifyCheckIns', kind: 'switch', category: 'notifications', default: false, target: { site: 'notifications' } },
   { key: 'notifyPauseLimit', kind: 'switch', category: 'notifications', default: false, target: { site: 'notifications' } },
   { key: 'usageCounts', kind: 'switch', category: 'privacy', default: true, target: { site: 'usageCounts' } },
@@ -258,8 +333,15 @@ export function migrateSettings(raw: unknown): Settings {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return defaults;
   const record = raw as Record<string, unknown>;
   const result: Record<string, unknown> = { schema: SETTINGS_SCHEMA };
+  const before3 = typeof record['schema'] !== 'number' || record['schema'] < 3;
   for (const setting of SETTINGS) {
-    const value = record[setting.key];
+    // Height's landmarks had ocean depth's switch until each mode had its own options box: kept as it was.
+    const value = setting.key === 'heightLandmarks' && !(setting.key in record) ? record['resultsLandmarks'] : record[setting.key];
+    // Leave fullscreen left at its old default reads as the new one (schema 3).
+    if (setting.key === 'leaveFullscreen' && before3 && value === LEAVE_FULLSCREEN_BEFORE_3) {
+      result[setting.key] = defaults[setting.key];
+      continue;
+    }
     if (!isValidValue(setting, value)) {
       result[setting.key] = defaults[setting.key];
     } else if (setting.kind === 'colors' && value !== null) {

@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { parseHex } from './color.ts';
+import { contrastRatio, mix, parseHex } from './color.ts';
+import { ANALOG_CONFIG } from '@stopwatch/core';
 import { deriveTheme, isLightBackground, themeCustomProperties } from './derive.ts';
 import { getPreset, PRESETS } from './presets.ts';
+
+describe('the dial red (round 2.8)', () => {
+  it('is the plan\'s red where it meets 4.5:1 on the small dial (graphite, paper), and meets 4.5:1 in every preset', () => {
+    expect(deriveTheme(getPreset('graphite')).red).toBe('#e5574b');
+    expect(deriveTheme(getPreset('paper')).red).toBe('#b8332a');
+    for (const preset of PRESETS) {
+      const theme = deriveTheme(preset);
+      const face = mix(theme.track, theme.background, ANALOG_CONFIG.subdialFill);
+      expect(contrastRatio(theme.red, face), preset.id).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
 
 describe('deriveTheme', () => {
   // Computed by the design canvas's pal(): muted steps back from 45 % until it has 4.5:1 against the background and the panel.
@@ -37,6 +50,7 @@ describe('deriveTheme', () => {
       pause: '#3a3b3b',
       end: '#a8403d',
       recordMarker: '#8c7a52',
+      red: '#e5574b',
     });
   });
 
@@ -49,6 +63,7 @@ describe('deriveTheme', () => {
       pause: '#cac9c8',
       end: '#e28a86',
       recordMarker: '#8a6d2e',
+      red: '#b8332a',
     });
   });
 
@@ -86,6 +101,7 @@ describe('themeCustomProperties', () => {
       '--color-pause',
       '--color-end',
       '--color-record',
+      '--color-red',
       '--color-scheme',
     ]);
     expect(properties['--color-muted']).toBe('#8a8a87');

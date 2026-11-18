@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { BRAND } from '../brand.ts';
 import { CONFIG } from '../config.ts';
 import {
+  ANIMATION_SPEEDS,
   FONT_CHOICES,
   MODE_CHOICES,
   SETTINGS,
   SETTINGS_CATEGORIES,
+  SETTINGS_SCHEMA,
   THEME_IDS,
+  declarationOf,
   defaultSettings,
   isValidValue,
   migrateSettings,
@@ -52,8 +55,8 @@ describe('settings schema', () => {
     expect(range('timeSize')).toMatchObject({ min: 50, max: 150 });
   });
 
-  it('offers the Release 1 modes, the ten presets, and 13 built-in fonts plus your own', () => {
-    expect(MODE_CHOICES).toEqual(['digits', 'ring', 'timeline']);
+  it('offers the modes built so far, the ten presets, and 13 built-in fonts plus your own', () => {
+    expect(MODE_CHOICES).toEqual(['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'interstellar']);
     expect(THEME_IDS).toEqual(Object.keys(BRAND.copy.themes));
     expect(FONT_CHOICES).toHaveLength(14);
     expect(FONT_CHOICES).not.toContain('lexend');
@@ -66,7 +69,7 @@ describe('settings schema', () => {
       seconds: 'never',
       checkInInterval: 31 * MINUTE,
       pauseLimit: 10 * MINUTE,
-      mode: 'ocean',
+      mode: 'sundial',
       theme: 'plum',
       colors: { background: '#000000', foreground: '#ffffff', accent: 'red' },
       font: 'inter',
@@ -91,6 +94,34 @@ describe('settings schema', () => {
     });
     expect(settings).not.toHaveProperty('extra');
     expect(Object.isFrozen(settings)).toBe(true);
+  });
+
+  it('migrates leave fullscreen to never where it was never changed (round 2.11): an older record at the old default, end', () => {
+    expect(defaultSettings().leaveFullscreen).toBe('never');
+    expect(migrateSettings({ schema: 2, leaveFullscreen: 'end', theme: 'sky' })).toMatchObject({ schema: 3, leaveFullscreen: 'never', theme: 'sky' });
+    expect(migrateSettings({ schema: 1, leaveFullscreen: 'end' }).leaveFullscreen).toBe('never');
+    // A choice the person made is kept.
+    expect(migrateSettings({ schema: 2, leaveFullscreen: 'pause-or-end' }).leaveFullscreen).toBe('pause-or-end');
+    expect(migrateSettings({ schema: 2, leaveFullscreen: 'never' }).leaveFullscreen).toBe('never');
+    // From schema 3 on, end is a choice like any other, kept as stored.
+    expect(migrateSettings({ schema: 3, leaveFullscreen: 'end' }).leaveFullscreen).toBe('end');
+    expect(migrateSettings(JSON.parse(serializeSettings(migrateSettings({ schema: 3, leaveFullscreen: 'end' })))).leaveFullscreen).toBe('end');
+  });
+
+  it('migrates schema 1 settings to schema 2: every choice kept, the new ones at their defaults', () => {
+    const stored = { schema: 1, seconds: 'always', mode: 'ring', theme: 'sky', timeSize: 120, clockFormat: '12h', usageCounts: false };
+    const settings = migrateSettings(stored);
+    expect(settings).toMatchObject({ ...stored, schema: SETTINGS_SCHEMA, animationSpeed: 'normal', lowPower: false });
+    expect(SETTINGS_SCHEMA).toBe(3);
+    expect(JSON.parse(serializeSettings(settings))).toMatchObject({ schema: 3, animationSpeed: 'normal', lowPower: false });
+  });
+
+  it('adds animation speed (slower, normal, faster) and low power to appearance', () => {
+    expect(declarationOf('animationSpeed')).toMatchObject({ category: 'appearance', options: ['slower', 'normal', 'faster'], default: 'normal', target: { css: '--motion-scale' } });
+    expect(declarationOf('lowPower')).toMatchObject({ category: 'appearance', kind: 'switch', default: false });
+    expect(Object.keys(CONFIG.motion.speeds)).toEqual([...ANIMATION_SPEEDS]);
+    expect(CONFIG.motion.speeds.normal).toBe(CONFIG.motion.durationScale);
+    expect(CONFIG.motion.speeds.slower * CONFIG.motion.speeds.faster).toBeCloseTo(1);
   });
 
   it.each([null, 'text', 42, [], { colors: { background: '#000', foreground: '#fff', accent: '#0f0', more: 1 } }])(

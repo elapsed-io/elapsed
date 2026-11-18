@@ -1,6 +1,6 @@
 /** Starting, pausing, resuming and ending, by pointer and keyboard, with the tab title. */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { BRAND } from '@stopwatch/core';
 import { MINUTE, SECOND, TIMER_END, endThroughCountdown, openApp, settle, untilEndNowAccepts } from './helpers.ts';

@@ -1,0 +1,95 @@
+/*
+ * Image particles that drift in (particles.ts, `arrive: drift-in`): ocean life arriving at random, schools and single
+ * fish at three distances and columns of bubbles, each arrival moved by one animation of opacity and transform; the
+ * fish wiggle and bob and the bubbles sway by the frame's own keyframes (generated with the mode's tokens).
+ */
+@layer mode {
+  .particles {
+    position: absolute;
+    inset: 0;
+  }
+
+  .life {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+  }
+
+  .life--in {
+    opacity: 1;
+  }
+
+  /* One arrival: placed at its share of the screen, moved and faded by its one animation (particles.ts). */
+  .life__arrival {
+    position: absolute;
+    left: calc(var(--arrival-x) * 100%);
+    top: calc(var(--arrival-y) * 100%);
+    width: 0;
+    height: 0;
+    opacity: 0;
+  }
+
+  .life__member {
+    position: absolute;
+    left: var(--member-x);
+    top: var(--member-y);
+  }
+
+
+
+  .life__wiggle {
+    animation: life-sine-x var(--sine-period) linear var(--sine-delay) infinite;
+  }
+
+  .life__bob {
+    animation: life-sine-y var(--sine-period) linear var(--sine-delay) infinite;
+  }
+
+
+  .life__fish {
+    display: block;
+    overflow: visible;
+  }
+
+  /* Swimming right: the fish turned about its nose. */
+  .life__fish--right {
+    transform: scaleX(-1);
+    transform-origin: left center;
+  }
+
+
+  /* An arrival's fish face their way about their own middle. */
+  .life__member .life__fish--right {
+    transform-origin: center;
+  }
+
+  .life__ball {
+    margin-left: calc(-1 * var(--bubble-r));
+    margin-top: calc(-1 * var(--bubble-r));
+  }
+
+  .life__bubble {
+    display: block;
+    overflow: visible;
+  }
+
+  .life [data-tone="life-far"] {
+    fill: var(--life-far);
+  }
+
+  .life [data-tone="life-mid"] {
+    fill: var(--life-mid);
+  }
+
+  .life [data-tone="life-near"] {
+    fill: var(--life-near);
+  }
+
+  .life [data-tone="life-bubble"] {
+    fill: none;
+    stroke: var(--life-bubble);
+    stroke-width: var(--life-bubble-stroke);
+    vector-effect: non-scaling-stroke;
+    opacity: var(--life-bubble-opacity);
+  }
+}

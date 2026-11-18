@@ -8,11 +8,11 @@
  * (after the tabulating screen); the session maximum notice.
  */
 
-import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, localDay, rulesFrom, summarise, systemTimeZone } from '@stopwatch/core';
-import type { SecondsDisplay, Session, TimerEvents, TimerView } from '@stopwatch/core';
+import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, localDay, rulesFrom, shownMode, summarise, systemTimeZone, withSetting } from '@stopwatch/core';
+import type { ModeChoice, Session, TimerEvents, TimerView } from '@stopwatch/core';
 import { CountClient } from './counts/client.ts';
 import { CrashReporter } from './crash/reporter.ts';
-import type { DisplayMode } from './modes/contract.ts';
+import type { DisplayMode, ModeOptions } from './modes/contract.ts';
 import { DEFAULT_MODE_ID } from './modes/manifests.ts';
 import { findMode } from './modes/registry.ts';
 import type { RegisteredMode } from './modes/registry.ts';
@@ -28,7 +28,12 @@ import { formatClockTime, setClockFormat } from './shell/clock-time.ts';
 import { answersCheckIn } from './shell/check-in.ts';
 import { Controls } from './shell/controls.ts';
 import { EndingCountdown } from './shell/ending.ts';
+import { FocusView } from './shell/focus-view.ts';
 import { MaximumNotice } from './shell/notice.ts';
+import { Pill } from './shell/pill.ts';
+import type { Notice } from './shell/pill.ts';
+import { ModeStage } from './shell/mode-stage.ts';
+import type { ModeContext } from './shell/mode-stage.ts';
 import { motionScale } from './shell/motion.ts';
 import { Notifier } from './shell/notifier.ts';
 import { takeSafeMode } from './shell/safe-mode.ts';
@@ -37,13 +42,24 @@ import { shortcutFor } from './shell/shortcuts.ts';
 import { titleFor } from './shell/title.ts';
 import { FinishedStore, browserSessionStorage } from './storage/finished-store.ts';
 import { LocalCustomCssStore, watchCustomCss } from './storage/custom-css-store.ts';
-import { IndexedDbMediaStore, browserIndexedDb } from './storage/media-store.ts';
+import { LocalNoticeStore } from './storage/notice-store.ts';
+import { TEST_MODES_KEY, asksForTestModes } from './storage/test-modes-ask.ts';
+import { lazyMediaStore } from './storage/lazy-media.ts';
+import { hasModeCaches } from './storage/offline-cache.ts';
+import type * as ModeCache from './storage/mode-cache.ts';
+
+type ModeCacheModule = typeof ModeCache;
 import { LocalSessionStore, browserLocalStorage, watchLocalStorage } from './storage/session-store.ts';
 import { LocalSettingsStore, watchSettings } from './storage/settings-store.ts';
 import { TabSync, openTabChannel } from './sync/tabs.ts';
 import { systemClock } from './time/system-clock.ts';
 
 type Screen = 'timer' | 'ending' | 'results' | 'maximum';
+/** A staged mode's contrast switch, held until it shows. */
+interface HeldChrome {
+  readonly share: number;
+  readonly dark: string;
+}
 
 function required<T extends Element>(doc: Document, selector: string, type: new () => T): T {
   const element = doc.querySelector(selector);
@@ -57,7 +73,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   };
   const screenElement = required(doc, '.screen', HTMLElement);
   const corner = required(doc, '.corner', HTMLElement);
-  const modeRoot = required(doc, '.mode-root', HTMLElement);
+  let modeRoot = required(doc, '.mode-root', HTMLElement);
   const controlsRoot = required(doc, '.controls', HTMLElement);
   const settingsButton = required(doc, '.icon-button--settings', HTMLButtonElement);
 
@@ -68,14 +84,46 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     rules: () => undefined,
     mode: () => undefined,
     clockFormat: () => undefined,
+    lowPower: () => undefined,
     font: () => undefined,
+    modeOptions: () => undefined,
   };
   const settingsStore = new LocalSettingsStore(browserLocalStorage(win), report);
   const customCssStore = new LocalCustomCssStore(browserLocalStorage(win), report);
+  const noticeStore = new LocalNoticeStore(browserLocalStorage(win), report);
+  // The test-modes switch: `?test=modes` (or `?test=interstellar`) offers it on this device, once and for good
+  // (nothing else does). Its store is fetched only where the address asks or the switch was offered before.
+  const local = browserLocalStorage(win);
+  const asked = asksForTestModes(win.location.search);
+  const hadTestModes = ((): boolean => {
+    try {
+      return local?.getItem(TEST_MODES_KEY) !== null && local !== null;
+    } catch {
+      return false;
+    }
+  })();
+  const testModes = asked || hadTestModes ? new (await import('./storage/test-modes-store.ts')).TestModesStore(local, report) : null;
+  if (asked) testModes?.offer();
+  /** The mode shown for a chosen one: digits for a test mode while test modes are off, the choice kept. */
+  const shownFor = (chosen: ModeChoice): ModeChoice => shownMode(chosen, testModes?.state.on ?? false);
+  /** Clear device data removes the switch whether or not its store was fetched. */
+  const testModesClearer = {
+    clear(): void {
+      if (testModes !== null) {
+        testModes.clear();
+        return;
+      }
+      try {
+        local?.removeItem(TEST_MODES_KEY);
+      } catch (error) {
+        report(error);
+      }
+    },
+  };
   const settings = new SettingsController({
     doc,
     store: settingsStore,
-    media: new IndexedDbMediaStore(browserIndexedDb(win)),
+    media: lazyMediaStore(win),
     customCss: customCssStore,
     safe: takeSafeMode(win),
     effects: {
@@ -86,24 +134,64 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
         effects.rules(rules);
       },
       mode: (id) => {
-        effects.mode(id);
+        effects.mode(shownFor(id));
       },
       clockFormat: (format) => {
         setClockFormat(format);
         effects.clockFormat(format);
       },
+      lowPower: (on) => {
+        effects.lowPower(on);
+      },
       font: () => {
         effects.font();
       },
+      modeOptions: () => {
+        effects.modeOptions();
+      },
     },
     onError: report,
+    alsoClears: [noticeStore, testModesClearer],
   });
   setClockFormat(settings.current.clockFormat);
   const fontReady = settings.start();
 
-  const reducedMotion = (): boolean => win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const motionQuery = win.matchMedia('(prefers-reduced-motion: reduce)');
+  const reducedMotion = (): boolean => motionQuery.matches;
+  // Low power: the setting, or the system's reduced-motion preference (plan, Loading and performance).
+  const lowPower = (): boolean => settings.current.lowPower || reducedMotion();
   // The site owns this object; a changed setting updates it and redraws (modes/contract.ts).
-  const context: { seconds: SecondsDisplay; reducedMotion: boolean } = { seconds: settings.current.seconds, reducedMotion: reducedMotion() };
+  /** A mode's options (its recipe's), as the settings that hold them say (modes/manifests.ts). */
+  const modeOptions = (id: string = registered.manifest.id): ModeOptions => {
+    const manifest = findMode(id)?.manifest;
+    return Object.fromEntries(Object.entries(manifest?.options ?? {}).map(([option, key]) => [option, settings.current[key]]));
+  };
+  // The contrast switch: the time, the icons and the labels crossfade to the mode's dark colour, or back. Each
+  // corner icon gets a dark copy the first time, stacked over it (modes/recipe/recipe.css).
+  const chrome = (share: number, dark: string): void => {
+    for (const icon of corner.querySelectorAll<SVGElement>('.icon-button > svg:not(.icon-shade)')) {
+      if (icon.parentElement?.querySelector('.icon-shade') !== null) continue;
+      const copy = icon.cloneNode(true) as SVGElement;
+      copy.classList.add('icon-shade');
+      icon.classList.add('icon-lit');
+      icon.after(copy);
+    }
+    if (share <= 0) delete screenElement.dataset['contrast'];
+    else screenElement.dataset['contrast'] = 'dark';
+    screenElement.style.setProperty('--contrast-dark', dark);
+  };
+  // The live mode's context (each mode gets its own, with its options: shell/mode-stage.ts).
+  let context: ModeContext = {
+    seconds: settings.current.seconds,
+    reducedMotion: reducedMotion(),
+    lowPower: lowPower(),
+    options: modeOptions(shownFor(settings.current.mode)),
+    chrome,
+  };
+  const showLowPower = (): void => {
+    doc.documentElement.toggleAttribute('data-low-power', context.lowPower);
+  };
+  showLowPower();
 
   const counts = new CountClient(win, () => settings.current.usageCounts);
   counts.visit();
@@ -113,10 +201,97 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   const finished = new FinishedStore(browserSessionStorage(win), report);
   const saved = store.load();
   // The display mode is a setting; a restored session switches to it if another tab left it elsewhere.
-  let registered: RegisteredMode = findMode(settings.current.mode) ?? fallbackMode();
+  /** Settings' list of downloaded modes follows a mode's caching; set once the panel can exist. */
+  let downloadsChanged = (): void => undefined;
+  // A test mode chosen while test modes are off (switched off in another tab, or cleared) shows digits; the choice
+  // stays in the settings for when testing ends.
+  let registered: RegisteredMode = findMode(shownFor(settings.current.mode)) ?? fallbackMode();
+  // Downloaded modes unused for 30 days go when the page loads, never on a timer (plan, Loading and performance).
+  // Fetched when the page has loaded, so the first visit's download carries none of it.
+  const modeCache = (): Promise<ModeCacheModule> => import('./storage/mode-cache.ts');
+  const shownAtStart = registered.manifest.id;
+  const sweep = (): void => {
+    // Only where a mode was ever downloaded: a first visit fetches nothing for it.
+    void hasModeCaches(win)
+      .then(async (any) => {
+        if (any) await (await modeCache()).removeUnusedModes(win, Date.now(), shownAtStart);
+      })
+      .catch(report);
+  };
+  if (doc.readyState === 'complete') sweep();
+  else win.addEventListener('load', sweep, { once: true });
   let mode: DisplayMode = (await registered.load())();
+  usedMode(registered);
   screenElement.dataset['mode'] = registered.manifest.id;
+  context.options = modeOptions();
   mode.mount(modeRoot, context);
+  /** Runs `task` as a background task of its own: after input and drawing, so it never holds a frame (plan, Performance). */
+  const backgroundTask = (task: () => void): (() => void) => {
+    const controller = new AbortController();
+    // Absent in Safari, whatever the types say.
+    if ('scheduler' in win) {
+      win.scheduler.postTask(task, { priority: 'background', signal: controller.signal }).catch(() => undefined);
+      return () => {
+        controller.abort();
+      };
+    }
+    // Without one (Safari): a task of its own, queued behind what is waiting.
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => {
+      channel.port1.close();
+      if (!controller.signal.aborted) task();
+    };
+    channel.port2.postMessage(null);
+    return () => {
+      controller.abort();
+      channel.port1.close();
+    };
+  };
+  const stage = new ModeStage(
+    { registered, mode, root: modeRoot, context },
+    {
+      contextFor: (next) => {
+        // Until it shows, the staged mode's contrast switch is held, and applied as it takes the screen.
+        let held: HeldChrome | null = null;
+        const staged: ModeContext = {
+          ...context,
+          options: modeOptions(next.manifest.id),
+          chrome: (share, dark) => {
+            held = { share, dark };
+          },
+        };
+        stagedChrome.set(staged, () => held);
+        return staged;
+      },
+      draw: (staged) => {
+        staged.render(shown(engine.view));
+      },
+      loaded: (next) => {
+        usedMode(next);
+      },
+      swapped: (live) => {
+        const held = stagedChrome.get(live.context)?.() ?? null;
+        stagedChrome.delete(live.context);
+        // The live context takes the site's values as they are now, then the screen follows the new mode.
+        live.context.seconds = context.seconds;
+        live.context.reducedMotion = context.reducedMotion;
+        live.context.lowPower = context.lowPower;
+        live.context.chrome = chrome;
+        context = live.context;
+        registered = live.registered;
+        mode = live.mode;
+        modeRoot = live.root;
+        screenElement.dataset['mode'] = registered.manifest.id;
+        if (held !== null) chrome(held.share, held.dark);
+        mode.relayout?.();
+        render(engine.view);
+      },
+      idle: backgroundTask,
+      fadeMs: () => (context.reducedMotion ? 0 : CONFIG.motion.modeSwitch.fadeMs * motionScale(doc)),
+      report,
+    },
+  );
+  const stagedChrome = new WeakMap<ModeContext, () => HeldChrome | null>();
 
   const announcer = new Announcer(screenElement);
   const bus = new EventBus<TimerEvents>({ onError: report });
@@ -160,7 +335,10 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     modeRoot.hidden = !timer;
     controlsRoot.hidden = !timer;
     screenElement.classList.toggle('screen--bare', next === 'ending');
-    if (timer) render(engine.view);
+    if (timer) {
+      render(engine.view);
+      showChosenMode();
+    } else focusView.update();
   };
 
   const notice = new MaximumNotice(doc, () => {
@@ -257,7 +435,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     current = 'results';
     modeRoot.hidden = true;
     controlsRoot.hidden = true;
-    await results.show(session, drawing, { start, reducedMotion: reducedMotion() });
+    await results.show(session, drawing, { start, reducedMotion: reducedMotion() }, modeOptions(drawing.id));
     if (showing !== session) return;
     // The corner icons return with the results: their fade-in is set, so they stay unseen until it starts.
     screenElement.classList.remove('screen--bare');
@@ -286,9 +464,20 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     setScreen('timer');
   };
 
+  // The display hears end the moment it is pressed (the analog crown dips): on the button's press, before its
+  // click, and on E. A display already answering the press ignores the second call.
+  const endPressed = (): void => {
+    if (current === 'timer' && (engine.status === 'running' || engine.status === 'paused')) mode.onEvent?.({ type: 'end.pressed' });
+  };
+  controlsRoot.addEventListener('pointerdown', (event) => {
+    if (event.target instanceof Element && event.target.closest('.button--end') !== null) endPressed();
+  });
   const beginEnding = (): void => {
     sync.pull();
     if (engine.status !== 'running' && engine.status !== 'paused') return;
+    // Session controls always win: a mode still loading stops (it shows again once back on the timer).
+    stage.cancel();
+    endPressed();
     endPressedAt = engine.now();
     const takeFocus = focusIsOn(controlsRoot);
     setScreen('ending');
@@ -299,13 +488,53 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
 
   // ---- Timer -------------------------------------------------------------
 
+  // Fullscreen (plan, Interface: the focus view settings): entered as a session starts, if asked, within the
+  // start's own press; left on pause or end as the setting says. Esc always leaves it (the browser's own). Where
+  // the page has no fullscreen (iPhones), nothing here runs and settings hide both choices.
+  const fullscreenAvailable = (): boolean => doc.fullscreenEnabled && typeof doc.documentElement.requestFullscreen === 'function';
+  const enterFullscreen = (): void => {
+    if (!settings.current.fullscreenOnStart || !fullscreenAvailable() || doc.fullscreenElement !== null) return;
+    void doc.documentElement.requestFullscreen().catch(() => undefined);
+  };
+  const leaveFullscreen = (on: 'pause' | 'end'): void => {
+    const leave = settings.current.leaveFullscreen;
+    if (doc.fullscreenElement === null || leave === 'never' || (on === 'pause' && leave !== 'pause-or-end')) return;
+    void doc.exitFullscreen().catch(() => undefined);
+  };
+
   const toggle = (): void => {
     sync.pull();
-    if (engine.status === 'running') engine.pause();
-    else if (engine.status === 'paused') engine.resume();
-    else engine.start(registered.manifest.id);
+    // Session controls always win: a mode still loading stops, the control applies at once, and the chosen mode
+    // loads again in a background task after it.
+    const wasLoading = stage.cancel();
+    if (engine.status === 'running') {
+      engine.pause();
+      leaveFullscreen('pause');
+    } else if (engine.status === 'paused') engine.resume();
+    else {
+      // The session starts in the chosen mode, whether or not its drawing is ready.
+      engine.start(chosenMode().manifest.id);
+      enterFullscreen();
+    }
+    if (wasLoading !== null) backgroundTask(showChosenMode);
   };
   const controls = new Controls(controlsRoot, { primary: toggle, end: beginEnding });
+  let settingsShown = false;
+  const focusView = new FocusView(win, screenElement, {
+    quietMs: () => {
+      const hide = settings.current.focusHide;
+      return hide === 'never' ? null : CONFIG.motion.focus.quietMs[hide];
+    },
+    active: () =>
+      current === 'timer' && !settingsShown && doc.visibilityState === 'visible' && engine.view.status === 'running' && engine.view.checkInDueAt === null,
+    now: () => win.performance.now(),
+    wakeAfter: (delayMs, run) => {
+      engine.wakeAfter('focus-view', delayMs, run);
+    },
+    cancelWake: () => {
+      engine.cancelWake('focus-view');
+    },
+  });
 
   // An ended session shows the idle screen behind the results.
   const shown = (view: TimerView): TimerView => (view.status === 'ended' ? computeView(null, view.at, context.seconds) : view);
@@ -323,7 +552,43 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     behind = false;
     mode.render(visible);
     controls.update(visible.status === 'running' || visible.status === 'paused' ? visible.status : 'idle');
+    focusView.update();
+    showNotice();
   };
+
+  // Notices (plan, Interface): one pill above the time. The first is the fullscreen tip on the idle screen,
+  // shown where the page can go fullscreen, while the setting is off and until it is dismissed. "change" turns
+  // the setting on and opens settings on it; the tip has then done its job, so it counts as dismissed too.
+  const fullscreenTip: Notice = { id: 'fullscreen', text: BRAND.copy.notices.fullscreen, setting: 'fullscreenOnStart' };
+  const noticeNow = (): Notice | null => {
+    if (current !== 'timer' || shown(engine.view).status !== 'idle') return null;
+    if (!fullscreenAvailable() || settings.current.fullscreenOnStart || noticeStore.dismissed(fullscreenTip.id)) return null;
+    return fullscreenTip;
+  };
+  const pill = new Pill(doc, {
+    dismiss: (notice) => {
+      noticeStore.dismiss(notice.id);
+      showNotice();
+    },
+    change: (notice, setting) => {
+      noticeStore.dismiss(notice.id);
+      settings.change(withSetting(settings.current, setting, true));
+      void openSettings()
+        .then(() => panel?.openOn(setting, true))
+        .catch(report);
+    },
+  });
+  function showNotice(): void {
+    // The mode may have rebuilt its time (a mode switch, an option); the pill follows it.
+    const time = modeRoot.querySelector<HTMLElement>(':scope > .contrast, :scope > .time-stack');
+    const next = noticeNow();
+    // A pill that goes while one of its buttons has focus hands focus on to the next control, start.
+    if (next === null && pill.element.contains(doc.activeElement)) controlsRoot.querySelector('button')?.focus();
+    pill.show(next, time);
+  }
+  settings.subscribe(() => {
+    showNotice();
+  });
 
   bus.on('view.changed', ({ view }) => {
     render(view);
@@ -352,6 +617,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     counts.session();
   });
   bus.on('session.ended', ({ session, reason }) => {
+    leaveFullscreen('end');
     sync.ended(session);
     finished.save(session);
     lastFinished = session;
@@ -386,26 +652,38 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   effects.clockFormat = () => {
     render(engine.view);
   };
+  const motionChanged = (): void => {
+    context.reducedMotion = reducedMotion();
+    context.lowPower = lowPower();
+    showLowPower();
+    render(engine.view);
+  };
+  effects.lowPower = motionChanged;
+  motionQuery.addEventListener('change', motionChanged);
   effects.font = () => {
     mode.relayout?.();
   };
-  let modeRequest = 0;
+  effects.modeOptions = () => {
+    context.options = modeOptions();
+    render(engine.view);
+  };
   effects.mode = (id) => {
     const next = findMode(id) ?? fallbackMode();
     sync.pull();
-    // The session records the switch when it is chosen; the drawing follows once its code has loaded.
+    // The session records the switch when it is chosen; the drawing follows once it is whole (shell/mode-stage.ts).
     if (engine.state !== null) engine.switchMode(next.manifest.id);
-    const request = ++modeRequest;
-    void next.load().then((factory) => {
-      if (request !== modeRequest) return;
-      mode.unmount();
-      registered = next;
-      mode = factory();
-      screenElement.dataset['mode'] = next.manifest.id;
-      mode.mount(modeRoot, context);
-      render(engine.view);
-    }, report);
+    stage.show(next);
   };
+  /** The chosen mode as shown (digits for a test mode while test modes are off). */
+  function chosenMode(): RegisteredMode {
+    return findMode(shownFor(settings.current.mode)) ?? fallbackMode();
+  }
+  /** Shows the chosen mode if neither the screen nor a load already has it (after a control stopped its load). */
+  function showChosenMode(): void {
+    const chosen = chosenMode();
+    if (current !== 'timer' || chosen.manifest.id === registered.manifest.id || stage.loading?.manifest.id === chosen.manifest.id) return;
+    stage.show(chosen);
+  }
   // Another tab's change applies here too, without being saved again.
   watchSettings(win, settingsStore, (next) => {
     settings.external(next);
@@ -418,9 +696,16 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
 
   let panel: SettingsPanel | null = null;
   let panelModule: Promise<typeof PanelModule> | null = null;
+  downloadsChanged = () => {
+    void panel?.refreshDownloads();
+  };
   const closeSettings = (): void => {
     if (panel === null || !panel.shown) return;
     panel.hide();
+    settingsShown = false;
+    focusView.update();
+    // Settings may have changed what the idle screen tells (clear device data brings dismissed notices back).
+    showNotice();
     settingsButton.focus({ preventScroll: true });
   };
   const openSettings = async (): Promise<void> => {
@@ -430,9 +715,26 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       controller: settings,
       close: closeSettings,
       requestNotifications,
+      testModes: {
+        get offered() {
+          return testModes?.state.offered ?? false;
+        },
+        get on() {
+          return testModes?.state.on ?? false;
+        },
+        setOn: (on) => {
+          testModes?.setOn(on);
+          // Turned off while a test mode is chosen, digits shows (the choice kept); turned on, it shows again.
+          effects.mode(shownFor(settings.current.mode));
+          panel?.refreshModes();
+        },
+        shown: (chosen) => shownFor(chosen),
+      },
     });
     if (!doc.body.contains(panel.element)) doc.body.append(panel.element);
     panel.open();
+    settingsShown = true;
+    focusView.update();
   };
   const toggleSettings = (): void => {
     if (panel?.shown === true) closeSettings();
@@ -546,6 +848,8 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   doc.addEventListener('visibilitychange', () => {
     const hidden = doc.visibilityState === 'hidden';
     engine.setBackground(hidden);
+    // The focus view waits only while the tab is seen.
+    focusView.update();
     if (hidden) return;
     refresh();
     if (behind) render(engine.view);
@@ -555,6 +859,8 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   watchLocalStorage(win, store, refresh);
 
   registerServiceWorker(win, report);
+  // Every control and shortcut answers from here on (the end-to-end tests wait for it).
+  doc.documentElement.toggleAttribute('data-ready', true);
 
   // A session's start reads its local day, and the first time zone lookup loads the browser's time zone
   // data: about 10 ms, several times that on a slow phone. Done once the page has loaded, the first tap
@@ -564,6 +870,16 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   };
   if (doc.readyState === 'complete') readTimeZone();
   else win.addEventListener('load', readTimeZone, { once: true });
+
+  /** A downloaded mode was shown: the service worker keeps it for offline use, and settings list it. */
+  function usedMode(shown: RegisteredMode): void {
+    if (shown.manifest.tier !== 'on-choice') return;
+    void modeCache()
+      .then(({ recordModeUse }) => recordModeUse(win, shown.manifest.id, Date.now()))
+      .then(() => {
+        downloadsChanged();
+      }, report);
+  }
 
   function fallbackMode(): RegisteredMode {
     const found = findMode(DEFAULT_MODE_ID);

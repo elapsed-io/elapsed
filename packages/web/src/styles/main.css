@@ -80,6 +80,7 @@
    */
   .screen {
     position: relative;
+    isolation: isolate;
     box-sizing: border-box;
     width: var(--view-width);
     height: 100dvh;
@@ -98,10 +99,44 @@
     );
   }
 
+  /*
+   * One layer order for every mode and screen (plan v11, Design system; round 2.11), by the layer tokens alone:
+   * the mode's background and art at the bottom (its environment, or its backdrop pieces in one wrapper, and an
+   * environment leaving after a switch), then the time with its figure, the buttons and the screens that take the
+   * timer's place, then the dialogs over the held time (pause, check-in: modes/shared/time.css), then notices
+   * (the pill), then the corner icons, over every screen; the settings panel comes after the whole view.
+   * Modes' own stylesheets never set a z-index (the plan audit holds them to it), so nothing from a mode can
+   * cover a dialog.
+   */
+  .mode-root > :is(.environment, .mode-art),
+  .screen > .environment--leaving {
+    z-index: var(--layer-art);
+  }
+
+  .mode-art {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .mode-root > :is(.time-stack, .contrast),
+  .controls,
+  .screen > :is(.ending, .notice) {
+    position: relative;
+    z-index: var(--layer-display);
+  }
+
+  /* Placed by their own stylesheets (the caption at the bottom, the results over the whole view). */
+  .mode-root > .recipe__caption,
+  .screen > .results {
+    z-index: var(--layer-display);
+  }
+
   /* Above whatever screen covers the view (the results fill it), so settings opens from every screen. */
   .corner {
     position: absolute;
-    z-index: 1;
+    z-index: var(--layer-chrome);
     top: var(--icon-inset);
     right: var(--icon-inset);
     display: flex;
@@ -249,6 +284,45 @@
     animation: notice-in var(--motion-fade) var(--ease-standard);
   }
 
+  /*
+   * Focus view (shell/focus-view.ts; the "the motion, on a loop" frame): untouched while a session runs, pause and
+   * end drop 10 px while fading out over 180 ms (easing in), the corner icons fade with them, the pointer hides, and
+   * the time grows to 1.32 times its size and settles 25 px lower over 220 ms (easing out), so it stays centred. A
+   * touch reverses it as fast, easing out. Distances are reference pixels, scaled with the window.
+   */
+  .controls,
+  .corner {
+    transition:
+      opacity var(--focus-controls) var(--ease-out-quart),
+      transform var(--focus-controls) var(--ease-out-quart);
+  }
+
+  .mode-root > :is(.time-stack, .contrast) {
+    transform-origin: 50% 50%;
+    transition: transform var(--focus-time) var(--ease-out-quart);
+  }
+
+  .screen--focus {
+    cursor: none;
+  }
+
+  .screen--focus > .controls,
+  .screen--focus > .corner {
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity var(--focus-controls) var(--ease-in-quad),
+      transform var(--focus-controls) var(--ease-in-quad);
+  }
+
+  .screen--focus > .controls {
+    transform: translateY(calc(var(--focus-controls-drop) * var(--u)));
+  }
+
+  .screen--focus > .mode-root > :is(.time-stack, .contrast) {
+    transform: translateY(calc(var(--focus-time-drop) * var(--u))) scale(var(--focus-time-scale));
+  }
+
   /* Hidden while the notice, the countdown or the results take their place. */
   .notice[hidden],
   .ending[hidden],
@@ -339,6 +413,99 @@
     font-size: var(--notice-body-size);
     line-height: var(--notice-body-line-height);
     color: var(--color-muted);
+  }
+
+  /*
+   * A mode's environment leaving (app.ts): held behind the screen while the next one fades in over it, or while it
+   * fades out itself. Its own stylesheet places it; the screen keeps it behind everything.
+   */
+  .screen:has(> .environment--leaving) {
+    isolation: isolate;
+  }
+
+  .environment--leaving {
+    pointer-events: none;
+  }
+
+  /*
+   * The next display mode getting ready (shell/mode-stage.ts): mounted out of sight and out of the layout, over the
+   * screen, until it is whole; then it takes the live mode's place on one frame.
+   */
+  .mode-stage {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /*
+   * The notice pill (shell/pill.ts; the "notice: fullscreen tip" frame). It hangs from the top of the time,
+   * so the time never moves when a notice comes or goes.
+   */
+  .mode-root > .contrast {
+    position: relative;
+  }
+
+  .pill {
+    position: absolute;
+    z-index: var(--layer-notice);
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: calc(var(--pill-above) * var(--u) * var(--time-scale));
+    display: flex;
+    align-items: center;
+    gap: var(--pill-gap);
+    /* 20 px inside its 1 px border, as the frame draws it. */
+    box-sizing: content-box;
+    height: var(--pill-height);
+    padding: 0 var(--pill-padding-end) 0 var(--pill-padding-start);
+    border: 1px solid var(--color-faint);
+    border-radius: var(--pill-radius);
+    background: var(--color-track);
+    color: var(--color-muted);
+    font-family: var(--font-family);
+    font-stretch: var(--font-stretch);
+    font-size: var(--pill-text);
+    font-weight: var(--font-weight-label);
+    line-height: normal;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  .pill__change {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-foreground);
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: var(--pill-underline-offset);
+    cursor: pointer;
+  }
+
+  .pill__change[hidden] {
+    display: none;
+  }
+
+  .pill__dismiss {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--pill-dismiss);
+    height: var(--pill-dismiss);
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-muted);
+    cursor: pointer;
+  }
+
+  .pill__cross {
+    width: var(--pill-cross);
+    height: var(--pill-cross);
+    stroke-width: var(--pill-cross-stroke);
   }
 
   @keyframes notice-in {

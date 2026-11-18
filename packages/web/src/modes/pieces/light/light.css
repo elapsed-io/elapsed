@@ -1,0 +1,32 @@
+/*
+ * The light-falloff environment (light.ts): behind everything, a strip of the light model's gradient that glides
+ * on its own layer while a session runs and is drawn in place while it stands still. A dive's strip hangs from the
+ * top; a climb's stands on the bottom.
+ */
+@layer mode {
+  /* On the shared art layer (styles/main.css). */
+  .light {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .light__strip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    transform-origin: top;
+    will-change: transform;
+  }
+
+  .light__strip--up {
+    top: auto;
+    bottom: 0;
+    transform-origin: bottom;
+  }
+
+  .light__strip--still {
+    will-change: auto;
+  }
+}

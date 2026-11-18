@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { GRAPHITE, PAPER, inPalette, soonFrame } from './fixtures/frames.ts';
 import { screenshotReference } from './helpers.ts';

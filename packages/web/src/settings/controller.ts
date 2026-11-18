@@ -26,8 +26,12 @@ export interface SettingsEffects {
   rules(rules: RuleSettings): void;
   mode(id: ModeChoice): void;
   clockFormat(format: ClockFormat): void;
+  /** The low power setting changed (the system's reduced-motion preference is the site's to add). */
+  lowPower(on: boolean): void;
   /** The font in use changed (after it loaded). */
   font(): void;
+  /** A display mode's option changed (ocean life, results landmarks). */
+  modeOptions(): void;
 }
 
 export type OwnFontResult = 'loaded' | 'too-large' | 'not-a-font' | 'unusable';
@@ -41,6 +45,8 @@ export interface SettingsControllerOptions {
   readonly safe: boolean;
   readonly effects: SettingsEffects;
   readonly onError: (error: unknown) => void;
+  /** Other records kept in this browser that "clear device data" removes too (dismissed notices). */
+  readonly alsoClears?: readonly { clear(): void }[];
 }
 
 const DEFAULT_STRETCH = `${String(CONFIG.design.type.fontWidth)}%`;
@@ -57,6 +63,7 @@ export class SettingsController {
   readonly #cssSheet: CustomCssSheet;
   readonly #listeners = new Set<(settings: Settings) => void>();
   readonly #cssListeners = new Set<(css: string) => void>();
+  readonly #alsoClears: readonly { clear(): void }[];
   #settings: Settings;
   /** The stored custom CSS, already cleaned. */
   #css: string;
@@ -74,6 +81,7 @@ export class SettingsController {
     this.#media = options.media;
     this.#effects = options.effects;
     this.#onError = options.onError;
+    this.#alsoClears = options.alsoClears ?? [];
     this.fonts = new FontLoader(options.doc);
     this.#sheet = new AppearanceSheet(options.doc);
     this.#settings = this.#store.load();
@@ -216,10 +224,11 @@ export class SettingsController {
     }
   }
 
-  /** Removes everything stored in this browser (choices, custom CSS, fonts), and returns to the defaults. */
+  /** Removes everything stored in this browser (choices, custom CSS, fonts, dismissed notices), and returns to the defaults. */
   async clearDeviceData(): Promise<void> {
     this.#store.clear();
     this.#cssStore.clear();
+    for (const store of this.#alsoClears) store.clear();
     this.#setCss('');
     try {
       await this.#media.clear();
@@ -238,6 +247,8 @@ export class SettingsController {
     if (next.checkInInterval !== previous.checkInInterval || next.pauseLimit !== previous.pauseLimit) this.#effects.rules(rulesFrom(next));
     if (next.mode !== previous.mode) this.#effects.mode(next.mode);
     if (next.clockFormat !== previous.clockFormat) this.#effects.clockFormat(next.clockFormat);
+    if (next.lowPower !== previous.lowPower) this.#effects.lowPower(next.lowPower);
+    if (next.oceanLife !== previous.oceanLife || next.resultsLandmarks !== previous.resultsLandmarks || next.heightLandmarks !== previous.heightLandmarks || next.treeView !== previous.treeView) this.#effects.modeOptions();
     this.#applyAppearance();
     if (next.font !== previous.font) void this.#applyFont();
     for (const listener of this.#listeners) listener(next);

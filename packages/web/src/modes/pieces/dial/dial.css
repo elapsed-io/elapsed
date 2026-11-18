@@ -1,0 +1,133 @@
+/*
+ * The dial (dial.ts), drawn as the redesigned "analog" frame: the dial is an SVG in the frame's own units (a
+ * 340 × 336 drawing, one unit a reference pixel at a radius of 150); each hand and the pin are HTML over it, each
+ * a drawing of the whole dial that CSS turns about the point it is pinned at, so the compositor can turn them.
+ * Everything scales with the window like the time.
+ */
+@layer mode {
+  .analog-stack {
+    position: relative;
+  }
+
+  .analog {
+    --analog-px: calc(var(--u) * var(--time-scale));
+    /* One unit of the drawing. */
+    --au: calc(var(--analog-px) * var(--analog-unit));
+    position: relative;
+    width: calc(var(--analog-width) * var(--analog-px));
+    height: calc(var(--analog-height) * var(--analog-px));
+  }
+
+  .analog__dial {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* The polished case and the crown: the frame's gradients, from the pause button's grey to the track. */
+  .analog__stop--gray {
+    stop-color: var(--color-pause);
+  }
+
+  .analog__stop--faint {
+    stop-color: var(--color-faint);
+  }
+
+  .analog__stop--track {
+    stop-color: var(--color-track);
+  }
+
+  .analog__ridge {
+    stroke: var(--color-track);
+  }
+
+  .analog__rim {
+    fill: none;
+    stroke: var(--color-foreground);
+  }
+
+  .analog__face {
+    fill: var(--color-track);
+  }
+
+  .analog__tick {
+    stroke: var(--color-muted);
+  }
+
+  .analog__baton {
+    stroke: var(--color-foreground);
+  }
+
+  .analog__subdial {
+    fill: var(--color-background);
+    stroke: var(--color-faint);
+  }
+
+  .analog__label,
+  .analog__subnumber {
+    font-family: var(--font-family);
+    font-stretch: var(--font-stretch);
+    fill: var(--color-muted);
+  }
+
+  .analog__label {
+    font-size: var(--analog-label-size);
+    letter-spacing: var(--analog-letter-spacing);
+  }
+
+  .analog__subnumber {
+    font-size: var(--analog-subdial-label-size);
+  }
+
+  .analog__hand {
+    will-change: transform;
+    transform-origin: calc(var(--hand-x) * var(--au)) calc(var(--hand-y) * var(--au));
+  }
+
+  .analog--still .analog__hand {
+    will-change: auto;
+  }
+
+  /* Each hand, and the pin, is a drawing over the whole dial. */
+  .analog__hand,
+  .analog__hubs,
+  .analog__pin,
+  .analog__hand-drawing {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .analog__hand-line {
+    stroke: var(--hand-colour);
+  }
+
+  .analog__pin-disc {
+    fill: var(--hand-colour);
+  }
+
+  .analog__pin-hole {
+    fill: var(--color-track);
+  }
+
+  /*
+   * The frame shows no digits. The time stays in the page, read on request by screen readers; when it has
+   * keyboard focus, the dial shows the focus ring instead.
+   */
+  .analog__time {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .analog-stack:has(.time--main:focus-visible) .analog {
+    outline: var(--focus-ring) solid var(--color-foreground);
+    outline-offset: var(--focus-offset);
+    border-radius: 50%;
+  }
+}

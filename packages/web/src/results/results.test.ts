@@ -1,6 +1,6 @@
 import { CONFIG, createSession, endSession, pauseSession, resumeSession, summarise } from '@stopwatch/core';
 import { describe, expect, it } from 'vitest';
-import { arc, ringGeometry, ringPaths } from '../modes/ring/ring-replay.ts';
+import { arc, ringGeometry, ringPaths } from '../modes/pieces/ring/ring-replay.ts';
 import { placeLabels } from '../modes/shared/strip-replay.ts';
 import { FINISHED_KEY, FinishedStore } from '../storage/finished-store.ts';
 import { countAt, countExpression, countTerms } from './results.ts';

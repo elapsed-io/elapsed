@@ -11,7 +11,7 @@
 
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { MINUTE, SECOND, endThroughCountdown, finishResults, openApp, settle } from './helpers.ts';
 
@@ -67,6 +67,7 @@ test.describe('WCAG 2.2 AA rules (axe-core)', () => {
   for (const mode of ['digits', 'ring', 'timeline']) {
     test(`the timer in ${mode}: idle, running, paused, a check-in waiting`, async ({ page }) => {
       await openApp(page, { mode });
+      await settle(page);
       expect(await violations(page), 'idle').toEqual([]);
       await primary(page).click();
       await page.clock.runFor(84 * MINUTE);

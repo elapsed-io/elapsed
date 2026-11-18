@@ -38,6 +38,27 @@
     align-items: center;
     justify-content: center;
     gap: var(--results-gap);
+    /* Its own stacking context, so the backdrop sits behind the card's content and over nothing else. */
+    isolation: isolate;
+  }
+
+  /*
+   * The shared layer order inside the card (plan v11, Design system; round 2.11): the replay's backdrop, behind the
+   * whole card, on the art layer, for a replay that lights it or passes things across it (contract, ReplaySurface);
+   * everything else the card holds, its headline, figure, statistics and icons, on the display layer above it.
+   */
+  .results > :not(.results__backdrop) {
+    position: relative;
+    z-index: var(--layer-display);
+  }
+
+  .results__backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: var(--layer-art);
+    overflow: hidden;
+    pointer-events: none;
+    container-type: size;
   }
 
   .results[hidden] {
@@ -48,8 +69,21 @@
     visibility: hidden;
   }
 
-  .results--ring {
+  /* The ring layout and the profile chart are 16 px apart (their frames); the strip 22 px. */
+  .results--ring,
+  .results--chart {
     gap: var(--results-ring-gap);
+  }
+
+  /* A drawing over the stats (the "results: tree" frame): 10 px apart, closer to the top and bottom. */
+  .results--figure {
+    gap: var(--results-figure-gap);
+    padding-block: var(--results-figure-padding-y);
+  }
+
+  /* A map over the stats (the "results: interstellar" frame): 14 px apart. */
+  .results--map {
+    gap: var(--results-map-gap);
   }
 
   .results__focused {

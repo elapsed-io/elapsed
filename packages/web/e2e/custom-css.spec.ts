@@ -7,7 +7,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { FONT, openApp, seedSettings } from './helpers.ts';
 import { LOCKOUT_CSS, MALICIOUS_CSS } from './fixtures/malicious-css.ts';
@@ -294,7 +294,8 @@ test.describe('the malicious-CSS corpus', () => {
     await seedCustomCss(page, '.screen { background-image: url(https://evil.example/a.png), url(/leak/control.png) }');
     await openApp(page, { width: 1280, height: 800 });
     await letStylesLoad(page);
-    expect(await violations()).toEqual([expect.stringMatching(/^img-src: https:\/\/evil\.example\/a\.png/)]);
+    // Reported from a queued task, so possibly after the styles applied (decision 281).
+    await expect.poll(() => violations()).toEqual([expect.stringMatching(/^img-src: https:\/\/evil\.example\/a\.png/)]);
     // Same-origin images are allowed by the CSP: this request is what the checker prevents.
     expect(leaks.sent).toEqual(['/leak/control.png']);
   });

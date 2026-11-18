@@ -7,10 +7,10 @@
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Browser, Page } from '@playwright/test';
-import { FONT, MINUTE, SECOND, endThroughCountdown, finishResults, openApp, seedSettings, settle } from './helpers.ts';
-import { FRAME_FONTS, SETTINGS_FRAME_HEIGHT, settingsFrame } from './fixtures/settings-frames.ts';
+import { FONT, MINUTE, SECOND, endThroughCountdown, finishResults, openApp, seedSettings, settle, switchTestModesOn } from './helpers.ts';
+import { ADVANCED_TEST_MODES_HEIGHT, FRAME_FONTS, SETTINGS_FRAME_HEIGHT, settingsFrame } from './fixtures/settings-frames.ts';
 import type { Palette, SettingsFrameName } from './fixtures/settings-frames.ts';
 import { GRAPHITE, PAPER } from './fixtures/frames.ts';
 import { diffPngs, expectLikeFrame } from './pixels.ts';
@@ -35,8 +35,8 @@ function choiceFont(id: string, name = `${id}.name.woff2`): Buffer {
 
 type Clip = { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
 
-async function frameReference(browser: Browser, name: SettingsFrameName, palette: Palette, storage?: string, clip?: Clip): Promise<Buffer> {
-  const height = SETTINGS_FRAME_HEIGHT[name];
+async function frameReference(browser: Browser, name: SettingsFrameName, palette: Palette, storage?: string, clip?: Clip, variant?: 'ocean' | 'notice' | 'test-modes'): Promise<Buffer> {
+  const height = variant === 'test-modes' ? ADVANCED_TEST_MODES_HEIGHT : SETTINGS_FRAME_HEIGHT[name];
   const reference = await browser.newPage({ viewport: { width: 1280, height } });
   await reference.route('http://frame.test/**', (route) => {
     const url = route.request().url();
@@ -45,10 +45,18 @@ async function frameReference(browser: Browser, name: SettingsFrameName, palette
     if (preview !== undefined && Object.values(FRAME_FONTS).includes(preview)) return route.fulfill({ body: choiceFont(preview), contentType: 'font/woff2' });
     const full = /\/full\/([a-z-]+)-(\d+)\.woff2$/.exec(url);
     if (full?.[1] !== undefined && Object.values(FRAME_FONTS).includes(full[1])) return route.fulfill({ body: choiceFont(full[1], `${full[1]}-${full[2] ?? ''}.woff2`), contentType: 'font/woff2' });
-    return route.fulfill({ body: settingsFrame(name, palette, storage), contentType: 'text/html' });
+    return route.fulfill({ body: settingsFrame(name, palette, storage, variant), contentType: 'text/html' });
   });
   await reference.goto('http://frame.test/');
   await reference.evaluate(() => document.fonts.ready);
+  // Painted afresh once, as the site's panel is (showLikeFrame): in the reference image the frame's tiles were
+  // sometimes caught re-rastered piecemeal, their corners a few levels off, while the site's never differed.
+  await reference.evaluate(() => {
+    document.body.style.setProperty('display', 'none');
+    document.body.getBoundingClientRect();
+    document.body.style.removeProperty('display');
+  });
+  await reference.waitForTimeout(100);
   const image = await reference.screenshot({ clip: clip ?? { ...PANEL, y: 0, height } });
   await reference.close();
   return image;
@@ -101,8 +109,14 @@ async function showLikeFrame(page: Page, name: SettingsFrameName): Promise<void>
 }
 
 test.describe('the panel matches its frames', () => {
+  // No session runs here, so nothing needs keeping awake (e2e/test.ts); the suite's pointer moves would only
+  // stir the panel between its fresh paint and the screenshot.
+  test.use({ awake: false });
+
   for (const name of ['timer', 'display', 'notifications', 'appearance', 'advanced'] as const) {
     test(`with ${name} open`, async ({ page, browser, browserName }) => {
+      // The display frame draws every mode's tile: from round 2.10 all but four are test modes'.
+      if (name === 'display') await switchTestModesOn(page);
       await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT[name] });
       await showLikeFrame(page, name);
       const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: SETTINGS_FRAME_HEIGHT[name] } });
@@ -113,6 +127,50 @@ test.describe('the panel matches its frames', () => {
       });
     });
   }
+
+  test('with advanced open and the test-modes switch offered, as the Release 2 advanced frame', async ({ page, browser, browserName }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('test-modes', '{"schema":1,"offered":true,"on":false}');
+    });
+    await openApp(page, { width: 1280, height: ADVANCED_TEST_MODES_HEIGHT });
+    await showLikeFrame(page, 'advanced');
+    const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: ADVANCED_TEST_MODES_HEIGHT } });
+    const reference = await frameReference(browser, 'advanced', GRAPHITE, undefined, undefined, 'test-modes');
+    const diff = await diffPngs(page, site, reference);
+    expectLikeFrame(diff, browserName, () => {
+      expect(diff.differing, JSON.stringify(diff)).toBe(0);
+    });
+  });
+
+  test.describe('from the fullscreen tip', () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
+
+    test('"change" opens settings on the switch, as the "change opens settings on it" frame', async ({ page, browser, browserName }) => {
+      await page.addInitScript(() => Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get: () => true, configurable: true }));
+      await openApp(page, { mode: 'ocean', width: 1280, height: SETTINGS_FRAME_HEIGHT.display });
+      await page.getByRole('button', { name: 'change' }).click();
+      await expect(page.locator('[data-setting="fullscreenOnStart"]')).toHaveClass(/setting--highlight/);
+      // "saved" held as the frame shows it, and the outline at its fullest held still: its animation is replaced by
+      // its middle, which it holds from 10 % to 85 % of its time (the animation itself is checked in notices.spec.ts).
+      await page.evaluate(() => {
+        (document.activeElement as HTMLElement | null)?.blur();
+        const saved = document.querySelector<HTMLElement>('.settings__saved');
+        for (const animation of saved?.getAnimations() ?? []) animation.cancel();
+        saved?.style.setProperty('opacity', '1');
+        const still = new CSSStyleSheet();
+        still.replaceSync('.mode-options .setting.setting--highlight::after { animation: none; opacity: 1 }');
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, still];
+      });
+      await settle(page);
+      await page.waitForTimeout(100);
+      const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: SETTINGS_FRAME_HEIGHT.display } });
+      const reference = await frameReference(browser, 'display', GRAPHITE, undefined, undefined, 'notice');
+      const diff = await diffPngs(page, site, reference);
+      expectLikeFrame(diff, browserName, () => {
+        expect(diff.differing, JSON.stringify(diff)).toBe(0);
+      });
+    });
+  });
 
   // Tester report: the ring tile showed a filled arc, not the ring's trail. Both display frames draw it as the
   // ring itself: a faint track, a short accent tail fading toward its far end, and the round head.
@@ -135,7 +193,98 @@ test.describe('the panel matches its frames', () => {
         expect(diff.differing, JSON.stringify(diff)).toBe(0);
       });
     });
+
+    test(`the analog tile matches the Release 2 display frame's, in ${theme}`, async ({ page, browser, browserName }) => {
+      await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT.display, settings: { theme } });
+      await showLikeFrame(page, 'display');
+      const box = await page.getByRole('radio', { name: 'analog' }).boundingBox();
+      if (box === null) throw new Error('no analog tile');
+      const clip = { x: Math.floor(box.x), y: Math.floor(box.y), width: Math.ceil(box.width), height: Math.ceil(box.height) };
+      const site = await page.screenshot({ clip });
+      const diff = await diffPngs(page, site, await frameReference(browser, 'display', palette, undefined, clip));
+      expectLikeFrame(diff, browserName, () => {
+        expect(diff.differing, JSON.stringify(diff)).toBe(0);
+      });
+    });
   }
+
+  for (const [theme, palette] of [
+    ['graphite', GRAPHITE],
+    ['paper', PAPER],
+  ] as const) {
+    test(`the ocean depth tile matches the Release 2 display frame's, in ${theme}`, async ({ page, browser, browserName }) => {
+      await switchTestModesOn(page);
+      await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT.display, settings: { theme } });
+      await showLikeFrame(page, 'display');
+      const box = await page.getByRole('radio', { name: 'ocean depth' }).boundingBox();
+      if (box === null) throw new Error('no ocean depth tile');
+      const clip = { x: Math.floor(box.x), y: Math.floor(box.y), width: Math.ceil(box.width), height: Math.ceil(box.height) };
+      const site = await page.screenshot({ clip });
+      const diff = await diffPngs(page, site, await frameReference(browser, 'display', palette, undefined, clip));
+      expectLikeFrame(diff, browserName, () => {
+        expect(diff.differing, JSON.stringify(diff)).toBe(0);
+      });
+    });
+
+    test(`with ocean depth chosen, its options box matches the Release 2 display frame's, in ${theme}`, async ({ page, browser, browserName }) => {
+      await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT.display, mode: 'ocean', settings: { theme } });
+      await showLikeFrame(page, 'display');
+      await page.mouse.move(0, 0);
+      const options = page.getByRole('group', { name: 'ocean depth options' });
+      await expect(options).toBeVisible();
+      const box = await options.boundingBox();
+      if (box === null) throw new Error('no options box');
+      // The tiles and the box below them, as the frame draws them with ocean depth chosen.
+      const tiles = await page.locator('.mode-tiles').boundingBox();
+      if (tiles === null) throw new Error('no tiles');
+      const clip = { x: Math.floor(tiles.x), y: Math.floor(tiles.y), width: Math.ceil(tiles.width), height: Math.ceil(box.y + box.height - tiles.y) };
+      const site = await page.screenshot({ clip });
+      const diff = await diffPngs(page, site, await frameReference(browser, 'display', palette, undefined, clip, 'ocean'));
+      expectLikeFrame(diff, browserName, () => {
+        expect(diff.differing, JSON.stringify(diff)).toBe(0);
+      });
+    });
+  }
+
+  test('each mode with options has its own box, shown only while it is chosen; height keeps its own landmarks switch', async ({ page }) => {
+    await switchTestModesOn(page);
+    await openApp(page, { width: 1280, height: 800 });
+    await openPanel(page);
+    await openCategory(page, 'display');
+    // A mode's own boxes (the focus view group is drawn in the same kind of box, for every mode).
+    const visibleBoxes = page.locator('.mode-options[data-options]:visible');
+    await expect(visibleBoxes).toHaveCount(0);
+    await page.getByRole('radio', { name: 'ocean depth' }).click();
+    const ocean = page.getByRole('group', { name: 'ocean depth options' });
+    await expect(ocean).toBeVisible();
+    await expect(visibleBoxes).toHaveCount(1);
+    const landmarks = ocean.getByRole('switch', { name: 'results landmarks' });
+    await expect(landmarks).toHaveAttribute('aria-checked', 'true');
+    await landmarks.click();
+    await expect(landmarks).toHaveAttribute('aria-checked', 'false');
+    const stored = (): Promise<{ resultsLandmarks?: boolean; heightLandmarks?: boolean; treeView?: string }> => page.evaluate(() => JSON.parse(localStorage.getItem('settings') ?? '{}') as { resultsLandmarks?: boolean; heightLandmarks?: boolean; treeView?: string });
+    expect((await stored()).resultsLandmarks).toBe(false);
+    // Height's box has its own switch, still on.
+    await page.getByRole('radio', { name: 'height' }).click();
+    const height = page.getByRole('group', { name: 'height options' });
+    await expect(height).toBeVisible();
+    await expect(visibleBoxes).toHaveCount(1);
+    await expect(height.getByRole('switch', { name: 'results landmarks' })).toHaveAttribute('aria-checked', 'true');
+    await expect(height).toContainText('up to two per 10 km on the results');
+    // The tree's view, a segmented control.
+    await page.getByRole('radio', { name: 'tree' }).click();
+    const tree = page.getByRole('group', { name: 'tree options' });
+    await expect(tree).toBeVisible();
+    await tree.getByRole('radio', { name: 'isometric' }).click();
+    expect((await stored()).treeView).toBe('isometric');
+    await page.getByRole('radio', { name: 'analog' }).click();
+    await expect(visibleBoxes).toHaveCount(0);
+    // Search finds them by their own words, under display.
+    await page.getByRole('searchbox', { name: 'search settings' }).fill('landmarks');
+    await expect(page.locator('.settings__row:visible')).toHaveText(['display']);
+    await page.getByRole('searchbox', { name: 'search settings' }).fill('isometric');
+    await expect(page.locator('.settings__row:visible')).toHaveText(['display']);
+  });
 
   test('with privacy and data open, a font file stored', async ({ page, browser, browserName }) => {
     await openApp(page, { width: 1280, height: 800 });
@@ -209,7 +358,7 @@ test.describe('changes', () => {
     const background = (target: Page) => target.evaluate(() => getComputedStyle(document.body).backgroundColor);
     expect(await background(page)).toBe('rgb(246, 245, 242)');
     await expect.poll(() => background(other)).toBe('rgb(246, 245, 242)');
-    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ schema: 1, theme: 'paper' });
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ schema: 3, theme: 'paper' });
     await page.reload();
     await page.locator('.button--primary').waitFor();
     expect(await background(page)).toBe('rgb(246, 245, 242)');
@@ -382,7 +531,8 @@ test.describe('fonts', () => {
     expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ font: 'own' });
     // Nothing was sent anywhere, and settings hold only the choice, not the file.
     expect(uploads.filter((url) => !url.endsWith('/api/count'))).toEqual([]);
-    expect((await page.evaluate(() => localStorage.getItem('settings')))?.length).toBeLessThan(400);
+    // The choices alone (about 460 characters), never the file.
+    expect((await page.evaluate(() => localStorage.getItem('settings')))?.length).toBeLessThan(1000);
 
     await page.reload();
     await page.locator('.button--primary').waitFor();

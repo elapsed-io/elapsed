@@ -10,6 +10,8 @@
  * Release 3.
  */
 
+import { CARD_STARS } from './height-stars.ts';
+
 
 export interface FramePalette {
   readonly bg: string;
@@ -248,4 +250,226 @@ export function resultsRingFrame(data: ResultsData): string {
   const legend = `<div style="display: flex; gap: 14px; font-size: 11px; color: ${C.muted}"><div style="display: flex; align-items: center; gap: 6px"><div style="width: 10px; height: 10px; border-radius: 2px; background: ${C.accent}"></div>focus</div><div style="display: flex; align-items: center; gap: 6px"><div style="width: 8px; height: 8px; border-radius: 2px; border: 1px solid ${C.faint}"></div>pause</div></div>`;
   const row = `<div style="display: flex; align-items: center; gap: 44px"><div style="display: flex; flex-direction: column; align-items: center; gap: 8px">${svg}${legend}</div><div style="width: 250px">${statsGrid(data.stats, 2)}</div></div>`;
   return resultsRoot(16, headline(data.focused) + row + resultsActions());
+}
+
+/** A landmark as the ocean depth results frame lists them: its depth in metres and its name. */
+export type FrameLandmark = readonly [number, string];
+
+const FISH = (left: number, top: number, width: number): string =>
+  `<div style="position: absolute; left: ${String(left)}px; top: ${String(top)}px"><svg width="${String(width)}" height="${(width / 2).toFixed(1)}" viewBox="0 0 20 10"><ellipse cx="9" cy="5" rx="7" ry="3.2" fill="#0B2235"></ellipse><path d="M15 5 L20 1.5 L20 8.5 Z" fill="#0B2235"></path></svg></div>`;
+
+/** The things that pass, as the frame draws them: [left, peak opacity, from, span, markup]. */
+const PASSING: readonly (readonly [number, number, number, number, string])[] = [
+  [470, 0.55, 0, 260, `<div style="position: relative; width: 120px; height: 60px">${FISH(0, 10, 18)}${FISH(24, 2, 14)}${FISH(40, 20, 16)}${FISH(64, 8, 18)}${FISH(82, 26, 13)}${FISH(18, 32, 15)}${FISH(52, 40, 14)}${FISH(96, 14, 12)}</div>`],
+  [90, 0.5, 40, 380, '<svg width="70" height="44" viewBox="0 0 70 44"><ellipse cx="34" cy="22" rx="20" ry="13" fill="#0B2235"></ellipse><circle cx="58" cy="20" r="6" fill="#0B2235"></circle><path d="M24 12 L10 2 L30 10 Z M24 32 L10 42 L30 34 Z M44 12 L54 4 L46 14 Z M44 32 L54 40 L46 30 Z" fill="#0B2235"></path></svg>'],
+  [380, 0.45, 220, 1030, '<svg width="230" height="80" viewBox="0 0 230 80"><path d="M10 40 C30 12 120 8 170 30 C185 36 200 30 214 18 L222 22 C212 34 210 42 222 58 L214 62 C200 50 186 46 170 50 C120 72 40 68 10 40 Z" fill="#06182A"></path><path d="M90 56 L76 74 L104 60 Z" fill="#06182A"></path></svg>'],
+  [150, 0.9, 320, 830, '<svg width="48" height="80" viewBox="0 0 48 80"><path d="M4 26 C4 4 44 4 44 26 Z" fill="rgba(170,210,255,0.55)"></path><path d="M10 26 C6 42 14 56 10 76" stroke="rgba(170,210,255,0.45)" stroke-width="1.4" fill="none"></path><path d="M18 26 C14 42 22 56 18 76" stroke="rgba(170,210,255,0.45)" stroke-width="1.4" fill="none"></path><path d="M26 26 C22 42 30 56 26 76" stroke="rgba(170,210,255,0.45)" stroke-width="1.4" fill="none"></path><path d="M34 26 C30 42 38 56 34 76" stroke="rgba(170,210,255,0.45)" stroke-width="1.4" fill="none"></path><path d="M40 26 C36 42 44 56 40 76" stroke="rgba(170,210,255,0.45)" stroke-width="1.4" fill="none"></path></svg>'],
+  [520, 1, 900, 1750, '<svg width="60" height="90" viewBox="0 0 60 90"><circle cx="30" cy="10" r="2.6" fill="#8FE6FF" opacity="0.9"></circle><circle cx="22" cy="24" r="1.8" fill="#8FE6FF" opacity="0.7"></circle><circle cx="38" cy="24" r="1.8" fill="#8FE6FF" opacity="0.7"></circle><circle cx="30" cy="36" r="2" fill="#8FE6FF" opacity="0.8"></circle><circle cx="18" cy="50" r="1.4" fill="#8FE6FF" opacity="0.6"></circle><circle cx="42" cy="50" r="1.4" fill="#8FE6FF" opacity="0.6"></circle><circle cx="26" cy="64" r="1.2" fill="#8FE6FF" opacity="0.5"></circle><circle cx="34" cy="70" r="1.2" fill="#8FE6FF" opacity="0.5"></circle><circle cx="30" cy="84" r="1" fill="#8FE6FF" opacity="0.4"></circle></svg>'],
+];
+
+/**
+ * The "results: ocean depth (build this one)" frame once its replay has landed and the labels have faded
+ * (canvas version 1794830661-c660), for `data` and the landmarks the site drew (picked at random each time,
+ * so the test reads them from the page), computed as the frame computes them: 15 m a focused minute, the
+ * card lit by the light model dimmed to 80 % from 20 m above to 60 m below, the chart 15 % deeper than the
+ * dive and at least 200 m.
+ */
+export function resultsDepthLitFrame(data: ResultsData, landmarks: readonly FrameLandmark[]): string {
+  const total = data.total;
+  let d = 0;
+  const raw: [number, number][] = [[0, 0]];
+  let at = 0;
+  for (const { from, to } of data.stretches) {
+    if (from > at) raw.push([from, d]);
+    d += (to - from) * 15;
+    raw.push([to, d]);
+    at = to;
+  }
+  if (total > at) raw.push([total, d]);
+  const col = (z: number): string =>
+    `#${[0.0232, 0.212, 0.392]
+      .map((v, i) => {
+        let x = 0.8 * v * Math.exp(-([0.3, 0.06, 0.023][i] ?? 0) * Math.min(z, 10935));
+        x = x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+        return Math.round(Math.max(0, Math.min(1, x)) * 255)
+          .toString(16)
+          .padStart(2, '0');
+      })
+      .join('')}`;
+  const bg = `linear-gradient(180deg, ${col(Math.max(0, d - 20))} 0%, ${col(d + 60)} 100%)`;
+  const yMax = Math.max(200, d * 1.15);
+  const Y = (z: number): number => Math.min(190, (z / yMax) * 190);
+  const pts = raw.map(([t, z]) => `${((t / total) * 600).toFixed(1)},${Y(z).toFixed(1)}`).join(' ');
+  const last = raw[raw.length - 1] ?? [0, 0];
+  const zones = (
+    [
+      [200, 'twilight zone'],
+      [1000, 'midnight zone'],
+      [4000, 'abyssal zone'],
+    ] as const
+  )
+    .map(([z, name]) => {
+      const y = Y(z);
+      const o = (z < yMax * 0.98 && y > 16 ? 0.35 : 0).toFixed(2);
+      return `<line x1="0" y1="${y.toFixed(1)}" x2="600" y2="${y.toFixed(1)}" stroke="#FFFFFF" stroke-width="1" stroke-dasharray="2 5" opacity="${o}"></line><text x="6" y="${(y - 5).toFixed(1)}" font-family="Archivo, system-ui, sans-serif" font-size="11" fill="#FFFFFF" opacity="${o}">${name}</text>`;
+    })
+    .join('\n');
+  const zone = d < 200 ? 'sunlight zone' : d < 1000 ? 'twilight zone' : d < 4000 ? 'midnight zone' : d < 6000 ? 'abyssal zone' : 'hadal zone';
+  const timeAt = (z: number): number => {
+    let acc = 0;
+    for (const { from, to } of data.stretches) {
+      const span = (to - from) * 15;
+      if (acc + span >= z) return from + (z - acc) / 15;
+      acc += span;
+    }
+    return total;
+  };
+  const sm = (x: number): number => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+  // Once the labels have faded, only the dots are left.
+  const dots = landmarks
+    .filter(([z]) => z <= d)
+    .map(([z]) => `<div style="position: absolute; left: 0; top: 0"><div style="position: absolute; left: ${((timeAt(z) / total) * 600).toFixed(1)}px; opacity: ${sm((d - z) / 120).toFixed(2)}; top: ${Y(z).toFixed(1)}px; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: #F2C46B; box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5)"></div></div>`)
+    .join('');
+  const things = PASSING.map(([left, peak, from, span, markup]) => {
+    const p = (d - from) / span;
+    const on = p > 0 && p < 1;
+    return `<div style="position: absolute; left: ${String(left)}px; top: 0; transform: translateY(${(560 - p * 660).toFixed(1)}px); opacity: ${on ? (peak * Math.sin(Math.PI * p)).toFixed(2) : '0'}">${markup}</div>`;
+  }).join('');
+  const text = '#F4F8FB';
+  const muted = 'rgba(232,242,250,0.74)';
+  const chart = `<div style="width: 600px; display: flex; flex-direction: column; gap: 6px">
+<div style="position: relative; width: 600px; height: 190px">
+<svg role="img" aria-label="dive profile" width="600" height="190" viewBox="0 0 600 190" style="position: absolute; top: 0; left: 0; overflow: visible">
+${zones}
+<polyline points="${pts}" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+<circle cx="${((last[0] / total) * 600).toFixed(1)}" cy="${Y(last[1]).toFixed(1)}" r="4" fill="#FFFFFF"></circle>
+<text x="596" y="22" text-anchor="end" font-family="Archivo, system-ui, sans-serif" font-size="22" font-weight="300" fill="#FFFFFF">${Math.round(d).toLocaleString('en-US')} m</text>
+<text x="596" y="40" text-anchor="end" font-family="Archivo, system-ui, sans-serif" font-size="11" fill="#FFFFFF" opacity="0.8">${zone}</text>
+</svg>
+${dots}
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 11px; color: ${muted}; font-variant-numeric: tabular-nums"><div>${data.start}</div><div>${data.end}</div></div>
+</div>`;
+  const lit = { ...C, text, muted };
+  const saved = C;
+  C = lit;
+  try {
+    const page = resultsRoot(16, headline(data.focused) + chart + statsGrid(data.stats, 6) + resultsActions());
+    // The card's light and the things that pass, behind the content; the corner icons keep the theme's colour.
+    return page
+      .replace(`background: ${lit.bg}; color: ${text}; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden">`, `background: ${bg}; color: ${text}; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden"><div aria-hidden="true" style="position: absolute; top: 0; left: 0; width: 720px; height: 520px; overflow: hidden; pointer-events: none">${things}</div>`)
+      .replaceAll(`color: ${lit.icon}; display: flex`, `color: ${saved.icon}; display: flex`);
+  } finally {
+    C = saved;
+  }
+}
+
+/** The things that pass on the height results, as its frame draws them: [left, peak opacity, from, span, markup]. */
+const FALLING: readonly (readonly [number, number, number, number, string])[] = [
+  [500, 0.8, 0, 2600, '<svg width="80" height="40" viewBox="0 0 80 40" fill="none" stroke="#0E2440" stroke-width="2" stroke-linecap="round"><path d="M4 14 q5 -5 10 0 q5 -5 10 0"></path><path d="M30 6 q5 -5 10 0 q5 -5 10 0"></path><path d="M52 20 q5 -5 10 0 q5 -5 10 0"></path><path d="M40 30 q5 -5 10 0 q5 -5 10 0"></path></svg>'],
+  [80, 0.9, 600, 5400, '<svg width="170" height="76" viewBox="0 0 100 45"><g fill="#FFFFFF" opacity="0.75"><ellipse cx="30" cy="30" rx="26" ry="13"></ellipse><ellipse cx="55" cy="22" rx="24" ry="17"></ellipse><ellipse cx="76" cy="31" rx="22" ry="12"></ellipse></g></svg>'],
+  [430, 0.85, 2500, 9000, '<svg width="220" height="99" viewBox="0 0 100 45"><g fill="#FFFFFF" opacity="0.6"><ellipse cx="30" cy="30" rx="26" ry="13"></ellipse><ellipse cx="55" cy="22" rx="24" ry="17"></ellipse><ellipse cx="76" cy="31" rx="22" ry="12"></ellipse></g></svg>'],
+  [250, 0.95, 8800, 4000, '<svg width="170" height="40" viewBox="0 0 170 40"><path d="M2 22 L80 20" stroke="rgba(255,255,255,0.6)" stroke-width="2.5"></path><path d="M80 18 L150 16 C160 16 166 19 166 20 C166 21 160 24 150 24 L80 23 Z M112 18 L96 4 L104 4 L126 18 Z M112 23 L96 37 L104 37 L126 23 Z M84 19 L78 10 L84 10 L92 19 Z" fill="#0E2440"></path></svg>'],
+  [560, 0.95, 15000, 19000, '<svg width="44" height="90" viewBox="0 0 44 90"><ellipse cx="22" cy="22" rx="18" ry="21" fill="#EDEFF3"></ellipse><path d="M22 43 L22 74" stroke="#C9D3E0" stroke-width="1"></path><rect x="17" y="74" width="10" height="8" fill="#C9D3E0"></rect></svg>'],
+];
+
+/**
+ * The "results: height (build this one)" frame once its replay has landed and the labels have faded (canvas
+ * version 1794830661-c660), for `data` and the landmarks the site drew, computed as the frame computes them:
+ * 140 m a focused minute, the card lit by the sky's light model dimmed to 65 % from 1,500 m above to 1,500 m
+ * below (never below the ground), the chart 15 % higher than the climb and at least 2,000 m, its stars and its
+ * horizon where the climb ended.
+ */
+export function resultsHeightLitFrame(data: ResultsData, landmarks: readonly FrameLandmark[]): string {
+  const total = data.total;
+  let d = 0;
+  const raw: [number, number][] = [[0, 0]];
+  let at = 0;
+  for (const { from, to } of data.stretches) {
+    if (from > at) raw.push([from, d]);
+    d += (to - from) * 140;
+    raw.push([to, d]);
+    at = to;
+  }
+  if (total > at) raw.push([total, d]);
+  const col = (z: number): string =>
+    `#${[0.078, 0.275, 0.597]
+      .map((v, i) => {
+        let x = 0.65 * v * Math.exp((-([1.25, 1.1, 0.95][i] ?? 0) * Math.max(0, Math.min(z, 100000))) / 8500);
+        x = x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+        return Math.round(Math.max(0, Math.min(1, x)) * 255)
+          .toString(16)
+          .padStart(2, '0');
+      })
+      .join('')}`;
+  const bg = `linear-gradient(180deg, ${col(d + 1500)} 0%, ${col(Math.max(0, d - 1500))} 100%)`;
+  const yMax = Math.max(2000, d * 1.15);
+  const Y = (z: number): number => Math.max(0, 190 - (z / yMax) * 190);
+  const pts = raw.map(([t, z]) => `${((t / total) * 600).toFixed(1)},${Y(z).toFixed(1)}`).join(' ');
+  const last = raw[raw.length - 1] ?? [0, 0];
+  const sm = (x: number): number => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
+  const zones = (
+    [
+      [12000, 'stratosphere'],
+      [50000, 'mesosphere'],
+      [85000, 'thermosphere'],
+    ] as const
+  )
+    .map(([z, name]) => {
+      const y = Y(z);
+      const o = (z < yMax * 0.98 && y > 16 ? 0.35 : 0).toFixed(2);
+      return `<line x1="0" y1="${y.toFixed(1)}" x2="600" y2="${y.toFixed(1)}" stroke="#FFFFFF" stroke-width="1" stroke-dasharray="2 5" opacity="${o}"></line><text x="6" y="${(y - 5).toFixed(1)}" font-family="Archivo, system-ui, sans-serif" font-size="11" fill="#FFFFFF" opacity="${o}">${name}</text>`;
+    })
+    .join('\n');
+  const zone = d < 12000 ? 'troposphere' : d < 50000 ? 'stratosphere' : d < 85000 ? 'mesosphere' : 'thermosphere';
+  const timeAt = (z: number): number => {
+    let acc = 0;
+    for (const { from, to } of data.stretches) {
+      const span = (to - from) * 140;
+      if (acc + span >= z) return from + (z - acc) / 140;
+      acc += span;
+    }
+    return total;
+  };
+  const dots = landmarks
+    .filter(([z]) => z <= d)
+    .map(([z]) => `<div style="position: absolute; left: 0; top: 0"><div style="position: absolute; left: ${((timeAt(z) / total) * 600).toFixed(1)}px; opacity: ${sm((d - z) / 1500).toFixed(2)}; top: ${Y(z).toFixed(1)}px; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: #F2C46B; box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5)"></div></div>`)
+    .join('');
+  const things = FALLING.map(([left, peak, from, span, markup]) => {
+    const p = (d - from) / span;
+    const on = p > 0 && p < 1;
+    return `<div style="position: absolute; left: ${String(left)}px; top: 0; transform: translateY(${(-90 + p * 640).toFixed(1)}px); opacity: ${on ? (peak * Math.sin(Math.PI * p)).toFixed(2) : '0'}">${markup}</div>`;
+  }).join('');
+  const hp = sm((d - 15000) / 8000);
+  const hp2 = sm((d - 23000) / 77000);
+  const stars = `<div aria-hidden="true" style="position: absolute; top: 0; left: 0; width: 720px; height: 520px; opacity: ${sm((d - 18000) / 24000).toFixed(2)}"><svg width="720" height="520" viewBox="0 0 720 520"><g>${CARD_STARS.join('')}</g></svg></div>`;
+  const horizon = `<div aria-hidden="true" style="position: absolute; left: 50%; top: 0; width: 3200px; height: 3200px; margin-left: -1600px; border-radius: 50%; transform: translateY(${(530 - 70 * hp - 50 * hp2).toFixed(1)}px); opacity: ${hp.toFixed(2)}; background: radial-gradient(circle at 50% 50%, #0B2A4E 0%, #0B2A4E 92%, #2B6FB0 98.8%, rgba(120,190,255,0.0) 100%); box-shadow: 0 0 40px 10px rgba(110,180,255,0.45)"></div>`;
+  const text = '#F4F8FB';
+  const muted = 'rgba(232,242,250,0.74)';
+  const chart = `<div style="width: 600px; display: flex; flex-direction: column; gap: 6px">
+<div style="position: relative; width: 600px; height: 190px">
+<svg role="img" aria-label="climb profile" width="600" height="190" viewBox="0 0 600 190" style="position: absolute; top: 0; left: 0; overflow: visible">
+${zones}
+<polyline points="${pts}" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+<circle cx="${((last[0] / total) * 600).toFixed(1)}" cy="${Y(last[1]).toFixed(1)}" r="4" fill="#FFFFFF"></circle>
+<text x="596" y="160" text-anchor="end" font-family="Archivo, system-ui, sans-serif" font-size="22" font-weight="300" fill="#FFFFFF">${Math.round(d).toLocaleString('en-US')} m</text>
+<text x="596" y="178" text-anchor="end" font-family="Archivo, system-ui, sans-serif" font-size="11" fill="#FFFFFF" opacity="0.8">${zone}</text>
+</svg>
+${dots}
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 11px; color: ${muted}; font-variant-numeric: tabular-nums"><div>${data.start}</div><div>${data.end}</div></div>
+</div>`;
+  const lit = { ...C, text, muted };
+  const saved = C;
+  C = lit;
+  try {
+    const page = resultsRoot(16, headline(data.focused) + chart + statsGrid(data.stats, 6) + resultsActions());
+    // The card's sky, its stars, its horizon and the things that pass, behind the content; the corner icons keep
+    // the theme's colour.
+    return page
+      .replace(`background: ${lit.bg}; color: ${text}; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden">`, `background: ${bg}; color: ${text}; font-family: Archivo, system-ui, sans-serif; position: relative; overflow: hidden">${stars}${horizon}<div aria-hidden="true" style="position: absolute; top: 0; left: 0; width: 720px; height: 520px; overflow: hidden; pointer-events: none">${things}</div>`)
+      .replaceAll(`color: ${lit.icon}; display: flex`, `color: ${saved.icon}; display: flex`);
+  } finally {
+    C = saved;
+  }
 }

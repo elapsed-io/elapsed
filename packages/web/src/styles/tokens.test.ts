@@ -33,16 +33,12 @@ describe('generated tokens', () => {
   it('gives each mode its own sizes, as the revised frames draw them', () => {
     const ring = renderModeTokensCss('ring');
     expect(ring).toContain('--mode-gap: 20');
-    // A 232 px ring (112 px to the middle of its 8 px track) in a 280 px box, the head's top-left at 136, 24.
-    expect(ring).toContain('--ring-diameter: 232');
-    expect(ring).toContain('--ring-inset: 24');
-    expect(ring).toContain('--ring-head-left: 136');
-    expect(ring).toContain('--ring-head-top: 24');
+    // The ring's geometry is its recipe's (checked against the ring frames, e2e/ring.spec.ts); the box and the tail's fade are the frame's.
+    expect(ring).toContain('--ring-box: 280');
     expect(ring).toContain('--ring-tail-far-strength: 15%');
     const timeline = renderModeTokensCss('timeline');
     expect(timeline).toContain('--mode-gap: 30');
     expect(timeline).toContain('--timeline-inner-gap: 18');
-    expect(timeline).toContain('--timeline-width: 480px');
     expect(timeline).toContain('--timeline-fade: 14%');
     // Modes move by transforms set once a minute, not by keyframes.
     expect(ring + timeline).not.toContain('@keyframes');
