@@ -15,7 +15,7 @@
  * - The results replay is the recipe's view, loaded with the results.
  */
 
-import { CONFIG, measureAt, replayTimingFor } from '@stopwatch/core';
+import { CONFIG, measureAt, PIECES_CONFIG, replayTimingFor } from '@stopwatch/core';
 import type { Layer, Recipe, ResultsView as ViewSpec, Session, StateName, TimeLayer, TimerView } from '@stopwatch/core';
 import { html } from '../../dom.ts';
 import type { DisplayContext, DisplayMode, ModeEvent, ModeOptions, ReplayLayout, ReplaySurface } from '../contract.ts';
@@ -111,6 +111,9 @@ export function zoneName(recipe: Recipe, value: number): string {
   return (recipe.zones ?? []).reduce<string>((name, [, label, from]) => (value >= from ? label : name), recipe.zones?.[0]?.[1] ?? '');
 }
 
+/** The caption of a mode whose environment is not drawn, when its recipe has no paused caption of its own. */
+const STAND_IN_CAPTION = { plain: '{value} {unit}', zoned: '{value} {unit} · {zone}' } as const;
+
 /** A state's caption from its template: only the recipe's placeholders, filled as text. */
 export function captionText(recipe: Recipe, template: string, value: number): string {
   const unit = recipe.measure.unitLabel ?? (recipe.measure.unit === 'time' ? '' : recipe.measure.unit);
@@ -146,8 +149,12 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
   let context: DisplayContext | null = null;
   let built: Built | null = null;
   let last: TimerView | null = null;
-  const darkShare = library.chrome === undefined ? null : contrastSwitch(recipe, library.chrome);
-  const dark = recipe.contrast?.dark ?? '#000000';
+  // A mode whose environment is not drawn (ocean depth and height while in testing) keeps the theme's background
+  // and colours: no contrast switch, which would turn the time the water's or the sky's dark colour over the theme
+  // (round 2.11, bug 5), and its measure's caption shown throughout, the measure's one sign on the screen.
+  const captionStandsIn = recipe.environment !== undefined && recipe.environment.type !== 'theme' && library.environment === undefined;
+  const darkShare = library.chrome === undefined || captionStandsIn ? null : contrastSwitch(recipe, library.chrome);
+  const dark = recipe.contrast?.dark ?? PIECES_CONFIG.colours.none;
   let shownShare = -1;
 
   const drawnKey = (values: ModeOptions): string =>
@@ -196,10 +203,15 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
     // The site crossfades one environment into the next when the mode changes (app.ts).
     environment?.element.classList.add('environment');
     if (environment !== null) environment.element.append(...backdrop);
-    const template = recipe.states?.paused?.caption;
+    // A mode whose environment is not drawn shows its measure's caption throughout: its paused caption, or the
+    // measure and zone as the mode's settings tile shows them ("84 m · sunlight zone").
+    const template = recipe.states?.paused?.caption ?? (captionStandsIn ? (recipe.zones === undefined ? STAND_IN_CAPTION.plain : STAND_IN_CAPTION.zoned) : undefined);
     const captionText = template === undefined ? null : [html(doc, 'span', { class: 'contrast__lit' }), ...(darkShare === null ? [] : [html(doc, 'span', { class: 'contrast__shade' })])];
     const caption = template === undefined || captionText === null ? null : { element: html(doc, 'div', { class: 'recipe__caption', attrs: { 'aria-hidden': 'true' } }, captionText), parts: captionText, template };
-    element.replaceChildren(...(environment === null ? backdrop : [environment.element]), shown, ...pieces.flatMap(({ piece }) => piece.overlay ?? []), ...(caption === null ? [] : [caption.element]));
+    // The mode's art goes on the shared art layer (styles/main.css): its environment, which holds its backdrop
+    // pieces, or else the backdrop pieces in one wrapper of their own, so none can stack above the time or a dialog.
+    const art = environment !== null ? [environment.element] : backdrop.length === 0 ? [] : [html(doc, 'div', { class: 'mode-art' }, backdrop)];
+    element.replaceChildren(...art, shown, ...pieces.flatMap(({ piece }) => piece.overlay ?? []), ...(caption === null ? [] : [caption.element]));
     if (time?.size === undefined) element.style.removeProperty('--mode-time-size');
     else element.style.setProperty('--mode-time-size', String(time.size));
     void doc.fonts.ready.then(() => {
@@ -256,8 +268,10 @@ export function createRecipeMode(id: string, recipe: Recipe, library: PieceLibra
       for (const { layer, piece } of built.pieces) piece.render({ ...frame, active: shownIn(recipe, layer, state, context) });
       built.stage?.render(frame);
       if (built.caption !== null) {
-        // The caption is ambient: shown while paused, never with low power.
-        const shown = frame.paused && !context.lowPower;
+        // The caption is ambient: shown while paused, never with low power. A mode whose environment is not drawn
+        // (ocean depth and height while in testing) shows it throughout instead, low power too: it is the measure's
+        // one sign on the theme's background, text changed once a second like the time (owner, round 2.11).
+        const shown = captionStandsIn || (frame.paused && !context.lowPower);
         if (shown) for (const part of built.caption.parts) part.textContent = captionText(recipe, built.caption.template, value);
         built.caption.element.classList.toggle('recipe__caption--shown', shown);
       }

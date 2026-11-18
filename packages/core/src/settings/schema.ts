@@ -15,6 +15,10 @@
  * Schema 2 (Release 2, round 2.1) adds animation speed and low power, and the
  * mode options (round 2.3 on: results landmarks for ocean depth and height; 2.4: ocean life). Older
  * settings migrate field by field: what they lack takes its default.
+ *
+ * Schema 3 (round 2.11): "leave fullscreen" defaults to never, so leaving fullscreen never delays the results.
+ * Stored settings hold every field, so the only sign a person never changed it is that it still holds the old
+ * default (end): an older record with end reads as never; any other choice is kept (owner, round 2.11).
  */
 
 import { CONFIG } from '../config.ts';
@@ -22,7 +26,10 @@ import { SECONDS_DISPLAYS } from '../engine/view.ts';
 import type { SecondsDisplay } from '../engine/view.ts';
 import type { RuleSettings } from '../session/rules.ts';
 
-export const SETTINGS_SCHEMA = 2;
+export const SETTINGS_SCHEMA = 3;
+
+/** The default "leave fullscreen" had before schema 3, which an older record holding it never chose. */
+const LEAVE_FULLSCREEN_BEFORE_3 = 'end';
 
 export const SETTINGS_CATEGORIES = ['timer', 'display', 'appearance', 'notifications', 'privacy'] as const;
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
@@ -232,7 +239,7 @@ export const SETTINGS: readonly SettingDeclaration[] = [
   { key: 'heightLandmarks', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
   { key: 'focusHide', kind: 'choice', category: 'display', options: FOCUS_HIDES, default: '3s', target: { site: 'focusView' } },
   { key: 'fullscreenOnStart', kind: 'switch', category: 'display', default: false, target: { site: 'focusView' } },
-  { key: 'leaveFullscreen', kind: 'choice', category: 'display', options: LEAVE_FULLSCREEN, default: 'end', target: { site: 'focusView' } },
+  { key: 'leaveFullscreen', kind: 'choice', category: 'display', options: LEAVE_FULLSCREEN, default: 'never', target: { site: 'focusView' } },
   { key: 'treeView', kind: 'choice', category: 'display', options: TREE_VIEWS, default: 'side', target: { site: 'modeOptions' } },
   { key: 'theme', kind: 'choice', category: 'appearance', options: THEME_IDS, default: 'graphite', target: { theme: 'preset' } },
   { key: 'colors', kind: 'colors', category: 'appearance', default: null, target: { theme: 'colors' } },
@@ -326,9 +333,15 @@ export function migrateSettings(raw: unknown): Settings {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return defaults;
   const record = raw as Record<string, unknown>;
   const result: Record<string, unknown> = { schema: SETTINGS_SCHEMA };
+  const before3 = typeof record['schema'] !== 'number' || record['schema'] < 3;
   for (const setting of SETTINGS) {
     // Height's landmarks had ocean depth's switch until each mode had its own options box: kept as it was.
     const value = setting.key === 'heightLandmarks' && !(setting.key in record) ? record['resultsLandmarks'] : record[setting.key];
+    // Leave fullscreen left at its old default reads as the new one (schema 3).
+    if (setting.key === 'leaveFullscreen' && before3 && value === LEAVE_FULLSCREEN_BEFORE_3) {
+      result[setting.key] = defaults[setting.key];
+      continue;
+    }
     if (!isValidValue(setting, value)) {
       result[setting.key] = defaults[setting.key];
     } else if (setting.kind === 'colors' && value !== null) {

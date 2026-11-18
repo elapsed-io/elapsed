@@ -1409,9 +1409,6 @@
               "slot": {
                 "$ref": "#/$defs/slotId"
               },
-              "view": {
-                "$ref": "#/$defs/slotId"
-              },
               "magnitudeMax": {
                 "type": "number",
                 "minimum": 0,

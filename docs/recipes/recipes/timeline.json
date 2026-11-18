@@ -14,7 +14,6 @@
     {
       "type": "time",
       "id": "time",
-      "size": 56,
       "position": "top",
       "seconds": "setting"
     },

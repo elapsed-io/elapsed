@@ -52,9 +52,7 @@ function leave(element: HTMLElement): void {
 }
 
 /** How long a drawn schedule of arrivals runs before it repeats, in seconds. */
-export const ARRIVAL_CYCLE_SECONDS = 180;
-/** Each arrival fades in and out over this long (at most a quarter of its stay). */
-const ARRIVAL_FADE_SECONDS = 2;
+export const ARRIVAL_CYCLE_SECONDS = LIFE.cycleSeconds;
 
 /** One arrival: what comes, where, when (seconds into the pause) and for how long, and how far it drifts. */
 export interface Arrival {
@@ -82,11 +80,9 @@ export interface Arrival {
  */
 export function scheduleArrivals(layer: ParticlesLayer, random: () => number = Math.random, cycle = ARRIVAL_CYCLE_SECONDS): Arrival[] {
   const { frameHeightPx: H, bubbleFromPx } = LIFE;
-  const rows = [150, 300, 390] as const;
-  const scales = [0.3, 0.55, 1.25] as const;
-  const speeds = [7, 13, 26] as const;
+  const { rowsPx: rows, scales, speedsPxPerSecond: speeds, bubbles } = LIFE;
   const every = layer.every;
-  const lifetime = layer.lifetime ?? [8, 20];
+  const lifetime = layer.lifetime ?? LIFE.lifetimeSeconds;
   const sizes = layer.size?.scale ?? [1, 1];
   const ends: number[] = [];
   const arrivals: Arrival[] = [];
@@ -101,8 +97,8 @@ export function scheduleArrivals(layer: ParticlesLayer, random: () => number = M
     if (art === 3) {
       // A column of bubbles rising from below the screen.
       const count = 3 + Math.floor(random() * 4);
-      const speed = between(random, [22, 38]);
-      const members = Array.from({ length: count }, (_, k) => [(random() * 2 - 1) * 12, k * between(random, [26, 48]), between(random, [2.5, 6])] as const);
+      const speed = between(random, bubbles.speedPxPerSecond);
+      const members = Array.from({ length: count }, (_, k) => [(random() * 2 - 1) * bubbles.spreadPx, k * between(random, bubbles.spacingPx), between(random, bubbles.radiusPx)] as const);
       arrivals.push({ art, start: at, life, x: between(random, [0.1, 0.9]), y: bubbleFromPx / H, dx: 0, dy: -speed * life, scale: 1, right: true, members });
     } else {
       const row = rows[art];
@@ -165,7 +161,8 @@ export function drawArrivals(doc: Document, arrivals: readonly Arrival[], art: r
     const element = html(doc, 'div', { class: 'life__arrival', attrs: { 'data-distance': ['far', 'mid', 'near', 'bubbles'][arrival.art] ?? '' } }, [bob]);
     element.style.setProperty('--arrival-x', String(arrival.x));
     element.style.setProperty('--arrival-y', String(arrival.y));
-    const fade = Math.min(ARRIVAL_FADE_SECONDS, arrival.life / 4);
+    // Each arrival fades in and out over LIFE.fadeSeconds, at most a quarter of its stay.
+    const fade = Math.min(LIFE.fadeSeconds, arrival.life / 4);
     const share = (seconds: number): number => seconds / cycle;
     const moved = `translate(${arrival.dx.toFixed(1)}px, ${arrival.dy.toFixed(1)}px)`;
     element.animate(

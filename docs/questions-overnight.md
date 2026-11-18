@@ -1,9 +1,119 @@
-# Overnight: Release 2, rounds 2.1 to 2.10
+# Overnight: Release 2, rounds 2.1 to 2.11
 
 Working unattended on `claude/release-2` (owner, 2026-11-16 evening). The morning summary goes at the top
 when the run stops; questions for the owner are collected below as they come up.
 
-## Round 2.10 summary: Lighter and faster (stopped for your review)
+## Round 2.11 summary: One design system (stopped for your review)
+
+Built on `claude/release-2` from your round 2.11 message (plan version 11 in `docs/plan.md`; the round written into
+`docs/plan-release-2.md` as 2.11, the layout editor renumbered 2.12 and marked held, then 2.13 picture-in-picture
+and 2.14 hardening). Decisions 386 to 398; safety overview `docs/safety/round-2.11.md`.
+
+### 1. What was built
+
+- **One layout** for the modes that show the time on its own (digits, ocean depth, height, interstellar): the
+  time's size, the 26 px gap and the buttons from the shared tokens alone, identical idle and running, measured by a
+  test at three window sizes (decision 388). The figure modes keep their frames for now (question 32).
+- **One layer order** in tokens, used by every mode and screen: art, then the time and buttons, then pause and
+  check-in, then notices, then the corner icons, the settings panel above all; no mode stylesheet may set a z-index
+  (the build fails on one); a frost under the held display so art behind a dialog is blurred, never crisp; a test
+  opens check-in, pause and settings in every mode and finds nothing of the mode above them (390, 391).
+- **One set of tokens:** every value a mode held of its own moved to the config modules (the list below); the build
+  fails on a new hard-coded colour, size or duration in a mode (392).
+- **Bug 1, the detached line:** the route, Earth and the traveller are worked out from the same value at every
+  moment; a test checks both ends within 1 px through the first minutes running and across the replay (393).
+- **Bug 2, stars over check-in:** fixed by the layer order and the frost (390, 391).
+- **Bug 3, the results map:** rebuilt as the revised frame, the journey filling the whole card behind the headline,
+  statistics and icons, a faint HYG star field behind it, kept off the route and the bodies by halos; it matches the
+  frame within a pixel with the stars hidden (394).
+- **Bug 4, the points' fade:** each landmark appears over about 2 s while running and a sixth of the replay on the
+  results (395).
+- **Bug 5, ocean depth and height:** the theme's background and colours with their contrast switch off, and their
+  depth or altitude caption shown and updating throughout; a test in a dark and a light theme (396). The black
+  screen itself did not reproduce here (question 33).
+- **Bug 6, leave fullscreen:** defaults to never; stored settings still at the old default ("on end") read as never,
+  any other choice is kept (397).
+- **Your answers:** the HYG sky everywhere, still and turning, with no crossfade and the hand-entered catalog gone
+  (389); the credits page, linked from the settings footer (398); "past saturn" in the corrected paused frame and
+  Jupiter's bands accepted (386, 387); the layout editor held.
+
+### 2. The places made universal
+
+Layout:
+- `core/src/modes/ocean-config.ts`, `height-config.ts`: their own time size (104 px) and gap (22 px) removed;
+  `web/src/styles/tokens.ts`: ocean depth's and height's `--mode-time-size` and `--mode-gap` removed.
+- Every built-in recipe (`docs/recipes/recipes/*.json`: digits, ring, timeline, ocean depth, height, the tree,
+  interstellar): the time layer's own `size` removed; the tokens size the time (`modes/recipe/recipe-mode.ts` sets
+  a size only for a recipe that asks for one).
+
+Layers:
+- `core/src/config.ts`: `design.layers`, generated as `--layer-*` tokens (`styles/tokens.ts`).
+- `styles/main.css`: each screen one stacking context; the art, display, dialog, notice and chrome layers; the
+  corner icons on the chrome layer, the pill on the notice layer.
+- `modes/pieces/stops/stops.css`, `modes/pieces/light/light.css`: their own `z-index: -1` and stacking contexts
+  removed (on the art layer now).
+- `modes/shared/time.css`, `modes/shared/time-display.ts`: the time, the frost, the veil and the pause and check-in
+  overlays placed by the layer tokens.
+- `modes/recipe/recipe-mode.ts`: a mode without an environment puts its backdrop pieces in one art-layer wrapper.
+- `results/results.css`: the replay's backdrop on the art layer, the card's content on the display layer.
+
+Values (from a mode's own code to the config modules):
+- The glides' 250 ms drift tolerance, in seven pieces and the camera (`tree`, `ring`, `dial`, `track`, `light`,
+  `starfield`, `camera`): `CONFIG.motion.glideDriftMs`.
+- Ocean life's rows, scales, speeds, stays, fade, cycle and bubbles (`pieces/particles/particles.ts`):
+  `OCEAN_LIFE_CONFIG`.
+- The comets' stay, head, length, distance and colour fallbacks (`pieces/particles/comets.ts`):
+  `SPACE_COMETS_CONFIG.defaults`.
+- The camera's 20 px edge margin, usable share and minimum (`recipe/camera.ts`, `views/space.ts`), the light's
+  keyframe steps (`pieces/light/light.ts`), a dial's fallback cycle, ticks, subdial radius, hand width and length
+  (`pieces/dial/dial.ts`), a path's width and head (`pieces/map/path.ts`, `views/space.ts`), a turning sky's
+  6 minutes (`pieces/starfield/sky.ts`), the results' landmark caps and opening crossfade (`views/profile.ts`), the
+  fallback black and the tree's shade ends (`light.ts`, `contrast.ts`, `recipe-mode.ts`, `profile.ts`,
+  `pieces/tree/colours.ts`): `PIECES_CONFIG`, a new module the pieces share.
+- The contrast rule's 4.5 and 3 (`recipe/contrast.ts`): `CONFIG.theme.minContrast`.
+- The results map's geometry and the distance line's colour (`views/space.ts`, `views/space.css`):
+  `SPACE_CONFIG.results` and its tokens.
+- The frost's shape: `CONFIG.motion.frostSolidShare` (`--frost-solid`).
+- Kept as they are, with the reason in decision 392: the masks' opaque black (an alpha mask), 1 px hairlines and
+  visually hidden boxes, and the clock's own units (a minute in milliseconds, minutes in an hour).
+
+### 3. Test results
+
+- `npm run check`: typecheck, lint, 770 unit tests (1 to do), contrast (all 10 presets), build, and the size
+  check: core JavaScript 40.2 KB of the 50 KB budget (39.8 before: the layer tokens, the frost and the shared
+  values); interstellar 23.1 KB of code and 17.3 KB of art (17.8 before: one sky instead of two); every download
+  within its ceiling.
+- The end-to-end suite through the reference image in Chromium, Firefox and WebKit: **1,028 passed, 100 skipped,
+  0 failed** (15.2 minutes), 57 tests more than round 2.10, the performance tests among them. The skipped are as
+  before: 84 water and sky tests set aside while ocean depth and height are in testing, 16 declared (Chromium-only
+  measurements, controls that hold only in the reference image).
+- Before the clean run: the first reference run failed one test in Firefox, the new route test, whose measure read
+  the route's matrix with `getScreenCTM`, which in Firefox leaves out a transform set from a custom property (the
+  results' replay); it now reads the computed transform, the same in every browser, and the whole suite was rerun
+  clean. In the local runs before it: the frost changed neighbouring pixels by 1 to 2 levels even unseen, so it is
+  drawn only while held and only in modes with art behind the time; the settings frames gained the credits link and
+  "never" chosen for leave fullscreen (both your rules, applied to the references as the hidden source-code link
+  is); the end-to-end helper seeded settings as schema 1, which the new migration correctly read as never.
+- After the clean run, the frost's check was tightened to assert it drawn exactly where a mode has art behind the
+  time (and not drawn elsewhere); its spec, `e2e/design-system.spec.ts`, was rerun in the reference image's three
+  browsers: 36 passed.
+
+### 4. Skipped and why
+
+- The figure modes' layout (ring, timeline, analog, the tree) is not changed to the shared time and gap: their
+  frames place the time inside or under the figure (question 32).
+- The layout editor round is held, as you asked.
+- The water's and the sky's tests, and the ocean and height timer frames, stay set aside while those environments
+  are not drawn (`ENVIRONMENT_IN_TESTING`).
+- Nothing was deployed, merged into Release 1, released, or changed on Cloudflare or GitHub settings.
+
+### 5. Questions waiting for you
+
+32 to 34 (new): the figure modes and the shared layout; the black screen, which did not reproduce; the credits
+page's look. 28 to 31 from round 2.10 and 13 to 22 from earlier rounds still stand (your answers to 13 to 22 are to
+follow). 23 to 27 are answered.
+
+## Earlier summary: round 2.10, Lighter and faster
 
 Built on `claude/release-2` from your round 2.10 message (plan version 10 in `docs/plan.md`; the round written into
 `docs/plan-release-2.md` and the later rounds renumbered: 2.11 the layout editor, 2.12 picture-in-picture, 2.13
@@ -287,6 +397,11 @@ and the Oort cloud and Proxima Centauri (no action needed).
   magnitude 5 derived reproducibly under CC BY-SA with its licence in its own folder; the canvas's own still sky
   recovered from the frames; the camera's map, glides and blur; the bodies as art; comets; the journey replay;
   the test-modes switch and the Release 2 advanced frame.
+- Round 2.11: one design system (decisions 386 to 398): one layout for the time modes, one layer order in tokens
+  with a frost under held dialogs, every mode's own values moved to the config modules with audit rules against
+  new ones; interstellar's route attached at every moment, its results map filling the card, its landmarks
+  fading in, one HYG sky everywhere; ocean depth's and height's captions throughout while in testing; "leave
+  fullscreen" defaulting to never (settings schema 3); the credits page.
 
 ## Questions for the owner
 
@@ -389,16 +504,26 @@ and easy to change; and 27, on which round 2.10 waits.
     that departs from the still view by up to about 10 px toward the edges. Built: as a pause starts, the strip
     starts turning from the still view's centre and the two crossfade over 2 s. Alternatives: turn the canvas
     catalog alone (no HYG at all), or show HYG's stars on the running screen too (then the frames' sky changes).
+    **Answered (owner, round 2.11):** no crossfade; the HYG sky everywhere, still and turning, and the hand-entered
+    catalog removed. Built (decision 389).
+
 24. **Where the HYG credit shows (decision 353).** The derived star data carries its credit and licence inside the
     file and in its folder's `LICENSE.md`; the site itself shows no credit yet. CC BY-SA asks for reasonable
     attribution where the work is used: a line in the about or legal page ("star positions from the HYG database,
     CC BY-SA 4.0"), or under interstellar's tile? Not built until you say where.
+    **Answered (owner, round 2.11):** a small credits page linked from the settings footer, listing every
+    third-party work and its licence. Built (decision 398).
+
 25. **"past jupiter" in the paused frame (decision 351).** The paused frame's line reads "10.1 au travelled · past
     jupiter" while its own map, at 11.1 AU from the Sun, has passed Saturn (and labels it); the results frame works
     its line out ("past" the last landmark reached). Built as the results frame: "past saturn" there. Confirm.
+    **Answered (owner, round 2.11):** "past saturn" is right; the paused frame is corrected (decision 386).
+
 26. **The Oort cloud and Proxima Centauri.** The plan keeps them for accounts' accumulated distance (Release 4);
     a guest's 16-hour session reaches about 116 AU, just short of the heliopause at 120. Nothing is drawn for
     them yet. (No action needed unless you want a hint of what lies beyond.)
+    **Answered (owner, round 2.11):** noted.
+
 27. **Round 2.11 (the layout editor, numbered 2.10 until you inserted "Lighter and faster") needs frames or answers
     before it starts.** The canvas has one frame for
     it, "layout editor: imported background, rotated timer, buttons moved" (in "later releases": the free-form
@@ -412,6 +537,9 @@ and easy to change; and 27, on which round 2.10 waits.
     is placed and cropped, and how it is removed; (e) each mode's replaceable art: where its slots are listed, the
     template download, and what a refused file says. Which of these should I build from the plan's words alone,
     and which wait for frames?
+    **Answered (owner, round 2.11):** held; the owner adds frames for Release 2's customize mode to the canvas first.
+    The round is 2.12 and marked held in `docs/plan-release-2.md`.
+
 28. **Ocean depth's and height's pieces over the theme while they are in testing (round 2.10, decision 378).** They
     now keep the theme's background at all times, with no environment colours, as you asked. Their pieces still
     draw over it in their own colours: ocean life while paused (navy and blue fish and bubbles), the depth and
@@ -434,3 +562,21 @@ and easy to change; and 27, on which round 2.10 waits.
     the tree's few hundred season animations are sampled from its model when it mounts, now in slices of 40 a task
     so none holds the main thread past 50 ms. Precomputed by the build they would be a large file to save a few
     milliseconds a slice. Built: kept on the device. Confirm, or move them to the build.
+32. **The figure modes and the shared layout (round 2.11, decision 388).** You asked for the time, the 26 px gap
+    and the buttons in exactly the same place and size in every mode. In digits, ocean depth, height and
+    interstellar they now are (one set of tokens, a test measures them). Ring, timeline, analog and the tree draw
+    the time inside or under their figure at their frames' sizes (52, 56, 52 and 30 px, with their own gaps, the
+    buttons below the figure), so one place for the time would change those frames. Built: their layouts kept
+    from their frames; their buttons are the shared buttons, the same size in every mode. Should the figure modes
+    also take the shared time and gap (and the figures fit around them), or keep their frames?
+33. **Ocean depth's and height's "black screen" (round 2.11, bug 5; decision 396).** I could not reproduce it: in
+    Chromium, Firefox and WebKit, stored or chosen in settings, both showed the theme's background and a running
+    time. What I found and changed: they had no sign of their measure while running (ocean depth no caption at all,
+    height's only while paused), and their contrast switch was still on (it never fired in my runs, but it would
+    turn the time the water's or sky's dark colour on the theme). Now the caption shows throughout and the switch
+    is off, with a test in a dark and a light theme. If you still see it, which browser and device, and was it
+    right after choosing the mode, after a reload, or on returning to the tab?
+34. **The credits page's look (decision 398).** It has no frame: built plain, in the default theme's colours and
+    the site's typeface, one column, each work with what it is used for, by whom, its licence (linked) and the
+    changes made, and a link back to the timer; it lists the twelve font choices too, as they are third-party
+    works the site serves. Keep it so, or should it follow a frame (or the theme the person chose)?

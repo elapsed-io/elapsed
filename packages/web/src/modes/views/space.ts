@@ -1,28 +1,31 @@
 /**
- * The journey replayed (plan, Display modes > Results replays; the "results: interstellar" frame): on one space
- * background across the whole card with a faint star field behind it (no stars on the map itself), the traveller
- * goes out again from Earth's orbit by focused time only, so it never stalls, and the camera pulls back as it goes,
- * resting at the end of the path. The map is the timer's, at −17°: the rings fading as they shrink, each body
- * drawn as itself once reached and fading as its orbit shrinks, Earth folding into the Sun's glow, a name only 70 px
- * clear of the next name kept further out. Comets drift across it, tails away from the Sun. The distance line at
- * its top left counts with the replay.
+ * The journey replayed (plan, Display modes > Results replays; the revised "results: interstellar" frame, round
+ * 2.11): the journey map fills the whole card, on one space background with a faint star field behind it (the same
+ * HYG sky as the timer's, never on the route or the bodies: each has a halo of space), and the headline, the
+ * statistics and the icons sit over it, a space kept for the journey between them. The traveller goes out again
+ * from Earth's orbit by focused time only, so it never stalls, and the camera pulls back as it goes, resting at the
+ * end of the path. The map is the timer's, at the recipe's results angle: the rings fading as they shrink, each body
+ * drawn as itself once reached, appearing over a sixth of the replay and fading as its orbit shrinks, Earth folding
+ * into the Sun's glow, a name only 70 px clear of the next name kept further out. Comets drift across it, tails away
+ * from the Sun. The distance line at its top left counts with the replay. The map shrinks with a smaller window
+ * and never grows.
  *
  * Everything that moves is calculated in CSS from the replay's one animated property (plan, Principles): the
- * distance r = 1 + R × progress (R, the session's distance), the scale k = 476.8 ÷ max(r, 1.6), and from them
+ * distance r = 1 + R × progress (R, the session's distance), the scale k = 575.5 ÷ max(r, 1.6), and from them
  * every ring's scale and opacity, every body's place and opacity, the route and its head, the names (stepping where
  * the replay drops or adds one, worked out here once) and the distance line (counters). Where the browser cannot
  * count, the line shows its final words. The map is an image with its own label.
  */
 
 import './space.css';
-import { headingDirection, keptLabels, smoothstep, SPACE_CONFIG, SPACE_COPY, summarise } from '@stopwatch/core';
+import { headingDirection, keptLabels, PIECES_CONFIG, smoothstep, SPACE_CONFIG, SPACE_COPY, summarise } from '@stopwatch/core';
 import type { Recipe, Session } from '@stopwatch/core';
 import { html, svg } from '../../dom.ts';
 import type { ModeOptions, ReplaySurface } from '../contract.ts';
 import { drawBody, isMapLandmarks } from '../pieces/map/landmarks.ts';
 import type { MapLandmark } from '../pieces/map/landmarks.ts';
 import { drawComets, scheduleComets } from '../pieces/particles/comets.ts';
-import { decoded, isStillSky } from '../pieces/starfield/sky.ts';
+import { decoded, isTurningSky } from '../pieces/starfield/sky.ts';
 import { colourCss } from '../recipe/colour.ts';
 import { distanceText, zoneName } from '../recipe/recipe-mode.ts';
 import type { Slots } from '../recipe/slots.ts';
@@ -83,21 +86,24 @@ export async function spaceView(surface: ReplaySurface, session: Session, recipe
   const focusedMinutes = summarise(session).focusedMs / MINUTE_MS;
   const travelled = focusedMinutes * recipe.measure.perMinute;
   const end = start + travelled;
-  const minValue = recipe.camera?.type === 'follow-zoom' ? (recipe.camera.minValue ?? 1) : 1;
+  const minValue = recipe.camera?.type === 'follow-zoom' ? (recipe.camera.minValue ?? PIECES_CONFIG.camera.minValue) : PIECES_CONFIG.camera.minValue;
   const heading = recipe.camera?.type === 'follow-zoom' ? (recipe.camera.resultsAngle ?? recipe.camera.angle) : 0;
   const [cos, sin] = headingDirection(heading);
   const sun = [MAP.sunX, MAP.sunY] as const;
   const scaleAt = (value: number): number => MAP.usablePx / Math.max(value, minValue);
   const valueAt = (progress: number): number => start + travelled * progress;
 
-  // The card: space from edge to edge, the faint star field behind it.
+  // The card: space from edge to edge, the faint star field behind it: the timer's sky, drawn by the build from the
+  // same catalog about the card's centre (720 × 520), covering the card.
   const stars = find(recipe, 'starfield', ids)[0];
-  // The card's sky, drawn by the build (720 × 520), covering the card as the frame's does.
-  const sky = stars?.view === undefined ? undefined : slots.data(stars.view);
-  const backdrop = isStillSky(sky) ? [html(doc, 'img', { class: 'space-card__stars', attrs: { src: sky.card.url, alt: '', decoding: 'async', draggable: 'false' } })] : [];
+  const sky = stars === undefined ? undefined : await slots.load(stars.slot);
+  const backdrop = isTurningSky(sky) && sky.card !== undefined ? [html(doc, 'img', { class: 'space-card__stars', attrs: { src: sky.card.url, alt: '', decoding: 'async', draggable: 'false' } })] : [];
   for (const image of backdrop) image.style.setProperty('opacity', String(SPACE.sky.resultsOpacity));
   surface.backdrop.append(html(doc, 'div', { class: 'space-card' }, backdrop));
   const skyReady = decoded(backdrop);
+  // A halo of space under the route, the Sun and each body keeps the star field off them (round 2.11, bug 3): all
+  // in one group under the whole map, each moving and fading with what it is under, so it hides only stars.
+  const space = SPACE.background;
 
   // The map, in the frame's pixels.
   const map = svg(doc, 'svg', { class: 'space-map__drawing', viewBox: `0 0 ${String(MAP.widthPx)} ${String(MAP.heightPx)}`, role: 'img', 'aria-label': SPACE_COPY.map });
@@ -108,6 +114,8 @@ export async function spaceView(surface: ReplaySurface, session: Session, recipe
   // The distance travelled in its last decimal place, for the counters.
   box.style.setProperty('--space-count', `round((var(--space-r) - ${n(start)}) * ${String(10 ** decimals)}, 1)`);
   const kEnd = scaleAt(end);
+  const halos = svg(doc, 'g', { class: 'space-map__halos' });
+  map.append(halos);
 
   // At rest the map is drawn as the frame draws it, every point to a tenth of a pixel; while the replay runs, each
   // moving element takes its place from the progress (space.css: .space-map__moving and .space-map__fading).
@@ -152,6 +160,7 @@ export async function spaceView(surface: ReplaySurface, session: Session, recipe
 
   // The Sun.
   for (const layer of find(recipe, 'shape', ids)) {
+    halos.append(svg(doc, 'circle', { cx: n(sun[0]), cy: n(sun[1]), r: MAP.haloPx, fill: space }));
     const group = svg(doc, 'g', { transform: `translate(${n(sun[0])} ${n(sun[1])})` });
     if (layer.glow?.color !== undefined) {
       const colour = layer.glow.color;
@@ -168,15 +177,18 @@ export async function spaceView(surface: ReplaySurface, session: Session, recipe
   if (path !== undefined) {
     const [x1, y1] = point(from, kEnd).map(tenth) as [number, number];
     const [x2, y2] = point(end, kEnd).map(tenth) as [number, number];
-    const line = svg(doc, 'line', { x1: n(x1), y1: n(y1), x2: n(x2), y2: n(y2), stroke: colourCss(path.color, 'var(--color-foreground)'), 'stroke-width': path.width ?? 1, opacity: n(typeof path.opacity === 'number' ? path.opacity : 1) });
+    const width = path.width ?? PIECES_CONFIG.path.widthPx;
+    const line = svg(doc, 'line', { x1: n(x1), y1: n(y1), x2: n(x2), y2: n(y2), stroke: colourCss(path.color, 'var(--color-foreground)'), 'stroke-width': width, opacity: n(typeof path.opacity === 'number' ? path.opacity : 1) });
+    const halo = svg(doc, 'line', { x1: n(x1), y1: n(y1), x2: n(x2), y2: n(y2), stroke: space, 'stroke-width': n(width + 2 * MAP.routeHaloPx) });
     // Stretched and shifted along the heading only, from where it rests (map.ts, along()).
     const a0 = from * kEnd;
     const length = Math.max(1e-9, (end - from) * kEnd);
     const stretch = `((var(--space-r) - ${n(from)}) * var(--space-k) / ${n(length)})`;
-    moving(
-      line,
-      `translate(${n(sun[0])}px, ${n(sun[1])}px) rotate(${n(heading)}deg) translateX(calc((${n(from)} * var(--space-k) - ${stretch} * ${n(a0)}) * 1px)) scaleX(calc(${stretch})) rotate(${n(-heading)}deg) translate(${n(-sun[0])}px, ${n(-sun[1])}px)`,
-    );
+    // The route's ends are the start's point and the traveller's, from the same distance in the same frame.
+    const route = `translate(${n(sun[0])}px, ${n(sun[1])}px) rotate(${n(heading)}deg) translateX(calc((${n(from)} * var(--space-k) - ${stretch} * ${n(a0)}) * 1px)) scaleX(calc(${stretch})) rotate(${n(-heading)}deg) translate(${n(-sun[0])}px, ${n(-sun[1])}px)`;
+    moving(halo, route);
+    moving(line, route);
+    halos.append(halo);
     map.append(line);
   }
 
@@ -201,6 +213,19 @@ export async function spaceView(surface: ReplaySurface, session: Session, recipe
     moving(art, `translate(calc(${n(sun[0])}px + ${n(entry.at)} * var(--space-k) * ${n(cos)} * 1px), calc(${n(sun[1])}px + ${n(entry.at)} * var(--space-k) * ${n(sin)} * 1px))`);
     return art;
   };
+  /** A body's halo, in the halos' group: where the body is, as opaque as it is, by the same expressions. */
+  const haloFor = (entry: MapLandmark, body: SVGElement): void => {
+    const halo = placed(entry);
+    halo.replaceChildren(svg(doc, 'circle', { r: MAP.haloPx, fill: space }));
+    const opacity = body.getAttribute('opacity');
+    if (opacity !== null) halo.setAttribute('opacity', opacity);
+    for (const name of ['--x', '--on', '--reach']) {
+      const value = body.style.getPropertyValue(name);
+      if (value !== '') halo.style.setProperty(name, value);
+    }
+    if (body.classList.contains('space-map__fading')) fading(halo, body.style.getPropertyValue('--replay-opacity'));
+    halos.append(halo);
+  };
   bodies.forEach((entry, index) => {
     const rest = point(entry.at, kEnd);
     const name = svg(doc, 'text', { x: n(tenth(rest[0] + SPACE.label.dxPx)), y: n(tenth(rest[1] + SPACE.label.dyPx)), class: 'map__name', fill: SPACE.label.colour, 'font-size': SPACE.label.textPx, opacity: finalNames[index] === true ? '1' : '0' }, [entry.name]);
@@ -211,8 +236,12 @@ export async function spaceView(surface: ReplaySurface, session: Session, recipe
     const element = svg(doc, 'g', { class: 'map__landmark', opacity: n(shown) }, [placed(entry), name]);
     element.style.setProperty('--x', smooth(`${n(entry.at)} * var(--space-k)`, fade, span));
     element.style.setProperty('--on', `clamp(0, (var(--space-r) - ${n(entry.at)}) * 1000000 + 1, 1)`);
-    fading(element, 'calc(var(--on) * var(--x) * var(--x) * (3 - 2 * var(--x)))');
+    // Reached, it appears over a sixth of the replay (round 2.11, bug 4), done by the replay's end.
+    const reachedAt = travelled > 0 ? (entry.at - start) / travelled : 0;
+    element.style.setProperty('--reach', `clamp(0, (var(--replay-progress) - ${n(reachedAt)}) / ${n(Math.max(1e-3, Math.min(SPACE.bodyFade.reachShare, 1 - reachedAt)))}, 1)`);
+    fading(element, 'calc(var(--on) * var(--x) * var(--x) * (3 - 2 * var(--x)) * var(--reach) * var(--reach) * (3 - 2 * var(--reach)))');
     map.append(element);
+    haloFor(entry, element);
   });
   for (const entry of list.filter((item) => item.at <= start)) {
     const { gonePxPerAu, spanPxPerAu } = SPACE.earthFade;
@@ -222,12 +251,13 @@ export async function spaceView(surface: ReplaySurface, session: Session, recipe
     element.style.setProperty('--x', smooth(`${n(entry.at)} * var(--space-k)`, gonePxPerAu, spanPxPerAu));
     fading(element, 'calc(var(--x) * var(--x) * (3 - 2 * var(--x)))');
     map.append(element);
+    haloFor(entry, element);
   }
 
   // The traveller.
   if (path?.head !== undefined) {
     const rest = point(end, kEnd).map(tenth) as [number, number];
-    const head = svg(doc, 'circle', { cx: n(rest[0]), cy: n(rest[1]), r: (path.head.size ?? 6) / 2, fill: colourCss(path.head.color, 'var(--color-foreground)') });
+    const head = svg(doc, 'circle', { cx: n(rest[0]), cy: n(rest[1]), r: (path.head.size ?? PIECES_CONFIG.path.headPx) / 2, fill: colourCss(path.head.color, 'var(--color-foreground)') });
     moving(head, `translate(calc(${n(sun[0] - rest[0])}px + var(--space-r) * var(--space-k) * ${n(cos)} * 1px), calc(${n(sun[1] - rest[1])}px + var(--space-r) * var(--space-k) * ${n(sin)} * 1px))`);
     map.append(head);
   }
@@ -264,17 +294,21 @@ export async function spaceView(surface: ReplaySurface, session: Session, recipe
   box.append(distance, html(doc, 'p', { class: 'visually-hidden' }, [final]));
   // Counting needs round() and mod() (as the headline's count, results.ts).
   if (typeof CSS !== 'undefined' && CSS.supports('width', 'calc(mod(7px, 3px) + round(down, 7px, 2px))')) box.classList.add('space-map--counting');
-  surface.graphic.append(box);
-
-  // The comets' box follows the map's width on narrow windows (the map never grows past its frame size).
-  const cometBox = box.querySelector<HTMLElement>('.comets__box');
-  if (cometBox !== null && typeof ResizeObserver !== 'undefined') {
-    cometBox.style.setProperty('width', `${String(MAP.widthPx)}px`);
-    cometBox.style.setProperty('height', `${String(MAP.heightPx)}px`);
+  // The map fills the card behind its text (round 2.11, bug 3): in the backdrop, at the frame's size, shrinking with
+  // a smaller window and never growing; in the card's flow, a space kept for the journey at the same scale, so the
+  // headline and the statistics sit above and below the route as the frame draws them.
+  surface.backdrop.append(box);
+  surface.graphic.append(html(doc, 'div', { class: 'space-spacer' }));
+  const fit = (width: number, height: number): void => {
+    const scale = Math.min(1, width / MAP.widthPx, height / MAP.heightPx);
+    for (const element of [surface.backdrop, surface.graphic]) element.style.setProperty('--space-card-scale', n(scale));
+  };
+  const card = surface.backdrop.getBoundingClientRect();
+  fit(card.width || MAP.widthPx, card.height || MAP.heightPx);
+  if (typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(([entry]) => {
-      const width = entry?.contentRect.width ?? MAP.widthPx;
-      cometBox.style.setProperty('transform', `scale(${String(width / MAP.widthPx)})`);
-    }).observe(box);
+      if (entry !== undefined && entry.contentRect.width > 0) fit(entry.contentRect.width, entry.contentRect.height);
+    }).observe(surface.backdrop);
   }
   // The card shows its sky whole: the replay starts once the image is decoded.
   await skyReady;

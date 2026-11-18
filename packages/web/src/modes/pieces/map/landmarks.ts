@@ -60,6 +60,9 @@ export function landmarksPiece({ doc, layer, recipe, slots, stage }: PieceSetup<
   const bodies = list.filter((entry) => entry.at > start).slice(0, layer.maxTotal ?? list.length);
   const origins = list.filter((entry) => entry.at <= start);
   const fade = layer.fadeBelowPx ?? 0;
+  // Once reached, a body appears with a slow fade over a couple of seconds of focused time (round 2.11, bug 4).
+  const reach = (recipe.measure.perMinute * SPACE.bodyFade.reachSeconds) / 60;
+  const reached = (entry: MapLandmark, value: number): number => smoothstep((value - entry.at) / reach);
   const group = stage.group('map__landmarks');
   const { label } = SPACE;
   const arts: { readonly holder: SVGGElement; readonly entry: MapLandmark }[] = [];
@@ -87,7 +90,7 @@ export function landmarksPiece({ doc, layer, recipe, slots, stage }: PieceSetup<
     group.append(element);
     stage.track(element, (value) => {
       const scale = mapScale(stage.layout, value);
-      return { opacity: value >= entry.at ? Math.round(smoothstep((entry.at * scale - fade) / SPACE.bodyFade.spanPx) * 100) / 100 : 0 };
+      return { opacity: value >= entry.at ? Math.round(reached(entry, value) * smoothstep((entry.at * scale - fade) / SPACE.bodyFade.spanPx) * 100) / 100 : 0 };
     });
     stage.track(art, (value) => ({ transform: place(entry, value) }));
     stage.track(text, (value, drawn) => {
@@ -109,7 +112,8 @@ export function landmarksPiece({ doc, layer, recipe, slots, stage }: PieceSetup<
   // Each landmark is reached at its own value, and a name drops or returns wherever the gaps cross 70 px or a
   // body crosses 30 %: the minute's glide steps there.
   stage.breaks((from, to) => {
-    const found = bodies.map((entry) => entry.at);
+    // The fade's own steps after each landmark, so the glide draws it as a curve.
+    const found = bodies.flatMap((entry) => Array.from({ length: SPACE.bodyFade.reachSteps + 1 }, (_, step) => entry.at + (reach * step) / SPACE.bodyFade.reachSteps));
     const steps = 48;
     const signature = (value: number): string => keptAt(value).map((kept) => (kept ? '1' : '0')).join('');
     let previous = signature(from);

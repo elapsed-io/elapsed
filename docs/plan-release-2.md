@@ -61,9 +61,10 @@ bounds. The small device features come last before hardening, since nothing else
 | 2.8 | Focus view, notices and fullscreen; the redesigned analog; ambient idle screens; replays that never stall | Running, recently touched; running, untouched; the motion, on a loop; the notice; "change" opens settings on it; Release 2 settings: display (focus view, the mode behind the panel); analog stopwatch (redesigned) |
 | 2.9 | Interstellar, as a recipe, behind the test-modes switch | Interstellar: running, paused and results; its tile; Release 2 settings: advanced (test modes) |
 | 2.10 | Lighter and faster: debloat, test modes, instant mode switches, the internals | no new frame; every frame again, unchanged but for the four fixes |
-| 2.11 | Layout editor, background images, and each mode's replaceable art | Layout editor |
-| 2.12 | Picture-in-picture, wake lock, the check-ins switch | Release 2 settings: timer (check-ins, keep screen awake) and display (picture-in-picture) |
-| 2.13 | Hardening and the release review | every Release 2 frame |
+| 2.11 | One design system: one layout, one layer order, one set of tokens; interstellar's results and line; the credits page | the revised "interstellar results" and corrected "interstellar, paused" frames; every timer frame for the shared layout |
+| 2.12 | Layout editor, background images, and each mode's replaceable art (held for the owner's frames) | Layout editor; Release 2 customize mode (to come) |
+| 2.13 | Picture-in-picture, wake lock, the check-ins switch | Release 2 settings: timer (check-ins, keep screen awake) and display (picture-in-picture) |
+| 2.14 | Hardening and the release review | every Release 2 frame |
 
 Every round ends as Release 1's did: `npm run check`, the end-to-end suite in Chromium, Firefox and WebKit
 (through the reference image), the round's safety overview in `docs/safety/round-2.<n>.md` with every item
@@ -77,8 +78,8 @@ it, and each frame is checked pixel for pixel once all of its controls exist:
 
 | Frame | Controls | Round |
 | --- | --- | --- |
-| timer | check-ins switch with its warning; keep screen awake ("only while elapsed is the active tab") | 2.12 |
-| display | mode tiles in four columns with a preview icon for each new mode (analog, ocean depth, height, tree, interstellar); ocean depth options (ocean life, results landmarks); picture-in-picture; downloaded modes with size and remove | tiles in each mode's round; downloaded modes 2.1; results landmarks 2.3; ocean life 2.4; each mode's own options box 2.7; picture-in-picture 2.12 |
+| timer | check-ins switch with its warning; keep screen awake ("only while elapsed is the active tab") | 2.13 |
+| display | mode tiles in four columns with a preview icon for each new mode (analog, ocean depth, height, tree, interstellar); ocean depth options (ocean life, results landmarks); picture-in-picture; downloaded modes with size and remove | tiles in each mode's round; downloaded modes 2.1; results landmarks 2.3; ocean life 2.4; each mode's own options box 2.7; picture-in-picture 2.13 |
 | appearance | animation speed (slower, normal, faster: "every animation, including the results replay"); low power ("stops ambient animation and shows only the time. on when your system asks for reduced motion.") | 2.1 |
 | advanced | test modes ("early modes that may change or disappear. shown after opening elapsed with ?test=interstellar.") | 2.9 (and ?test=modes, 2.10) |
 
@@ -343,7 +344,46 @@ still only a switch); the calendar's removal from settings (a stored calendar ch
 
 **Stop:** for the owner's review, with the summary, the size report before and after, and the answers above.
 
-### 2.11 Layout editor, background images, and each mode's replaceable art
+### 2.11 One design system
+
+**Goal:** centralise every design so it is universal: one layout, one set of tokens, one layering order, used by
+every mode and screen (owner, 2026-11-18; plan v11, Design system). The owner's answers to questions 23 to 27 are
+built here too.
+
+**Builds:**
+- **One shared screen layout:** the time, the 26 px gap and the buttons sit in exactly the same place and size in
+  every display mode, idle and running; only the mode's own layers differ. A test measures it in every mode.
+- **One layer order everywhere:** the mode's background and art, then the time and buttons, then pause, check-in
+  and other dialogs, then notices, then settings; nothing from a mode may cover a dialog. A test opens check-in,
+  pause and settings in every mode and checks that no mode layer sits above them.
+- **One set of tokens:** every colour, size, spacing and duration from the shared design tokens and the plan's
+  Design system section; values hard-coded inside a mode are removed, each listed in the round summary.
+- **Interstellar:** the HYG sky everywhere, still and turning (the hand-entered catalog removed, so pausing simply
+  starts the sky turning; question 23); the line drawn from Earth's position to the traveller's from the same
+  values in the same frame with the same transform, both ends tested within 1 px running and through a replay;
+  every point along the line appearing with a slow fade (about 2 s running, a sixth of the replay on results);
+  the results rebuilt as the revised "interstellar results" frame (the journey map filling the card, the
+  headline, statistics and icons above it, a faint star field behind it, never on the line or bodies); the
+  corrected paused frame ("past saturn", question 25).
+- **Ocean depth and height:** while in testing, the theme's background at all times with the time, the buttons
+  and their depth or altitude caption updating as the session runs, inside the shared layout.
+- **"Leave fullscreen"** defaults to never, so leaving fullscreen never delays the results screen; stored settings
+  migrate only where the user never changed it.
+- **A credits page** linked from the settings footer, listing every third-party work the site uses and its
+  licence (question 24).
+
+**Tests:** the shared layout in every mode; the layer order with check-in, pause and settings in every mode;
+interstellar's line attached at both ends within 1 px; ocean depth and height on the theme's background with
+their captions updating; the fullscreen migration; the credits page; every frame again.
+
+**Safety overview:** the credits page (static, from the site's own origin); the settings migration.
+
+**Stop:** for the owner's review, with the summary and the list of places made universal.
+
+### 2.12 Layout editor, background images, and each mode's replaceable art
+
+**Held** (owner, 2026-11-18): the owner adds frames for Release 2's customize mode to the design canvas first;
+this round is not built until they are there.
 
 **Builds:** the customize mode, entered from settings or with a long press on phones; every layer
 (background, display mode, buttons, icons) moved, rotated, stretched, resized, hidden and reordered as
@@ -371,7 +411,7 @@ the editor.
 files), storage keys, abuse cases (decompression bombs, malformed images, layouts that hide every control
 with safe mode as the way back), tests.
 
-### 2.12 Picture-in-picture, wake lock, the check-ins switch
+### 2.13 Picture-in-picture, wake lock, the check-ins switch
 
 **Builds:**
 
@@ -398,7 +438,7 @@ due and the pause limit still applies; the timer and display frames; settings mi
 **Safety overview:** permissions used (none new in the Permissions-Policy; `screen-wake-lock` is allowed by
 default for the site's own pages), data (the switches are settings on the device), abuse cases.
 
-### 2.13 Hardening and the release review
+### 2.14 Hardening and the release review
 
 **Builds:** the accessibility pass for every new mode and the editor (WCAG 2.2 AA, axe-core, keyboard and
 screen readers, 44 px targets, reduced motion and low power), the performance pass (budgets, a long
@@ -408,7 +448,7 @@ sign-off.
 
 ## The owner's answers
 
-1. **Free-form layout before payments exist:** the free-form editor is built in full in round 2.11 but
+1. **Free-form layout before payments exist:** the free-form editor is built in full in round 2.12 but
    switched on only when the unlock arrives in Release 3; until then everyone gets preset positions. It is
    testable behind the test-modes switch.
 2. **The interstellar test flag:** opening the site once with `?test=interstellar` shows a "test modes"
@@ -417,7 +457,7 @@ sign-off.
 3. **Picture-in-picture:** a display setting, off by default, as drawn. When on, it adds a button to the
    timer's top-right icons (Tabler's picture-in-picture icon, the same size and colour as the other corner
    icons, left of settings) that opens the floating timer. The setting and the button appear only where
-   the browser offers a window for a page, and are hidden elsewhere. Built in round 2.12.
+   the browser offers a window for a page, and are hidden elsewhere. Built in round 2.13.
 4. **Background images:** JPEG, PNG, WebP or AVIF, detected from their contents, at most 20 MB and 50
    megapixels, re-encoded at screen size; SVG refused. They stay on the device, never uploaded or synced.
    One per display mode.
@@ -426,7 +466,7 @@ sign-off.
    separate from the GPL code.
 
 Also from the owner's review: the analog hand glides continuously (round 2.2), and the Permissions-Policy
-is confirmed not to block the wake lock (round 2.12).
+is confirmed not to block the wake lock (round 2.13).
 
 ## Open points
 

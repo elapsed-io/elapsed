@@ -73,7 +73,11 @@ export const SPACE_CONFIG = {
     'heliopause-ring': '#8FB4FF',
   },
   bodyStrokes: ['earth-air', 'saturn-ring', 'uranus-ring', 'neptune-cloud', 'shock-ring', 'heliopause-ring'] as const,
-  bodyFade: { gonePx: 24, spanPx: 14 },
+  /**
+   * A body fades as its orbit shrinks from gonePx + spanPx to gonePx; once reached it appears with a slow fade, over
+   * reachSeconds of focused time while running and over reachShare of the replay on the results (round 2.11).
+   */
+  bodyFade: { gonePx: 24, spanPx: 14, reachSeconds: 2, reachShare: 1 / 6, reachSteps: 4 },
   earthFade: { gonePxPerAu: 9, spanPxPerAu: 8 },
   label: { dxPx: 9, dyPx: 19, textPx: 11, minGapPx: 70, shownAbove: 0.3, colour: '#C9D3F0' },
   sun: { glowRadiusPx: 10, glowColour: '#FFE7B0', glowOpacity: 0.16, radiusPx: 4, colour: '#FFF1CF' },
@@ -90,7 +94,7 @@ export const SPACE_CONFIG = {
    * magnitude 1. While paused it turns once in 6 minutes (the strip of every catalog star, warm from B−V 0.95,
    * as Pollux), crossfading from the still view over 2 s.
    */
-  sky: { opacity: 0.55, resultsOpacity: 0.45, opacityPerMagnitude: 0.1, glowBelowMagnitude: 1, glowScale: 3, glowOpacity: 0.08, white: '#EAF0FF', warm: '#FFD2A6', faint: '#DCE4FF', warmFromColourIndex: 0.95, crossfadeMs: 2000 },
+  sky: { opacity: 0.55, resultsOpacity: 0.45, opacityPerMagnitude: 0.1, glowBelowMagnitude: 1, glowScale: 3, glowOpacity: 0.08, white: '#EAF0FF', warm: '#FFD2A6', warmFromColourIndex: 0.95 },
   /**
    * Comets while paused and on the results (the paused and results frames): each fades in over the first 16 %
    * of its stay and out over the last 16 %, its tail 0.6 of its head across, its head white with a glow of its
@@ -98,20 +102,26 @@ export const SPACE_CONFIG = {
    */
   comets: SPACE_COMETS_CONFIG,
   /**
-   * The results (the "results: interstellar" frame): the map 600 × 208, the Sun at (34, 178), heading −17°,
-   * 476.8 px of usable path; the distance line 12 px from the left and 10 px from the top. The card is space
-   * from edge to edge, its text and icons in the frame's colours.
+   * The results (the revised "results: interstellar" frame, round 2.11): the journey map fills the whole card, 720 ×
+   * 520, the Sun at (46, 336), heading −15° (the recipe's resultsAngle), 575.5 px of usable path; the headline, a
+   * 236 px space where the journey runs, the statistics and the icons over it; the distance line 18 px from the
+   * left and 16 px from the top. The card is space from edge to edge, with a faint star field behind the map, kept
+   * off the route and the bodies by a halo of space around each (haloPx, and routeHaloPx each side of the route).
+   * The map shrinks with a smaller window, never grows. Its text and icons are in the frame's colours.
    */
   results: {
-    widthPx: 600,
-    heightPx: 208,
-    sunX: 34,
-    sunY: 178,
-    usablePx: 476.8,
-    distanceLeftPx: 12,
-    distanceTopPx: 10,
+    widthPx: 720,
+    heightPx: 520,
+    sunX: 46,
+    sunY: 336,
+    usablePx: 575.5,
+    spacerPx: 236,
+    distanceLeftPx: 18,
+    distanceTopPx: 16,
     distancePx: 11,
     gapPx: 14,
+    haloPx: 10,
+    routeHaloPx: 3,
     card: { text: '#E8ECF6', muted: '#9AA4C0', icon: '#9AA4C0' },
   },
   oortCloudAu: { min: 2000, max: 100_000 },

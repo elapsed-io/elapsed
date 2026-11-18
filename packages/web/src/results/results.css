@@ -42,11 +42,20 @@
     isolation: isolate;
   }
 
-  /* Behind the whole card, for a replay that lights it or passes things across it (contract, ReplaySurface). */
+  /*
+   * The shared layer order inside the card (plan v11, Design system; round 2.11): the replay's backdrop, behind the
+   * whole card, on the art layer, for a replay that lights it or passes things across it (contract, ReplaySurface);
+   * everything else the card holds, its headline, figure, statistics and icons, on the display layer above it.
+   */
+  .results > :not(.results__backdrop) {
+    position: relative;
+    z-index: var(--layer-display);
+  }
+
   .results__backdrop {
     position: absolute;
     inset: 0;
-    z-index: -1;
+    z-index: var(--layer-art);
     overflow: hidden;
     pointer-events: none;
     container-type: size;

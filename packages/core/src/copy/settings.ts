@@ -137,6 +137,8 @@ export const SETTINGS_COPY = {
     { label: 'privacy', href: `${SITE}/privacy`, shown: true },
     { label: 'terms', href: `${SITE}/terms`, shown: true },
     { label: 'feedback', href: `mailto:${SUPPORT}`, shown: true },
+    /** Every third-party work the site uses and its licence (round 2.11): the site's own page. */
+    { label: 'credits', href: '/credits/', shown: true },
     { label: 'source code', href: REPOSITORY, shown: false },
     { label: 'donate', href: null, shown: false },
   ],

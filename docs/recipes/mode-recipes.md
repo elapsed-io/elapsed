@@ -54,10 +54,10 @@ one cancellable pipeline (the site's mode stage), and every mode mounts and come
 (`docs/display-mode-contract.md`).
 
 **Prepared when the site is built (round 2.10).** A `starfield` with a `projection` in a built-in recipe is drawn by
-the build, not the device: the `view` catalog projected about the view's centre, its faint stars as one tile, the
-results card's sky, and the whole catalog in `slot` as a strip a full turn wide, each an SVG image with the
-recipe's projection and star sizes (`packages/web/build/sky.ts`). The device only places these images and slides
-the strip. A recipe from anywhere else cannot yet bring a catalog to project: its starfield needs a ready-drawn
+the build, not the device: the whole catalog in `slot` as a strip a full turn wide, and the results card's star
+field from the same catalog, each an SVG image with the recipe's projection and star sizes
+(`packages/web/build/sky.ts`). The device only places these images and slides the strip. One sky everywhere (round
+2.11): the strip stands still while running and slides while `pan.when` turns it, with no second catalog. A recipe from anywhere else cannot yet bring a catalog to project: its starfield needs a ready-drawn
 field (an image slot), as height's is.
 
 ## Additions from the first new mode (2026-11-16), and its removal (round 2.10)
@@ -92,8 +92,6 @@ stays valid:
 Interstellar (`recipes/interstellar.json`, a test mode) is built from the recipe as its frames draw it, which
 settled what some fields mean and added one optional field, so every recipe written before stays valid:
 
-- **A starfield's `view`**: a star-catalog slot shown while the sky stands still (the frames' own catalog); the
-  layer's `slot` is then the whole sky, drawn as a strip a full turn wide while `pan.when` turns it.
 - **Camera space** is one map: a `follow-zoom` camera's layers (`space: "camera"`) draw on one drawing in the
   recipe's order, held behind one blur while paused. The anchor is a share of the screen in the frame's
   reference pixels; the usable path runs `usable` of the way along the heading to 20 px short of the right edge.

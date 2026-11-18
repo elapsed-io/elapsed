@@ -1,13 +1,8 @@
-/* The colour-stops environment (stops.ts): behind everything, the screen its stacking context. */
+/* The colour-stops environment (stops.ts): behind everything, on the shared art layer (styles/main.css). */
 @layer mode {
-  .screen:has(> .mode-root > .stops) {
-    isolation: isolate;
-  }
-
   .stops {
     position: absolute;
     inset: 0;
-    z-index: -1;
     overflow: hidden;
   }
 }

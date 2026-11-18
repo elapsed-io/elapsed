@@ -32,5 +32,5 @@ export const MODE_ART: Readonly<Record<string, readonly string[]>> = {
   height: ['sky/stars', 'sky/stars-card', ...HEIGHT_CONFIG.results.passing.things.map((thing) => thing.key)],
   tree: TREE_DRAWING,
   // The whole sky and the still one, then each body.
-  interstellar: ['stars/hyg-mag5', 'space/canvas-stars', ...[SPACE_CONFIG.start, ...SPACE_CONFIG.landmarks].map((body) => `space/${body.id}`)],
+  interstellar: ['stars/hyg-mag5', ...[SPACE_CONFIG.start, ...SPACE_CONFIG.landmarks].map((body) => `space/${body.id}`)],
 };

@@ -124,8 +124,10 @@ What the site gives every mode, on `:root` (generated from the config module, so
 What a mode sets for itself, scoped to `.screen[data-mode="<id>"]` in its own generated token sheet
 (`virtual:tokens/<id>.css`):
 
-- `--mode-time-size`: the time's size at the reference frame (720 × 450), which the site scales.
-- `--mode-gap`: the gap between the time and the controls.
+- `--mode-time-size`: the time's size at the reference frame (720 × 450), which the site scales; and
+- `--mode-gap`: the gap between the time and the controls; both only for a mode that draws the time inside a
+  figure (ring, timeline, analog, the tree). A mode that shows the time on its own takes the shared layout's
+  (`--time-size`, `--time-gap`) and sets neither (round 2.11, decision 388).
 - Its own sizes and colours, named after the mode (`--ring-*`, `--timeline-*`, `--analog-*`, `--ocean-*`,
   `--height-*`, `--meteor-*`, `--tree-*`; the tree's colours also on `[data-replay="tree"]`).
 
@@ -135,6 +137,13 @@ showing): for the shared profile chart (ocean depth, height; decision 301), `--p
 
 A mode's stylesheet lives in the `mode` cascade layer, below custom CSS. It animates only `transform`,
 `opacity` and `filter`; its sizes and colours come from tokens, never literals (the plan audit checks both).
+
+**One layer order (round 2.11, decision 390).** Every screen stacks by the layer tokens alone: `--layer-art` (the
+mode's environment, or its backdrop pieces in one `.mode-art` wrapper), `--layer-display` (the time with its
+figure, the buttons, the countdown, the results), `--layer-dialog` (pause and check-in over the held time),
+`--layer-notice` (the pill), `--layer-chrome` (the corner icons); the settings panel comes after the whole view.
+A mode places its pieces through the recipe (backdrop or overlay) and never sets a `z-index` (the plan audit fails
+the build on one), so nothing from a mode can cover a dialog.
 
 ## Community modes
 

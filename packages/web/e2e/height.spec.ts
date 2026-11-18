@@ -283,7 +283,8 @@ test('paused above the stars: the altitude line, shooting stars and a shower, al
   await primary(page).click();
   await settle(page);
   await expect(page.locator('.meteors')).toHaveCount(0);
-  await expect(page.locator('.recipe__caption')).toHaveCSS('opacity', '0');
+  // While height is in testing its altitude line stays as the session runs (owner, round 2.11, bug 5).
+  await expect(page.locator('.recipe__caption')).toHaveCSS('opacity', '1');
 });
 
 test('paused below the stars: the altitude line, and no shooting stars', async ({ page }) => {
@@ -300,13 +301,14 @@ for (const [how, settings, reduce] of [
   ['low power', { lowPower: true }, false],
   ['reduced motion', undefined, true],
 ] as const) {
-  test(`with ${how}, nothing comes while paused: no shooting stars, no altitude line`, async ({ page }) => {
+  test(`with ${how}, nothing comes while paused: no shooting stars; the altitude line stays while in testing`, async ({ page }) => {
     if (reduce) await page.emulateMedia({ reducedMotion: 'reduce' });
     await restoreAt(page, 13_388_571, settings);
     await primary(page).click();
     await settle(page);
     await expect(page.locator('.meteor')).toHaveCount(0);
-    await expect(page.locator('.recipe__caption')).toHaveCSS('opacity', '0');
+    // The line is the altitude's one sign on the theme's background (owner, round 2.11, bug 5; decision 396).
+    await expect(page.locator('.recipe__caption')).toHaveCSS('opacity', '1');
   });
 }
 

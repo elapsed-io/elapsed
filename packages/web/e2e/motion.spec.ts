@@ -57,7 +57,7 @@ test('low power is switched on in settings, and stops the modes gliding', async 
   await lowPower.click();
   await expect(lowPower).toHaveAttribute('aria-checked', 'true');
   await expect(page.locator('html')).toHaveAttribute('data-low-power', '');
-  expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ schema: 2, lowPower: true });
+  expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ schema: 3, lowPower: true });
   await page.keyboard.press(',');
   await primary(page).click();
   await page.clock.runFor(90 * SECOND);

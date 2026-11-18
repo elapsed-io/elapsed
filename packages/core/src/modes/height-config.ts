@@ -49,8 +49,6 @@ export const HEIGHT_CONFIG = {
   tile: { mountain: 'muted', summit: 'text', star: 'accent' } as const,
   /** The height frames' own colours for the time, the icons (dimmer while paused) and the buttons over the sky. */
   palette: { text: '#EEF4FA', icon: '#C9DCEE', iconPaused: '#9AA6C8', accent: '#35764E', end: '#A8403D', pause: '#2A4A6A', label: '#B9C6DE' },
-  timePx: 104,
-  gapPx: 22,
   /** The stars: the frames' own field, tinted (the "height, full climb" frame). */
   stars: { faint: '#DCE4FF', white: '#EAF0FF', warm: '#FFD2A6' },
   /**

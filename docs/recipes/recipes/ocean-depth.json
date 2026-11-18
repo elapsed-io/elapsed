@@ -61,7 +61,6 @@
     {
       "type": "time",
       "id": "time",
-      "size": 104,
       "position": "center",
       "seconds": "setting"
     },

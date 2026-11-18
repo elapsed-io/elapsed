@@ -1,4 +1,4 @@
-import { mixColour, TREE_CONFIG } from '@stopwatch/core';
+import { mixColour, PIECES_CONFIG, TREE_CONFIG } from '@stopwatch/core';
 import type { TreeLayer } from '@stopwatch/core';
 import { colourCss } from '../../recipe/colour.ts';
 
@@ -17,10 +17,10 @@ export function treeColours(layer: TreeLayer): Record<string, string> {
   [s0, s1, m0, a0, a1].forEach((colour, stage) => {
     const k = String(stage);
     colours[`--tree-leaf-${k}`] = colour;
-    colours[`--tree-leaf-${k}-dark`] = mixColour(colour, '#000000', side.dark);
-    colours[`--tree-leaf-${k}-light`] = mixColour(colour, '#FFFFFF', side.light);
-    colours[`--tree-leaf-${k}-top`] = mixColour(colour, '#FFFFFF', iso.top);
-    colours[`--tree-leaf-${k}-right`] = mixColour(colour, '#000000', iso.right);
+    colours[`--tree-leaf-${k}-dark`] = mixColour(colour, PIECES_CONFIG.colours.shade, side.dark);
+    colours[`--tree-leaf-${k}-light`] = mixColour(colour, PIECES_CONFIG.colours.light, side.light);
+    colours[`--tree-leaf-${k}-top`] = mixColour(colour, PIECES_CONFIG.colours.light, iso.top);
+    colours[`--tree-leaf-${k}-right`] = mixColour(colour, PIECES_CONFIG.colours.shade, iso.right);
   });
   return colours;
 }

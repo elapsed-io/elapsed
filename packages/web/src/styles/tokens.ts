@@ -55,6 +55,8 @@ export function designCustomProperties(): CustomProperties {
     // The active display mode overrides these two.
     '--mode-time-size': 'var(--time-size)',
     '--mode-gap': 'var(--time-gap)',
+    // One layer order for every mode and screen (plan v11, Design system).
+    ...Object.fromEntries(Object.entries(CONFIG.design.layers).map(([name, z]) => [`--layer-${name}`, String(z)])),
 
     '--paused-for-size': String(type.pausedForPx),
     '--paused-label-size': px(paused.labelPx),
@@ -178,6 +180,7 @@ export function designCustomProperties(): CustomProperties {
     '--ease-smoothstep': SMOOTHSTEP,
     '--held-blur': px(motion.heldBlurPx),
     '--held-opacity': String(motion.heldOpacity),
+    '--frost-solid': `${String(motion.frostSolidShare * 100)}%`,
     '--blur-away-max': px(motion.blurAwayMaxPx),
     '--blur-ones-start': ms(motion.onesBlurWindow.start),
     '--blur-ones-window': ms(motion.onesBlurWindow.end - motion.onesBlurWindow.start),
@@ -466,8 +469,6 @@ function analogTokens(): string {
 function oceanTokens(): string {
   const ocean = OCEAN_CONFIG;
   const properties: CustomProperties = {
-    '--mode-time-size': String(ocean.timePx),
-    '--mode-gap': String(ocean.gapPx),
     '--ocean-text': ocean.palette.text,
     '--ocean-icon': ocean.palette.icon,
     '--ocean-accent': ocean.palette.accent,
@@ -591,8 +592,6 @@ function heightTokens(): string {
   const stars: CustomProperties = { '--height-star-faint': height.stars.faint, '--height-star-white': height.stars.white, '--height-star-warm': height.stars.warm };
   const { meteors } = height;
   const properties: CustomProperties = {
-    '--mode-time-size': String(height.timePx),
-    '--mode-gap': String(height.gapPx),
     '--height-text': height.palette.text,
     '--height-icon': height.palette.icon,
     '--height-icon-paused': height.palette.iconPaused,
@@ -648,7 +647,6 @@ function interstellarTokens(): string {
     '--space-caption': palette.caption,
     '--space-end': palette.end,
     '--space-pause': palette.pause,
-    '--sky-crossfade': ms(space.sky.crossfadeMs),
     '--comet-tail-radius': px(space.comets.tailRadiusPx),
     ...tones,
   };
@@ -657,10 +655,12 @@ function interstellarTokens(): string {
     '--space-card-text': results.card.text,
     '--space-card-muted': results.card.muted,
     '--space-map-width': px(results.widthPx),
-    '--space-map-aspect': `${String(results.widthPx)} / ${String(results.heightPx)}`,
+    '--space-map-height': px(results.heightPx),
+    '--space-spacer': px(results.spacerPx),
     '--space-distance-left': px(results.distanceLeftPx),
     '--space-distance-top': px(results.distanceTopPx),
     '--space-distance-size': px(results.distancePx),
+    '--space-distance-colour': space.label.colour,
     '--comet-tail-radius': px(space.comets.tailRadiusPx),
     ...tones,
   };

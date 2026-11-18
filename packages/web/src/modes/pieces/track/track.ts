@@ -21,7 +21,7 @@
 
 import 'virtual:tokens/timeline.css';
 import './track.css';
-import { TIMELINE_CONFIG } from '@stopwatch/core';
+import { CONFIG, TIMELINE_CONFIG } from '@stopwatch/core';
 import type { TrackLayer } from '@stopwatch/core';
 import { html, svg } from '../../../dom.ts';
 import { colourCss } from '../../recipe/colour.ts';
@@ -30,8 +30,6 @@ import { timelineStripMinutes } from './strip.ts';
 
 const T = TIMELINE_CONFIG;
 const MINUTE_MS = 60_000;
-/** A gliding layer that has drifted this far from focused time (after sleep, say) is set right. */
-const DRIFT_MS = 250;
 
 const pad = (value: number): string => String(value).padStart(2, '0');
 
@@ -173,7 +171,7 @@ export function trackPiece({ doc, layer: spec, context }: PieceSetup<TrackLayer>
         item.animation = animation;
       }
       if (animation === null) continue;
-      if (fresh || animation.playState === 'finished' || Math.abs(Number(animation.currentTime) - into) >= DRIFT_MS) animation.currentTime = into;
+      if (fresh || animation.playState === 'finished' || Math.abs(Number(animation.currentTime) - into) >= CONFIG.motion.glideDriftMs) animation.currentTime = into;
       if (animation.playState !== 'running') animation.play();
     }
     anchored = { offset, glide: true, running: true };

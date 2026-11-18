@@ -4,14 +4,10 @@
  * top; a climb's stands on the bottom.
  */
 @layer mode {
-  .screen:has(> .mode-root > .light) {
-    isolation: isolate;
-  }
-
+  /* On the shared art layer (styles/main.css). */
   .light {
     position: absolute;
     inset: 0;
-    z-index: -1;
     overflow: hidden;
   }
 

@@ -23,7 +23,7 @@
 
 import 'virtual:tokens/ring.css';
 import './ring.css';
-import { RING_CONFIG } from '@stopwatch/core';
+import { CONFIG, RING_CONFIG } from '@stopwatch/core';
 import type { RingLayer } from '@stopwatch/core';
 import { html } from '../../../dom.ts';
 import { colourCss } from '../../recipe/colour.ts';
@@ -31,8 +31,6 @@ import type { Activity, Piece, PieceSetup } from '../../recipe/piece.ts';
 
 const RING = RING_CONFIG;
 const MINUTE_MS = 60_000;
-/** A glide this far from focused time is set right (after the device slept, or the tab was hidden). */
-const DRIFT_MS = 250;
 
 export interface RingShape {
   /** Degrees the head turns a minute: a turn per cycle. */
@@ -125,7 +123,7 @@ export function ringPiece({ doc, layer, recipe, context }: PieceSetup<RingLayer>
       glidingMinute = minute;
     }
     if (glide === null) return;
-    if (fresh || glide.playState === 'finished' || Math.abs(Number(glide.currentTime) - into) >= DRIFT_MS) glide.currentTime = into;
+    if (fresh || glide.playState === 'finished' || Math.abs(Number(glide.currentTime) - into) >= CONFIG.motion.glideDriftMs) glide.currentTime = into;
     if (glide.playState !== 'running') glide.play();
     showTail(ringAngles(focusedMs, false, shape).tail);
   };

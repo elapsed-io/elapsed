@@ -19,7 +19,7 @@
  * the interface's fade, so the blur itself never animates and the sky under it stays sharp.
  */
 
-import { measureAt } from '@stopwatch/core';
+import { CONFIG, measureAt, PIECES_CONFIG } from '@stopwatch/core';
 import type { Recipe } from '@stopwatch/core';
 import { html, svg } from '../../dom.ts';
 import type { DisplayContext } from '../contract.ts';
@@ -27,7 +27,6 @@ import type { Frame } from './piece.ts';
 import './camera.css';
 
 const MINUTE_MS = 60_000;
-const DRIFT_MS = 250;
 
 /** The map's geometry in reference pixels. */
 export interface CameraLayout {
@@ -67,12 +66,11 @@ export function cameraLayout(recipe: Recipe, width: number, height: number, refe
   const sun = [camera.anchor[0] * w, camera.anchor[1] * h] as const;
   const heading = camera.angle;
   // To a tenth of a pixel, as the frames write it (606.5 px at 720 × 450).
-  const usable = Math.round((((camera.usable ?? 0.85) * (w - EDGE_MARGIN - sun[0])) / Math.cos((heading * Math.PI) / 180)) * 10) / 10;
-  return { width: w, height: h, scale, sun, heading, usable, minValue: camera.minValue ?? 1 };
+  // The frames keep the usable path a margin short of the right edge.
+  const usable = Math.round((((camera.usable ?? PIECES_CONFIG.camera.usable) * (w - PIECES_CONFIG.camera.edgeMarginPx - sun[0])) / Math.cos((heading * Math.PI) / 180)) * 10) / 10;
+  return { width: w, height: h, scale, sun, heading, usable, minValue: camera.minValue ?? PIECES_CONFIG.camera.minValue };
 }
 
-/** The frames keep the usable path 20 px short of the right edge. */
-const EDGE_MARGIN = 20;
 
 export class CameraStage {
   readonly element: HTMLElement;
@@ -183,7 +181,7 @@ export class CameraStage {
       for (const item of this.#tracked) {
         const animation = item.animation;
         if (animation === null) continue;
-        if (fresh || animation.playState === 'finished' || Math.abs(Number(animation.currentTime) - into) >= DRIFT_MS) animation.currentTime = into;
+        if (fresh || animation.playState === 'finished' || Math.abs(Number(animation.currentTime) - into) >= CONFIG.motion.glideDriftMs) animation.currentTime = into;
         if (animation.playState !== 'running') animation.play();
       }
     }

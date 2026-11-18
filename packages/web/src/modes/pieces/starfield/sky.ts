@@ -1,22 +1,22 @@
 /**
  * A projected sky (docs/recipes/mode-recipes.md, `starfield` with a `projection`; plan, Display modes >
- * Interstellar). The build draws it (build/sky-art.ts, round 2.10): the still view (the layer's `view` catalog
- * projected about the view's centre, over the faint stars tiled from the frame's corner) and the whole catalog in
- * the layer's slot as a strip one turn wide along the sky's equator. The device only places those images: the still
- * view from the view's centre, the strip twice side by side, slid sideways by one CSS animation while the recipe
- * turns the sky (paused), a full turn in `turnMinutes`, wrapping seamlessly, crossfading from the still view over
- * 2 s. Never with low power or reduced motion: the sky then stays still. Nothing is redrawn when the screen's size
- * changes; the images move.
+ * Interstellar). The build draws it (build/sky-art.ts, round 2.10): the whole catalog in the layer's slot (every HYG
+ * star to magnitude 5) as a strip one turn wide along the sky's equator, the view's centre in the middle. One sky
+ * everywhere, still and turning (owner, round 2.11): the strip shows from the start, its centre on the view's centre,
+ * and while the recipe turns the sky (paused) one CSS animation slides it sideways, a full turn in `turnMinutes`,
+ * wrapping seamlessly over a second copy beside it; resumed, it stops where it is. Never with low power or reduced
+ * motion: the sky then stays still. Nothing is redrawn when the screen's size changes; the images move.
  */
 
-import { CONFIG } from '@stopwatch/core';
+import { CONFIG, PIECES_CONFIG } from '@stopwatch/core';
 import type { StarfieldLayer } from '@stopwatch/core';
 import { html } from '../../../dom.ts';
 import type { Piece, PieceSetup } from '../../recipe/piece.ts';
 
 const REFERENCE = CONFIG.design.reference.timer;
+const MINUTE_MS = 60_000;
 
-/** An image the build drew, in reference pixels; `x` and `y` place the still view's stars from the view's centre. */
+/** An image the build drew, in reference pixels; `x` and `y` place it from the view's centre. */
 export interface SkyImage {
   readonly url: string;
   readonly x: number;
@@ -25,16 +25,10 @@ export interface SkyImage {
   readonly height: number;
 }
 
-/** The still sky's images: the projected stars, the faint stars' tile and the results card's whole sky. */
-export interface StillSky {
-  readonly still: SkyImage;
-  readonly faint: SkyImage;
-  readonly card: SkyImage;
-}
-
-/** The turning sky: one turn wide, with the row of the view's centre. */
+/** The sky: one turn wide, with the row of the view's centre, and the results card's sky drawn from it. */
 export interface TurningSky extends SkyImage {
   readonly centreY: number;
+  readonly card?: SkyImage;
 }
 
 const isImage = (value: unknown): value is SkyImage => {
@@ -43,14 +37,10 @@ const isImage = (value: unknown): value is SkyImage => {
   return typeof image['url'] === 'string' && ['x', 'y', 'width', 'height'].every((key) => typeof image[key] === 'number' && Number.isFinite(image[key]));
 };
 
-export function isStillSky(value: unknown): value is StillSky {
-  if (typeof value !== 'object' || value === null) return false;
-  const sky = value as Record<string, unknown>;
-  return isImage(sky['still']) && isImage(sky['faint']) && isImage(sky['card']);
-}
-
 export function isTurningSky(value: unknown): value is TurningSky {
-  return isImage(value) && typeof (value as unknown as Record<string, unknown>)['centreY'] === 'number';
+  if (!isImage(value)) return false;
+  const sky = value as unknown as Record<string, unknown>;
+  return typeof sky['centreY'] === 'number' && (sky['card'] === undefined || isImage(sky['card']));
 }
 
 const px = (value: number): string => `${String(value)}px`;
@@ -70,27 +60,15 @@ export async function decoded(images: readonly HTMLImageElement[]): Promise<void
   await Promise.all(images.map(async (image) => image.decode().catch(() => undefined)));
 }
 
-/** The starfield piece with a projection: the still view, and the turning sky while the recipe turns it. */
+/** The starfield piece with a projection: the sky, still, turning while the recipe turns it. */
 export function skyPiece({ doc, layer, context, slots, stage }: PieceSetup<StarfieldLayer>): Piece {
   const opacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
-  const view = layer.view === undefined ? undefined : slots.data(layer.view);
-  const sky = isStillSky(view) ? view : null;
-  const faint = html(doc, 'div', { class: 'sky__faint' });
-  const bright = sky === null ? null : skyImage(doc, sky.still, 'sky__image', 0, 0);
-  const still = html(doc, 'div', { class: 'sky__still', attrs: { 'aria-hidden': 'true' } }, [faint, ...(bright === null ? [] : [bright])]);
   const strip = html(doc, 'div', { class: 'sky__strip', attrs: { 'aria-hidden': 'true' } });
-  const turning = html(doc, 'div', { class: 'sky__turning' }, [strip]);
-  const box = html(doc, 'div', { class: 'sky__box' }, [still, turning]);
+  const box = html(doc, 'div', { class: 'sky__box' }, [strip]);
   const element = html(doc, 'div', { class: 'sky' }, [box]);
   box.style.setProperty('opacity', String(opacity));
-  if (sky !== null) {
-    faint.style.setProperty('background-image', `url("${sky.faint.url}")`);
-    faint.style.setProperty('background-size', `${px(sky.faint.width)} ${px(sky.faint.height)}`);
-  }
-  let strips: { readonly sky: TurningSky; readonly images: readonly HTMLImageElement[] } | null = null;
-  let loading = false;
+  let sky: TurningSky | null = null;
   let pan: Animation | null = null;
-  let wanted = false;
   let gone = false;
   // Read through a function: unmount sets it while a load awaits, where TypeScript cannot see it.
   const stopped = (): boolean => gone;
@@ -108,68 +86,49 @@ export function skyPiece({ doc, layer, context, slots, stage }: PieceSetup<Starf
     return { width, height };
   };
 
-  /** Places the images for the view's size; nothing is redrawn. */
+  /** Places the strip for the view's size: two copies side by side, the view's centre on the right one's middle. */
   const place = (): void => {
     const { width, height } = size();
-    if (sky !== null && bright !== null) {
-      bright.style.setProperty('left', px(width / 2 + sky.still.x));
-      bright.style.setProperty('top', px(height / 2 + sky.still.y));
-    }
-    if (strips !== null) {
-      // Two strips side by side, the second a turn to the left of the first, so the slide wraps without a seam.
-      const { width: turn, height: tall, centreY } = strips.sky;
-      strip.style.setProperty('left', px(width / 2 - turn / 2 - turn));
-      strip.style.setProperty('top', px(height / 2 - centreY));
-      strip.style.setProperty('width', px(2 * turn));
-      strip.style.setProperty('height', px(tall));
-    }
+    if (sky === null) return;
+    const { width: turn, height: tall, centreY } = sky;
+    strip.style.setProperty('left', px(width / 2 - turn / 2 - turn));
+    strip.style.setProperty('top', px(height / 2 - centreY));
+    strip.style.setProperty('width', px(2 * turn));
+    strip.style.setProperty('height', px(tall));
   };
 
-  /** Starts the turn from the current view, so nothing jumps. */
-  const startTurning = (): void => {
-    if (strips === null) return;
-    pan?.cancel();
-    const minutes = layer.pan?.turnMinutes ?? 6;
-    pan = strip.animate([{ transform: 'translateX(0px)' }, { transform: `translateX(${px(strips.sky.width)})` }], { duration: minutes * 60_000, iterations: Infinity, easing: 'linear' });
-    element.classList.add('sky--turning');
-  };
-
-  const turnSky = (on: boolean): void => {
-    if (on === wanted) return;
-    wanted = on;
+  /** Turns the sky from where it is, or stops it where it is: nothing jumps. */
+  const turn = (on: boolean): void => {
+    if (sky === null) return;
     if (!on) {
-      element.classList.remove('sky--turning');
+      pan?.pause();
       return;
     }
-    if (strips !== null) {
-      startTurning();
-      return;
-    }
-    if (loading) return;
-    loading = true;
-    void slots.load(layer.slot).then(async (data) => {
-      if (stopped() || !isTurningSky(data)) return;
-      const images = [skyImage(doc, data, 'sky__image', data.width, 0), skyImage(doc, data, 'sky__image', 0, 0)];
-      // The strip shows only once both copies are decoded, so the crossfade never shows an empty sky.
-      await decoded(images);
-      loading = false;
-      if (stopped()) return;
-      strip.replaceChildren(...images);
-      strips = { sky: data, images };
-      place();
-      if (wanted) startTurning();
-    });
+    if (pan === null) {
+      const minutes = layer.pan?.turnMinutes ?? PIECES_CONFIG.sky.turnMinutes;
+      pan = strip.animate([{ transform: 'translateX(0px)' }, { transform: `translateX(${px(sky.width)})` }], { duration: minutes * MINUTE_MS, iterations: Infinity, easing: 'linear' });
+    } else if (pan.playState !== 'running') pan.play();
   };
+
+  // The sky shows whole from the first frame: the mode is ready once both copies are decoded.
+  const ready = slots.load(layer.slot).then(async (data) => {
+    if (stopped() || !isTurningSky(data)) return;
+    const images = [skyImage(doc, data, 'sky__image', data.width, 0), skyImage(doc, data, 'sky__image', 0, 0)];
+    await decoded(images);
+    if (stopped()) return;
+    strip.replaceChildren(...images);
+    sky = data;
+    place();
+  });
 
   place();
   stage?.onLayout(place);
 
   return {
     backdrop: [element],
-    ready: bright === null ? Promise.resolve() : decoded([bright]),
+    ready,
     render({ paused }) {
-      const turns = (layer.pan?.when ?? []).includes('paused') && paused && !context.lowPower && !context.reducedMotion;
-      turnSky(turns);
+      turn((layer.pan?.when ?? []).includes('paused') && paused && !context.lowPower && !context.reducedMotion);
     },
     unmount() {
       gone = true;

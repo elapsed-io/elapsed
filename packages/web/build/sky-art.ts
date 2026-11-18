@@ -3,13 +3,12 @@
  * static layers drawn once as images and only moved). The device never projects a star: the build projects the
  * recipe's catalogs with the recipe's own projection and star sizes and writes each sky as an SVG image.
  *
- * - The still view (the frames' own catalog): projected gnomonically about the view's centre; the image's place is
- *   given from that centre, so it sits where the stars fell whatever the screen's size.
- * - The faint stars: one tile of the timer's frame (720 × 450), repeated past it.
- * - The results card's sky (720 × 520): its faint stars and the catalog projected about its centre.
- * - The turning sky (every HYG star to magnitude 5): the whole sky as a strip one turn wide along the sky's
- *   equator, its rows from declination +90° to −90°, the view's centre row given; a star across the strip's edge
- *   is drawn on both edges, so two strips side by side join seamlessly.
+ * One sky everywhere, from one catalog (every HYG star to magnitude 5; owner, round 2.11):
+ * - the timer's sky, still and turning: the whole sky as a strip one turn wide along the sky's equator, its rows
+ *   from declination +90° to −90°, the view's centre row given; a star across the strip's edge is drawn on both
+ *   edges, so two strips side by side join seamlessly;
+ * - the results card's faint star field (720 × 520): the same catalog projected gnomonically about the card's
+ *   centre.
  *
  * Each star's radius is max(min, at0 + perMagnitude × m), its opacity 1 − 0.1 m, warm or white, with a faint glow
  * three times its radius for those brighter than magnitude 1 (the frames), in reference pixels, rounded as the
@@ -31,7 +30,6 @@ export interface StarSizes {
 export interface SkyLook {
   readonly white: string;
   readonly warm: string;
-  readonly faint: string;
   readonly opacityPerMagnitude: number;
   readonly glowBelowMagnitude: number;
   readonly glowScale: number;
@@ -39,14 +37,10 @@ export interface SkyLook {
   readonly warmFromColourIndex: number;
 }
 
-/** [right ascension (h), declination (°), magnitude, warm] */
-export type ViewStar = readonly [number, number, number, boolean];
-/** [x, y, radius, opacity] in reference pixels */
-export type FaintStar = readonly [number, number, number, number];
 /** [right ascension (h), declination (°), magnitude, B−V] */
 export type CatalogStar = readonly [number, number, number, number];
 
-/** An image the build drew, and where it goes: its top-left corner from the view's centre (the still view), in reference pixels. */
+/** An image the build drew, and where it goes: its top-left corner from the view's centre, in reference pixels. */
 export interface SkyImage {
   readonly svg: string;
   readonly x: number;
@@ -91,42 +85,22 @@ function star(x: number, y: number, magnitude: number, warm: boolean, sizes: Sta
   return `${glow}<circle cx="${cx}" cy="${cy}" r="${fixed(radius, 2)}" fill="${fill}" opacity="${fixed(Math.min(1, 1 - look.opacityPerMagnitude * magnitude), 2)}"/>`;
 }
 
-function faintStar([x, y, r, opacity]: FaintStar, look: SkyLook): string {
-  return `<circle cx="${fixed(x, 1)}" cy="${fixed(y, 1)}" r="${String(r)}" fill="${look.faint}" opacity="${fixed(opacity, 2)}"/>`;
-}
-
 function image(width: number, height: number, body: string, credit = ''): string {
   const note = credit === '' ? '' : `<!-- ${credit} -->`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${String(width)}" height="${String(height)}" viewBox="0 0 ${String(width)} ${String(height)}">${note}${body}</svg>`;
 }
 
-/** The still view's catalog, projected about the view's centre, in an image just big enough to hold it. */
-export function stillImage(stars: readonly ViewStar[], projection: Projection, sizes: StarSizes, look: SkyLook): SkyImage {
-  const placed = stars.flatMap(([ra, dec, magnitude, warm]) => {
-    const point = gnomonic(ra, dec, projection, 0, 0);
-    return point === null ? [] : [{ x: point[0], y: point[1], magnitude, warm, reach: reach(magnitude, sizes, look) }];
-  });
-  // Whole pixels around every star's reach, so the image lands on the pixel grid as the old drawing did.
-  const left = Math.floor(Math.min(0, ...placed.map((p) => p.x - p.reach)) - 1);
-  const top = Math.floor(Math.min(0, ...placed.map((p) => p.y - p.reach)) - 1);
-  const right = Math.ceil(Math.max(0, ...placed.map((p) => p.x + p.reach)) + 1);
-  const bottom = Math.ceil(Math.max(0, ...placed.map((p) => p.y + p.reach)) + 1);
-  const body = placed.map((p) => star(p.x - left, p.y - top, p.magnitude, p.warm, sizes, look)).join('');
-  return { svg: image(right - left, bottom - top, body), x: left, y: top, width: right - left, height: bottom - top };
-}
-
-/** One tile of faint stars, repeated past it. */
-export function faintTile(faint: readonly FaintStar[], tile: { readonly width: number; readonly height: number }, look: SkyLook): SkyImage {
-  return { svg: image(tile.width, tile.height, faint.map((item) => faintStar(item, look)).join('')), x: 0, y: 0, width: tile.width, height: tile.height };
-}
-
-/** A card's whole sky: its faint stars, then the catalog projected about its centre. */
-export function cardImage(stars: readonly ViewStar[], faint: readonly FaintStar[], card: { readonly width: number; readonly height: number }, projection: Projection, sizes: StarSizes, look: SkyLook): SkyImage {
-  const projected = stars.flatMap(([ra, dec, magnitude, warm]) => {
+/** A card's faint star field: the catalog to `magnitudeMax`, projected about the card's centre. */
+export function cardImage(catalog: readonly CatalogStar[], card: { readonly width: number; readonly height: number }, projection: Projection, sizes: StarSizes, magnitudeMax: number, look: SkyLook, credit: string): SkyImage {
+  const projected = catalog.flatMap(([ra, dec, magnitude, colour]) => {
+    if (magnitude > magnitudeMax) return [];
     const point = gnomonic(ra, dec, projection, card.width / 2, card.height / 2);
-    return point === null ? [] : [star(point[0], point[1], magnitude, warm, sizes, look)];
+    if (point === null) return [];
+    const r = reach(magnitude, sizes, look);
+    if (point[0] + r < 0 || point[1] + r < 0 || point[0] - r > card.width || point[1] - r > card.height) return [];
+    return [star(point[0], point[1], magnitude, colour >= look.warmFromColourIndex, sizes, look)];
   });
-  return { svg: image(card.width, card.height, faint.map((item) => faintStar(item, look)).join('') + projected.join('')), x: 0, y: 0, width: card.width, height: card.height };
+  return { svg: image(card.width, card.height, projected.join(''), credit), x: 0, y: 0, width: card.width, height: card.height };
 }
 
 /** The turning sky: one turn wide, from +90° to −90°, with `pad` pixels above and below for the brightest glows. */

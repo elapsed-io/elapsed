@@ -80,6 +80,7 @@
    */
   .screen {
     position: relative;
+    isolation: isolate;
     box-sizing: border-box;
     width: var(--view-width);
     height: 100dvh;
@@ -98,10 +99,44 @@
     );
   }
 
+  /*
+   * One layer order for every mode and screen (plan v11, Design system; round 2.11), by the layer tokens alone:
+   * the mode's background and art at the bottom (its environment, or its backdrop pieces in one wrapper, and an
+   * environment leaving after a switch), then the time with its figure, the buttons and the screens that take the
+   * timer's place, then the dialogs over the held time (pause, check-in: modes/shared/time.css), then notices
+   * (the pill), then the corner icons, over every screen; the settings panel comes after the whole view.
+   * Modes' own stylesheets never set a z-index (the plan audit holds them to it), so nothing from a mode can
+   * cover a dialog.
+   */
+  .mode-root > :is(.environment, .mode-art),
+  .screen > .environment--leaving {
+    z-index: var(--layer-art);
+  }
+
+  .mode-art {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .mode-root > :is(.time-stack, .contrast),
+  .controls,
+  .screen > :is(.ending, .notice) {
+    position: relative;
+    z-index: var(--layer-display);
+  }
+
+  /* Placed by their own stylesheets (the caption at the bottom, the results over the whole view). */
+  .mode-root > .recipe__caption,
+  .screen > .results {
+    z-index: var(--layer-display);
+  }
+
   /* Above whatever screen covers the view (the results fill it), so settings opens from every screen. */
   .corner {
     position: absolute;
-    z-index: 1;
+    z-index: var(--layer-chrome);
     top: var(--icon-inset);
     right: var(--icon-inset);
     display: flex;
@@ -413,6 +448,7 @@
 
   .pill {
     position: absolute;
+    z-index: var(--layer-notice);
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);

@@ -7,7 +7,7 @@
  */
 
 import './profile.css';
-import { bindingAt, environmentColour, HEIGHT_CONFIG, HEIGHT_COPY, OCEAN_CONFIG, OCEAN_COPY, pickByBand } from '@stopwatch/core';
+import { bindingAt, environmentColour, HEIGHT_CONFIG, HEIGHT_COPY, OCEAN_CONFIG, OCEAN_COPY, pickByBand, PIECES_CONFIG } from '@stopwatch/core';
 import type { Recipe, ShapeLayer, StarfieldLayer } from '@stopwatch/core';
 import { ART } from '../../art/registry.ts';
 import { html, svg } from '../../dom.ts';
@@ -167,22 +167,22 @@ export async function profileSpec(recipe: Recipe, layers: readonly Recipe['layer
     chart: {
       ...tuning.chart,
       zoneLines: { ...tuning.chart.zoneLines, names: tuning.chart.zoneLines.at.map((at) => zones.find((zone) => zone.from === at)?.name ?? '') },
-      landmark: { ...tuning.landmark, max: landmarks?.maxTotal ?? 6 },
+      landmark: { ...tuning.landmark, max: landmarks?.maxTotal ?? PIECES_CONFIG.results.landmarksMax },
     },
     zones,
     copy: { value: `{value} ${unit}`, token: '{value}', profile: tuning.copy.profile, landmarksPassed: tuning.copy.landmarksPassed },
     valueClass: direction === 'down' ? 'profile__depth' : 'profile__height',
     pickLandmarks: (random) => {
       if (landmarks === undefined) return [];
-      const picked = pickByBand(catalog, (entry) => entry.at, landmarks.perBand?.size ?? Number.MAX_SAFE_INTEGER, landmarks.perBand?.max ?? 2, random);
+      const picked = pickByBand(catalog, (entry) => entry.at, landmarks.perBand?.size ?? Number.MAX_SAFE_INTEGER, landmarks.perBand?.max ?? PIECES_CONFIG.results.landmarksPerBand, random);
       return picked.map((entry): ProfileLandmark => ({ at: entry.at, id: entry.id, label: landmarkLabel(landmarks.labels?.template ?? '{landmark} · {value} m', entry) }));
     },
     lit: {
-      colour: (at) => environmentColour(recipe, at, dim) ?? '#000000',
+      colour: (at) => environmentColour(recipe, at, dim) ?? PIECES_CONFIG.colours.none,
       nearMetres: tuning.lit.near,
       farMetres: tuning.lit.far,
       blackFromMetres: tuning.lit.blackFrom,
-      crossfadeMs: (recipe.results.card?.crossSeconds ?? 0.35) * 1000,
+      crossfadeMs: (recipe.results.card?.crossSeconds ?? PIECES_CONFIG.results.cardCrossSeconds) * 1000,
       stepMetres: tuning.lit.step,
     },
     passing: { ...card, things, ready: () => Promise.resolve() },

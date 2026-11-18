@@ -154,6 +154,11 @@ export const CONFIG = {
      */
     startMorph: 160,
     fade: 180,
+    /**
+     * A glide a minute long (the ring's, the timeline's, the dials', the light's, the sky's, the camera's) is
+     * started again only when it is this far from where the time puts it, in milliseconds.
+     */
+    glideDriftMs: 250,
     control: 120,
     /** The contrast switch crossfades its two stacked copies over this long (owner, changes 4: about 220 ms). */
     contrastFade: 220,
@@ -196,6 +201,11 @@ export const CONFIG = {
     /** Check-in and pause: time blurred 10 px at 40 % opacity. */
     heldBlurPx: 10,
     heldOpacity: 0.4,
+    /**
+     * Held, the frost under the dialog (round 2.11) is whole to this share of the way from its centre to its edge
+     * (the display and three blur radii round it), then fades out, so it has no edge of its own.
+     */
+    frostSolidShare: 0.55,
     /** The seconds blur-away's last fade, as the running frame draws it (not an interface transition). */
     blurAwayFade: 200,
     /** Results: tabulating holds 0.3 s then fades out over 0.25 s. */
@@ -236,6 +246,13 @@ export const CONFIG = {
 
   /** Sizes at the design canvas's reference frames (Design system > Type, Controls and icons, Screens). */
   design: {
+    /**
+     * One layer order for every mode and screen (plan v11, Design system; round 2.11), bottom to top: the mode's
+     * background and art; the time, its figure and the buttons (and the screens that take the timer's place:
+     * the ending countdown, the results, the session maximum); pause, check-in and other dialogs; notices; the
+     * corner icons, over every screen; settings. Stylesheets stack by these alone (tokens `--layer-*`).
+     */
+    layers: { art: 0, display: 1, dialog: 2, notice: 3, chrome: 4, settings: 5 },
     /** Timer screens are drawn at 720 × 450, results at 720 × 520, settings and dashboard 1280 wide. */
     reference: {
       timer: { width: 720, height: 450 },
@@ -478,7 +495,7 @@ export const CONFIG = {
     /** A background with relative luminance at or above this is a light theme. */
     lightBackgroundLuminance: 0.4,
     /** Minimum contrast ratios every preset must pass. */
-    minContrast: { text: 4.5, accentGraphic: 2.5 },
+    minContrast: { text: 4.5, accentGraphic: 2.5, large: 3 },
     /**
      * The analog seconds dial's face: the track over the background at this share (its fill-opacity, the
      * "analog" frame's); the theme's dial red is chosen against it (theme/derive.ts).

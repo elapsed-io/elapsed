@@ -1,10 +1,10 @@
 /**
  * Interstellar, from its recipe (a test mode, behind the test-modes switch; plan-release-2, round 2.9): space
- * behind everything, the still sky (the canvas's catalog) turning while paused (every HYG star to magnitude 5),
+ * behind everything, one sky (every HYG star to magnitude 5; round 2.11), still while running and turning while paused,
  * the true-scale map on the camera (orbits, the Sun, the route and the bodies on it), comets while paused, the
  * distance line, and the journey replayed on the results. Its art is its slots' defaults: the bodies through the
- * asset registry, the landmark list built in, and both skies drawn by the build as images (build/sky.ts, round
- * 2.10), the whole sky's fetched only when it first turns.
+ * asset registry, the landmark list built in, and the sky and the results card's star field drawn by the build as
+ * images (build/sky.ts, round 2.10).
  */
 
 import 'virtual:tokens/interstellar.css';
@@ -29,7 +29,6 @@ export const INTERSTELLAR: BuiltInMode = {
     art: { 'space/': async () => (await import('../../art/space/bodies.ts')).SPACE_BODIES },
     data: {
       'space/landmarks': spaceLandmarks,
-      'space/canvas-stars': () => SKY['space/canvas-stars'],
       'stars/hyg-mag5': () => SKY['stars/hyg-mag5'],
     },
   },

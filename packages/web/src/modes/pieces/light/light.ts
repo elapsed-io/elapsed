@@ -14,13 +14,12 @@
  */
 
 import './light.css';
-import { environmentColour, measureAt } from '@stopwatch/core';
+import { CONFIG, environmentColour, measureAt, PIECES_CONFIG } from '@stopwatch/core';
 import type { Recipe } from '@stopwatch/core';
 import { html } from '../../../dom.ts';
 import type { Activity, Environment, EnvironmentFactory } from '../../recipe/piece.ts';
 
 const MINUTE_MS = 60_000;
-const DRIFT_MS = 250;
 
 interface Light {
   readonly recipe: Recipe;
@@ -54,13 +53,11 @@ export function lightGradient(light: Light, near: number, far: number): string {
   const count = Math.max(1, Math.ceil(span / light.step));
   const stops = Array.from({ length: count + 1 }, (_, i) => {
     const at = Math.min(far, near + (i * span) / count);
-    return `${environmentColour(light.recipe, at) ?? '#000000'} ${String(Math.round(((at - near) / span) * 100_000) / 1000)}%`;
+    return `${environmentColour(light.recipe, at) ?? PIECES_CONFIG.colours.none} ${String(Math.round(((at - near) / span) * 100_000) / 1000)}%`;
   });
   return `linear-gradient(${light.down ? '180deg' : '0deg'}, ${stops.join(', ')})`;
 }
 
-/** How finely a dive's first stretch is keyframed (the window grows from one spread to two). */
-const ZOOM_STEPS_PER_SPREAD = 48;
 
 /**
  * One minute's glide of a strip drawn from `near` to `far`, as keyframes from `from` to `to`: the window of
@@ -78,7 +75,7 @@ export function glideKeyframes(light: Light, from: number, to: number, near: num
   };
   const values = [from];
   if (light.down) {
-    const step = light.spread / ZOOM_STEPS_PER_SPREAD;
+    const step = light.spread / PIECES_CONFIG.light.zoomStepsPerSpread;
     const edge = light.start + light.spread;
     for (let value = Math.ceil(from / step) * step; value < Math.min(edge, to); value += step) if (value > from) values.push(value);
     if (from < edge && to > edge) values.push(edge);
@@ -142,7 +139,7 @@ export const lightEnvironment: EnvironmentFactory = ({ doc, recipe, context }) =
       glide = strip.animate(glideKeyframes(light, from, to, near, far), { duration: MINUTE_MS, easing: 'linear', fill: 'forwards' });
     }
     if (glide === null) return;
-    if (fresh || glide.playState === 'finished' || Math.abs(Number(glide.currentTime) - into) >= DRIFT_MS) glide.currentTime = into;
+    if (fresh || glide.playState === 'finished' || Math.abs(Number(glide.currentTime) - into) >= CONFIG.motion.glideDriftMs) glide.currentTime = into;
     if (glide.playState !== 'running') glide.play();
   };
 

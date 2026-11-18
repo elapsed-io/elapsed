@@ -96,12 +96,24 @@ describe('settings schema', () => {
     expect(Object.isFrozen(settings)).toBe(true);
   });
 
+  it('migrates leave fullscreen to never where it was never changed (round 2.11): an older record at the old default, end', () => {
+    expect(defaultSettings().leaveFullscreen).toBe('never');
+    expect(migrateSettings({ schema: 2, leaveFullscreen: 'end', theme: 'sky' })).toMatchObject({ schema: 3, leaveFullscreen: 'never', theme: 'sky' });
+    expect(migrateSettings({ schema: 1, leaveFullscreen: 'end' }).leaveFullscreen).toBe('never');
+    // A choice the person made is kept.
+    expect(migrateSettings({ schema: 2, leaveFullscreen: 'pause-or-end' }).leaveFullscreen).toBe('pause-or-end');
+    expect(migrateSettings({ schema: 2, leaveFullscreen: 'never' }).leaveFullscreen).toBe('never');
+    // From schema 3 on, end is a choice like any other, kept as stored.
+    expect(migrateSettings({ schema: 3, leaveFullscreen: 'end' }).leaveFullscreen).toBe('end');
+    expect(migrateSettings(JSON.parse(serializeSettings(migrateSettings({ schema: 3, leaveFullscreen: 'end' })))).leaveFullscreen).toBe('end');
+  });
+
   it('migrates schema 1 settings to schema 2: every choice kept, the new ones at their defaults', () => {
     const stored = { schema: 1, seconds: 'always', mode: 'ring', theme: 'sky', timeSize: 120, clockFormat: '12h', usageCounts: false };
     const settings = migrateSettings(stored);
     expect(settings).toMatchObject({ ...stored, schema: SETTINGS_SCHEMA, animationSpeed: 'normal', lowPower: false });
-    expect(SETTINGS_SCHEMA).toBe(2);
-    expect(JSON.parse(serializeSettings(settings))).toMatchObject({ schema: 2, animationSpeed: 'normal', lowPower: false });
+    expect(SETTINGS_SCHEMA).toBe(3);
+    expect(JSON.parse(serializeSettings(settings))).toMatchObject({ schema: 3, animationSpeed: 'normal', lowPower: false });
   });
 
   it('adds animation speed (slower, normal, faster) and low power to appearance', () => {

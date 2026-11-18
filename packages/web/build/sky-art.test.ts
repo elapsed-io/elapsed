@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { cardImage, faintTile, gnomonic, stillImage, stripImage } from './sky-art.ts';
+import { cardImage, gnomonic, stripImage } from './sky-art.ts';
 import type { SkyLook } from './sky-art.ts';
 
-const LOOK: SkyLook = { white: '#EAF0FF', warm: '#FFD2A6', faint: '#DCE4FF', opacityPerMagnitude: 0.1, glowBelowMagnitude: 1, glowScale: 3, glowOpacity: 0.08, warmFromColourIndex: 0.95 };
+const LOOK: SkyLook = { white: '#EAF0FF', warm: '#FFD2A6', opacityPerMagnitude: 0.1, glowBelowMagnitude: 1, glowScale: 3, glowOpacity: 0.08, warmFromColourIndex: 0.95 };
 const PROJECTION = { ra: 5.5, dec: 6, pxPerDegree: 8 };
 const SIZES = { min: 0.7, at0: 2.7, perMagnitude: -0.42 };
 const circles = (svg: string): { cx: number; cy: number; r: number }[] =>
   [...svg.matchAll(/<circle cx="([-\d.]+)" cy="([-\d.]+)" r="([\d.]+)"/g)].map((match) => ({ cx: Number(match[1]), cy: Number(match[2]), r: Number(match[3]) }));
 
 describe('the skies the build draws', () => {
-  it('project the still view about its centre, as the site drew it before (round 2.9)', () => {
+  it('project about the view’s centre, right ascension to the left and declination up', () => {
     expect(gnomonic(5.5, 6, PROJECTION, 360, 225)).toEqual([360, 225]);
     // Right ascension grows to the left, declination up.
     const [x, y] = gnomonic(6, 10, PROJECTION, 0, 0) ?? [0, 0];
@@ -18,20 +18,29 @@ describe('the skies the build draws', () => {
     expect(gnomonic(17.5, -6, PROJECTION, 0, 0)).toBeNull();
   });
 
-  it('place the still view from the centre: each star where the projection put it, its glow inside the image', () => {
-    const image = stillImage([[5.5, 6, 0.5, true]], PROJECTION, SIZES, LOOK);
-    const [glow, star] = circles(image.svg);
-    expect(star?.cx).toBeCloseTo(-image.x, 1);
-    expect(star?.cy).toBeCloseTo(-image.y, 1);
+  it('draw the results card’s star field from the same catalog, about the card’s centre, to the layer’s magnitude, keeping only what falls on the card', () => {
+    const card = cardImage(
+      [
+        [5.5, 6, 0.5, 1.2],
+        [5.5, 6, 6, 0.1],
+        [17.5, -6, 2, 0.1],
+        [9, 6, 2, 0.1],
+      ],
+      { width: 720, height: 520 },
+      PROJECTION,
+      SIZES,
+      5,
+      LOOK,
+      'HYG',
+    );
+    expect(card).toMatchObject({ width: 720, height: 520, x: 0, y: 0 });
+    const [glow, star, ...rest] = circles(card.svg);
+    // The bright warm star at the centre, with its glow; the faint one, the one behind and the one off the card left out.
+    expect(star).toMatchObject({ cx: 360, cy: 260 });
     expect(glow?.r).toBeCloseTo(3 * (2.7 - 0.42 * 0.5), 1);
-    expect(image.x).toBeLessThanOrEqual(-(glow?.r ?? 0));
-    expect(image.svg).toContain('fill="#FFD2A6"');
-  });
-
-  it('draw the faint tile and the card at their frames’ sizes', () => {
-    expect(faintTile([[10, 20, 0.5, 0.3]], { width: 720, height: 450 }, LOOK)).toMatchObject({ width: 720, height: 450 });
-    const card = cardImage([[5.5, 6, 2, false]], [[1, 2, 0.5, 0.2]], { width: 720, height: 520 }, PROJECTION, SIZES, LOOK);
-    expect(circles(card.svg).at(-1)).toMatchObject({ cx: 360, cy: 260 });
+    expect(rest).toEqual([]);
+    expect(card.svg).toContain('fill="#FFD2A6"');
+    expect(card.svg).toContain('<!-- HYG -->');
   });
 
   it('draw the whole sky one turn wide, the view’s centre at its middle, a star across an edge on both edges', () => {

@@ -20,7 +20,7 @@ const EXTENTS = {
   // The tree grows (its scale).
   tree: '.tree__grow',
   // Interstellar's route lengthens with every focused minute (its stretch along the heading, as the camera pulls back).
-  route: '.space-map__drawing line',
+  route: '.space-map__drawing > line',
 } as const;
 
 const MODES = [

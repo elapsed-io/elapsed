@@ -89,7 +89,7 @@
       0.8711111
     ],
     "angle": -28,
-    "resultsAngle": -17,
+    "resultsAngle": -15,
     "usable": 0.85,
     "minValue": 1.6
   },
@@ -98,7 +98,6 @@
       "type": "starfield",
       "id": "stars",
       "slot": "space.stars",
-      "view": "space.stars.view",
       "magnitudeMax": 5,
       "blurOnPause": false,
       "opacity": 0.55,
@@ -270,7 +269,6 @@
     {
       "type": "time",
       "id": "time",
-      "size": 104,
       "position": "center",
       "seconds": "setting"
     }
@@ -317,11 +315,6 @@
       "id": "space.stars",
       "kind": "star-catalog",
       "default": "builtin:stars/hyg-mag5"
-    },
-    {
-      "id": "space.stars.view",
-      "kind": "star-catalog",
-      "default": "builtin:space/canvas-stars"
     },
     {
       "id": "space.landmarks",

@@ -25,9 +25,6 @@ export const OCEAN_CONFIG = {
   tile: { top: '#2E7FA8', bottom: '#05122A', wave: '#BFE3F2' },
   /** The ocean frames' own colours for the time, the icons and the buttons over the water. */
   palette: { text: '#DCE8EE', icon: '#9EC3D6', accent: '#35764E', end: '#A8403D', pause: '#1E3E57' },
-  /** The time is 104 px at reference, 22 px above the buttons. */
-  timePx: 104,
-  gapPx: 22,
   /** Where each zone ends (metres); the hadal zone runs to the bottom. */
   zones: { sunlight: 200, twilight: 1000, midnight: 4000, abyssal: 6000 },
   /** The landmarks a replay may show, by depth (names in the brand module). */

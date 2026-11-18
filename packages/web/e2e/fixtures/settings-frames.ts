@@ -22,10 +22,11 @@
  * appearance (animation speed, low power)"): the Release 1 frame with those two
  * rows added before its reset button, 1160 px tall; nothing else differs.
  *
- * Two owner rules make the site differ from the frames, and are applied to
+ * Four owner rules make the site differ from the frames, and are applied to
  * the reference: the footer's source code link stays hidden until the
- * owner says so (privacy, terms and feedback show); Lexend is not offered
- * (no tabular figures).
+ * owner says so (privacy, terms and feedback show); a credits link follows
+ * feedback (round 2.11); "leave fullscreen" defaults to never (round 2.11);
+ * Lexend is not offered (no tabular figures).
  */
 
 export interface Palette {
@@ -265,7 +266,19 @@ function withOceanChosen(panel: string, c: Palette): string {
 export function settingsFrame(name: SettingsFrameName, c: Palette, storage?: string, variant?: 'ocean' | 'notice' | 'test-modes'): string {
   let panel = (variant === 'notice' ? fromNotice : variant === 'test-modes' ? advancedTestModes : PANELS[name])(c)
     .replace(/<button aria-pressed="false"[^>]*font-family: Lexend[^>]*>lexend<\/button>/, '')
-    .replace(/<a href="#source code"[^>]*>source code<\/a>/, '');
+    // The source code link stays hidden; the credits link (owner, round 2.11) follows feedback, in the links' style.
+    .replace(/<a href="#source code"([^>]*)>source code<\/a>/, '<a href="#credits"$1>credits</a>');
+  // "leave fullscreen" defaults to never (owner, round 2.11): its control shows never chosen, not "on end".
+  const leave = panel.indexOf('leave fullscreen</label>');
+  if (leave >= 0) {
+    const control = panel.slice(leave, panel.indexOf('</div></div>', leave));
+    panel =
+      panel.slice(0, leave) +
+      control
+        .replace(`background: transparent; color: ${c.muted}">never</button>`, `background: ${c.gray}; color: ${c.text}">never</button>`)
+        .replace(`background: ${c.gray}; color: ${c.text}">on end</button>`, `background: transparent; color: ${c.muted}">on end</button>`) +
+      panel.slice(leave + control.length);
+  }
   if (storage !== undefined) panel = panel.replace('your font · 184 KB', storage);
   if (variant === 'ocean') panel = withOceanChosen(panel, c);
   const faces = Object.entries(FRAME_FONTS)

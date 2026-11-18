@@ -17,7 +17,7 @@
 
 import 'virtual:tokens/tree.css';
 import './tree.css';
-import { grassWeights, leafScale, leafState, shares, TREE_CONFIG, TREE_COPY, weather } from '@stopwatch/core';
+import { CONFIG, grassWeights, leafScale, leafState, shares, TREE_CONFIG, TREE_COPY, weather } from '@stopwatch/core';
 import type { TreeLayer, TreeView } from '@stopwatch/core';
 import { ART } from '../../../art/registry.ts';
 import type { ArtCatalog } from '../../../art/registry.ts';
@@ -31,7 +31,6 @@ const MINUTE_MS = 60_000;
 const SEASON_MINUTES = TREE.season / MINUTE_MS;
 const YEAR_MINUTES = 4 * SEASON_MINUTES;
 const YEAR_MS = YEAR_MINUTES * MINUTE_MS;
-const DRIFT_MS = 250;
 
 export type Values = Readonly<Record<string, number | string>>;
 
@@ -195,7 +194,7 @@ export function treePiece({ doc, layer, context }: PieceSetup<TreeLayer>): Piece
     const at = state === 'idle' ? 0 : stepped ? Math.floor(into / MINUTE_MS) * MINUTE_MS : into;
     for (const animation of year) {
       if (state === 'running' && !stepped) {
-        if (animation.playState !== 'running' || Math.abs(Number(animation.currentTime) - at) >= DRIFT_MS) animation.currentTime = at;
+        if (animation.playState !== 'running' || Math.abs(Number(animation.currentTime) - at) >= CONFIG.motion.glideDriftMs) animation.currentTime = at;
         if (animation.playState !== 'running') animation.play();
       } else {
         if (animation.playState !== 'paused') animation.pause();

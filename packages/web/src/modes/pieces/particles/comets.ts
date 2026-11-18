@@ -42,11 +42,12 @@ export function tailAngle(x: number, y: number, dx: number, dy: number, anchor: 
 /** The comets of one cycle in a scene `width` × `height`, drawn at random once. */
 export function scheduleComets(layer: ParticlesLayer, width: number, height: number, anchor: readonly [number, number], random: () => number = Math.random, cycle: number = COMETS.cycleSeconds): Comet[] {
   const every = layer.every;
-  const lifetime = layer.lifetime ?? [8, 11];
-  const heads = layer.size?.head ?? [4, 8];
-  const lengths = layer.size?.length ?? [50, 110];
-  const distances = layer.distance ?? [280, 400];
-  const colours = layer.colors ?? ['#D2F0FF'];
+  const fallback = COMETS.defaults;
+  const lifetime = layer.lifetime ?? fallback.lifetimeSeconds;
+  const heads = layer.size?.head ?? fallback.headPx;
+  const lengths = layer.size?.length ?? fallback.lengthPx;
+  const distances = layer.distance ?? fallback.distancePx;
+  const colours = layer.colors ?? [fallback.colour];
   const comets: Comet[] = [];
   const ends: number[] = [];
   let at = between(random, [0.5, 1]);
@@ -63,7 +64,7 @@ export function scheduleComets(layer: ParticlesLayer, width: number, height: num
     const distance = between(random, distances);
     const dx = distance * Math.cos(heading);
     const dy = distance * Math.sin(heading);
-    const colour = colours[Math.floor(random() * colours.length)] ?? '#D2F0FF';
+    const colour = colours[Math.floor(random() * colours.length)] ?? fallback.colour;
     comets.push({ start: at, life, x, y, dx, dy, head: between(random, heads), length: between(random, lengths), colour, angle: tailAngle(x, y, dx, dy, anchor) });
     ends.push(at + life);
     at += between(random, every);

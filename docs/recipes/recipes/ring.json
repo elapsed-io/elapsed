@@ -37,7 +37,6 @@
     {
       "type": "time",
       "id": "time",
-      "size": 52,
       "position": "center",
       "seconds": "setting"
     }

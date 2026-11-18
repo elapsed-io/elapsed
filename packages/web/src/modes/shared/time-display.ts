@@ -35,6 +35,7 @@ export class TimeDisplay {
   readonly #pausedFor: TimeText;
   readonly #overlay: HTMLDivElement;
   readonly #veil: HTMLDivElement;
+  readonly #frost: HTMLDivElement;
   #held: boolean | null = null;
   #fade: Animation | null = null;
   readonly #missed: HTMLSpanElement;
@@ -66,7 +67,9 @@ export class TimeDisplay {
     this.#body = html(doc, 'div', { class: 'time-stack__body' }, [...compose(this.#main.element)]);
     // While the held state fades in or out, a veil blurs what is under it at a fixed radius (time.css).
     this.#veil = html(doc, 'div', { class: 'time-stack__veil', attrs: { 'aria-hidden': 'true' } });
-    this.element = html(doc, 'div', { class: 'time-stack' }, [this.#body, this.#veil, this.#overlay, this.#checkIn]);
+    // Held, the dialog sits above the mode's art: what the art draws behind the display is blurred like it (round 2.11).
+    this.#frost = html(doc, 'div', { class: 'time-stack__frost', attrs: { 'aria-hidden': 'true' } });
+    this.element = html(doc, 'div', { class: 'time-stack' }, [this.#frost, this.#body, this.#veil, this.#overlay, this.#checkIn]);
     // Opening settings (or any overlay that changes the room the time has) resizes the time while the
     // seconds may be sliding away; see #resized.
     const view = doc.defaultView;
@@ -159,6 +162,7 @@ export class TimeDisplay {
     const from = this.#fade === null ? (held ? 0 : 1) : Number(getComputedStyle(veil).opacity);
     this.#fade?.cancel();
     this.#fade = null;
+    this.#frost.classList.toggle('time-stack__frost--on', held);
     body.classList.toggle('time-stack__body--held', held);
     body.classList.remove('time-stack__body--blurred');
     if (first || !veil.isConnected) {

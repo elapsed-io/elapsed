@@ -156,6 +156,64 @@ for (const mode of ['ocean depth', 'height'] as const) {
   });
 }
 
+/**
+ * Round 2.11, bug 5: started, ocean depth and height show the theme's background, the theme's colours for the time
+ * and the buttons, and their depth or altitude caption updating as the session runs, in the shared layout; in a
+ * dark theme and a light one.
+ */
+for (const [id, caption] of [
+  ['ocean', /^([\d,]+) m · (sunlight|twilight|midnight|abyssal|hadal) zone$/],
+  ['height', /^([\d,]+) m · [a-z ]+$/],
+] as const) {
+  for (const theme of ['graphite', 'paper'] as const) {
+    test(`${id}, started in ${theme}: the theme's background and colours, with its caption updating as the session runs`, async ({ page, browser }) => {
+      // The theme's own look, from digits in a browser context of its own (settings are stored per origin).
+      const reference = await browser.newContext();
+      const digits = await reference.newPage();
+      await openApp(digits, { settings: { theme } });
+      const expected = await digits.evaluate(() => ({
+        background: getComputedStyle(document.querySelector('.screen') ?? document.body).backgroundColor,
+        time: getComputedStyle(document.querySelector('.time--main') ?? document.body).color,
+        start: getComputedStyle(document.querySelector('.button--primary') ?? document.body).backgroundColor,
+      }));
+      await reference.close();
+      await openApp(page, { mode: id, settings: { theme } });
+      await settle(page);
+      const read = (): Promise<{ background: string; time: string; caption: string; shown: boolean; look: string; environments: number }> =>
+        page.evaluate(() => {
+          const element = document.querySelector('.recipe__caption');
+          return {
+            background: getComputedStyle(document.querySelector('.screen') ?? document.body).backgroundColor,
+            time: getComputedStyle(document.querySelector('.mode-root .time--main') ?? document.body).color,
+            caption: element?.textContent ?? '',
+            shown: element !== null && getComputedStyle(element).visibility === 'visible' && getComputedStyle(element).opacity === '1',
+            look: element === null ? '' : `${getComputedStyle(element).visibility} ${getComputedStyle(element).opacity} ${element.className}`,
+            environments: document.querySelectorAll('.environment').length,
+          };
+        });
+      expect(await page.locator('.button--primary').evaluate((button) => getComputedStyle(button).backgroundColor)).toBe(expected.start);
+      await page.locator('.button--primary').click();
+      const metres: number[] = [];
+      for (const minutes of [1, 9, 30]) {
+        await page.clock.runFor(minutes * MINUTE);
+        await settle(page);
+        const now = await read();
+        expect(now.background).toBe(expected.background);
+        expect(now.time).toBe(expected.time);
+        expect(now.environments).toBe(0);
+        expect(now.shown, JSON.stringify(now)).toBe(true);
+        const match = caption.exec(now.caption);
+        expect(match, now.caption).not.toBeNull();
+        metres.push(Number((match?.[1] ?? '').replace(/,/g, '')));
+      }
+      // The caption follows the session: deeper or higher at every look.
+      expect(metres[0]).toBeGreaterThan(0);
+      expect(metres[1]).toBeGreaterThan(metres[0] ?? 0);
+      expect(metres[2]).toBeGreaterThan(metres[1] ?? 0);
+    });
+  }
+}
+
 test('every mode follows the same mount and teardown contract: switched away, nothing of it is left', async ({ page, browserName }) => {
   await switchTestModesOn(page);
   await openApp(page, { width: 1280, height: 800 });

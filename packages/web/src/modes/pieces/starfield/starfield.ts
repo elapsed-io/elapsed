@@ -7,7 +7,7 @@
  */
 
 import './starfield.css';
-import { bindingAt, measureAt } from '@stopwatch/core';
+import { bindingAt, CONFIG, measureAt } from '@stopwatch/core';
 import type { StarfieldLayer } from '@stopwatch/core';
 import { ART } from '../../../art/registry.ts';
 import { html } from '../../../dom.ts';
@@ -15,7 +15,6 @@ import type { Activity, Piece, PieceSetup } from '../../recipe/piece.ts';
 import { skyPiece } from './sky.ts';
 
 const MINUTE_MS = 60_000;
-const DRIFT_MS = 250;
 
 /** The field as an element: the slot's art, covering the screen. */
 export function drawField(doc: Document, key: string, className: string): SVGSVGElement {
@@ -63,7 +62,7 @@ export function starfieldPiece(setup: PieceSetup<StarfieldLayer>): Piece {
       glide = element.animate([{ opacity: opacity(from) }, { opacity: opacity(to) }], { duration: MINUTE_MS, easing: 'linear', fill: 'forwards' });
     }
     if (glide === null) return;
-    if (fresh || glide.playState === 'finished' || Math.abs(Number(glide.currentTime) - into) >= DRIFT_MS) glide.currentTime = into;
+    if (fresh || glide.playState === 'finished' || Math.abs(Number(glide.currentTime) - into) >= CONFIG.motion.glideDriftMs) glide.currentTime = into;
     if (glide.playState !== 'running') glide.play();
   };
 

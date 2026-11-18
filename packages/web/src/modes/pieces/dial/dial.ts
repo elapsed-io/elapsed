@@ -19,7 +19,7 @@
 
 import 'virtual:tokens/analog.css';
 import './dial.css';
-import { ANALOG_CONFIG } from '@stopwatch/core';
+import { ANALOG_CONFIG, CONFIG, PIECES_CONFIG } from '@stopwatch/core';
 import type { Cycle, DialLayer, Subdial } from '@stopwatch/core';
 import { html, svg } from '../../../dom.ts';
 import { motionScale } from '../../../shell/motion.ts';
@@ -28,8 +28,6 @@ import type { Activity, Piece, PieceSetup } from '../../recipe/piece.ts';
 
 const ANALOG = ANALOG_CONFIG;
 const MINUTE_MS = 60_000;
-/** A glide this far from focused time is set right (after the device slept, or the tab was hidden). */
-const DRIFT_MS = 250;
 /** The dial's centre, in the drawing's own units. */
 const CENTRE = ANALOG.centre;
 const FRAME_RADIUS = ANALOG.caseRadius;
@@ -80,7 +78,7 @@ interface DialShape {
 function marksOf(sub: SubdialShape): number {
   if (sub.spec.ticks !== undefined) return sub.spec.ticks;
   if ((sub.spec.labels ?? 0) > 0) return sub.spec.labels ?? 0;
-  return Math.max(1, Math.round((sub.cycle?.minutes ?? 720) / 60));
+  return Math.max(1, Math.round((sub.cycle?.minutes ?? PIECES_CONFIG.dial.cycleMinutes) / 60));
 }
 
 /** A small dial's numbers, the first at 12: seconds on a dial of a minute or less, minutes up to an hour, else hours. */
@@ -226,24 +224,24 @@ export function dialPiece({ doc, layer, recipe, context }: PieceSetup<DialLayer>
   const cycleOf = (id: string): Cycle | undefined => recipe.cycles?.find((cycle) => cycle.id === id);
   const subdials: SubdialShape[] = (layer.subdials ?? []).map((spec) => {
     const offset = spec.offset ?? [0, 0];
-    const radius = spec.radius ?? 22;
+    const radius = spec.radius ?? PIECES_CONFIG.dial.subdialRadius;
     return {
       spec,
       x: CENTRE.x + offset[0],
       y: CENTRE.y + offset[1],
       radius,
       cycle: cycleOf(spec.cycle),
-      hand: spec.hand?.length ?? radius * (39 / 42),
+      hand: spec.hand?.length ?? radius * PIECES_CONFIG.dial.subdialHandShare,
       tail: spec.hand?.tail ?? 0,
-      width: spec.hand?.width ?? 1.2,
+      width: spec.hand?.width ?? PIECES_CONFIG.dial.subdialHandWidth,
       face: (spec.face ?? 'dial') === 'dial',
     };
   });
   const shape: DialShape = {
     cycleMinutes: cycleOf(layer.cycle)?.minutes ?? ANALOG.revolution / MINUTE_MS,
-    major: layer.ticks?.major ?? 12,
-    minor: layer.ticks?.minor ?? 60,
-    labels: layer.labels?.count ?? 60 / ANALOG.labelEveryMinutes,
+    major: layer.ticks?.major ?? PIECES_CONFIG.dial.majorTicks,
+    minor: layer.ticks?.minor ?? PIECES_CONFIG.dial.minorTicks,
+    labels: layer.labels?.count ?? ANALOG.revolution / MINUTE_MS / ANALOG.labelEveryMinutes,
     format: layer.labels?.format ?? 'minutes',
     batons: layer.batons ?? 0,
     subdials,
@@ -390,7 +388,7 @@ export function dialPiece({ doc, layer, recipe, context }: PieceSetup<DialLayer>
       }
       const glide = hand.glide;
       if (glide === null) continue;
-      if (fresh || glide.playState === 'finished' || Math.abs(Number(glide.currentTime) - into) >= DRIFT_MS) glide.currentTime = into;
+      if (fresh || glide.playState === 'finished' || Math.abs(Number(glide.currentTime) - into) >= CONFIG.motion.glideDriftMs) glide.currentTime = into;
       if (glide.playState !== 'running') glide.play();
     }
     glidingMinute = minute;

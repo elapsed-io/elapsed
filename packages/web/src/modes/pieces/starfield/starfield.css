@@ -24,10 +24,9 @@
   }
 }
 
-/* A projected sky (sky.ts): the build's images of the still view and of the strip that turns while paused, crossfading over 2 s. */
+/* A projected sky (sky.ts): the build's strip of the whole sky, still, sliding sideways while it turns. */
 @layer mode {
-  .sky,
-  .sky__turning {
+  .sky {
     position: absolute;
     inset: 0;
     overflow: hidden;
@@ -41,20 +40,6 @@
     transform-origin: 0 0;
   }
 
-  .sky__still {
-    position: absolute;
-    inset: 0;
-    transition: opacity var(--sky-crossfade) ease-in-out;
-  }
-
-  /* The faint stars: the build's tile of the frame, repeated from its corner. */
-  .sky__faint {
-    position: absolute;
-    inset: 0;
-    background-repeat: repeat;
-    background-position: 0 0;
-  }
-
   /* An image the build drew, placed in reference pixels (sky.ts). */
   .sky__image {
     position: absolute;
@@ -62,28 +47,9 @@
     max-width: none;
   }
 
-  .sky__turning {
-    overflow: visible;
-    opacity: 0;
-    visibility: hidden;
-    transition:
-      opacity var(--sky-crossfade) ease-in-out,
-      visibility 0s linear var(--sky-crossfade);
-  }
-
   .sky__strip {
     position: absolute;
     top: 0;
     will-change: transform;
-  }
-
-  .sky--turning .sky__still {
-    opacity: 0;
-  }
-
-  .sky--turning .sky__turning {
-    opacity: 1;
-    visibility: visible;
-    transition: opacity var(--sky-crossfade) ease-in-out;
   }
 }

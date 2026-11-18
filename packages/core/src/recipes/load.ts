@@ -217,10 +217,6 @@ function semanticProblems(recipe: Recipe): string[] {
       }
       case 'starfield':
         slot(where, item.slot);
-        if (item.view !== undefined) {
-          slot(where, item.view);
-          if (names.slots.get(item.view)?.kind !== 'star-catalog') fail(`${where} shows a still view that is not a star catalog`);
-        }
         break;
       case 'landmarks':
       case 'reveal':

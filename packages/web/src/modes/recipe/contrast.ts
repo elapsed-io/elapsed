@@ -8,11 +8,10 @@
  * decision 327). The rule holds whatever a recipe asks: a recipe over an environment always has the switch.
  */
 
-import { contrast, environmentColour, parseHexColour } from '@stopwatch/core';
+import { CONFIG, contrast, environmentColour, parseHexColour, PIECES_CONFIG } from '@stopwatch/core';
 import type { Recipe } from '@stopwatch/core';
 
-const TEXT = 4.5;
-const LARGE = 3;
+const { text: TEXT, large: LARGE } = CONFIG.theme.minContrast;
 
 export interface Chrome {
   readonly text: string;
@@ -24,7 +23,7 @@ export interface Chrome {
 export function contrastSwitch(recipe: Recipe, chrome: Chrome): ((value: number) => number) | null {
   const dark = recipe.contrast?.dark;
   if (recipe.environment === undefined || recipe.environment.type === 'theme' || dark === undefined || !dark.startsWith('#')) return null;
-  const ratio = (colour: string, value: number): number => contrast(parseHexColour(colour), parseHexColour(environmentColour(recipe, value) ?? '#000000'));
+  const ratio = (colour: string, value: number): number => contrast(parseHexColour(colour), parseHexColour(environmentColour(recipe, value) ?? PIECES_CONFIG.colours.none));
   const light = (value: number): number => Math.min(ratio(chrome.text, value) / LARGE, ratio(chrome.icon, value) / LARGE, ratio(chrome.label, value) / TEXT);
   const darkScore = (value: number): number => ratio(dark, value) / TEXT;
   const prefersDark = (value: number): boolean => darkScore(value) > light(value);

@@ -161,6 +161,37 @@ describe('plan audit: design', () => {
     }
   });
 
+  it('keeps one layer order (round 2.11): every z-index is a layer token, and no mode stylesheet sets one', () => {
+    for (const path of STYLESHEETS) {
+      const text = readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+      const values = [...text.matchAll(/z-index:\s*([^;]+);/g)].map((match) => (match[1] ?? '').trim());
+      const name = rel(path);
+      // The settings panel orders its own parts inside its own stacking contexts (the editor's gutter, a highlight
+      // behind its setting); the timer view is one stacking context of its own (0) under the settings panel.
+      if (name.includes('/settings/')) continue;
+      expect(values.filter((value) => !/^var\(--layer-[a-z]+\)$/.test(value) && value !== '0 !important'), name).toEqual([]);
+      // Only the shared time display places its parts (frost, time, dialogs) among the layers; a mode never does.
+      if (name.includes('/modes/') && !name.endsWith('modes/shared/time.css')) expect(values, name).toEqual([]);
+    }
+  });
+
+  it("keeps every colour, size, spacing and duration of a mode in the config (round 2.11): no literal in a mode's code", () => {
+    const modes = SITE_SOURCE.filter((path) => rel(path).startsWith('packages/web/src/modes/'));
+    // Facts of the clock, not design values: a minute and an hour in milliseconds, minutes in an hour, four seasons,
+    // and a clock hand's turn in degrees per minute.
+    const facts = new Set(['MINUTE_MS', 'HOUR', 'MINUTES_PER_RING', 'YEAR_MINUTES', 'MINUTE_HAND_DEGREES', 'HOUR_HAND_DEGREES']);
+    for (const path of modes) {
+      const text = withoutComments(readFileSync(path, 'utf8'));
+      expect([...text.matchAll(/['"`]#[0-9A-Fa-f]{3,8}['"`]/g)].map((match) => match[0]), rel(path)).toEqual([]);
+      const constants = [...text.matchAll(/^(?:export )?const ([A-Z_]+) = -?\d/gm)].map((match) => match[1] ?? '');
+      expect(constants.filter((name) => !facts.has(name)), rel(path)).toEqual([]);
+      // A fallback for what a recipe leaves out comes from the config, unless it is neutral (none, all, the middle).
+      const fallbacks = [...text.matchAll(/\?\? (-?\d[\d_.]*|\[[^\]]*\d[^\]]*\])/g)].map((match) => match[1] ?? '');
+      const neutral = (value: string): boolean => ['0', '1', '0.5', '[0, 0]', '[1, 1]'].includes(value) || /^\[\w+ \/ 2, \w+ \/ 2\]$/.test(value);
+      expect(fallbacks.filter((value) => !neutral(value)), rel(path)).toEqual([]);
+    }
+  });
+
   it('puts user-facing text only in the brand module', () => {
     // theme/contrast.ts names colour pairs for the CI contrast report, which only developers read.
     for (const path of SITE_SOURCE.filter((p) => !p.endsWith('theme/contrast.ts'))) {

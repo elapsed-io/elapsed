@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { CONFIG } from '@stopwatch/core';
+import { CONFIG, SETTINGS_SCHEMA } from '@stopwatch/core';
 import { coreFiles } from '../scripts/size-budget.ts';
 import { diffPngs } from './pixels.ts';
 import type { PixelDiff } from './pixels.ts';
@@ -24,7 +24,7 @@ export const T_READY = T0 + 30_000;
 export async function seedSettings(page: Page, settings: Readonly<Record<string, unknown>>): Promise<void> {
   await page.addInitScript((text) => {
     if (localStorage.getItem('settings') === null) localStorage.setItem('settings', text);
-  }, JSON.stringify({ schema: 1, ...settings }));
+  }, JSON.stringify({ schema: SETTINGS_SCHEMA, ...settings }));
 }
 
 /**

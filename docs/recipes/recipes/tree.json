@@ -137,7 +137,6 @@
     {
       "type": "time",
       "id": "time",
-      "size": 30,
       "position": "bottom",
       "seconds": "setting"
     }

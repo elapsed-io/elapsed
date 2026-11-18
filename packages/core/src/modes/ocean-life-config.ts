@@ -20,5 +20,16 @@ export const OCEAN_LIFE_CONFIG = {
   bubbleSwayPx: 6,
   bubbleSwayRate: 1.4,
   bubbleStrokePx: 1.2,
+  /** The three distances, far to near: their rows, their fish's scales, and how fast they drift (px/s). */
+  rowsPx: [150, 300, 390],
+  scales: [0.3, 0.55, 1.25],
+  speedsPxPerSecond: [7, 13, 26],
+  /** How long an arrival stays when its recipe does not say, in seconds; each fades in and out over fadeSeconds. */
+  lifetimeSeconds: [8, 20],
+  fadeSeconds: 2,
+  /** How long a drawn schedule of arrivals runs before it repeats, in seconds. */
+  cycleSeconds: 180,
+  /** A column of bubbles: how fast it rises (px/s), how far its bubbles sway apart, their spacing and radii (px). */
+  bubbles: { speedPxPerSecond: [22, 38], spreadPx: 12, spacingPx: [26, 48], radiusPx: [2.5, 6] },
   colours: { far: '#0B2A63', mid: '#1B4C82', near: '#3D7EA6', bubble: '#7FB3CC', bubbleOpacity: 0.5 },
 } as const;

@@ -1,7 +1,9 @@
 /*
- * The journey replayed (space.ts; the "results: interstellar" frame): space from edge to edge of the card with its
- * faint stars, the map 600 × 208 (shrinking on narrow windows, never growing), the distance line at its top left
- * counting while the replay runs (where the browser can count), and the card's own text colours.
+ * The journey replayed (space.ts; the revised "results: interstellar" frame, round 2.11): space from edge to edge of
+ * the card with its faint stars, the journey map filling the card behind its text at the frame's 720 × 520 (centred,
+ * shrinking with a smaller window by --space-card-scale, never growing), a space kept for the journey in the card's
+ * flow at the same scale, the distance line at the map's top left counting while the replay runs (where the browser
+ * can count), and the card's own text colours.
  */
 @layer mode {
   .results[data-replay="interstellar"] {
@@ -28,12 +30,19 @@
   }
 
   .space-map {
-    position: relative;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--space-map-width);
+    height: var(--space-map-height);
+    overflow: hidden;
+    transform: translate(-50%, -50%) scale(var(--space-card-scale, 1));
+  }
+
+  .space-spacer {
     flex: none;
     width: 100%;
-    max-width: var(--space-map-width);
-    aspect-ratio: var(--space-map-aspect);
-    overflow: hidden;
+    height: calc(var(--space-spacer) * var(--space-card-scale, 1));
   }
 
   .space-map__drawing {
@@ -48,7 +57,7 @@
     left: var(--space-distance-left);
     top: var(--space-distance-top);
     font-size: var(--space-distance-size);
-    color: var(--space-card-text);
+    color: var(--space-distance-colour);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
