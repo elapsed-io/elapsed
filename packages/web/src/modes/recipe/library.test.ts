@@ -3,7 +3,7 @@ import LIBRARY from './library.ts?raw';
 import { CAMERA_SOURCE, ENVIRONMENT_SOURCES, MODE_BUILD, PIECE_SOURCES, VIEW_SOURCES } from '../sources.ts';
 import { MODE_MANIFESTS } from '../manifests.ts';
 
-const RECIPES: Readonly<Record<string, unknown>> = import.meta.glob('../../../../../docs/recipes/recipes/*.json', { eager: true, import: 'default' });
+const RECIPES: Readonly<Record<string, unknown>> = import.meta.glob('../../../../../packages/core/src/recipes/shipped/*.json', { eager: true, import: 'default' });
 const web = (relative: string): string => relative.replace(/^\.\.\//, 'src/modes/').replace(/^\.\//, 'src/modes/recipe/');
 
 describe('the build’s list of what each mode fetches', () => {

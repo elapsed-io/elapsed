@@ -38,14 +38,14 @@ export const CAMERA_SOURCE = 'src/modes/recipe/camera.ts';
 
 /** Each mode's recipe file (relative to packages/web) and whether it draws its own environment (BuiltInMode.environment). */
 export const MODE_BUILD: Readonly<Record<string, { readonly recipe: string; readonly environment: boolean }>> = {
-  digits: { recipe: '../../docs/recipes/recipes/digits.json', environment: true },
-  ring: { recipe: '../../docs/recipes/recipes/ring.json', environment: true },
-  timeline: { recipe: '../../docs/recipes/recipes/timeline.json', environment: true },
-  analog: { recipe: '../../docs/recipes/recipes/analog.json', environment: true },
-  ocean: { recipe: '../../docs/recipes/recipes/ocean-depth.json', environment: false },
-  height: { recipe: '../../docs/recipes/recipes/height.json', environment: false },
-  tree: { recipe: '../../docs/recipes/recipes/tree.json', environment: true },
-  interstellar: { recipe: '../../docs/recipes/recipes/interstellar.json', environment: true },
+  digits: { recipe: '../core/src/recipes/shipped/digits.json', environment: true },
+  ring: { recipe: '../core/src/recipes/shipped/ring.json', environment: true },
+  timeline: { recipe: '../core/src/recipes/shipped/timeline.json', environment: true },
+  analog: { recipe: '../core/src/recipes/shipped/analog.json', environment: true },
+  ocean: { recipe: '../core/src/recipes/shipped/ocean-depth.json', environment: false },
+  height: { recipe: '../core/src/recipes/shipped/height.json', environment: false },
+  tree: { recipe: '../core/src/recipes/shipped/tree.json', environment: true },
+  interstellar: { recipe: '../core/src/recipes/shipped/interstellar.json', environment: true },
 };
 
 interface RecipeShape {

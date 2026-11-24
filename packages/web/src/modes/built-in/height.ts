@@ -7,7 +7,7 @@
 import 'virtual:tokens/height.css';
 import './height.css';
 import { HEIGHT_CONFIG, HEIGHT_COPY, HEIGHT_LANDMARKS } from '@stopwatch/core';
-import RECIPE from '../../../../../docs/recipes/recipes/height.json' with { type: 'json' };
+import RECIPE from '../../../../../packages/core/src/recipes/shipped/height.json' with { type: 'json' };
 import type { BuiltInMode } from './built-in.ts';
 
 export const HEIGHT: BuiltInMode = {

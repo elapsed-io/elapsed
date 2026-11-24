@@ -57,11 +57,11 @@
             0.45
           ],
           [
-            1,
+            60,
             1
           ]
         ],
-        "ease": "linear"
+        "ease": "smooth"
       },
       "leaves": {
         "clusters": 70,
@@ -85,7 +85,8 @@
         "ground": true
       },
       "trunk": "#6E4636",
-      "ground": "line"
+      "ground": "line",
+      "grass": "#7FAF5A"
     },
     {
       "type": "tree",
@@ -104,14 +105,14 @@
             0.45
           ],
           [
-            1,
+            60,
             1
           ]
         ],
-        "ease": "linear"
+        "ease": "smooth"
       },
       "leaves": {
-        "clusters": 45,
+        "clusters": 70,
         "offsetMax": 0.25,
         "spring": [
           "#C2DE8E",
@@ -132,33 +133,113 @@
         "ground": true
       },
       "trunk": "#6E4636",
-      "ground": "field"
+      "ground": "field",
+      "grass": "#7FAF5A"
+    },
+    {
+      "type": "sprite",
+      "id": "tree-art",
+      "slot": "tree.seasons",
+      "frames": 4,
+      "frameBy": {
+        "cycle": "year"
+      },
+      "crossfade": 180,
+      "position": "center",
+      "size": [
+        360,
+        300
+      ],
+      "scale": {
+        "by": "measure",
+        "stops": [
+          [
+            0,
+            0.45
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "ease": "smooth"
+      },
+      "variantOf": {
+        "option": "tree-view",
+        "value": "your art"
+      }
+    },
+    {
+      "type": "particles",
+      "id": "falling-snow",
+      "when": [
+        "running",
+        "paused"
+      ],
+      "shape": "flake",
+      "visibleWhen": {
+        "phase": "winter"
+      },
+      "every": [
+        0.5,
+        1.5
+      ],
+      "maxAtOnce": 12,
+      "lifetime": [
+        4,
+        8
+      ],
+      "size": {
+        "scale": [
+          0.6,
+          1.4
+        ]
+      },
+      "colors": [
+        "#FFFFFF"
+      ],
+      "angle": [
+        80,
+        100
+      ],
+      "distance": [
+        200,
+        320
+      ],
+      "blurOnPause": false
     },
     {
       "type": "time",
       "id": "time",
-      "position": "bottom",
+      "size": 30,
+      "position": "top",
       "seconds": "setting"
     }
   ],
   "states": {
     "paused": {
-      "blur": "display"
+      "blur": [
+        "time"
+      ]
     },
     "checkin": {
-      "blur": "display"
+      "blur": [
+        "time"
+      ]
     }
   },
   "results": {
     "replay": {
-      "seconds": 3,
+      "seconds": 3.0,
       "easing": "gentle",
       "longSessionExtra": true
     },
     "view": {
       "type": "scene",
       "layers": [
-        "tree-side"
+        "tree-side",
+        "tree-isometric",
+        "tree-art"
       ],
       "camera": false
     }
@@ -170,9 +251,22 @@
       "kind": "segmented",
       "choices": [
         "side",
-        "isometric"
+        "isometric",
+        "your art"
       ],
       "default": "side"
+    }
+  ],
+  "slots": [
+    {
+      "id": "tree.seasons",
+      "kind": "image-strip",
+      "default": "builtin:tree/seasons-strip.png",
+      "frames": 4,
+      "size": [
+        360,
+        300
+      ]
     }
   ]
 }

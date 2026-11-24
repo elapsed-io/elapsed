@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import SCHEMA from '../../../../docs/recipes/mode-recipe-1.schema.json' with { type: 'json' };
+import SCHEMA from '../../../../packages/core/src/recipes/schema/mode-recipe-1.schema.json' with { type: 'json' };
 import { DIGITS_RECIPE } from './built-in.ts';
 import { checkRecipe, parseRecipe, recipeOrDigits } from './load.ts';
 import { RECIPE_LIMITS } from './limits.ts';
@@ -17,14 +17,14 @@ import { CONFIG } from '../config.ts';
 /** The timeline's time size: the shared design system's (round 2.11). */
 const TIMELINE_TIME_PX: number = CONFIG.design.type.timelineTimePx;
 
-import ANALOG from '../../../../docs/recipes/recipes/analog.json' with { type: 'json' };
-import DIGITS from '../../../../docs/recipes/recipes/digits.json' with { type: 'json' };
-import HEIGHT from '../../../../docs/recipes/recipes/height.json' with { type: 'json' };
-import INTERSTELLAR from '../../../../docs/recipes/recipes/interstellar.json' with { type: 'json' };
-import OCEAN from '../../../../docs/recipes/recipes/ocean-depth.json' with { type: 'json' };
-import RING from '../../../../docs/recipes/recipes/ring.json' with { type: 'json' };
-import TIMELINE from '../../../../docs/recipes/recipes/timeline.json' with { type: 'json' };
-import TREE from '../../../../docs/recipes/recipes/tree.json' with { type: 'json' };
+import ANALOG from '../../../../packages/core/src/recipes/shipped/analog.json' with { type: 'json' };
+import DIGITS from '../../../../packages/core/src/recipes/shipped/digits.json' with { type: 'json' };
+import HEIGHT from '../../../../packages/core/src/recipes/shipped/height.json' with { type: 'json' };
+import INTERSTELLAR from '../../../../packages/core/src/recipes/shipped/interstellar.json' with { type: 'json' };
+import OCEAN from '../../../../packages/core/src/recipes/shipped/ocean-depth.json' with { type: 'json' };
+import RING from '../../../../packages/core/src/recipes/shipped/ring.json' with { type: 'json' };
+import TIMELINE from '../../../../packages/core/src/recipes/shipped/timeline.json' with { type: 'json' };
+import TREE from '../../../../packages/core/src/recipes/shipped/tree.json' with { type: 'json' };
 
 const RAW: Readonly<Record<string, unknown>> = { digits: DIGITS, ring: RING, timeline: TIMELINE, analog: ANALOG, 'ocean-depth': OCEAN, height: HEIGHT, tree: TREE, interstellar: INTERSTELLAR };
 const BUILT_IN = ['digits', 'ring', 'timeline', 'analog', 'ocean-depth', 'height', 'tree', 'interstellar'] as const;

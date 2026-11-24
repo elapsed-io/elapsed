@@ -1,8 +1,8 @@
 import { checkRecipe, HEIGHT_CONFIG, OCEAN_CONFIG } from '@stopwatch/core';
 import type { Recipe } from '@stopwatch/core';
 import { describe, expect, it } from 'vitest';
-import HEIGHT from '../../../../../docs/recipes/recipes/height.json' with { type: 'json' };
-import OCEAN from '../../../../../docs/recipes/recipes/ocean-depth.json' with { type: 'json' };
+import HEIGHT from '../../../../../packages/core/src/recipes/shipped/height.json' with { type: 'json' };
+import OCEAN from '../../../../../packages/core/src/recipes/shipped/ocean-depth.json' with { type: 'json' };
 import { optionValues, resultsLayers } from '../recipe/recipe-mode.ts';
 import { Slots } from '../recipe/slots.ts';
 import { profileSpec } from './profile.ts';

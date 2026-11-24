@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import HEIGHT from '../../../../docs/recipes/recipes/height.json' with { type: 'json' };
-import OCEAN from '../../../../docs/recipes/recipes/ocean-depth.json' with { type: 'json' };
-import TREE from '../../../../docs/recipes/recipes/tree.json' with { type: 'json' };
+import HEIGHT from '../../../../packages/core/src/recipes/shipped/height.json' with { type: 'json' };
+import OCEAN from '../../../../packages/core/src/recipes/shipped/ocean-depth.json' with { type: 'json' };
+import TREE from '../../../../packages/core/src/recipes/shipped/tree.json' with { type: 'json' };
 import { heightReached, skyColour, skyLitColour, starsOpacity } from '../modes/height.ts';
 import { oceanColour, oceanDepth, oceanLitColour, oceanZone } from '../modes/ocean.ts';
 import { checkRecipe } from './load.ts';

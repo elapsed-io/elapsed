@@ -14,7 +14,11 @@
     {
       "type": "time",
       "id": "time",
-      "position": "top",
+      "size": 56,
+      "position": [
+        0.5,
+        0.42
+      ],
       "seconds": "setting"
     },
     {
@@ -48,7 +52,7 @@
   },
   "results": {
     "replay": {
-      "seconds": 2,
+      "seconds": 2.0,
       "easing": "fast",
       "longSessionExtra": true
     },

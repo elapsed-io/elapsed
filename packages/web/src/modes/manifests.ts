@@ -29,7 +29,7 @@ export type ModeOptionSetting = 'oceanLife' | 'resultsLandmarks' | 'heightLandma
 const budget = { codeBytes: CONFIG.budgets.displayMode.codeBytes, artBytes: CONFIG.budgets.displayMode.artBytes };
 
 /**
- * Each built-in mode is its recipe (docs/recipes/recipes) drawn with the pieces it names; `source` is the module
+ * Each built-in mode is its recipe (packages/core/src/recipes/shipped) drawn with the pieces it names; `source` is the module
  * that holds the recipe and its art's sources (modes/built-in), which the size check measures with everything it
  * loads. `options` names the setting that holds each of the recipe's options.
  */

@@ -1,6 +1,6 @@
 /**
  * The recipe loader (plan-release-2, round 2.7): a recipe is checked when it loads (built-in recipes when the site
- * is built, built-in.ts), against the schema (docs/recipes/mode-recipe-1.schema.json) and then against what a schema cannot say: every id it
+ * is built, built-in.ts), against the schema the site ships (schema/mode-recipe-1.schema.json) and then against what a schema cannot say: every id it
  * refers to exists, tuples hold what they should, colours inside them are colours, slot defaults are built-in
  * assets with no way out of their folder, and nothing exceeds the runtime limits (limits.ts). A recipe that fails
  * is refused whole; the site shows digits instead (recipeOrDigits).
@@ -8,7 +8,7 @@
  * A loaded recipe is a deep copy, frozen, so nothing that held the original can change it afterwards.
  */
 
-import SCHEMA from '../../../../docs/recipes/mode-recipe-1.schema.json' with { type: 'json' };
+import SCHEMA from '../../../../packages/core/src/recipes/schema/mode-recipe-1.schema.json' with { type: 'json' };
 import { DIGITS_RECIPE, deepFreeze } from './built-in.ts';
 import { RECIPE_LIMITS as LIMITS } from './limits.ts';
 import type { Binding, Recipe } from './types.ts';

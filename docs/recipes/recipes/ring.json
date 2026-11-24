@@ -37,6 +37,7 @@
     {
       "type": "time",
       "id": "time",
+      "size": 52,
       "position": "center",
       "seconds": "setting"
     }
@@ -51,7 +52,7 @@
   },
   "results": {
     "replay": {
-      "seconds": 2,
+      "seconds": 2.0,
       "easing": "fast",
       "longSessionExtra": true
     },

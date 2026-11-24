@@ -1,12 +1,12 @@
 /**
- * Built-in recipes (docs/recipes/recipes), shipped inside the site. They are checked when the site is built: the
+ * Built-in recipes (shipped/, as the site ships them), shipped inside the site. They are checked when the site is built: the
  * build refuses one the loader would refuse (web/build/plugins.ts, `checkRecipes`), and the unit tests check each
  * (recipes.test.ts). So they load already checked, and the checker and its schema stay off the startup path (core
  * JavaScript at most 50 KB, plan, Loading and performance); a recipe from anywhere else is checked when it loads
  * (load.ts). A built-in recipe is frozen, so nothing can change it afterwards.
  */
 
-import DIGITS from '../../../../docs/recipes/recipes/digits.json' with { type: 'json' };
+import DIGITS from '../../../../packages/core/src/recipes/shipped/digits.json' with { type: 'json' };
 import type { Recipe } from './types.ts';
 
 export function deepFreeze<T>(value: T): T {

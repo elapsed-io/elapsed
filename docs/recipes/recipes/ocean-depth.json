@@ -50,8 +50,23 @@
     ],
     "per": 1,
     "spread": 6,
-    "resultsDim": 0.8
+    "resultsDim": 0.8,
+    "dim": 0.6
   },
+  "cycles": [
+    {
+      "id": "glow-drift",
+      "minutes": 0.78
+    },
+    {
+      "id": "glow-breathe",
+      "minutes": 0.62
+    },
+    {
+      "id": "glow-bright",
+      "minutes": 0.68
+    }
+  ],
   "contrast": {
     "light": "#DCE8EE",
     "dark": "#0E2440",
@@ -59,8 +74,171 @@
   },
   "layers": [
     {
+      "type": "shape",
+      "id": "calm",
+      "when": [
+        "idle"
+      ],
+      "shape": "rect",
+      "size": [
+        720,
+        450
+      ],
+      "x": 0,
+      "y": 0,
+      "fill": {
+        "linear": [
+          [
+            0,
+            "#2A7398"
+          ],
+          [
+            0.45,
+            "#1F6485"
+          ],
+          [
+            1,
+            "#0E3F5E"
+          ]
+        ]
+      }
+    },
+    {
+      "type": "shape",
+      "id": "glow",
+      "when": [
+        "idle"
+      ],
+      "shape": "ellipse",
+      "size": [
+        1080,
+        660
+      ],
+      "y": -70,
+      "fill": {
+        "radial": [
+          [
+            0,
+            "#E6F8FF"
+          ],
+          [
+            0.45,
+            "#E6F8FF40"
+          ],
+          [
+            1,
+            "#E6F8FF00"
+          ]
+        ]
+      },
+      "x": {
+        "by": "cycle:glow-drift",
+        "stops": [
+          [
+            0,
+            360
+          ],
+          [
+            0.25,
+            520
+          ],
+          [
+            0.5,
+            360
+          ],
+          [
+            0.75,
+            200
+          ],
+          [
+            1,
+            360
+          ]
+        ],
+        "ease": "smooth"
+      },
+      "scale": {
+        "by": "cycle:glow-breathe",
+        "stops": [
+          [
+            0,
+            1
+          ],
+          [
+            0.5,
+            1.08
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "ease": "smooth"
+      },
+      "opacity": {
+        "by": "cycle:glow-bright",
+        "stops": [
+          [
+            0,
+            0.2
+          ],
+          [
+            0.5,
+            0.24
+          ],
+          [
+            1,
+            0.2
+          ]
+        ],
+        "ease": "smooth"
+      }
+    },
+    {
+      "type": "particles",
+      "id": "snow",
+      "when": [
+        "idle"
+      ],
+      "shape": "dot",
+      "every": [
+        1,
+        1
+      ],
+      "maxAtOnce": 1,
+      "colors": [
+        "#DDF1FF"
+      ],
+      "depths": 3,
+      "size": {
+        "scale": [
+          0.4,
+          2.0
+        ]
+      },
+      "field": {
+        "count": 86,
+        "crossSeconds": [
+          90,
+          60,
+          38
+        ],
+        "swayPx": [
+          6,
+          10,
+          16
+        ],
+        "swaySeconds": [
+          47,
+          31,
+          23
+        ]
+      }
+    },
+    {
       "type": "time",
       "id": "time",
+      "size": 104,
       "position": "center",
       "seconds": "setting"
     },
@@ -73,34 +251,21 @@
       "shape": "image",
       "catalogByZone": {
         "sunlight": [
-          "ocean.sunlight.fish-far",
-          "ocean.sunlight.fish-mid",
-          "ocean.sunlight.fish-near",
-          "ocean.sunlight.bubble"
+          "ocean.fish-school",
+          "ocean.turtle"
         ],
         "twilight": [
-          "ocean.twilight.fish-far",
-          "ocean.twilight.fish-mid",
-          "ocean.twilight.fish-near",
-          "ocean.twilight.bubble"
+          "ocean.jellyfish",
+          "ocean.whale"
         ],
         "midnight": [
-          "ocean.midnight.fish-far",
-          "ocean.midnight.fish-mid",
-          "ocean.midnight.fish-near",
-          "ocean.midnight.bubble"
+          "ocean.squid-lights"
         ],
         "abyssal": [
-          "ocean.abyssal.fish-far",
-          "ocean.abyssal.fish-mid",
-          "ocean.abyssal.fish-near",
-          "ocean.abyssal.bubble"
+          "ocean.anglerfish"
         ],
         "hadal": [
-          "ocean.hadal.fish-far",
-          "ocean.hadal.fish-mid",
-          "ocean.hadal.fish-near",
-          "ocean.hadal.bubble"
+          "ocean.snailfish"
         ]
       },
       "every": [
@@ -135,35 +300,35 @@
           "slot": "ocean.fish-school",
           "from": 0,
           "to": 260,
-          "x": 0.6528,
+          "x": 0.65,
           "opacity": 0.55
         },
         {
           "slot": "ocean.turtle",
           "from": 40,
           "to": 420,
-          "x": 0.125,
+          "x": 0.12,
           "opacity": 0.5
         },
         {
           "slot": "ocean.whale",
           "from": 220,
           "to": 1250,
-          "x": 0.5278,
+          "x": 0.53,
           "opacity": 0.45
         },
         {
           "slot": "ocean.jellyfish",
           "from": 320,
           "to": 1150,
-          "x": 0.2083,
+          "x": 0.2,
           "opacity": 0.9
         },
         {
           "slot": "ocean.squid-lights",
           "from": 900,
           "to": 2650,
-          "x": 0.7222,
+          "x": 0.72,
           "opacity": 1
         }
       ]
@@ -186,7 +351,7 @@
         "pop": true,
         "fadeAfterReplay": true,
         "hover": true,
-        "template": "{landmark} · {value} m"
+        "template": "{landmark} \u00b7 {value} m"
       }
     }
   ],
@@ -195,6 +360,7 @@
       "blur": [
         "time"
       ],
+      "caption": "{value} m \u00b7 {zone}",
       "show": [
         "ocean-life"
       ]
@@ -207,7 +373,7 @@
   },
   "results": {
     "replay": {
-      "seconds": 3,
+      "seconds": 3.0,
       "easing": "gentle",
       "longSessionExtra": true
     },
@@ -254,134 +420,44 @@
   ],
   "slots": [
     {
-      "id": "ocean.sunlight.fish-far",
-      "kind": "image",
-      "default": "builtin:sunlight/fish-far"
-    },
-    {
-      "id": "ocean.sunlight.fish-mid",
-      "kind": "image",
-      "default": "builtin:sunlight/fish-mid"
-    },
-    {
-      "id": "ocean.sunlight.fish-near",
-      "kind": "image",
-      "default": "builtin:sunlight/fish-near"
-    },
-    {
-      "id": "ocean.sunlight.bubble",
-      "kind": "image",
-      "default": "builtin:sunlight/bubble"
-    },
-    {
-      "id": "ocean.twilight.fish-far",
-      "kind": "image",
-      "default": "builtin:twilight/fish-far"
-    },
-    {
-      "id": "ocean.twilight.fish-mid",
-      "kind": "image",
-      "default": "builtin:twilight/fish-mid"
-    },
-    {
-      "id": "ocean.twilight.fish-near",
-      "kind": "image",
-      "default": "builtin:twilight/fish-near"
-    },
-    {
-      "id": "ocean.twilight.bubble",
-      "kind": "image",
-      "default": "builtin:twilight/bubble"
-    },
-    {
-      "id": "ocean.midnight.fish-far",
-      "kind": "image",
-      "default": "builtin:midnight/fish-far"
-    },
-    {
-      "id": "ocean.midnight.fish-mid",
-      "kind": "image",
-      "default": "builtin:midnight/fish-mid"
-    },
-    {
-      "id": "ocean.midnight.fish-near",
-      "kind": "image",
-      "default": "builtin:midnight/fish-near"
-    },
-    {
-      "id": "ocean.midnight.bubble",
-      "kind": "image",
-      "default": "builtin:midnight/bubble"
-    },
-    {
-      "id": "ocean.abyssal.fish-far",
-      "kind": "image",
-      "default": "builtin:abyssal/fish-far"
-    },
-    {
-      "id": "ocean.abyssal.fish-mid",
-      "kind": "image",
-      "default": "builtin:abyssal/fish-mid"
-    },
-    {
-      "id": "ocean.abyssal.fish-near",
-      "kind": "image",
-      "default": "builtin:abyssal/fish-near"
-    },
-    {
-      "id": "ocean.abyssal.bubble",
-      "kind": "image",
-      "default": "builtin:abyssal/bubble"
-    },
-    {
-      "id": "ocean.hadal.fish-far",
-      "kind": "image",
-      "default": "builtin:hadal/fish-far"
-    },
-    {
-      "id": "ocean.hadal.fish-mid",
-      "kind": "image",
-      "default": "builtin:hadal/fish-mid"
-    },
-    {
-      "id": "ocean.hadal.fish-near",
-      "kind": "image",
-      "default": "builtin:hadal/fish-near"
-    },
-    {
-      "id": "ocean.hadal.bubble",
-      "kind": "image",
-      "default": "builtin:hadal/bubble"
-    },
-    {
       "id": "ocean.fish-school",
       "kind": "image",
-      "default": "builtin:passing/fish-school"
+      "default": "builtin:ocean/fish-school.svg"
     },
     {
       "id": "ocean.turtle",
       "kind": "image",
-      "default": "builtin:passing/sea-turtle"
+      "default": "builtin:ocean/turtle.svg"
     },
     {
       "id": "ocean.whale",
       "kind": "image",
-      "default": "builtin:passing/whale"
+      "default": "builtin:ocean/whale.svg"
     },
     {
       "id": "ocean.jellyfish",
       "kind": "image",
-      "default": "builtin:passing/jellyfish"
+      "default": "builtin:ocean/jellyfish.svg"
     },
     {
       "id": "ocean.squid-lights",
       "kind": "image",
-      "default": "builtin:passing/squid-lights"
+      "default": "builtin:ocean/squid-lights.svg"
+    },
+    {
+      "id": "ocean.anglerfish",
+      "kind": "image",
+      "default": "builtin:ocean/anglerfish.svg"
+    },
+    {
+      "id": "ocean.snailfish",
+      "kind": "image",
+      "default": "builtin:ocean/snailfish.svg"
     },
     {
       "id": "ocean.landmarks",
       "kind": "landmark-list",
-      "default": "builtin:ocean/landmarks"
+      "default": "builtin:ocean/landmarks.json"
     }
   ]
 }

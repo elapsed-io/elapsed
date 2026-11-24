@@ -10,7 +10,7 @@
 import 'virtual:tokens/interstellar.css';
 import './interstellar.css';
 import { SPACE_CONFIG, SPACE_COPY } from '@stopwatch/core';
-import RECIPE from '../../../../../docs/recipes/recipes/interstellar.json' with { type: 'json' };
+import RECIPE from '../../../../../packages/core/src/recipes/shipped/interstellar.json' with { type: 'json' };
 import SKY from 'virtual:sky/interstellar/stars';
 import type { BuiltInMode } from './built-in.ts';
 

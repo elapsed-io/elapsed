@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import DIGITS from '../../../docs/recipes/recipes/digits.json' with { type: 'json' };
+import DIGITS from '../../../packages/core/src/recipes/shipped/digits.json' with { type: 'json' };
 import { checkRecipes } from './plugins.ts';
 
 /** Runs the plugin's build start as Vite would, collecting what it refuses. */

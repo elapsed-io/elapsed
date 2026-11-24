@@ -1,7 +1,18 @@
-# Overnight: Release 2, rounds 2.1 to 2.11
+# Overnight: Release 2, rounds 2.1 to 2.11, and release readiness
 
 Working unattended on `claude/release-2` (owner, 2026-11-16 evening). The morning summary goes at the top
 when the run stops; questions for the owner are collected below as they come up.
+
+## 2026-11-24: plan version 12, the recipe archive, and release readiness (stopped for your review)
+
+`docs/plan.md` is version 12 and `docs/recipes/` is your archive of 2026-11-24 (decision 399). The site keeps
+building from its own copies of the recipes until the two are reconciled, because the archive's standard
+recipes predate the frames (decision 400, question 35); `npm run check` passes, and the reference run in
+Chromium, Firefox and WebKit: 1,028 passed, 100 skipped, 0 failed. **`docs/release-readiness.md`**
+lists, for each standard mode and shared screen, what is done, what is left against the frames and the plan,
+and what blocks the release, and orders the rest; `docs/plan-release-2.md` now follows that order (rounds 2.12
+to 2.19, decision 401). Nothing was built beyond the move. Questions 32 and 34 are answered by plan version 12;
+35 to 39 are new.
 
 ## Round 2.11 summary: One design system (stopped for your review)
 
@@ -569,6 +580,10 @@ and easy to change; and 27, on which round 2.10 waits.
     buttons below the figure), so one place for the time would change those frames. Built: their layouts kept
     from their frames; their buttons are the shared buttons, the same size in every mode. Should the figure modes
     also take the shared time and gap (and the figures fit around them), or keep their frames?
+    **Answered (plan version 12, 2026-11-24):** every mode's main block sits in the same centered slot with its
+    buttons 26 px below it, with a 260 px dial for ring and analog and a 48 px time inside ring and timeline.
+    Round 2.13 builds it.
+
 33. **Ocean depth's and height's "black screen" (round 2.11, bug 5; decision 396).** I could not reproduce it: in
     Chromium, Firefox and WebKit, stored or chosen in settings, both showed the theme's background and a running
     time. What I found and changed: they had no sign of their measure while running (ocean depth no caption at all,
@@ -580,3 +595,32 @@ and easy to change; and 27, on which round 2.10 waits.
     the site's typeface, one column, each work with what it is used for, by whom, its licence (linked) and the
     changes made, and a link back to the timer; it lists the twelve font choices too, as they are third-party
     works the site serves. Keep it so, or should it follow a frame (or the theme the person chose)?
+    **Answered (plan version 12):** it follows the person's chosen theme and the site's typeface, laid out like
+    the privacy and terms pages. Round 2.14 builds it.
+35. **The recipe archive against the frames (round 2.13; decision 400).** The archive of 2026-11-24 was written
+    from an earlier copy of the recipes. For the standard modes it undoes the analog redesign (no batons, hand
+    tail or the redesign's subdial fields) and gives ring and timeline a 52 and 56 px time, where the frames and
+    plan version 12 say 48; for the proofs of concept it carries ocean depth's calm water and height's falcon,
+    which the site does not draw yet, and keeps interstellar's results angle at −17° where the revised results
+    frame draws −15°. Proposed: the frames and the plan win for the standard modes, the archive's
+    additions come in with the rounds that draw them, and the reconciled recipes go back into the archive so
+    `recipe-check.py` writes them. Confirm, or say which wins where.
+36. **Seconds "always" for people who never changed it (round 2.14).** The default moves from "blur away" to
+    "always show". As with "leave fullscreen" (decision 397), a stored record still at the old default could
+    read as the new one, while any other choice is kept. Proposed: the same rule. Or keep stored records as
+    they are?
+37. **The seconds tip's timing (round 2.14).** It is drawn on the idle screen, above the time, with "change"
+    and dismiss; the plan says it shows once and only one notice shows at a time. The fullscreen tip also shows
+    on the idle screen until dismissed. Proposed: the seconds tip first, on the first idle screen; the
+    fullscreen tip on a later visit once the seconds tip is gone. "change" sets seconds to "blur away" and opens
+    settings on it, highlighted. Or another order or moment (for instance after the first session)?
+38. **What the standard modes' release contains, and whether it is the public launch.** Your in-scope list
+    names the standard modes and the shared screens. The plan's Release 2 also lists the layout editor (held),
+    picture-in-picture, the screen wake lock and the check-ins switch, and the Release 2 settings frames draw
+    the last three. Proposed: round 2.15 builds those three before the release review if you keep them in;
+    the layout editor and the proofs of concept come after the release. If this release is also the public
+    launch, Release 1's launch list applies (privacy and terms served by the app, the header check against
+    elapsed.io, secret scanning, the HSTS preload). Which do you want?
+39. **The Release 2 display frame's "leave fullscreen".** It still shows "on end" chosen, while the plan and
+    your round 2.11 answer make never the default; the tests apply your rule to the frame. Redraw the frame
+    with never chosen, or leave it?

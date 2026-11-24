@@ -9,8 +9,8 @@ D['color'] = {'anyOf': [{'type': 'string', 'pattern': '^#[0-9A-Fa-f]{6}([0-9A-Fa
                                   'theme.end', 'theme.pr', 'contrast.text', 'contrast.muted']}]}
 D['id'] = {'type': 'string', 'pattern': '^[a-z][a-z0-9-]{0,31}$'}
 D['slotId'] = {'type': 'string', 'pattern': '^[a-z][a-z0-9-]{0,31}(\\.[a-z0-9-]{1,32}){0,2}$'}
-D['source'] = {'type': 'string', 'pattern': '^(measure|progress|cycle:[a-z][a-z0-9-]{0,31})$'}
-D['states'] = {'type': 'array', 'items': {'enum': ['running', 'paused', 'checkin', 'results']}, 'minItems': 1, 'uniqueItems': True}
+D['source'] = {'type': 'string', 'pattern': '^(measure|progress|elapsed|cycle:[a-z][a-z0-9-]{0,31})$'}
+D['states'] = {'type': 'array', 'items': {'enum': ['idle', 'running', 'paused', 'checkin', 'results']}, 'minItems': 1, 'uniqueItems': True}
 D['range'] = {'type': 'array', 'items': {'type': 'number'}, 'minItems': 2, 'maxItems': 2}
 D['frac'] = {'type': 'number', 'minimum': 0, 'maximum': 1}
 D['point'] = {'type': 'array', 'items': {'$ref': '#/$defs/frac'}, 'minItems': 2, 'maxItems': 2}
@@ -29,7 +29,7 @@ D['hand'] = {'type': 'object', 'additionalProperties': False, 'properties': {
 
 def layer(t, props, required=()):
     base = {'type': {'const': t}, 'id': {'$ref': '#/$defs/id'}, 'when': {'$ref': '#/$defs/states'},
-            'variantOf': {'$ref': '#/$defs/variant'}, 'space': {'enum': ['screen', 'camera']},
+            'variantOf': {'$ref': '#/$defs/variant'}, 'space': {'enum': ['screen', 'camera', 'sky']},
             'blurOnPause': {'type': 'boolean'}, 'opacity': {'$ref': '#/$defs/binding'}}
     base.update(props)
     return {'type': 'object', 'additionalProperties': False, 'required': ['type', 'id'] + list(required), 'properties': base}
@@ -70,7 +70,7 @@ LAYERS = [
                       'items': {'type': 'array', 'maxItems': 24, 'items': {'type': 'object', 'additionalProperties': False, 'required': ['slot', 'from', 'to'], 'properties': {
                           'slot': {'$ref': '#/$defs/slotId'}, 'from': {'type': 'number'}, 'to': {'type': 'number'}, 'x': {'$ref': '#/$defs/frac'},
                           'opacity': {'$ref': '#/$defs/frac'}, 'size': {'type': 'number', 'minimum': 8, 'maximum': 400}}}}}, ['direction', 'items']),
-    layer('particles', {'shape': {'enum': ['streak', 'comet', 'dot', 'flake', 'image']}, 'slot': {'$ref': '#/$defs/slotId'},
+    layer('particles', {'shape': {'enum': ['streak', 'comet', 'dot', 'flake', 'image', 'beam']}, 'slot': {'$ref': '#/$defs/slotId'},
                         'catalogByZone': {'type': 'object', 'maxProperties': 12, 'additionalProperties': {'type': 'array', 'maxItems': 12, 'items': {'$ref': '#/$defs/slotId'}}},
                         'visibleWhen': {'type': 'object', 'additionalProperties': False, 'properties': {'by': {'$ref': '#/$defs/source'}, 'min': {'type': 'number'}, 'max': {'type': 'number'}, 'phase': {'$ref': '#/$defs/id'}}},
                         'every': {'$ref': '#/$defs/range'}, 'maxAtOnce': {'type': 'integer', 'minimum': 1, 'maximum': 12}, 'lifetime': {'$ref': '#/$defs/range'},
@@ -79,7 +79,18 @@ LAYERS = [
                         'angle': {'$ref': '#/$defs/range'}, 'distance': {'$ref': '#/$defs/range'},
                         'orient': {'enum': ['travel', 'away-from-anchor', 'none']}, 'depths': {'type': 'integer', 'minimum': 1, 'maximum': 3},
                         'arrive': {'enum': ['fade', 'drift-in']}, 'leaveOnResume': {'type': 'boolean'},
-                        'bursts': {'type': 'object', 'additionalProperties': False, 'properties': {'every': {'$ref': '#/$defs/range'}, 'count': {'$ref': '#/$defs/range'}, 'within': {'type': 'number', 'minimum': 0.5, 'maximum': 10}}}},
+                        'bursts': {'type': 'object', 'additionalProperties': False, 'properties': {'every': {'$ref': '#/$defs/range'}, 'count': {'$ref': '#/$defs/range'}, 'within': {'type': 'number', 'minimum': 0.5, 'maximum': 10}}},
+                        'origin': {'type': 'array', 'items': {'type': 'number', 'minimum': -3, 'maximum': 3}, 'minItems': 2, 'maxItems': 2},
+                        'lanes': {'type': 'integer', 'minimum': 2, 'maximum': 24}, 'spread': {'type': 'array', 'items': {'type': 'number', 'minimum': -89, 'maximum': 89}, 'minItems': 2, 'maxItems': 2},
+                        'widths': {'type': 'array', 'items': {'type': 'number', 'minimum': 0.1, 'maximum': 10}, 'minItems': 2, 'maxItems': 2}, 'noOverlap': {'type': 'boolean'},
+                        'fade': {'type': 'object', 'additionalProperties': False, 'properties': {'in': {'$ref': '#/$defs/range'}, 'hold': {'$ref': '#/$defs/range'}, 'out': {'$ref': '#/$defs/range'}, 'rest': {'$ref': '#/$defs/range'}}},
+                        'peak': {'type': 'number', 'minimum': 0, 'maximum': 0.25}, 'shimmer': {'type': 'number', 'minimum': 0, 'maximum': 0.5},
+                        'field': {'type': 'object', 'additionalProperties': False, 'required': ['count'], 'properties': {
+                            'count': {'type': 'integer', 'minimum': 1, 'maximum': 120},
+                            'crossSeconds': {'type': 'array', 'items': {'type': 'number', 'minimum': 5, 'maximum': 600}, 'minItems': 1, 'maxItems': 3},
+                            'swayPx': {'type': 'array', 'items': {'type': 'number', 'minimum': 0, 'maximum': 60}, 'minItems': 1, 'maxItems': 3},
+                            'swaySeconds': {'type': 'array', 'items': {'type': 'number', 'minimum': 2, 'maximum': 600}, 'minItems': 1, 'maxItems': 3}}},
+                        'falloff': {'type': 'array', 'minItems': 2, 'maxItems': 8, 'items': {'type': 'array', 'minItems': 2, 'maxItems': 2, 'items': {'type': 'number', 'minimum': 0, 'maximum': 1}}}},
           ['shape', 'every', 'maxAtOnce']),
     layer('starfield', {'slot': {'$ref': '#/$defs/slotId'}, 'magnitudeMax': {'type': 'number', 'minimum': 0, 'maximum': 6.5},
                         'projection': {'type': 'object', 'additionalProperties': False, 'properties': {'type': {'enum': ['gnomonic', 'equirectangular']}, 'ra': {'type': 'number', 'minimum': 0, 'maximum': 24},
@@ -96,17 +107,47 @@ LAYERS = [
                         'maxTotal': {'type': 'integer', 'minimum': 1, 'maximum': 12}, 'dot': {'$ref': '#/$defs/color'}, 'fadeBelowPx': {'type': 'number', 'minimum': 0, 'maximum': 40},
                         'labels': {'type': 'object', 'additionalProperties': False, 'properties': {'pop': {'type': 'boolean'}, 'fadeAfterReplay': {'type': 'boolean'}, 'hover': {'type': 'boolean'}, 'template': {'$ref': '#/$defs/template'}}}}, ['slot']),
     layer('shape', {'shape': {'enum': ['circle', 'rect', 'ellipse']}, 'size': {'type': 'array', 'items': {'type': 'number', 'minimum': 1, 'maximum': 4000}, 'minItems': 2, 'maxItems': 2},
-                    'x': {'$ref': '#/$defs/binding'}, 'y': {'$ref': '#/$defs/binding'},
-                    'fill': {'oneOf': [{'$ref': '#/$defs/color'}, {'type': 'object', 'additionalProperties': False, 'required': ['radial'], 'properties': {'radial': {'type': 'array', 'maxItems': 6, 'items': {'type': 'array', 'minItems': 2, 'maxItems': 2}}}}]},
+                    'x': {'$ref': '#/$defs/binding'}, 'y': {'$ref': '#/$defs/binding'}, 'scale': {'$ref': '#/$defs/binding'},
+                    'fill': {'oneOf': [{'$ref': '#/$defs/color'}, {'type': 'object', 'additionalProperties': False, 'required': ['radial'], 'properties': {'radial': {'type': 'array', 'maxItems': 6, 'items': {'type': 'array', 'minItems': 2, 'maxItems': 2}}}},
+                                       {'type': 'object', 'additionalProperties': False, 'required': ['linear'], 'properties': {'linear': {'type': 'array', 'minItems': 2, 'maxItems': 6, 'items': {'type': 'array', 'minItems': 2, 'maxItems': 2}}}}]},
                     'glow': {'type': 'object', 'additionalProperties': False, 'properties': {'blur': {'type': 'number', 'minimum': 0, 'maximum': 80}, 'color': {'$ref': '#/$defs/color'}}}}, ['shape', 'size']),
     layer('reveal', {'slot': {'$ref': '#/$defs/slotId'}, 'direction': {'enum': ['up', 'down', 'left', 'right', 'radial']}, 'by': {'$ref': '#/$defs/binding'}}, ['slot', 'direction', 'by']),
+
+    layer('scenery', {'preset': {'enum': ['conifers', 'hills', 'image']}, 'slot': {'$ref': '#/$defs/slotId'},
+                      'baseY': {'type': 'number', 'minimum': 0, 'maximum': 1.5}, 'height': {'type': 'array', 'items': {'type': 'number', 'minimum': 8, 'maximum': 300}, 'minItems': 2, 'maxItems': 2}, 'color': {'$ref': '#/$defs/color'},
+                      'distance': {'type': 'number', 'minimum': 1, 'maximum': 100}, 'tileX': {'type': 'boolean'}, 'seed': {'type': 'integer', 'minimum': 0, 'maximum': 9999}},
+          ['preset', 'distance']),
+    layer('subject', {
+        'art': {'type': 'object', 'additionalProperties': False, 'required': ['preset'], 'properties': {'preset': {'enum': ['falcon', 'image']}, 'slot': {'$ref': '#/$defs/slotId'}, 'color': {'$ref': '#/$defs/color'}}},
+        'size': {'type': 'number', 'minimum': 4, 'maximum': 200}, 'position': {'$ref': '#/$defs/point'},
+        'entry': {'type': 'object', 'additionalProperties': False, 'properties': {'from': {'type': 'array', 'items': {'type': 'number', 'minimum': -1, 'maximum': 2}, 'minItems': 2, 'maxItems': 2},
+                  'delay': {'type': 'number', 'minimum': 0, 'maximum': 10}, 'speed': {'type': 'number', 'minimum': 0, 'maximum': 2000}}},
+        'motion': {'type': 'object', 'additionalProperties': False, 'properties': {'forwardSpeed': {'type': 'number', 'minimum': 0, 'maximum': 2000}, 'forwardDecay': {'type': 'number', 'minimum': 0.1, 'maximum': 60},
+                   'climbFrom': {'enum': ['measure', 'none']}, 'climbRamp': {'type': 'number', 'minimum': 0, 'maximum': 30}}},
+        'flight': {'type': 'object', 'additionalProperties': False, 'properties': {
+            'flapHz': {'type': 'number', 'minimum': 0.5, 'maximum': 12}, 'downstrokeShare': {'type': 'number', 'minimum': 0.3, 'maximum': 0.7}, 'upstrokeFold': {'type': 'number', 'minimum': 0, 'maximum': 0.6},
+            'pattern': {'type': 'array', 'maxItems': 6, 'items': {'type': 'object', 'additionalProperties': False, 'minProperties': 1, 'maxProperties': 1,
+                        'properties': {'flap': {'type': 'number', 'minimum': 0, 'maximum': 600}, 'glide': {'type': 'number', 'minimum': 0, 'maximum': 600}}}},
+            'glideAngle': {'type': 'number', 'minimum': -90, 'maximum': 0}, 'glideWobble': {'type': 'number', 'minimum': 0, 'maximum': 15}, 'steady': {'type': 'boolean'}}},
+        'stages': {'type': 'array', 'maxItems': 6, 'items': {'type': 'object', 'additionalProperties': False, 'required': ['from'], 'properties': {
+            'from': {'type': 'number'}, 'label': {'$ref': '#/$defs/label'}, 'color': {'$ref': '#/$defs/color'}, 'crossfade': {'type': 'number', 'minimum': 0, 'maximum': 600},
+            'halo': {'type': 'object', 'additionalProperties': False, 'properties': {'radius': {'type': 'number', 'minimum': 0, 'maximum': 200}, 'strength': {'$ref': '#/$defs/frac'}}},
+            'flash': {'type': 'object', 'additionalProperties': False, 'properties': {'radius': {'type': 'number', 'minimum': 0, 'maximum': 400}, 'strength': {'type': 'number', 'minimum': 0, 'maximum': 0.9}, 'seconds': {'type': 'number', 'minimum': 0.5, 'maximum': 10}}},
+            'streamers': {'type': 'object', 'additionalProperties': False, 'properties': {'count': {'type': 'integer', 'minimum': 1, 'maximum': 5}, 'length': {'type': 'number', 'minimum': 4, 'maximum': 400},
+                          'wave': {'type': 'number', 'minimum': 0, 'maximum': 40}, 'color': {'$ref': '#/$defs/color'}, 'grow': {'type': 'number', 'minimum': 0, 'maximum': 600}}}}}}},
+        ['art', 'size']),
+    layer('glare', {'source': {'$ref': '#/$defs/id'}, 'trigger': {'enum': ['tilt', 'never']}, 'peak': {'type': 'number', 'minimum': 0, 'maximum': 0.9},
+                    'bloom': {'type': 'number', 'minimum': 0, 'maximum': 1200},
+                    'ghosts': {'type': 'array', 'maxItems': 8, 'items': {'type': 'array', 'minItems': 3, 'maxItems': 3, 'items': {'type': 'number', 'minimum': 0, 'maximum': 200}}}},
+          ['source', 'trigger']),
+
     layer('image-path', {'slot': {'$ref': '#/$defs/slotId'}, 'points': {'type': 'array', 'minItems': 2, 'maxItems': 64, 'items': {'$ref': '#/$defs/point'}},
                          'by': {'$ref': '#/$defs/binding'}, 'marker': {'$ref': '#/$defs/color'}}, ['slot', 'points', 'by']),
 ]
 
 state = {'type': 'object', 'additionalProperties': False, 'properties': {
     'blur': {'oneOf': [{'const': 'display'}, {'type': 'array', 'maxItems': 24, 'items': {'$ref': '#/$defs/id'}}]},
-    'caption': {'$ref': '#/$defs/template'}, 'show': {'type': 'array', 'maxItems': 12, 'items': {'$ref': '#/$defs/id'}}}}
+    'caption': {'$ref': '#/$defs/template'}, 'show': {'type': 'array', 'maxItems': 12, 'items': {'$ref': '#/$defs/id'}}, 'freeze': {'type': 'boolean'}}}
 
 SCHEMA = {
     '$schema': 'https://json-schema.org/draft/2020-12/schema', '$id': 'https://elapsed.io/schemas/mode-recipe-1.json',
@@ -131,9 +172,14 @@ SCHEMA = {
             {'type': 'object', 'additionalProperties': False, 'required': ['type', 'base', 'k'], 'properties': {'type': {'const': 'light-falloff'},
                 'base': {'type': 'array', 'items': {'$ref': '#/$defs/frac'}, 'minItems': 3, 'maxItems': 3},
                 'k': {'type': 'array', 'items': {'type': 'number', 'minimum': 0, 'maximum': 5}, 'minItems': 3, 'maxItems': 3},
-                'per': {'type': 'number', 'minimum': 1, 'maximum': 1000000}, 'spread': {'type': 'number', 'minimum': 0}, 'resultsDim': {'type': 'number', 'minimum': 0.4, 'maximum': 1}}}]},
+                'per': {'type': 'number', 'minimum': 1, 'maximum': 1000000}, 'spread': {'type': 'number', 'minimum': 0}, 'resultsDim': {'type': 'number', 'minimum': 0.4, 'maximum': 1}, 'dim': {'type': 'number', 'minimum': 0.3, 'maximum': 1}}}]},
         'contrast': {'type': 'object', 'additionalProperties': False, 'properties': {'light': {'$ref': '#/$defs/color'}, 'dark': {'$ref': '#/$defs/color'}, 'auto': {'type': 'boolean'}}},
         'camera': {'oneOf': [{'type': 'object', 'additionalProperties': False, 'required': ['type'], 'properties': {'type': {'const': 'fixed'}}},
+                             {'type': 'object', 'additionalProperties': False, 'required': ['type', 'pxPerUnit', 'follow'], 'properties': {'type': {'const': 'rig'},
+                                 'pxPerUnit': {'type': 'number', 'minimum': 0.01, 'maximum': 1000},
+                                 'follow': {'type': 'object', 'additionalProperties': False, 'required': ['subject'], 'properties': {'subject': {'$ref': '#/$defs/id'}, 'damping': {'type': 'number', 'minimum': 0.1, 'maximum': 10}}},
+                                 'tilt': {'type': 'object', 'additionalProperties': False, 'properties': {'px': {'type': 'number', 'minimum': -600, 'maximum': 600}, 'start': {'type': 'number', 'minimum': 0, 'maximum': 60},
+                                          'over': {'type': 'number', 'minimum': 0.1, 'maximum': 30}, 'ease': {'enum': ['smooth', 'linear']}, 'skyShift': {'type': 'number', 'minimum': 0}}}}},
                              {'type': 'object', 'additionalProperties': False, 'required': ['type', 'anchor', 'angle'], 'properties': {'type': {'const': 'follow-zoom'},
                                  'anchor': {'$ref': '#/$defs/point'}, 'angle': {'type': 'number', 'minimum': -180, 'maximum': 180},
                                  'resultsAngle': {'type': 'number', 'minimum': -180, 'maximum': 180},
@@ -192,9 +238,21 @@ R['analog'] = dict(recipe=1, id='analog', name='analog stopwatch', icon='analog'
 OCEAN_ZONES = [['sunlight', 'sunlight zone', 0], ['twilight', 'twilight zone', 200], ['midnight', 'midnight zone', 1000], ['abyssal', 'abyssal zone', 4000], ['hadal', 'hadal zone', 6000]]
 R['ocean-depth'] = dict(recipe=1, id='ocean-depth', name='ocean depth', icon='ocean',
     measure=dict(unit='m', perMinute=15, max=10935, records='comparable'), zones=OCEAN_ZONES,
-    environment={'type': 'light-falloff', 'base': [0.0232, 0.212, 0.392], 'k': [0.30, 0.06, 0.023], 'per': 1, 'spread': 6, 'resultsDim': 0.8},
+    environment={'type': 'light-falloff', 'base': [0.0232, 0.212, 0.392], 'k': [0.30, 0.06, 0.023], 'per': 1, 'spread': 6, 'resultsDim': 0.8, 'dim': 0.6},
+    cycles=[dict(id='glow-drift', minutes=0.78), dict(id='glow-breathe', minutes=0.62), dict(id='glow-bright', minutes=0.68)],
     contrast=dict(light='#DCE8EE', dark='#0E2440', auto=True),
-    layers=[dict(type='time', id='time', size=104, position='center', seconds='setting'),
+    layers=[
+            # idle: calm water; its middle colour is the light model at 0 m (dim 0.6), where the dive begins
+            dict(type='shape', id='calm', when=['idle'], shape='rect', size=[720, 450], x=0, y=0, fill={'linear': [[0, '#2A7398'], [0.45, '#1F6485'], [1, '#0E3F5E']]}),
+            # a soft glow from above, drifting side to side and breathing on slow loops
+            dict(type='shape', id='glow', when=['idle'], shape='ellipse', size=[1080, 660], y=-70, fill={'radial': [[0, '#E6F8FF'], [0.45, '#E6F8FF40'], [1, '#E6F8FF00']]},
+                 x={'by': 'cycle:glow-drift', 'stops': [[0, 360], [0.25, 520], [0.5, 360], [0.75, 200], [1, 360]], 'ease': 'smooth'},
+                 scale={'by': 'cycle:glow-breathe', 'stops': [[0, 1], [0.5, 1.08], [1, 1]], 'ease': 'smooth'},
+                 opacity={'by': 'cycle:glow-bright', 'stops': [[0, 0.2], [0.5, 0.24], [1, 0.2]], 'ease': 'smooth'}),
+            # marine snow: specks in three depths, sinking and swaying forever, far small and slow, near larger and faster
+            dict(type='particles', id='snow', when=['idle'], shape='dot', every=[1, 1], maxAtOnce=1, colors=['#DDF1FF'], depths=3,
+                 size={'scale': [0.4, 2.0]}, field={'count': 86, 'crossSeconds': [90, 60, 38], 'swayPx': [6, 10, 16], 'swaySeconds': [47, 31, 23]}),
+            dict(type='time', id='time', size=104, position='center', seconds='setting'),
             dict(type='particles', id='ocean-life', when=['paused'], shape='image', catalogByZone={'sunlight': ['ocean.fish-school', 'ocean.turtle'], 'twilight': ['ocean.jellyfish', 'ocean.whale'],
                  'midnight': ['ocean.squid-lights'], 'abyssal': ['ocean.anglerfish'], 'hadal': ['ocean.snailfish']},
                  every=[3, 9], maxAtOnce=4, lifetime=[8, 20], size={'scale': [0.5, 1.2]}, depths=3, arrive='drift-in', leaveOnResume=True, blurOnPause=False),
@@ -215,26 +273,47 @@ R['ocean-depth'] = dict(recipe=1, id='ocean-depth', name='ocean depth', icon='oc
 R['height'] = dict(recipe=1, id='height', name='height', icon='height',
     measure=dict(unit='m', perMinute=140, max=100000, records='comparable'),
     zones=[['troposphere', 'troposphere', 0], ['stratosphere', 'stratosphere', 12000], ['mesosphere', 'mesosphere', 50000], ['thermosphere', 'thermosphere', 85000]],
-    environment={'type': 'light-falloff', 'base': [0.078, 0.275, 0.597], 'k': [1.25, 1.1, 0.95], 'per': 8500, 'spread': 1500, 'resultsDim': 0.65},
-    contrast=dict(light='#EEF4FA', dark='#0E2440', auto=True),
-    layers=[dict(type='starfield', id='stars', slot='sky.stars', magnitudeMax=5, blurOnPause=False,
-                 opacity={'by': 'measure', 'stops': [[18000, 0], [42000, 1]], 'ease': 'smooth'}),
-            dict(type='time', id='time', size=104, position='center', seconds='setting'),
-            dict(type='particles', id='shooting-stars', when=['paused'], shape='streak', visibleWhen={'by': 'measure', 'min': 18000},
-                 every=[7, 15], maxAtOnce=3, lifetime=[0.6, 1.2], size={'length': [60, 130], 'thickness': [1, 2]},
-                 colors=['#FFFFFF', '#FFECBE', '#C8FFDC', '#DCE8FF'], angle=[18, 40], distance=[140, 260], orient='travel',
-                 bursts={'every': [120, 300], 'count': [8, 15], 'within': 3}, blurOnPause=False),
-            dict(type='passing', id='passing', when=['results'], direction='down', items=[
-                dict(slot='sky.birds', **{'from': 0, 'to': 2600}, x=0.7, opacity=0.8), dict(slot='sky.cloud', **{'from': 600, 'to': 6000}, x=0.11, opacity=0.9),
-                dict(slot='sky.cloud', **{'from': 2500, 'to': 11500}, x=0.6, opacity=0.85), dict(slot='sky.airliner', **{'from': 8800, 'to': 12800}, x=0.35, opacity=0.95),
-                dict(slot='sky.balloon', **{'from': 15000, 'to': 34000}, x=0.78, opacity=0.95)]),
-            dict(type='shape', id='horizon', when=['results'], shape='circle', size=[3200, 3200], x=0.5,
-                 y={'by': 'measure', 'stops': [[15000, 530], [23000, 460], [100000, 410]], 'ease': 'smooth'},
-                 opacity={'by': 'measure', 'stops': [[15000, 0], [23000, 1]], 'ease': 'smooth'},
-                 fill={'radial': [[0, '#0B2A4E'], [0.92, '#0B2A4E'], [0.988, '#2B6FB0'], [1, '#78BEFF00']]}, glow=dict(blur=40, color='#6EB4FF73')),
-            dict(type='landmarks', id='landmarks', when=['results'], slot='sky.landmarks', anchor='chart', perBand=dict(size=10000, max=2), maxTotal=6, dot='#F2C46B',
-                 labels=dict(pop=True, fadeAfterReplay=True, hover=True, template='{landmark} · {value} m'))],
-    states=dict(paused=dict(blur=['time'], caption='{value} m · {zone}', show=['shooting-stars']), checkin=dict(blur=['time'])),
+    # the painted sky by altitude; the camera's upward tilt looks into higher, deeper sky
+    environment={'type': 'stops', 'by': 'measure', 'stops': [[0, '#86BCE4'], [1000, '#78B0DF'], [5000, '#5A93CF'], [9000, '#3F75BA'], [15000, '#285593'], [25000, '#163266'], [40000, '#0B1A3B']]},
+    contrast=dict(light='#F3F6FB', dark='#1F2A3A', auto=True),
+    # a camera that follows the falcon, critically damped (no lurch, no overshoot), then tilts up toward the sun
+    camera={'type': 'rig', 'pxPerUnit': 50, 'follow': {'subject': 'falcon', 'damping': 0.9},
+            'tilt': {'px': 170, 'start': 1.1, 'over': 2.5, 'ease': 'smooth', 'skyShift': 2600}},
+    layers=[
+        dict(type='shape', id='sun', space='sky', shape='circle', size=[140, 140], x=604, y=112, fill={'radial': [[0, '#FFF6DD'], [0.35, '#FFF1D0'], [1, '#FFF1D000']]},
+             opacity={'by': 'measure', 'stops': [[6000, 1], [18000, 0]], 'ease': 'smooth'}),
+        dict(type='starfield', id='stars', slot='sky.stars', magnitudeMax=5, opacity={'by': 'measure', 'stops': [[18000, 0], [42000, 1]], 'ease': 'smooth'}),
+        # the landscape: each layer moves by the camera's movement divided by its distance, and repeats sideways
+        dict(type='scenery', id='hills', preset='hills', baseY=0.747, color='#B7CAD6', distance=40, tileX=True, seed=7, opacity={'by': 'measure', 'stops': [[90, 1], [310, 0]], 'ease': 'smooth'}),
+        dict(type='scenery', id='far-forest', preset='conifers', baseY=0.836, height=[22, 40], color='#9CB3C2', distance=19, tileX=True, seed=11, opacity={'by': 'measure', 'stops': [[90, 1], [310, 0]], 'ease': 'smooth'}),
+        dict(type='scenery', id='mid-forest', preset='conifers', baseY=0.92, height=[34, 58], color='#76958E', distance=13.5, tileX=True, seed=12, opacity={'by': 'measure', 'stops': [[90, 1], [310, 0]], 'ease': 'smooth'}),
+        dict(type='scenery', id='near-forest', preset='conifers', baseY=1.018, height=[50, 84], color='#507459', distance=10, tileX=True, seed=13, opacity={'by': 'measure', 'stops': [[90, 1], [310, 0]], 'ease': 'smooth'}),
+        # the falcon: enters from the left half a second after start, keeps its speed, turns into a thermal and climbs at the measure's rate
+        dict(type='subject', id='falcon', art={'preset': 'falcon', 'color': '#2B303B'}, size=20, position=[0.5, 0.836],
+             entry={'from': [-0.08, 1.04], 'delay': 0.5, 'speed': 200},
+             motion={'forwardSpeed': 200, 'forwardDecay': 3, 'climbFrom': 'measure', 'climbRamp': 2},
+             flight={'flapHz': 2.2, 'downstrokeShare': 0.55, 'upstrokeFold': 0.3, 'pattern': [{'flap': 1}, {'glide': 60}], 'glideAngle': -36, 'glideWobble': 2.4, 'steady': True},
+             # above the highest bird ever recorded, it becomes a glowing white angel with long streamers
+             stages=[{'from': 11300, 'label': 'angel', 'color': '#FFFFFF', 'crossfade': 2.5,
+                      'halo': {'radius': 34, 'strength': 0.75}, 'flash': {'radius': 90, 'strength': 0.9, 'seconds': 1.1},
+                      'streamers': {'count': 3, 'length': 95, 'wave': 5.5, 'color': '#FFFFFF', 'grow': 2.6}}]),
+        # a lens glare, in circles, peaking while the camera tilts toward the sun
+        dict(type='glare', id='glare', source='sun', trigger='tilt', peak=0.85, bloom=300,
+             ghosts=[[0.18, 9, 0.12], [0.34, 18, 0.09], [0.5, 34, 0.06], [0.64, 12, 0.12], [0.78, 24, 0.07], [0.92, 15, 0.1]]),
+        dict(type='time', id='time', size=104, position='center', seconds='setting'),
+        dict(type='passing', id='passing', when=['results'], direction='down', items=[
+            dict(slot='sky.birds', **{'from': 0, 'to': 2600}, x=0.7, opacity=0.8), dict(slot='sky.cloud', **{'from': 600, 'to': 6000}, x=0.11, opacity=0.9),
+            dict(slot='sky.cloud', **{'from': 2500, 'to': 11500}, x=0.6, opacity=0.85), dict(slot='sky.airliner', **{'from': 8800, 'to': 12800}, x=0.35, opacity=0.95),
+            dict(slot='sky.balloon', **{'from': 15000, 'to': 34000}, x=0.78, opacity=0.95)]),
+        dict(type='shape', id='horizon', when=['results'], shape='circle', size=[3200, 3200], x=0.5,
+             y={'by': 'measure', 'stops': [[15000, 530], [23000, 460], [100000, 410]], 'ease': 'smooth'},
+             opacity={'by': 'measure', 'stops': [[15000, 0], [23000, 1]], 'ease': 'smooth'},
+             fill={'radial': [[0, '#0B2A4E'], [0.92, '#0B2A4E'], [0.988, '#2B6FB0'], [1, '#78BEFF00']]}, glow=dict(blur=40, color='#6EB4FF73')),
+        dict(type='landmarks', id='landmarks', when=['results'], slot='sky.landmarks', anchor='chart', perBand=dict(size=10000, max=2), maxTotal=6, dot='#F2C46B',
+             labels=dict(pop=True, fadeAfterReplay=True, hover=True, template='{landmark} · {value} m'))],
+    # paused: the whole scene freezes where it is; only the time blurs
+    states=dict(paused=dict(blur=['time'], caption='{value} m · {zone}', freeze=True), checkin=dict(blur=['time'], freeze=True)),
+    # the results stay as they are
     results=dict(replay=dict(seconds=3.0, easing='gentle', longSessionExtra=True), view=dict(type='profile', direction='up'),
                  card=dict(environment='follow-replay', startFrom='session-end', crossSeconds=0.35), show=['stars', 'passing', 'horizon', 'landmarks']),
     options=[dict(id='landmarks', label='results landmarks', kind='switch', default=True, toggles=['landmarks'])],
@@ -297,16 +376,33 @@ COVER = {
               ('personal record marker', lambda r: L(r, 'track')[0]['marker']['source'] == 'personal-record'), ('56 px time', lambda r: L(r, 'time')[0]['size'] == 56)],
  'analog': [('one turn an hour, labels every 5 minutes', lambda r: L(r, 'dial')[0]['labels']['count'] == 12), ('hours subdial', lambda r: L(r, 'dial')[0]['subdials'][0]['cycle'] == 'half-day'),
             ('accent hand', lambda r: L(r, 'dial')[0]['hand']['color'] == 'theme.accent')],
- 'ocean-depth': [('15 m a minute to 10,935 m', lambda r: r['measure']['perMinute'] == 15 and r['measure']['max'] == 10935), ('light model with ±6 m gradient', lambda r: r['environment']['spread'] == 6),
-                 ('text switches for contrast', lambda r: r['contrast']['auto']), ('ocean life by zone on pause at 3 distances, leaving on resume', lambda r: L(r, 'particles')[0]['depths'] == 3 and L(r, 'particles')[0]['leaveOnResume']),
+ 'ocean-depth': [('idle: calm water whose middle is where the dive begins', lambda r: next(l for l in L(r, 'shape') if l['id'] == 'calm')['fill']['linear'][1] == [0.45, '#1F6485']),
+ ('idle: a glow drifting and breathing on slow loops', lambda r: next(l for l in L(r, 'shape') if l['id'] == 'glow')['x']['by'] == 'cycle:glow-drift'),
+ ('idle: marine snow in three depths, sinking and swaying', lambda r: next(l for l in L(r, 'particles') if l['id'] == 'snow')['field']['crossSeconds'] == [90, 60, 38]),
+                 ('the light model dimmed for readable text, the same idle and running', lambda r: r['environment']['dim'] == 0.6),
+                 ('15 m a minute to 10,935 m', lambda r: r['measure']['perMinute'] == 15 and r['measure']['max'] == 10935), ('light model with ±6 m gradient', lambda r: r['environment']['spread'] == 6),
+                 ('text switches for contrast', lambda r: r['contrast']['auto']), ('ocean life by zone on pause at 3 distances, leaving on resume', lambda r: next(l for l in L(r, 'particles') if l['id'] == 'ocean-life')['depths'] == 3 and next(l for l in L(r, 'particles') if l['id'] == 'ocean-life')['leaveOnResume']),
                  ('paused caption', lambda r: '{zone}' in r['states']['paused']['caption']), ('lit results from the session-end colour', lambda r: r['results']['card']['startFrom'] == 'session-end'),
                  ('things rise past on results', lambda r: L(r, 'passing')[0]['direction'] == 'up'), ('sonar ping finale', lambda r: r['results']['finale'][0]['type'] == 'ping'),
                  ('≤2 landmarks per 1,000 m, ≤6, pop, fade, hover', lambda r: L(r, 'landmarks')[0]['perBand'] == dict(size=1000, max=2) and L(r, 'landmarks')[0]['maxTotal'] == 6 and all(L(r, 'landmarks')[0]['labels'][k] for k in ('pop', 'fadeAfterReplay', 'hover'))),
                  ('3 s gentle replay', lambda r: r['results']['replay']['easing'] == 'gentle'), ('ocean life and landmark switches', lambda r: [o['id'] for o in r['options']] == ['ocean-life', 'landmarks'])],
- 'height': [('140 m a minute to 100 km', lambda r: r['measure']['perMinute'] == 140 and r['measure']['max'] == 100000), ('sky model per 8,500 m, ±1,500 m', lambda r: r['environment']['per'] == 8500 and r['environment']['spread'] == 1500),
-            ('stars fade in 18 to 42 km', lambda r: L(r, 'starfield')[0]['opacity']['stops'] == [[18000, 0], [42000, 1]]), ('shooting stars when stars show, varied', lambda r: L(r, 'particles')[0]['visibleWhen']['min'] == 18000 and len(L(r, 'particles')[0]['colors']) == 4),
-            ('rare meteor showers', lambda r: L(r, 'particles')[0]['bursts']['count'] == [8, 15]), ('things fall past on results', lambda r: L(r, 'passing')[0]['direction'] == 'down'),
-            ('horizon fades in and rises from 15 km', lambda r: L(r, 'shape')[0]['opacity']['stops'][0] == [15000, 0]), ('text switches for contrast', lambda r: r['contrast']['auto']),
+ 'height': [('140 m a minute to 100 km', lambda r: r['measure']['perMinute'] == 140 and r['measure']['max'] == 100000),
+            ('painted sky by altitude', lambda r: r['environment']['by'] == 'measure' and len(r['environment']['stops']) == 7),
+            ('camera follows the falcon, critically damped', lambda r: r['camera']['type'] == 'rig' and r['camera']['follow'] == {'subject': 'falcon', 'damping': 0.9}),
+            ('camera tilts up 170 px over 2.5 s, deepening the sky', lambda r: r['camera']['tilt']['px'] == 170 and r['camera']['tilt']['over'] == 2.5 and r['camera']['tilt']['skyShift'] == 2600),
+            ('sun lives in the sky and moves only with the tilt', lambda r: L(r, 'shape')[0]['space'] == 'sky'),
+            ('four landscape layers at their distances, repeating sideways', lambda r: [l['distance'] for l in L(r, 'scenery')] == [40, 19, 13.5, 10] and all(l['tileX'] for l in L(r, 'scenery'))),
+            ('landscape fades into haze from 90 to 310 m', lambda r: all(l['opacity']['stops'] == [[90, 1], [310, 0]] for l in L(r, 'scenery'))),
+            ('falcon, one colour, about 20 px', lambda r: L(r, 'subject')[0]['art'] == {'preset': 'falcon', 'color': '#2B303B'} and L(r, 'subject')[0]['size'] == 20),
+            ('enters from the left half a second after start', lambda r: L(r, 'subject')[0]['entry']['from'][0] < 0 and L(r, 'subject')[0]['entry']['delay'] == 0.5),
+            ('keeps its speed, turns into a thermal, climbs at the measure', lambda r: L(r, 'subject')[0]['motion'] == {'forwardSpeed': 200, 'forwardDecay': 3, 'climbFrom': 'measure', 'climbRamp': 2}),
+            ('2.2 beats a second, 1 s flapping per 60 s gliding, steady position', lambda r: L(r, 'subject')[0]['flight']['flapHz'] == 2.2 and L(r, 'subject')[0]['flight']['pattern'] == [{'flap': 1}, {'glide': 60}] and L(r, 'subject')[0]['flight']['steady']),
+            ('small irregular corrections while gliding', lambda r: L(r, 'subject')[0]['flight']['glideWobble'] > 0),
+            ('above 11,300 m: a glowing white angel with three streamers', lambda r: L(r, 'subject')[0]['stages'][0]['from'] == 11300 and L(r, 'subject')[0]['stages'][0]['color'] == '#FFFFFF' and L(r, 'subject')[0]['stages'][0]['streamers']['count'] == 3),
+            ('glare in circles, tied to the tilt', lambda r: L(r, 'glare')[0]['trigger'] == 'tilt' and len(L(r, 'glare')[0]['ghosts']) == 6),
+            ('paused: the scene freezes', lambda r: r['states']['paused']['freeze'] is True),
+            ('stars above 18 km', lambda r: L(r, 'starfield')[0]['opacity']['stops'] == [[18000, 0], [42000, 1]]),
+            ('results kept: profile, lit card, things passing, horizon, landmarks', lambda r: r['results']['view'] == {'type': 'profile', 'direction': 'up'} and r['results']['show'] == ['stars', 'passing', 'horizon', 'landmarks']),
             ('own landmarks switch', lambda r: r['options'][0]['id'] == 'landmarks')],
  'tree': [('one year an hour, four seasons', lambda r: r['cycles'][0]['minutes'] == 60 and len(r['cycles'][0]['phases']) == 4), ('side and isometric views', lambda r: {l['view'] for l in L(r, 'tree')} == {'side', 'isometric'}),
           ('leaf colours per season, cluster offsets up to a quarter season, all fallen by autumn\'s end', lambda r: L(r, 'tree')[0]['leaves']['offsetMax'] == 0.25 and L(r, 'tree')[0]['leaves']['fallBy'] == 'autumn-end'),
@@ -337,6 +433,13 @@ for k, r in R.items():
     for o in r.get('options', []): refs += o.get('toggles', [])
     for x in refs:
         if x not in ids: ok = False; print('REF', k, x)
+    if sum(1 for l in r['layers'] if l['type'] == 'scenery') > 6 or sum(1 for l in r['layers'] if l['type'] == 'subject') > 1: ok = False; print('BUDGET', k)
+    for l in r['layers']:
+        if l.get('shape') == 'beam' and l.get('noOverlap'):
+            gap = (l['spread'][1] - l['spread'][0]) / (l['lanes'] - 1)
+            if l['widths'][1] >= gap: ok = False; print('BEAMS CAN OVERLAP', k)
+    st = [x['from'] for l in r['layers'] if l['type'] == 'subject' for x in l.get('stages', [])]
+    if any(b - a < r['measure']['perMinute'] for a, b in zip(sorted(st), sorted(st)[1:])): ok = False; print('STAGES TOO CLOSE', k)
     slots = {s['id'] for s in r.get('slots', [])}
     for l in r['layers']:
         for sref in [l.get('slot')] + [i['slot'] for i in l.get('items', []) if isinstance(i, dict) and 'slot' in i] + sum((v for v in (l.get('catalogByZone') or {}).values()), []):

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { builtInRecipe } from '@stopwatch/core';
 import type { ParticlesLayer } from '@stopwatch/core';
-import RECIPE from '../../../../../../docs/recipes/recipes/interstellar.json' with { type: 'json' };
+import RECIPE from '../../../../../../packages/core/src/recipes/shipped/interstellar.json' with { type: 'json' };
 import { scheduleComets, tailAngle } from './comets.ts';
 
 const recipe = builtInRecipe(RECIPE);

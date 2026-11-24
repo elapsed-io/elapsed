@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseHexColour } from './light.ts';
 import { grassColour, grassWeights, leafColour, leafScale, leafState, seasonPhase, shares, stackedColour, weather, yearPhase } from './tree.ts';
-import TREE_RECIPE from '../../../../docs/recipes/recipes/tree.json' with { type: 'json' };
+import TREE_RECIPE from '../../../../packages/core/src/recipes/shipped/tree.json' with { type: 'json' };
 import { checkRecipe } from '../recipes/load.ts';
 import { bindingAt, measureAt } from '../recipes/measure.ts';
 import { TREE_CONFIG } from './tree-config.ts';

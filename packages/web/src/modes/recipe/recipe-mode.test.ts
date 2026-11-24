@@ -1,10 +1,10 @@
 import { DIGITS_RECIPE, checkRecipe } from '@stopwatch/core';
 import type { Recipe } from '@stopwatch/core';
 import { describe, expect, it } from 'vitest';
-import HEIGHT from '../../../../../docs/recipes/recipes/height.json' with { type: 'json' };
-import OCEAN from '../../../../../docs/recipes/recipes/ocean-depth.json' with { type: 'json' };
-import RING from '../../../../../docs/recipes/recipes/ring.json' with { type: 'json' };
-import TREE from '../../../../../docs/recipes/recipes/tree.json' with { type: 'json' };
+import HEIGHT from '../../../../../packages/core/src/recipes/shipped/height.json' with { type: 'json' };
+import OCEAN from '../../../../../packages/core/src/recipes/shipped/ocean-depth.json' with { type: 'json' };
+import RING from '../../../../../packages/core/src/recipes/shipped/ring.json' with { type: 'json' };
+import TREE from '../../../../../packages/core/src/recipes/shipped/tree.json' with { type: 'json' };
 import { prepareMode } from './library.ts';
 import { bindingCss } from './binding-css.ts';
 import { captionText, displayLayers, optionValues, resultsLayers } from './recipe-mode.ts';
@@ -110,14 +110,14 @@ describe('the manifests', () => {
     const { MODE_MANIFESTS } = await import('../manifests.ts');
     const { MODE_ART, recipeArt } = await import('../mode-art.ts');
     const files: Record<string, unknown> = {
-      digits: (await import('../../../../../docs/recipes/recipes/digits.json', { with: { type: 'json' } })).default,
+      digits: (await import('../../../../../packages/core/src/recipes/shipped/digits.json', { with: { type: 'json' } })).default,
       ring: RING,
-      timeline: (await import('../../../../../docs/recipes/recipes/timeline.json', { with: { type: 'json' } })).default,
-      analog: (await import('../../../../../docs/recipes/recipes/analog.json', { with: { type: 'json' } })).default,
+      timeline: (await import('../../../../../packages/core/src/recipes/shipped/timeline.json', { with: { type: 'json' } })).default,
+      analog: (await import('../../../../../packages/core/src/recipes/shipped/analog.json', { with: { type: 'json' } })).default,
       ocean: OCEAN,
       height: HEIGHT,
       tree: TREE,
-      interstellar: (await import('../../../../../docs/recipes/recipes/interstellar.json', { with: { type: 'json' } })).default,
+      interstellar: (await import('../../../../../packages/core/src/recipes/shipped/interstellar.json', { with: { type: 'json' } })).default,
     };
     for (const manifest of MODE_MANIFESTS) {
       const own = recipeArt(files[manifest.id] as object);

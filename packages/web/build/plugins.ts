@@ -121,7 +121,7 @@ export function countStub(): Plugin {
   };
 }
 
-const RECIPES = fileURLToPath(new URL('../../../docs/recipes/recipes/', import.meta.url));
+const RECIPES = fileURLToPath(new URL('../../../packages/core/src/recipes/shipped/', import.meta.url));
 
 /** Every built-in recipe as the loader checks a recipe: one it would refuse stops the build, with its problems. */
 export function checkRecipes(folder = RECIPES): Plugin {

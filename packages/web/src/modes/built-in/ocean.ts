@@ -7,7 +7,7 @@
 import 'virtual:tokens/ocean.css';
 import './ocean.css';
 import { OCEAN_CONFIG, OCEAN_COPY, OCEAN_LANDMARKS } from '@stopwatch/core';
-import RECIPE from '../../../../../docs/recipes/recipes/ocean-depth.json' with { type: 'json' };
+import RECIPE from '../../../../../packages/core/src/recipes/shipped/ocean-depth.json' with { type: 'json' };
 import type { BuiltInMode } from './built-in.ts';
 
 export const OCEAN: BuiltInMode = {

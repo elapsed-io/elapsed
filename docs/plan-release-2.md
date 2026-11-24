@@ -49,6 +49,12 @@ profile-chart replay; ocean life follows ocean depth. The tree and interstellar 
 most art-heavy. The layout editor comes after every mode exists, so it is built against all of their
 bounds. The small device features come last before hardening, since nothing else depends on them.
 
+**The standard modes first (owner, 2026-11-24; plan version 12).** Digits, ring, timeline and analog ship
+first, finished and polished; ocean depth, height, the tree and interstellar are proofs of concept for the
+recipe system, only on a visit opened with the test flag, and are not part of any release until promoted.
+From round 2.12 on, the rounds follow `docs/release-readiness.md`, which lists what is done and left for each
+standard mode and shared screen and orders the rest by what releases the standard modes soonest.
+
 | Round | Builds | Frames |
 | --- | --- | --- |
 | 2.1 | Mode platform, low power, animation speed, the ring's glide | Release 2 settings: display (downloaded modes) and appearance; ring frames |
@@ -62,9 +68,14 @@ bounds. The small device features come last before hardening, since nothing else
 | 2.9 | Interstellar, as a recipe, behind the test-modes switch | Interstellar: running, paused and results; its tile; Release 2 settings: advanced (test modes) |
 | 2.10 | Lighter and faster: debloat, test modes, instant mode switches, the internals | no new frame; every frame again, unchanged but for the four fixes |
 | 2.11 | One design system: one layout, one layer order, one set of tokens; interstellar's results and line; the credits page | the revised "interstellar results" and corrected "interstellar, paused" frames; every timer frame for the shared layout |
-| 2.12 | Layout editor, background images, and each mode's replaceable art (held for the owner's frames) | Layout editor; Release 2 customize mode (to come) |
-| 2.13 | Picture-in-picture, wake lock, the check-ins switch | Release 2 settings: timer (check-ins, keep screen awake) and display (picture-in-picture) |
-| 2.14 | Hardening and the release review | every Release 2 frame |
+| 2.12 | Test modes behind the flag only | settings, advanced (release 2): no test-modes switch; the display frame's flagged-visit line |
+| 2.13 | The standard sizes and the recipe archive | ring: the shared 260 px dial, time 48 px; ring at the start; ring, paused; timeline: compact, time 48 px; timeline at the start; timeline, paused; analog: the shared 260 px dial; the analog tile |
+| 2.14 | Seconds, settings and notices | the seconds tip, once only; settings panel: slides in and out; settings open on display, now first; seconds: always (default), blur away, never; every shared timer frame with seconds |
+| 2.15 | The check-ins switch, keep screen awake, picture-in-picture (if kept in this release) | Release 2 settings: timer (check-ins, keep screen awake) and display (picture-in-picture) |
+| 2.16 | Hardening and the release review of the standard modes | every frame of the release |
+| 2.17 | Layout editor, background images, and each mode's replaceable art (held for the owner's frames) | Layout editor; Release 2 customize mode (to come) |
+| 2.18 | Ocean depth's calm water (proof of concept, behind the flag) | ocean depth (proof of concept): idle, calm water |
+| 2.19 | Height's falcon (proof of concept, behind the flag; after the standard modes ship) | the five height frames |
 
 Every round ends as Release 1's did: `npm run check`, the end-to-end suite in Chromium, Firefox and WebKit
 (through the reference image), the round's safety overview in `docs/safety/round-2.<n>.md` with every item
@@ -78,10 +89,10 @@ it, and each frame is checked pixel for pixel once all of its controls exist:
 
 | Frame | Controls | Round |
 | --- | --- | --- |
-| timer | check-ins switch with its warning; keep screen awake ("only while elapsed is the active tab") | 2.13 |
-| display | mode tiles in four columns with a preview icon for each new mode (analog, ocean depth, height, tree, interstellar); ocean depth options (ocean life, results landmarks); picture-in-picture; downloaded modes with size and remove | tiles in each mode's round; downloaded modes 2.1; results landmarks 2.3; ocean life 2.4; each mode's own options box 2.7; picture-in-picture 2.13 |
+| timer | seconds (always, blur away, never; always by default, 2.14); check-ins switch with its warning; keep screen awake ("only while elapsed is the active tab") | 2.15 |
+| display | mode tiles in four columns with a preview icon for each new mode (analog, ocean depth, height, tree, interstellar); ocean depth options (ocean life, results landmarks); picture-in-picture; downloaded modes with size and remove | tiles in each mode's round; downloaded modes 2.1; results landmarks 2.3; ocean life 2.4; each mode's own options box 2.7; the analog tile redrawn 2.13; the flagged-visit line 2.12; picture-in-picture 2.15 |
 | appearance | animation speed (slower, normal, faster: "every animation, including the results replay"); low power ("stops ambient animation and shows only the time. on when your system asks for reduced motion.") | 2.1 |
-| advanced | test modes ("early modes that may change or disappear. shown after opening elapsed with ?test=interstellar.") | 2.9 (and ?test=modes, 2.10) |
+| advanced | no test-modes switch (the redrawn frame: test modes come only from ?test=modes); custom CSS, safe mode, the settings file, reset all | 2.12 removes the switch of 2.9 |
 
 The tile grid has three columns while there are three modes (the Release 1 frame) and four from round 2.2,
 when the fourth mode arrives (the Release 2 frame).
@@ -380,10 +391,135 @@ their captions updating; the fullscreen migration; the credits page; every frame
 
 **Stop:** for the owner's review, with the summary and the list of places made universal.
 
-### 2.12 Layout editor, background images, and each mode's replaceable art
+### 2.12 Test modes behind the flag only
+
+**Goal:** the owner's item 2 of 2026-11-24, so the release carries nothing of the proofs of concept.
+
+**Builds:**
+
+- A visit opened with `?test=modes` (or `?test=interstellar`) adds ocean depth, height, the tree and
+  interstellar to the mode tiles for that visit, until the tab is closed: the flag is read from the address on
+  every load and kept in memory only, and the address keeps it, so a reload stays flagged. Without the flag
+  they appear nowhere and are never downloaded.
+- The "test modes" switch leaves advanced settings (the redrawn "settings, advanced (release 2)" frame), and
+  nothing about the flag is stored: the `test-modes` key is removed on update and never written again.
+- On a flagged visit the display category shows the line under the tiles that the Release 2 display frame
+  draws: "test modes appear here only for a visit opened with ?test=modes."
+- Someone with a test mode chosen sees digits on a visit without the flag; the choice is kept for the next
+  flagged visit (as today).
+- Everything only the test modes use (their code, art, recipe pieces, results views, environments and the
+  camera) stays out of a visit without the flag: never fetched, never offered to the service worker.
+
+**Tests:** a visit without the flag shows only the four standard tiles, fetches no test-mode code or piece,
+and stores nothing about the flag; a flagged visit shows all eight, and a new tab without the flag shows four
+again; a stored switch from round 2.9 is removed on load; a stored test-mode choice shows digits unflagged and
+returns flagged; the advanced frame without the switch; the display frame's line on a flagged visit.
+
+**Safety overview:** data (one storage key removed, nothing added), inputs (the address's `test` parameter,
+read and never stored), abuse cases (a crafted parameter), tests.
+
+**Stop** for the owner's review.
+
+### 2.13 The standard sizes and the recipe archive
+
+**Goal:** ring, timeline and analog as their new frames draw them, inside the one shared layout; the site's
+recipes and the owner's archive made one.
+
+**Builds:**
+
+- The 260 px dial for ring and analog, the 48 px time inside ring and timeline, the compact timeline (its time
+  14 px above a 360 px track whose ends fade over 14 %), and every mode's main block in the same centered slot
+  with its buttons 26 px below it (plan version 12, Design system). Frames: "ring: the shared 260 px dial, time
+  48 px", "ring at the start", "ring, paused", "timeline: compact, time 48 px", "timeline at the start",
+  "timeline, paused", "analog: the shared 260 px dial".
+- Analog rescaled to the shared dial (the drawing 300 × 296; case, rim and face radii 130, 126 and 120; the
+  seconds dial radius 36; numbers at 10 px and 8.5 px) and its tile redrawn as the Release 2 display frame
+  draws it.
+- The recipes: the site's shipped copies (`packages/core/src/recipes/shipped/`) and the owner's archive
+  (`docs/recipes/`) reconciled field by field, the frames and the plan winning for the standard modes; the
+  validator takes the archive's schema (with `minProperties` and its optional additions); `recipe-check.py`'s
+  schema validation, reference checks, feature checks and safety tests become permanent tests, each feature
+  whose number a frame changed recorded.
+
+**Tests:** each new frame pixel for pixel in three browsers; the shared slot measured in every standard mode,
+idle, running and paused; the glides and steps at the new sizes; the recipe checks; size ceilings.
+
+**Safety overview:** inputs (the recipe schema's additions, refused by the validator until a piece draws
+them), tests.
+
+**Stop** for the owner's review.
+
+### 2.14 Seconds, settings and notices
+
+**Goal:** the shared screens as the current frames and plan version 12 draw them.
+
+**Builds:**
+
+- Seconds default "always show" (options in the order always, blur away, never), with the settings migration
+  the owner chooses (question 36); every shared timer frame re-taken with seconds (running, the focus frames,
+  check-in, paused, paused after a missed check-in).
+- The once-only seconds tip on the idle screen, "seconds can fade out after a minute, for a calmer screen",
+  with "change" (which sets seconds to blur away and opens settings on it, highlighted) and dismiss; only one
+  notice at a time, in the order the owner chooses with the fullscreen tip (question 37).
+- Settings open on display, now the first category, with display mode at the top; the panel slides 24 px in
+  from the right while fading in over 200 ms and out over 160 ms, so the timer behind it never moves.
+- The credits page in the person's chosen theme and the site's typeface, laid out like the privacy and terms
+  pages.
+
+**Tests:** the settings migration; the tip's once-only rule, "change" and dismiss, one notice at a time; the
+panel's motion (transform and opacity only, never moving the timer); the frames "the seconds tip, once
+only", "settings panel: slides in and out", "settings open on display, now first", "seconds: always
+(default), blur away, never", and every shared timer frame; the credits page in each theme.
+
+**Safety overview:** data (the notices store gains one id), tests.
+
+**Stop** for the owner's review.
+
+### 2.15 The check-ins switch, keep screen awake, picture-in-picture
+
+**Only if the owner keeps these in the standard modes' release** (`docs/release-readiness.md`, question 38);
+otherwise after it.
+
+**Builds:**
+
+- Picture-in-picture: a display setting, off by default, as the Release 2 display frame draws it ("adds a
+  button to the timer that opens a small floating timer. shown only in browsers that offer it."). When on,
+  a picture-in-picture button joins the timer's top-right icons, left of settings: Tabler's
+  picture-in-picture icon, at the same size and colour as the other corner icons. It opens the floating
+  timer, with the same time and buttons. The setting and the button appear only where the browser offers
+  a window for a page (the Document Picture-in-Picture API), and are hidden elsewhere.
+- Keep screen awake (timer, on by default: "only while elapsed is the active tab"): a screen wake lock
+  while the page is visible, released when hidden and requested again when seen. The Permissions-Policy is
+  confirmed not to block it: the header lists only `camera`, `microphone` and `geolocation`, so
+  `screen-wake-lock` keeps its default of the site's own pages; a test fails if the header ever disables it.
+- The check-ins switch (timer, on by default) with the plan's warning ("sessions without check-ins count
+  towards your history, but won't count towards competitions"); nothing is marked on the session yet (the
+  plan adds that marking in Release 6).
+- The Release 2 timer frame, and the display frame now that every control in it exists.
+
+**Tests:** the picture-in-picture setting and button exist only where the browser offers the window; the
+window shows the same time and buttons and closes cleanly; the wake lock is requested only while visible,
+released when hidden, and allowed by the deployed Permissions-Policy; with check-ins off no check-in falls
+due and the pause limit still applies; the timer and display frames; settings migrations.
+
+**Safety overview:** permissions used (none new in the Permissions-Policy; `screen-wake-lock` is allowed by
+default for the site's own pages), data (the switches are settings on the device), abuse cases.
+
+### 2.16 Hardening and the release review of the standard modes
+
+**Builds:** the accessibility pass over the standard modes and every changed screen (WCAG 2.2 AA, axe-core,
+keyboard and screen readers, 44 px targets, reduced motion and low power), the performance pass (budgets, a
+long session in each standard mode, the slow-phone checklist), the cross-browser pass, the device checks
+extended for the new features, and the release review (`docs/safety/release-2.md`); if this release is the
+public launch, Release 1's launch list prepared for the owner (the privacy and terms pages served by the app,
+the header check against elapsed.io, secret scanning and push protection, the HSTS preload submission). Then
+the owner's sign-off.
+
+### 2.17 Layout editor, background images, and each mode's replaceable art
 
 **Held** (owner, 2026-11-18): the owner adds frames for Release 2's customize mode to the design canvas first;
-this round is not built until they are there.
+this round is not built until they are there. After the standard modes' release (owner, 2026-11-24), unless the
+owner says otherwise. Where it says "the test-modes switch" below, read "the test flag" (round 2.12).
 
 **Builds:** the customize mode, entered from settings or with a long press on phones; every layer
 (background, display mode, buttons, icons) moved, rotated, stretched, resized, hidden and reordered as
@@ -411,40 +547,29 @@ the editor.
 files), storage keys, abuse cases (decompression bombs, malformed images, layouts that hide every control
 with safe mode as the way back), tests.
 
-### 2.13 Picture-in-picture, wake lock, the check-ins switch
+### 2.18 Ocean depth's calm water (proof of concept, behind the flag)
 
-**Builds:**
+**When:** once the standard modes allow (after round 2.16, unless the owner says otherwise).
 
-- Picture-in-picture: a display setting, off by default, as the Release 2 display frame draws it ("adds a
-  button to the timer that opens a small floating timer. shown only in browsers that offer it."). When on,
-  a picture-in-picture button joins the timer's top-right icons, left of settings: Tabler's
-  picture-in-picture icon, at the same size and colour as the other corner icons. It opens the floating
-  timer, with the same time and buttons. The setting and the button appear only where the browser offers
-  a window for a page (the Document Picture-in-Picture API), and are hidden elsewhere.
-- Keep screen awake (timer, on by default: "only while elapsed is the active tab"): a screen wake lock
-  while the page is visible, released when hidden and requested again when seen. The Permissions-Policy is
-  confirmed not to block it: the header lists only `camera`, `microphone` and `geolocation`, so
-  `screen-wake-lock` keeps its default of the site's own pages; a test fails if the header ever disables it.
-- The check-ins switch (timer, on by default) with the plan's warning ("sessions without check-ins count
-  towards your history, but won't count towards competitions"); nothing is marked on the session yet (the
-  plan adds that marking in Release 6).
-- The Release 2 timer frame, and the display frame now that every control in it exists.
+**Builds:** ocean depth's idle screen as the frame "ocean depth (proof of concept): idle, calm water" and its
+recipe draw it: the gradient (#2A7398 at the top, #1F6485 at 45 %, #0E3F5E at the bottom) as the page's
+background; the glow (#E6F8FF, centered just above the top edge) drawn once at 180 × 110 and scaled 6×,
+drifting side to side and breathing in size and brightness on cycles of about 31 to 47 s, by transforms and
+opacity only; marine snow in three depths crossing the screen in 90, 60 and 38 s and swaying 6, 10 and 16 px on
+their own rhythms, each depth drawn once at half resolution as a strip twice the screen's height, slid by a
+linear CSS animation with its sway a second one. No timers, no blend modes; everything removed when a session
+starts, which crossfades over about 2 s into the running colours starting at exactly #1F6485; still with
+reduced motion or low power. Only the recipe pieces the recipe uses, each its own small download (no beam
+particles or drifting patches).
 
-**Tests:** the picture-in-picture setting and button exist only where the browser offers the window; the
-window shows the same time and buttons and closes cleanly; the wake lock is requested only while visible,
-released when hidden, and allowed by the deployed Permissions-Policy; with check-ins off no check-in falls
-due and the pause limit still applies; the timer and display frames; settings migrations.
+**Tests:** zero repaints a frame on the idle screen, under 3 MB of GPU memory, the time at 4.5:1 or more at the
+glow's brightest; the crossfade's start colour; reduced motion and low power.
 
-**Safety overview:** permissions used (none new in the Permissions-Policy; `screen-wake-lock` is allowed by
-default for the site's own pages), data (the switches are settings on the device), abuse cases.
+### 2.19 Height's falcon (proof of concept, behind the flag)
 
-### 2.14 Hardening and the release review
-
-**Builds:** the accessibility pass for every new mode and the editor (WCAG 2.2 AA, axe-core, keyboard and
-screen readers, 44 px targets, reduced motion and low power), the performance pass (budgets, a long
-session in each ambient mode, the slow-phone checklist), the cross-browser pass, the device checks
-extended for the new features, and the release review (`docs/safety/release-2.md`), then the owner's
-sign-off.
+**When:** after the standard modes have shipped. The five height frames, as the proof of concept for the
+cinematic recipe pieces (`scenery`, `subject`, `glare`, `camera: rig`, `freeze`), each built only when the
+height recipe uses it.
 
 ## The owner's answers
 
@@ -453,7 +578,8 @@ sign-off.
    testable behind the test-modes switch.
 2. **The interstellar test flag:** opening the site once with `?test=interstellar` shows a "test modes"
    switch in advanced settings, off by default, which adds interstellar to the mode tiles. One build for
-   everyone.
+   everyone. (Superseded on 2026-11-24: no switch; test modes come only from a visit opened with the flag,
+   round 2.12.)
 3. **Picture-in-picture:** a display setting, off by default, as drawn. When on, it adds a button to the
    timer's top-right icons (Tabler's picture-in-picture icon, the same size and colour as the other corner
    icons, left of settings) that opens the floating timer. The setting and the button appear only where

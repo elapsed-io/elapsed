@@ -1,0 +1,375 @@
+{
+  "recipe": 1,
+  "id": "interstellar",
+  "name": "interstellar",
+  "icon": "space",
+  "visibility": "test",
+  "measure": {
+    "unit": "au",
+    "perMinute": 0.12024,
+    "start": 1,
+    "decimals": 1,
+    "records": "comparable"
+  },
+  "zones": [
+    [
+      "earth",
+      "leaving earth",
+      1
+    ],
+    [
+      "mars",
+      "past mars",
+      1.52
+    ],
+    [
+      "jupiter",
+      "past jupiter",
+      5.2
+    ],
+    [
+      "saturn",
+      "past saturn",
+      9.54
+    ],
+    [
+      "uranus",
+      "past uranus",
+      19.2
+    ],
+    [
+      "neptune",
+      "past neptune",
+      30.1
+    ],
+    [
+      "pluto",
+      "past pluto",
+      39.5
+    ],
+    [
+      "kuiper",
+      "past the kuiper belt",
+      50
+    ],
+    [
+      "termination-shock",
+      "past the termination shock",
+      94
+    ],
+    [
+      "heliopause",
+      "past the heliopause",
+      120
+    ]
+  ],
+  "environment": {
+    "type": "stops",
+    "by": "measure",
+    "stops": [
+      [
+        0,
+        "#03040A"
+      ],
+      [
+        1,
+        "#03040A"
+      ]
+    ]
+  },
+  "contrast": {
+    "light": "#E8ECF6",
+    "dark": "#0E2440",
+    "auto": false
+  },
+  "camera": {
+    "type": "follow-zoom",
+    "anchor": [
+      0.0972222,
+      0.8711111
+    ],
+    "angle": -28,
+    "resultsAngle": -15,
+    "usable": 0.85,
+    "minValue": 1.6
+  },
+  "layers": [
+    {
+      "type": "starfield",
+      "id": "stars",
+      "slot": "space.stars",
+      "magnitudeMax": 5,
+      "blurOnPause": false,
+      "opacity": 0.55,
+      "projection": {
+        "type": "gnomonic",
+        "ra": 5.5,
+        "dec": 6,
+        "pxPerDegree": 8
+      },
+      "radius": {
+        "min": 0.7,
+        "at0": 2.7,
+        "perMagnitude": -0.42
+      },
+      "pan": {
+        "when": [
+          "paused"
+        ],
+        "turnMinutes": 6
+      }
+    },
+    {
+      "type": "circles",
+      "id": "orbits",
+      "space": "camera",
+      "color": "#7A86B0",
+      "opacity": 0.55,
+      "fadeBelowPx": 6,
+      "items": [
+        {
+          "at": 0.39,
+          "label": "mercury"
+        },
+        {
+          "at": 0.72,
+          "label": "venus"
+        },
+        {
+          "at": 1.0,
+          "label": "earth"
+        },
+        {
+          "at": 1.52,
+          "label": "mars"
+        },
+        {
+          "at": 5.2,
+          "label": "jupiter"
+        },
+        {
+          "at": 9.54,
+          "label": "saturn"
+        },
+        {
+          "at": 19.2,
+          "label": "uranus"
+        },
+        {
+          "at": 30.1,
+          "label": "neptune"
+        },
+        {
+          "at": 39.5,
+          "label": "pluto",
+          "dashed": true
+        },
+        {
+          "at": 50,
+          "label": "kuiper belt edge",
+          "dashed": true
+        },
+        {
+          "at": 94,
+          "label": "termination shock",
+          "dashed": true
+        },
+        {
+          "at": 120,
+          "label": "heliopause",
+          "dashed": true
+        }
+      ]
+    },
+    {
+      "type": "shape",
+      "id": "sun",
+      "space": "camera",
+      "shape": "circle",
+      "size": [
+        8,
+        8
+      ],
+      "x": 0,
+      "y": 0,
+      "fill": "#FFF1CF",
+      "glow": {
+        "blur": 10,
+        "color": "#FFE7B029"
+      }
+    },
+    {
+      "type": "path",
+      "id": "route",
+      "space": "camera",
+      "from": 1,
+      "color": "#C9D3F0",
+      "opacity": 0.7,
+      "width": 1.3,
+      "head": {
+        "size": 7,
+        "color": "#FFFFFF"
+      }
+    },
+    {
+      "type": "landmarks",
+      "id": "landmarks",
+      "space": "camera",
+      "slot": "space.landmarks",
+      "anchor": "path",
+      "maxTotal": 9,
+      "dot": "#F2C46B",
+      "fadeBelowPx": 24,
+      "labels": {
+        "pop": true,
+        "fadeAfterReplay": false,
+        "hover": true,
+        "template": "{landmark}"
+      }
+    },
+    {
+      "type": "particles",
+      "id": "comets",
+      "when": [
+        "paused",
+        "results"
+      ],
+      "shape": "comet",
+      "every": [
+        3,
+        7
+      ],
+      "maxAtOnce": 2,
+      "lifetime": [
+        8,
+        11
+      ],
+      "size": {
+        "head": [
+          4,
+          8
+        ],
+        "length": [
+          50,
+          110
+        ]
+      },
+      "distance": [
+        280,
+        400
+      ],
+      "colors": [
+        "#BEE2FF",
+        "#FFE2AA",
+        "#D2F0FF"
+      ],
+      "orient": "away-from-anchor",
+      "blurOnPause": false
+    },
+    {
+      "type": "time",
+      "id": "time",
+      "position": "center",
+      "seconds": "setting"
+    }
+  ],
+  "states": {
+    "paused": {
+      "blur": [
+        "orbits",
+        "sun",
+        "route",
+        "landmarks",
+        "time"
+      ],
+      "caption": "{distance} au travelled · {zone}",
+      "show": [
+        "comets"
+      ]
+    },
+    "checkin": {
+      "blur": "display"
+    }
+  },
+  "results": {
+    "replay": {
+      "seconds": 2.0,
+      "easing": "fast",
+      "longSessionExtra": true
+    },
+    "view": {
+      "type": "scene",
+      "layers": [
+        "stars",
+        "orbits",
+        "sun",
+        "route",
+        "landmarks",
+        "comets"
+      ],
+      "camera": true
+    }
+  },
+  "slots": [
+    {
+      "id": "space.stars",
+      "kind": "star-catalog",
+      "default": "builtin:stars/hyg-mag5"
+    },
+    {
+      "id": "space.landmarks",
+      "kind": "landmark-list",
+      "default": "builtin:space/landmarks"
+    },
+    {
+      "id": "space.body.earth",
+      "kind": "image",
+      "default": "builtin:space/earth"
+    },
+    {
+      "id": "space.body.mars",
+      "kind": "image",
+      "default": "builtin:space/mars"
+    },
+    {
+      "id": "space.body.jupiter",
+      "kind": "image",
+      "default": "builtin:space/jupiter"
+    },
+    {
+      "id": "space.body.saturn",
+      "kind": "image",
+      "default": "builtin:space/saturn"
+    },
+    {
+      "id": "space.body.uranus",
+      "kind": "image",
+      "default": "builtin:space/uranus"
+    },
+    {
+      "id": "space.body.neptune",
+      "kind": "image",
+      "default": "builtin:space/neptune"
+    },
+    {
+      "id": "space.body.pluto",
+      "kind": "image",
+      "default": "builtin:space/pluto"
+    },
+    {
+      "id": "space.body.kuiper",
+      "kind": "image",
+      "default": "builtin:space/kuiper"
+    },
+    {
+      "id": "space.body.termination-shock",
+      "kind": "image",
+      "default": "builtin:space/termination-shock"
+    },
+    {
+      "id": "space.body.heliopause",
+      "kind": "image",
+      "default": "builtin:space/heliopause"
+    }
+  ]
+}
