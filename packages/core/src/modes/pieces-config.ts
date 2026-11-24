@@ -18,7 +18,7 @@ export const PIECES_CONFIG = {
    * A dial's fallbacks: its cycle (minutes), its ticks, and a subdial's radius, its hand's width and its hand's
    * length as a share of the radius (the analog frame's 39 of 42).
    */
-  dial: { cycleMinutes: 720, majorTicks: 12, minorTicks: 60, subdialRadius: 22, subdialHandWidth: 1.2, subdialHandShare: 39 / 42 },
+  dial: { cycleMinutes: 720, majorTicks: 12, minorTicks: 60, subdialRadius: 22, subdialHandWidth: 1.2, subdialHandShare: 33 / 36 },
   /** A turning sky goes once round in this many minutes when its recipe does not say. */
   sky: { turnMinutes: 6 },
 } as const;

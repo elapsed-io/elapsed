@@ -20,6 +20,7 @@
             "theme.gray",
             "theme.end",
             "theme.pr",
+            "theme.red",
             "contrast.text",
             "contrast.muted"
           ]
@@ -158,6 +159,11 @@
         },
         "color": {
           "$ref": "#/$defs/color"
+        },
+        "tail": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
         }
       }
     }
@@ -814,9 +820,14 @@
               "hand": {
                 "$ref": "#/$defs/hand"
               },
+              "batons": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
               "subdials": {
                 "type": "array",
-                "maxItems": 3,
+                "maxItems": 8,
                 "items": {
                   "type": "object",
                   "additionalProperties": false,
@@ -845,8 +856,22 @@
                       "minimum": 0,
                       "maximum": 24
                     },
+                    "ticks": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 120
+                    },
+                    "topColor": {
+                      "$ref": "#/$defs/color"
+                    },
                     "hand": {
                       "$ref": "#/$defs/hand"
+                    },
+                    "face": {
+                      "enum": [
+                        "dial",
+                        "hand"
+                      ]
                     }
                   }
                 }

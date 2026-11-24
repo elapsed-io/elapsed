@@ -1,12 +1,11 @@
 /** Interstellar (round 2.9): the map on the camera, the sky, the pause's comets, its frames, and its results. */
 
 import { expect, test } from './test.ts';
-import type { Browser, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { createSession, serializeActiveState, startState } from '@stopwatch/core';
 import { resultsSpaceFrame, spaceFrame, spacePausedFrame } from './fixtures/space-frames.ts';
-import { MINUTE, SECOND, T0, T_READY, compareWithReference, endThroughCountdown, finishResults, freezeAnimations, openApp, settle } from './helpers.ts';
+import { MINUTE, SECOND, T0, T_READY, compareWithReference, compareWithoutText, endThroughCountdown, finishResults, freezeAnimations, openApp, settle } from './helpers.ts';
 import { expectLikeFrame } from './pixels.ts';
-import type { PixelDiff } from './pixels.ts';
 
 // The results frame's clock times are 24-hour, in UTC (as results.spec.ts).
 test.use({ locale: 'en-GB', timezoneId: 'UTC' });
@@ -37,23 +36,6 @@ const TEXT_EDGES = 2000;
 const PAUSED_TEXT_EDGES = 600;
 const RESULTS_TEXT_EDGES = 6000;
 const TEXT_SMOOTHED = 40;
-const NO_TEXT = '* { color: transparent !important; -webkit-text-fill-color: transparent !important; } text { fill: transparent !important; }';
-
-/** The page and the frame compared with every glyph (and every icon drawn in the text colour) transparent. */
-async function compareWithoutText(page: Page, browser: Browser, markup: string): Promise<PixelDiff> {
-  // A constructed stylesheet: the site's CSP refuses inline style elements.
-  await page.evaluate((css) => {
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(css);
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
-  }, NO_TEXT);
-  const diff = await compareWithReference(page, browser, markup.replace('</body>', `<style>${NO_TEXT}</style></body>`));
-  await page.evaluate(() => {
-    document.adoptedStyleSheets = document.adoptedStyleSheets.slice(0, -1);
-  });
-  return diff;
-}
-
 /**
  * Edge noise: Jupiter's bands are drawn as the bands' own shapes (art can name no clip), so their ends differ from
  * the frame's clipped strips by a few edge pixels; measured at most 6 past 8 levels, smoothed at most 4.8. The owner

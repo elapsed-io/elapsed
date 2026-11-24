@@ -269,36 +269,37 @@ function timelineLayers(page: Page): Promise<{ rest: string; glide: { from: stri
 
 test('the timeline glides 10 px a minute on its own layers, anchored once a minute, and draws nothing before the start', async ({ page }) => {
   await openApp(page, { mode: 'timeline' });
-  // Idle: still, the strip's start at now (the past layer, the future layer clipped from now, the labels).
+  // Idle: still, the strip's start at now, the middle of the compact 360 px track (the past layer, the future layer
+  // clipped from now, the labels).
   expect((await timelineLayers(page)).map(({ rest, glide }) => [rest, glide])).toEqual([
-    ['translateX(240px)', null],
+    ['translateX(180px)', null],
     ['translateX(0px)', null],
-    ['translateX(240px)', null],
+    ['translateX(180px)', null],
   ]);
   await page.locator('.button--primary').click();
   await page.clock.runFor(SECOND);
   const running = await timelineLayers(page);
   expect(running.map(({ glide }) => glide)).toEqual([
-    { from: 'translateX(240px)', to: 'translateX(230px)', easing: 'linear', duration: 60_000, state: 'running' },
+    { from: 'translateX(180px)', to: 'translateX(170px)', easing: 'linear', duration: 60_000, state: 'running' },
     { from: 'translateX(0px)', to: 'translateX(-10px)', easing: 'linear', duration: 60_000, state: 'running' },
-    { from: 'translateX(240px)', to: 'translateX(230px)', easing: 'linear', duration: 60_000, state: 'running' },
+    { from: 'translateX(180px)', to: 'translateX(170px)', easing: 'linear', duration: 60_000, state: 'running' },
   ]);
   expect(running.map(({ layer }) => layer)).toEqual(['transform', 'transform', 'transform']);
   // The next minute anchors the glide 10 px on, from where the last one ended.
   await page.clock.runFor(59 * SECOND);
-  expect((await timelineLayers(page))[0]?.glide).toMatchObject({ from: 'translateX(230px)', to: 'translateX(220px)', state: 'running' });
+  expect((await timelineLayers(page))[0]?.glide).toMatchObject({ from: 'translateX(170px)', to: 'translateX(160px)', state: 'running' });
   // Paused half way through the minute, it stands still where the glide had reached, drawn in place.
   await page.clock.runFor(30 * SECOND);
   await page.locator('.button--primary').click();
   const paused = await timelineLayers(page);
   expect(paused.map(({ rest, glide, layer }) => [rest, glide, layer])).toEqual([
-    ['translateX(225px)', null, 'auto'],
+    ['translateX(165px)', null, 'auto'],
     ['translateX(-15px)', null, 'auto'],
-    ['translateX(225px)', null, 'auto'],
+    ['translateX(165px)', null, 'auto'],
   ]);
   // Resumed, it glides on from there.
   await page.locator('.button--primary').click();
-  expect((await timelineLayers(page))[0]?.glide).toMatchObject({ from: 'translateX(230px)', to: 'translateX(220px)', state: 'running' });
+  expect((await timelineLayers(page))[0]?.glide).toMatchObject({ from: 'translateX(170px)', to: 'translateX(160px)', state: 'running' });
   expect(await page.locator('.timeline__glide').first().evaluate((element) => element.getAnimations()[0]?.currentTime)).toBeCloseTo(30_000, -3);
   // The strip starts at the session's start: nothing at negative positions.
   const leftmost = await page.locator('.timeline__strip rect, .timeline__label').evaluateAll((shapes) => Math.min(...shapes.map((shape) => Number(shape.getAttribute('x')))));
@@ -320,12 +321,12 @@ test(`with ${how}, the timeline steps once a minute instead of gliding`, async (
   await prepare(page);
   await page.locator('.button--primary').click();
   await page.clock.runFor(59 * SECOND);
-  expect((await timelineLayers(page)).map(({ rest, glide }) => [rest, glide])[0]).toEqual(['translateX(240px)', null]);
+  expect((await timelineLayers(page)).map(({ rest, glide }) => [rest, glide])[0]).toEqual(['translateX(180px)', null]);
   await page.clock.runFor(SECOND);
   expect((await timelineLayers(page)).map(({ rest, glide }) => [rest, glide])).toEqual([
-    ['translateX(230px)', null],
+    ['translateX(170px)', null],
     ['translateX(-10px)', null],
-    ['translateX(230px)', null],
+    ['translateX(170px)', null],
   ]);
 });
 }

@@ -177,6 +177,27 @@ export async function compareWithReference(page: Page, browser: Browser, markup:
   return diff;
 }
 
+/** Every glyph (and every icon drawn in the text colour) made transparent, on the site and in a frame. */
+const NO_TEXT = '* { color: transparent !important; -webkit-text-fill-color: transparent !important; } text { fill: transparent !important; }';
+
+/**
+ * The page and the frame compared with every glyph transparent on both sides: what is left is the drawing alone,
+ * for frames whose text a browser anti-aliases differently from the frame's page (decision 384).
+ */
+export async function compareWithoutText(page: Page, browser: Browser, markup: string): Promise<PixelDiff> {
+  // A constructed stylesheet: the site's CSP refuses inline style elements.
+  await page.evaluate((css) => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(css);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  }, NO_TEXT);
+  const diff = await compareWithReference(page, browser, markup.replace('</body>', `<style>${NO_TEXT}</style></body>`));
+  await page.evaluate(() => {
+    document.adoptedStyleSheets = document.adoptedStyleSheets.slice(0, -1);
+  });
+  return diff;
+}
+
 /** The end button of the timer's own controls (the countdown has an "end now" button of the same style). */
 export const TIMER_END = '.screen > .controls .button--end';
 

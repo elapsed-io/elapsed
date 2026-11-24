@@ -419,6 +419,15 @@ and the Oort cloud and Proxima Centauri (no action needed).
   and nothing of the test modes downloaded or shown without it. `npm run check` passes (776 unit tests); the
   reference run in Chromium, Firefox and WebKit: 1,031 passed, 100 skipped, 0 failed.
 
+- Round 2.13, the standard sizes and the recipe archive (decisions 408 to 412): the shared 260 px dial, the 48 px
+  time, the compact timeline and the shared slot; the analog stopwatch on the shared dial and its tile; the frames
+  win for the standard recipes, written back into the archive (64 features), whose checks are now permanent tests.
+  `npm run check` passes (897 unit tests). The reference run in Chromium, Firefox and WebKit: 1,041 passed, 99
+  skipped, 3 failed, all on glyph edges (the ring's time over its gliding layer in Chromium, the analog seconds
+  dial's small numbers in WebKit); after comparing those frames whole within a glyph-edge allowance and exactly
+  with every glyph transparent (decision 412), the frame and interstellar specs passed in all three browsers (115
+  passed, 22 skipped), and the frame spec again after the last fix (71 passed, 22 skipped).
+
 ## Questions for the owner
 
 Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 and 9; their answers are built in

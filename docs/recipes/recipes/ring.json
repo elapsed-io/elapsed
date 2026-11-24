@@ -21,7 +21,7 @@
       "type": "ring",
       "id": "ring",
       "cycle": "hour",
-      "radius": 112,
+      "radius": 126,
       "thickness": 8,
       "track": "theme.faint",
       "fill": "theme.accent",
@@ -37,7 +37,6 @@
     {
       "type": "time",
       "id": "time",
-      "size": 52,
       "position": "center",
       "seconds": "setting"
     }

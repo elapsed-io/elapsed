@@ -18,10 +18,11 @@ export const RING_CONFIG = {
     { at: 0.45, strength: 0.15 },
     { at: 0.75, strength: 0.55 },
   ],
-  /** Geometry at reference, from the ring frame: a 280 px box, the ring's centre line at 112 px, an 8 px round head. */
-  boxPx: 280,
-  radiusPx: 112,
+  /**
+   * Geometry at reference, from the ring frame: the shared 260 px dial (plan, Design system), the ring filling its
+   * box, its centre line at 126 px, an 8 px round head. The buttons sit the shared 26 px below it.
+   */
+  boxPx: 260,
+  radiusPx: 126,
   headPx: 8,
-  /** The ring sits 20 px above the buttons. */
-  gapPx: 20,
 } as const;

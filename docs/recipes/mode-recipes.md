@@ -5,7 +5,7 @@ Every display mode is a **recipe**: a JSON file that chooses and tunes pieces fr
 Files:
 - `mode-recipe-1.schema.json`: the JSON Schema every recipe must pass.
 - `recipes/*.json`: the eight built-in modes as recipes.
-- `recipe-check.py`: validates the recipes, checks every reference, and checks 49 features from docs/plan.md against them. Port it to the repository's tests.
+- `recipe-check.py`: validates the recipes, checks every reference, and checks the features docs/plan.md gives each mode against them (64 since round 2.13). Ported to the repository's tests (`packages/core/src/recipes/archive.test.ts`).
 
 ## Shape of a recipe
 
@@ -30,7 +30,7 @@ Files:
 | `time` | The clock, with the seconds setting | all |
 | `text` | A caption from a template | any |
 | `ring` | Track, fading tail that can grow in, round head | ring |
-| `dial` | Ticks, labels, hand, up to 3 subdials | analog |
+| `dial` | Ticks, labels, batons, a hand with a tail, up to 8 subdials (small dials, or further hands from the centre) | analog |
 | `track` | Scrolling time scale with faded ends and the personal-record marker | timeline |
 | `sprite` | An image strip; the frame follows a cycle, a zone or the measure, with crossfades | tree (your own art) |
 | `tree` | The procedural tree, side or isometric, with growth, leaf colours per season, cluster offsets, snow and ground | tree |
@@ -60,7 +60,7 @@ The checker's negative tests (script in a name, unknown placeholders, `url()` co
 
 ## Coverage
 
-All eight built-in modes are expressed as recipes, and all 49 features the plan gives them pass the check, including the ring's growing tail, the timeline's record marker, the analog subdial, ocean life by zone at three distances, the lit results that start from the session's colour, both finales, shooting stars with meteor showers, the tree's seasons and both views, and interstellar's camera, orbits, comets and turning sky. The tree's procedural drawing is the one piece specific to a mode; the `sprite` piece gives the same mode a path for anyone's own season strip.
+All eight built-in modes are expressed as recipes, and all the features the plan gives them pass the check (64 since round 2.13), including the ring's growing tail, the timeline's record marker, the analog subdial, ocean life by zone at three distances, the lit results that start from the session's colour, both finales, shooting stars with meteor showers, the tree's seasons and both views, and interstellar's camera, orbits, comets and turning sky. The tree's procedural drawing is the one piece specific to a mode; the `sprite` piece gives the same mode a path for anyone's own season strip.
 
 ## Added for cinematic modes (height's falcon, and anything at depth or interstellar's level)
 
@@ -76,7 +76,7 @@ These are still schema version 1, which stays open until Release 2's public rele
 | `camera: rig` | Follows a subject with a critically damped ease (no lurch, no overshoot), at `pxPerUnit` pixels per measure unit where the subject flies, with an optional upward `tilt` (pixels, start, duration, how far it deepens the sky) |
 | `freeze` on paused and check-in | The whole scene stops where it is; only the time blurs |
 
-The height recipe uses all of them and passes 18 feature checks; all eight recipes pass 58 in total. The safety tests now also reject a streamer flood, a 1000 Hz wingbeat, a flood of glare ghosts, a 5000 px tilt, unknown flight fields and too many stages.
+The height recipe uses all of them and passes 18 feature checks. The safety tests now also reject a streamer flood, a 1000 Hz wingbeat, a flood of glare ghosts, a 5000 px tilt, unknown flight fields and too many stages.
 
 ## Added for ocean depth's idle screen
 
@@ -90,3 +90,16 @@ All optional, still version 1.
 | `beam` particles | Light shafts from an `origin` (may sit off screen, like the sun), in `lanes` across a `spread` of directions, with random `widths`; each lives a random life (`fade`: in, hold, out, rest) at a `peak` brightness with a gentle `shimmer` and a depth `falloff`; `noOverlap` gives each beam a free lane only |
 
 Load checks: with `noOverlap`, the lanes must be spaced wider than the widest beam (otherwise the recipe is refused), and the runtime contrast check takes a single beam as the worst case behind text. A beam's peak is at most 25% white.
+
+## The standard modes follow their frames (round 2.13)
+
+For digits, ring, timeline and analog the design canvas's frames are the source of truth (plan version 13): where a
+recipe here differed from a frame, the frame won and the corrected recipe was written back into `recipe-check.py`,
+which wrote this archive again and passes. Ring and analog draw the shared 260 px dial (the ring's radius 126 with an
+8 px track; the analog stopwatch's case radius 130, redesigned with batons, the hours hand from the centre and a
+seconds dial with its red 60); the timeline is the compact one, a 360 px track; and the time inside ring and timeline
+takes the design system's shared 48 px, so these recipes give the time no size of their own (digits' 104 px is the
+shared size too). The schema gained what those recipes need: `theme.red`, a hand's `tail`, `batons`, and subdials
+with `face`, `ticks` and `topColor`, up to eight. The checker counts 64 features; the site runs its validation,
+reference and budget checks, its features and its safety cases on this archive as permanent tests
+(`packages/core/src/recipes/archive.test.ts`), and the site ships these four recipes unchanged.

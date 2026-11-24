@@ -426,8 +426,8 @@ function ringTokens(): string {
   const [far, near] = ring.tailStops;
   // The ring's radius, thickness and head come from its recipe (pieces/ring/ring.ts); these are the frame's own.
   const properties: CustomProperties = {
-    '--mode-time-size': String(CONFIG.design.type.ringTimePx),
-    '--mode-gap': String(ring.gapPx),
+    '--mode-time-size': String(CONFIG.design.type.modeTimePx),
+    '--mode-gap': String(CONFIG.design.controls.timeToButtonsPx),
     // Reference pixels, scaled with the time.
     '--ring-box': String(ring.boxPx),
     '--ring-tail-far': String(far.at),
@@ -441,8 +441,8 @@ function ringTokens(): string {
 function timelineTokens(): string {
   const timeline = TIMELINE_CONFIG;
   const properties: CustomProperties = {
-    '--mode-time-size': String(CONFIG.design.type.timelineTimePx),
-    '--mode-gap': String(timeline.gapPx),
+    '--mode-time-size': String(CONFIG.design.type.modeTimePx),
+    '--mode-gap': String(CONFIG.design.controls.timeToButtonsPx),
     '--timeline-inner-gap': String(timeline.innerGapPx),
     '--timeline-height': px(timeline.heightPx),
     '--timeline-edge': px(timeline.edgePx),
@@ -456,8 +456,8 @@ function analogTokens(): string {
   const analog = ANALOG_CONFIG;
   // The dial's size comes from its recipe (pieces/dial/dial.ts); the hands carry the points they turn about.
   const properties: CustomProperties = {
-    '--mode-time-size': String(CONFIG.design.type.ringTimePx),
-    '--mode-gap': String(analog.gapPx),
+    '--mode-time-size': String(CONFIG.design.type.modeTimePx),
+    '--mode-gap': String(CONFIG.design.controls.timeToButtonsPx),
     '--analog-label-size': px(analog.labelPx),
     '--analog-letter-spacing': em(analog.numbers.letterSpacingEm),
     '--analog-subdial-label-size': px(analog.subdialLabelPx),

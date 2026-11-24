@@ -14,17 +14,13 @@
     {
       "type": "time",
       "id": "time",
-      "size": 56,
-      "position": [
-        0.5,
-        0.42
-      ],
+      "position": "top",
       "seconds": "setting"
     },
     {
       "type": "track",
       "id": "track",
-      "width": 480,
+      "width": 360,
       "pxPerMinute": 10,
       "ticks": {
         "every": 5,

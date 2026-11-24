@@ -511,6 +511,10 @@
     stroke: var(--color-muted);
   }
 
+  .mode-tile__fill {
+    fill: var(--color-muted);
+  }
+
   .mode-tile__text {
     stroke: currentColor;
   }

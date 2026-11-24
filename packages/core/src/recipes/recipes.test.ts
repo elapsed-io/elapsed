@@ -14,8 +14,8 @@ import type { Binding, LayerOf, LayerType, Recipe } from './types.ts';
 import { SchemaValidator } from './validate.ts';
 import { CONFIG } from '../config.ts';
 
-/** The timeline's time size: the shared design system's (round 2.11). */
-const TIMELINE_TIME_PX: number = CONFIG.design.type.timelineTimePx;
+/** The time inside a mode's figure: the shared design system's (round 2.13). */
+const MODE_TIME_PX: number = CONFIG.design.type.modeTimePx;
 
 import ANALOG from '../../../../packages/core/src/recipes/shipped/analog.json' with { type: 'json' };
 import DIGITS from '../../../../packages/core/src/recipes/shipped/digits.json' with { type: 'json' };
@@ -101,11 +101,11 @@ const COVER: Readonly<Record<(typeof BUILT_IN)[number], readonly Feature[]>> = {
     ['rings-per-hour replay behind the hand, tighter past 6 h', (r) => r.results.view.type === 'rings-per-hour' && r.results.view.hand === true && r.results.view.fitAfterHours === 6],
   ],
   timeline: [
-    ['480 px track, 10 px a minute', (r) => first(r, 'track').width === 480 && first(r, 'track').pxPerMinute === 10],
+    ['compact 360 px track, 10 px a minute', (r) => first(r, 'track').width === 360 && first(r, 'track').pxPerMinute === 10],
     ['faded ends, nothing before start', (r) => first(r, 'track').fadeEnds === true && first(r, 'track').drawBeforeStart === false],
     ['personal record marker', (r) => first(r, 'track').marker?.source === 'personal-record'],
-    // The size is the shared design system's, never the recipe's own (round 2.11).
-    ['56 px time', (r) => first(r, 'time').size === undefined && TIMELINE_TIME_PX === 56],
+    // The size is the shared design system's, never the recipe's own (rounds 2.11 and 2.13).
+    ['the shared 48 px time above the track', (r) => first(r, 'time').size === undefined && first(r, 'time').position === 'top' && MODE_TIME_PX === 48],
   ],
   analog: [
     ['one turn an hour, labels every 5 minutes', (r) => first(r, 'dial').labels?.count === 12],

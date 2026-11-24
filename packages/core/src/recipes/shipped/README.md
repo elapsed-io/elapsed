@@ -1,15 +1,16 @@
 # The recipes the site ships
 
 The eight built-in recipes as the site builds and draws them, with the schema it checks them against
-(`../schema/mode-recipe-1.schema.json`). They are the round 2.11 recipes, unchanged.
+(`../schema/mode-recipe-1.schema.json`).
 
-`docs/recipes/` holds the owner's recipe archive of 2026-11-24 (`recipe-check.py`, the schema, the guide and
-the eight recipes it generates). That archive was written from an earlier copy of the recipes: for the standard
-modes it predates the frames the site is built to (the analog redesign of round 2.8; ring's and timeline's
-48 px time in plan version 12), and it adds the cinematic and idle-screen fields (`scenery`, `subject`, `glare`,
-`camera: rig`, `freeze`, `idle`, `dim`, `scale`, `beam`, `visibility`) that the site does not draw yet.
+`docs/recipes/` holds the owner's recipe archive: `recipe-check.py`, the guide, and the schema and eight recipes the
+checker writes. Since round 2.13 the two are one for the standard modes: for digits, ring, timeline and analog the
+frames are the source of truth (plan version 13), so the corrected recipes were written back into the checker,
+which wrote them into the archive, and these four files are copies of the archive's (a test fails if they differ).
 
-So the site keeps these copies until the two are reconciled field by field, as `docs/release-readiness.md`
-orders it: the frames and the plan win for the standard modes; the archive's additions come in with the rounds
-that build them. Until then a change to a built-in recipe is made here and, if it is the owner's, in
-`docs/recipes/` too.
+The test modes' recipes differ on purpose: the archive carries additions the site does not draw yet (ocean depth's
+calm water, height's falcon and its cinematic pieces), which come in with the rounds that build them (2.18 and
+2.19), and the site's copies carry what rounds 2.9 to 2.11 changed. The site's schema is the narrower of the two
+(only what its pieces draw); every recipe here also passes the archive's schema (tested).
+
+A change to a standard recipe is made in `recipe-check.py`, run, and copied here from the archive.

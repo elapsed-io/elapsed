@@ -13,9 +13,9 @@
  * Owner rules make the site differ from the frames, and are applied to the reference: the footer's source code
  * link stays hidden until the owner confirms the repository is public (privacy, terms and feedback show); a credits
  * link follows feedback (round 2.11); Lexend is not offered (no tabular figures). The list of downloaded modes is
- * left out, as the test browser has downloaded none. Two parts of the Release 2 frames come in later rounds, and
- * until then the reference shows what is built: the redrawn analog tile (round 2.13) and display as the first
- * category (round 2.14; until then the timer row stays above display).
+ * left out, as the test browser has downloaded none. One part of the Release 2 frames comes in a later round, and
+ * until then the reference shows what is built: display as the first category (round 2.14; until then the timer row
+ * stays above display).
  */
 
 export interface Palette {
@@ -213,13 +213,6 @@ const fromNotice = (c: Palette): string => `<div style="position: absolute; top:
 <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid ${c.faint}"><div style="font-size: 11px; color: ${c.muted}">changes are autosaved</div><div style="display: flex; gap: 16px; font-size: 11px"><a href="#privacy" style="color: ${c.muted}; text-decoration: none">privacy</a><a href="#terms" style="color: ${c.muted}; text-decoration: none">terms</a><a href="#feedback" style="color: ${c.muted}; text-decoration: none">feedback</a><a href="#source code" style="color: ${c.muted}; text-decoration: none">source code</a></div></div>
 </div>`;
 
-/** The analog tile as built (the Release 2 display frame of round 2.8), until round 2.13 builds the redrawn one. */
-const BUILT_ANALOG_TILE = (c: Palette): string =>
-  `<svg aria-hidden="true" width="56" height="32" viewBox="0 0 56 32" fill="none" stroke-linecap="round"><circle cx="28" cy="16" r="12" stroke="${c.muted}" stroke-width="1.5"></circle><line x1="28.0" y1="5.5" x2="28.0" y2="4.0" stroke="${c.muted}" stroke-width="1.2"></line><line x1="33.3" y1="6.9" x2="34.0" y2="5.6" stroke="${c.muted}" stroke-width="1.2"></line><line x1="37.1" y1="10.8" x2="38.4" y2="10.0" stroke="${c.muted}" stroke-width="1.2"></line><line x1="38.5" y1="16.0" x2="40.0" y2="16.0" stroke="${c.muted}" stroke-width="1.2"></line><line x1="37.1" y1="21.3" x2="38.4" y2="22.0" stroke="${c.muted}" stroke-width="1.2"></line><line x1="33.2" y1="25.1" x2="34.0" y2="26.4" stroke="${c.muted}" stroke-width="1.2"></line><line x1="28.0" y1="26.5" x2="28.0" y2="28.0" stroke="${c.muted}" stroke-width="1.2"></line><line x1="22.7" y1="25.1" x2="22.0" y2="26.4" stroke="${c.muted}" stroke-width="1.2"></line><line x1="18.9" y1="21.2" x2="17.6" y2="22.0" stroke="${c.muted}" stroke-width="1.2"></line><line x1="17.5" y1="16.0" x2="16.0" y2="16.0" stroke="${c.muted}" stroke-width="1.2"></line><line x1="18.9" y1="10.7" x2="17.6" y2="10.0" stroke="${c.muted}" stroke-width="1.2"></line><line x1="22.8" y1="6.9" x2="22.0" y2="5.6" stroke="${c.muted}" stroke-width="1.2"></line><line x1="28" y1="16" x2="35" y2="10" stroke="${c.accent}" stroke-width="2"></line><circle cx="28" cy="16" r="1.6" fill="${c.accent}"></circle></svg>`;
-/** The redrawn analog tile in the current display frames. */
-const FRAME_ANALOG_TILE = (c: Palette): string =>
-  `<svg aria-hidden="true" width="56" height="32" viewBox="0 0 56 32" fill="none" stroke-linecap="round"><rect x="25" y="0.5" width="6" height="3" rx="1" fill="${c.muted}"></rect><circle cx="28" cy="16" r="12" stroke="${c.muted}" stroke-width="1.5"></circle><circle cx="28" cy="22" r="3.4" stroke="${c.muted}" stroke-width="0.8"></circle><line x1="28" y1="16" x2="35" y2="10" stroke="${c.accent}" stroke-width="1.6"></line><line x1="28" y1="16" x2="24" y2="12" stroke="${c.accent}" stroke-width="2.4"></line><circle cx="28" cy="16" r="1.6" fill="${c.accent}"></circle></svg>`;
-
 /** A category's row (collapsed), as every frame draws it: its button, from its opening tag to its closing one. */
 function categoryRow(panel: string, name: string): string {
   const label = `<div>${name}</div>`;
@@ -248,9 +241,7 @@ export function settingsFrame(name: SettingsFrameName, c: Palette, storage?: str
     // The source code link stays hidden; the credits link (owner, round 2.11) follows feedback, in the links' style.
     .replace(/<a href="#source code"([^>]*)>source code<\/a>/, '<a href="#credits"$1>credits</a>')
     // The test browser has downloaded no mode, so the list of downloaded modes is not shown.
-    .replace(/<div style="display: flex; flex-direction: column; gap: 8px"><label style="font-size: 13px">downloaded modes<\/label>.*?unused for 30 days are removed\.<\/div><\/div>\n?/s, '')
-    // Until round 2.13: the analog tile as built.
-    .replace(FRAME_ANALOG_TILE(c), BUILT_ANALOG_TILE(c));
+    .replace(/<div style="display: flex; flex-direction: column; gap: 8px"><label style="font-size: 13px">downloaded modes<\/label>.*?unused for 30 days are removed\.<\/div><\/div>\n?/s, '');
   // Until round 2.14: Release 1's category order.
   panel = release1Order(panel);
   if (storage !== undefined) panel = panel.replace('your font · 184 KB', storage);

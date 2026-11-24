@@ -20,7 +20,7 @@
     {
       "type": "track",
       "id": "track",
-      "width": 480,
+      "width": 360,
       "pxPerMinute": 10,
       "ticks": {
         "every": 5,
@@ -48,7 +48,7 @@
   },
   "results": {
     "replay": {
-      "seconds": 2,
+      "seconds": 2.0,
       "easing": "fast",
       "longSessionExtra": true
     },

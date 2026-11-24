@@ -29,7 +29,7 @@
       "type": "dial",
       "id": "dial",
       "cycle": "hour",
-      "radius": 150,
+      "radius": 130,
       "ticks": {
         "major": 12,
         "minor": 60
@@ -40,9 +40,9 @@
       },
       "batons": 12,
       "hand": {
-        "length": 114,
-        "tail": 18,
-        "width": 2.5,
+        "length": 99,
+        "tail": 16,
+        "width": 2.4,
         "color": "theme.accent"
       },
       "subdials": [
@@ -54,24 +54,24 @@
             0
           ],
           "hand": {
-            "length": 52,
-            "tail": 12,
+            "length": 45,
+            "tail": 10,
             "width": 4.4,
             "color": "theme.accent"
           }
         },
         {
           "cycle": "minute",
-          "radius": 42,
+          "radius": 36,
           "offset": [
             0,
-            69
+            60
           ],
           "labels": 6,
           "ticks": 60,
           "topColor": "theme.red",
           "hand": {
-            "length": 39,
+            "length": 33,
             "tail": 5,
             "width": 1.2,
             "color": "theme.text"
@@ -90,7 +90,7 @@
   },
   "results": {
     "replay": {
-      "seconds": 2,
+      "seconds": 2.0,
       "easing": "fast",
       "longSessionExtra": true
     },

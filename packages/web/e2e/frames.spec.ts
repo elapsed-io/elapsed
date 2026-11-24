@@ -19,8 +19,9 @@ import type { Page } from '@playwright/test';
 import { GRAPHITE, PAPER, checkInFrame, idleFrame, inPalette, limitFrame, pausedFrame, pausedMissedFrame, runningFrame } from './fixtures/frames.ts';
 import { modeFrame, oceanFrame, oceanPausedFrame } from './fixtures/mode-frames.ts';
 import { createSession, pauseSession, resumeSession, serializeActiveState, startState } from '@stopwatch/core';
-import { compareWithReference, ENVIRONMENT_IN_TESTING, freezeAnimations, holdAnimationsAt, MINUTE, openApp, SECOND, settle } from './helpers.ts';
-import { SMOOTHED_LIMIT, expectLikeFrame } from './pixels.ts';
+import { compareWithReference, compareWithoutText, ENVIRONMENT_IN_TESTING, freezeAnimations, holdAnimationsAt, MINUTE, openApp, SECOND, settle } from './helpers.ts';
+import { PIXEL_REFERENCE, SMOOTHED_LIMIT, expectLikeFrame } from './pixels.ts';
+import type { PixelDiff } from './pixels.ts';
 
 /** Moments across both blur-away windows, including their ends. */
 const RUNNING_MOMENTS = [0.5, 3, 7.5, 9.9, 12, 35, 47.5, 59.5];
@@ -95,9 +96,9 @@ test('paused matches the paused frame exactly', async ({ page, browser, browserN
   });
 });
 
-/** Runs a session in `mode` to `focus`, then optionally pauses it for `paused`. */
-async function sessionAt(page: Page, mode: string, focus: number, paused = 0): Promise<void> {
-  await openApp(page, { mode });
+/** Runs a session in `mode` to `focus`, then optionally pauses it for `paused`; `seconds` as the frame shows them. */
+async function sessionAt(page: Page, mode: string, focus: number, paused = 0, seconds?: 'always'): Promise<void> {
+  await openApp(page, { mode, ...(seconds === undefined ? {} : { settings: { seconds } }) });
   await page.locator('.button--primary').click();
   await page.clock.runFor(focus);
   if (paused > 0) {
@@ -111,20 +112,45 @@ async function sessionAt(page: Page, mode: string, focus: number, paused = 0): P
 // resampled by the browser where the frame draws them in place: a few pixels of anti-aliasing differ. While
 // it glides, the rotor is a layer the compositor turns, which resamples a little more (decision 267): the
 // running frame allows 100 such pixels, and the control below shows a ring 3° off fails by far.
-// Each frame shows a whole minute, so the timeline's and the ring's glides are frozen at the start of their minute.
+// The frames at the shared sizes (round 2.13) show the time with its seconds (01:24:37) and the figure at the start of
+// its minute, so the timeline's and the ring's glides are frozen there.
 const RING_GLIDING_LIMIT = 100;
+/**
+ * Text drawn over a moving layer: in the reference image Chromium draws the ring's time, which sits over the gliding
+ * rotor's layer, with greyscale anti-aliasing and the frame's page with subpixel, as it draws interstellar's names
+ * (decision 384): measured 1,295 and 1,308 pixels past 8 levels, smoothed at most 38.7, all on the time's glyph
+ * edges. WebKit places the analog seconds dial's small numbers (8.5 px) a fraction of a pixel from the frame's,
+ * smoothed 37. So these frames are compared twice: whole, within these allowances, and with every glyph transparent
+ * on both sides, which must match within the drawing's own limits (the ring's 100, the analog's 600).
+ */
+const TEXT_EDGES = 1600;
+const TEXT_SMOOTHED = 40;
+
+function expectDrawingAndText(whole: PixelDiff, drawing: PixelDiff, browserName: string, drawingLimit: number): void {
+  if (browserName === 'chromium' && PIXEL_REFERENCE) {
+    expect(whole.visible, JSON.stringify(whole)).toBeLessThanOrEqual(TEXT_EDGES);
+    expect(drawing.visible, JSON.stringify(drawing)).toBeLessThanOrEqual(drawingLimit);
+  }
+  expect(whole.smoothedMaxDelta, JSON.stringify(whole)).toBeLessThanOrEqual(TEXT_SMOOTHED);
+  expect(drawing.smoothedMaxDelta, JSON.stringify(drawing)).toBeLessThanOrEqual(SMOOTHED_LIMIT);
+}
 for (const [name, mode, focus, paused, limit] of [
-  ['ring', 'ring', 84 * MINUTE, 0, RING_GLIDING_LIMIT],
-  ['ringStart', 'ring', 1 * MINUTE, 0, 40],
-  ['ringPaused', 'ring', 84 * MINUTE, 4 * MINUTE + 12 * SECOND, 40],
-  ['timeline', 'timeline', 84 * MINUTE, 0, 0],
-  ['timelineStart', 'timeline', 4 * MINUTE, 0, 0],
-  ['timelinePaused', 'timeline', 84 * MINUTE, 4 * MINUTE + 12 * SECOND, 0],
+  ['ring', 'ring', 84 * MINUTE + 37 * SECOND, 0, RING_GLIDING_LIMIT],
+  ['ringStart', 'ring', 1 * MINUTE + 12 * SECOND, 0, 40],
+  ['ringPaused', 'ring', 84 * MINUTE + 37 * SECOND, 4 * MINUTE + 12 * SECOND, 40],
+  ['timeline', 'timeline', 84 * MINUTE + 37 * SECOND, 0, 0],
+  ['timelineStart', 'timeline', 4 * MINUTE + 12 * SECOND, 0, 0],
+  ['timelinePaused', 'timeline', 84 * MINUTE + 37 * SECOND, 4 * MINUTE + 12 * SECOND, 0],
 ] as const) {
   test(`${mode} matches the "${name}" frame`, async ({ page, browser, browserName }) => {
-    await sessionAt(page, mode, focus, paused);
+    await sessionAt(page, mode, focus, paused, 'always');
     await freezeAnimations(page, { at: { '.timeline__glide': 0, '.ring__rotor': 0 } });
     const diff = await compareWithReference(page, browser, modeFrame(name, GRAPHITE));
+    // The ring's time over its gliding rotor: whole within the text's allowance, the drawing exactly (above).
+    if (mode === 'ring' && paused === 0) {
+      expectDrawingAndText(diff, await compareWithoutText(page, browser, modeFrame(name, GRAPHITE)), browserName, limit);
+      return;
+    }
     expectLikeFrame(diff, browserName, () => {
       expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(limit);
       expect(diff.smoothedMaxDelta, JSON.stringify(diff)).toBeLessThanOrEqual(SMOOTHED_LIMIT);
@@ -146,10 +172,12 @@ test('analog matches the "analog" frame', async ({ page, browser, browserName })
   await sessionAt(page, 'analog', 84 * MINUTE);
   await freezeAnimations(page, { at: { '.analog__hand': 10 * SECOND } });
   const diff = await compareWithReference(page, browser, modeFrame('analog', GRAPHITE));
-  expectLikeFrame(diff, browserName, () => {
+  expectDrawingAndText(diff, await compareWithoutText(page, browser, modeFrame('analog', GRAPHITE)), browserName, ANALOG_LIMIT);
+  // In the reference Chromium the whole frame holds to the drawing's limit too: its text is drawn as the frame's.
+  if (browserName === 'chromium' && PIXEL_REFERENCE) {
     expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(ANALOG_LIMIT);
     expect(diff.smoothedMaxDelta, JSON.stringify(diff)).toBeLessThanOrEqual(SMOOTHED_LIMIT);
-  });
+  }
 });
 
 // Ocean depth: the frames draw the water as one gradient between the colours 6 m above and 6 m below; the site
@@ -211,9 +239,10 @@ test('control: analog hands 3° from the frame fail the analog frame by far', as
 
 test('control: a gliding ring 3° from the frame fails the ring frame by far', async ({ page, browser, browserName }) => {
   test.skip(browserName !== 'chromium' || process.env['PIXEL_REFERENCE'] !== '1', 'exact pixel rules hold only in the reference environment');
-  await sessionAt(page, 'ring', 84 * MINUTE);
+  await sessionAt(page, 'ring', 84 * MINUTE + 37 * SECOND, 0, 'always');
   await freezeAnimations(page, { at: { '.ring__rotor': 30 * SECOND } });
-  const diff = await compareWithReference(page, browser, modeFrame('ring', GRAPHITE));
+  // The drawing alone, as the ring's frame tests compare it beside its text.
+  const diff = await compareWithoutText(page, browser, modeFrame('ring', GRAPHITE));
   expect(diff.visible).toBeGreaterThan(RING_GLIDING_LIMIT);
   expect(diff.smoothedMaxDelta).toBeGreaterThan(SMOOTHED_LIMIT);
 });

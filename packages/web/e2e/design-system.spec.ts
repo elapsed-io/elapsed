@@ -4,9 +4,11 @@
  *
  * - The shared layout: the time, the gap under it and the buttons sit in exactly the same place and size in every
  *   mode that shows the time on its own (digits, ocean depth, height, interstellar), idle and running; only the
- *   mode's own layers differ. The modes that draw the time inside a figure (ring, timeline, analog, the tree) keep
- *   their frames' layouts until the owner says otherwise (docs/questions-overnight.md, question 32); their buttons
- *   are still the shared buttons, the same size in every mode.
+ *   mode's own layers differ. The standard modes that draw a figure share its sizes (round 2.13; plan, Design
+ *   system): the dial is 260 px across in ring and analog, the time inside ring and timeline is 48 px, the compact
+ *   timeline's track is 360 px wide and 14 px below its time, and every mode's main block sits in the same
+ *   centred slot with the buttons 26 px below it, idle, running and paused. The buttons are the shared buttons,
+ *   the same size in every mode.
  * - The layer order: the mode's background and art, then the time and buttons, then pause, check-in and other
  *   dialogs, then notices, then settings. Nothing from a mode may cover a dialog: with every element made
  *   hit-testable, so hit testing follows the paint order, the topmost element over each part of a dialog is the
@@ -119,6 +121,85 @@ test.describe('the shared layout', () => {
         expect(Math.abs(size.height - (reference?.height ?? 0)), `${mode}: button ${String(index + 1)} height`).toBeLessThanOrEqual(0.5);
       });
     }
+  });
+});
+
+/** The figure modes' main blocks, by mode. */
+const BLOCKS = { ring: '.ring', timeline: '.timeline', analog: '.analog-stack' } as const;
+
+interface Slot {
+  readonly block: Box;
+  readonly gap: number;
+  readonly centre: number;
+  readonly middle: number;
+  readonly above: number;
+  readonly below: number;
+}
+
+/** The main block's box, its gap to the buttons, and where the block and buttons sit together on the screen. */
+async function slot(page: Page, selector: string): Promise<Slot> {
+  return page.evaluate((selector) => {
+    const block = document.querySelector(`.mode-root ${selector}`)?.getBoundingClientRect();
+    const buttons = [...document.querySelectorAll('.controls .button')].filter((button) => button.getClientRects().length > 0).map((button) => button.getBoundingClientRect());
+    const first = buttons[0];
+    if (block === undefined || first === undefined) throw new Error('missing element');
+    const bottom = Math.max(...buttons.map((button) => button.bottom));
+    return {
+      block: { x: block.x, y: block.y, width: block.width, height: block.height },
+      gap: first.top - block.bottom,
+      centre: block.x + block.width / 2,
+      middle: innerWidth / 2,
+      above: block.top,
+      below: innerHeight - bottom,
+    };
+  }, selector);
+}
+
+test.describe('the standard modes share one slot (round 2.13)', () => {
+  for (const [mode, selector] of Object.entries(BLOCKS)) {
+    test(`${mode}: its block centred with the buttons 26 px below it, idle, running and paused`, async ({ page }) => {
+      await openApp(page, { mode });
+      const check = async (state: string): Promise<void> => {
+        await settle(page);
+        const measured = await slot(page, selector);
+        const what = `${mode}, ${state}: ${JSON.stringify(measured)}`;
+        expect(Math.abs(measured.gap - 26), what).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(measured.centre - measured.middle), what).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(measured.above - measured.below), what).toBeLessThanOrEqual(1);
+      };
+      await check('idle');
+      await page.locator('.button--primary').click();
+      await page.clock.runFor(2 * SECOND);
+      await check('running');
+      await page.locator('.button--primary').click();
+      await check('paused');
+    });
+  }
+
+  test('ring: the dial 260 px across, the time inside it 48 px', async ({ page }) => {
+    await openApp(page, { mode: 'ring' });
+    await settle(page);
+    expect(await page.locator('.mode-root .ring').evaluate((ring) => ring.getBoundingClientRect().width)).toBeCloseTo(260, 1);
+    expect(await page.locator('.mode-root .ring__track').evaluate((track) => track.getBoundingClientRect().width)).toBeCloseTo(260, 1);
+    expect(await page.locator('.mode-root .time--main').evaluate((time) => getComputedStyle(time).fontSize)).toBe('48px');
+  });
+
+  test('analog: the case 260 px across, the shared dial', async ({ page }) => {
+    await openApp(page, { mode: 'analog' });
+    await settle(page);
+    // The case: the drawing's largest circle.
+    const caseWidth = await page.locator('.mode-root .analog-stack svg').first().evaluate((drawing) => Math.max(...[...drawing.querySelectorAll('circle')].map((circle) => circle.getBoundingClientRect().width)));
+    expect(caseWidth).toBeCloseTo(260, 1);
+  });
+
+  test('timeline: the time 48 px, the compact track 360 px wide and 14 px below it', async ({ page }) => {
+    await openApp(page, { mode: 'timeline' });
+    await settle(page);
+    expect(await page.locator('.mode-root .time--main').evaluate((time) => getComputedStyle(time).fontSize)).toBe('48px');
+    const time = await page.locator('.mode-root .time--main').evaluate((element) => element.getBoundingClientRect().toJSON() as Box);
+    const track = await page.locator('.mode-root .timeline__track').evaluate((element) => element.getBoundingClientRect().toJSON() as Box);
+    expect(track.width).toBeCloseTo(360, 1);
+    expect(track.y - (time.y + time.height)).toBeCloseTo(14, 0);
   });
 });
 

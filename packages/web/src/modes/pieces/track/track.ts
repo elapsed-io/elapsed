@@ -1,9 +1,10 @@
 /**
  * The track piece (the timeline's recipe).
  *
- * Timeline: the time at 56 px above a 480 px track, 10 minutes per 100 px
- * with now at the centre, both ends fading out (plan, Design system > Display
- * modes; the revised "timeline" and "timeline at 00:04" frames). The past
+ * Timeline: the compact timeline, the shared 48 px time 14 px above a 360 px
+ * track, 10 minutes per 100 px with now at the centre, both ends fading out
+ * (plan, Design system; the "timeline: compact, time 48 px" and "timeline at
+ * the start" frames, round 2.13). The past
  * line and its ticks are muted, the future faint; ticks every 5 minutes and
  * hh:mm labels every 10. Nothing is drawn before the session's start.
  *
@@ -33,7 +34,7 @@ const MINUTE_MS = 60_000;
 
 const pad = (value: number): string => String(value).padStart(2, '0');
 
-/** The track's numbers from its layer: the frame's 480 px, 10 px a minute, ticks every 5 minutes, labels every 10. */
+/** The track's numbers from its layer: the frame's 360 px, 10 px a minute, ticks every 5 minutes, labels every 10. */
 export interface TrackShape {
   readonly widthPx: number;
   readonly pxPerMinute: number;

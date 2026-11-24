@@ -18,6 +18,10 @@
     {
       "id": "half-day",
       "minutes": 720
+    },
+    {
+      "id": "minute",
+      "minutes": 1
     }
   ],
   "layers": [
@@ -25,7 +29,7 @@
       "type": "dial",
       "id": "dial",
       "cycle": "hour",
-      "radius": 150,
+      "radius": 130,
       "ticks": {
         "major": 12,
         "minor": 60
@@ -34,23 +38,42 @@
         "count": 12,
         "format": "minutes"
       },
+      "batons": 12,
       "hand": {
-        "length": 140,
-        "width": 2,
+        "length": 99,
+        "tail": 16,
+        "width": 2.4,
         "color": "theme.accent"
       },
       "subdials": [
         {
           "cycle": "half-day",
-          "radius": 34,
+          "face": "hand",
           "offset": [
             0,
-            52
+            0
           ],
-          "labels": 12,
           "hand": {
-            "length": 26,
-            "width": 1.5,
+            "length": 45,
+            "tail": 10,
+            "width": 4.4,
+            "color": "theme.accent"
+          }
+        },
+        {
+          "cycle": "minute",
+          "radius": 36,
+          "offset": [
+            0,
+            60
+          ],
+          "labels": 6,
+          "ticks": 60,
+          "topColor": "theme.red",
+          "hand": {
+            "length": 33,
+            "tail": 5,
+            "width": 1.2,
             "color": "theme.text"
           }
         }

@@ -1,8 +1,8 @@
 /**
- * A JSON Schema (draft 2020-12) validator for the keywords the recipe schema uses, and no others: type, const,
- * enum, properties, additionalProperties, required, items, minItems, maxItems, uniqueItems, minimum, maximum,
- * minLength, maxLength, pattern, maxProperties, oneOf, anyOf and $ref to "#/$defs/…". A keyword it does not
- * know is an error in the schema, not something to skip, so a schema change cannot loosen validation unseen.
+ * A JSON Schema (draft 2020-12) validator for the keywords the recipe schemas use (the site's, and the owner's
+ * archive's in docs/recipes), and no others: type, const, enum, properties, additionalProperties, required, items,
+ * minItems, maxItems, uniqueItems, minimum, maximum, minLength, maxLength, pattern, minProperties, maxProperties,
+ * oneOf, anyOf and $ref to "#/$defs/…". A keyword it does not know is an error in the schema, not something to skip, so a schema change cannot loosen validation unseen.
  * No dependency: the site adds none at run time (owner's rule).
  */
 
@@ -37,6 +37,7 @@ const KNOWN = new Set([
   'minLength',
   'maxLength',
   'pattern',
+  'minProperties',
   'maxProperties',
   'oneOf',
   'anyOf',
@@ -144,6 +145,7 @@ export class SchemaValidator {
     if (isObject(value)) {
       const properties = isObject(schema['properties']) ? schema['properties'] : {};
       if (Array.isArray(schema['required'])) for (const key of schema['required'] as string[]) if (!Object.hasOwn(value, key)) fail(`must have ${key}`);
+      if (typeof schema['minProperties'] === 'number' && Object.keys(value).length < schema['minProperties']) fail(`must have at least ${String(schema['minProperties'])} properties`);
       if (typeof schema['maxProperties'] === 'number' && Object.keys(value).length > schema['maxProperties']) fail(`must have at most ${String(schema['maxProperties'])} properties`);
       for (const [key, item] of Object.entries(value)) {
         const own = properties[key];

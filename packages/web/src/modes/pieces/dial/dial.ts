@@ -2,7 +2,7 @@
  * The dial piece (the analog stopwatch's recipe; plan, Design system > Display
  * modes > Analog stopwatch; the redesigned "analog" frame).
  *
- * The dial is the frame's own drawing, an SVG of 340 × 336 units (one a reference pixel at a radius of 150),
+ * The dial is the frame's own drawing, an SVG of 300 × 296 units (one a reference pixel at a radius of 130),
  * drawn once: a polished case with a ridged crown at 12 that dips whenever end is pressed, an outer track of
  * ticks with its numbers turned to follow the edge, slim baton indices that stop short of (or leave out) any
  * small dial in their way, and the small dials. Each hand and the centre pin are HTML on top of it, each a
@@ -317,7 +317,7 @@ export function dialPiece({ doc, layer, recipe, context }: PieceSetup<DialLayer>
     ...overHubs.map((hand) => hand.element),
     pin,
   ]);
-  // The recipe's size: a radius of 150 is the frame's 340 × 336 box.
+  // The recipe's size: a radius of 130 is the frame's 300 × 296 box (the shared 260 px dial).
   const scale = (layer.radius ?? FRAME_RADIUS) / FRAME_RADIUS;
   const style: Record<string, string> = {
     '--analog-width': String(ANALOG.widthPx * scale),

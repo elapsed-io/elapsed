@@ -6,7 +6,7 @@ from jsonschema import Draft202012Validator
 D = {}
 D['color'] = {'anyOf': [{'type': 'string', 'pattern': '^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$'},
                         {'enum': ['theme.bg', 'theme.text', 'theme.accent', 'theme.muted', 'theme.faint', 'theme.track', 'theme.gray',
-                                  'theme.end', 'theme.pr', 'contrast.text', 'contrast.muted']}]}
+                                  'theme.end', 'theme.pr', 'theme.red', 'contrast.text', 'contrast.muted']}]}
 D['id'] = {'type': 'string', 'pattern': '^[a-z][a-z0-9-]{0,31}$'}
 D['slotId'] = {'type': 'string', 'pattern': '^[a-z][a-z0-9-]{0,31}(\\.[a-z0-9-]{1,32}){0,2}$'}
 D['source'] = {'type': 'string', 'pattern': '^(measure|progress|elapsed|cycle:[a-z][a-z0-9-]{0,31})$'}
@@ -25,7 +25,8 @@ D['binding'] = {'oneOf': [{'type': 'number'},
 D['variant'] = {'type': 'object', 'additionalProperties': False, 'required': ['option', 'value'],
                 'properties': {'option': {'$ref': '#/$defs/id'}, 'value': {'type': ['string', 'boolean']}}}
 D['hand'] = {'type': 'object', 'additionalProperties': False, 'properties': {
-    'length': {'type': 'number', 'minimum': 4, 'maximum': 400}, 'width': {'type': 'number', 'minimum': 0.5, 'maximum': 12}, 'color': {'$ref': '#/$defs/color'}}}
+    'length': {'type': 'number', 'minimum': 4, 'maximum': 400}, 'width': {'type': 'number', 'minimum': 0.5, 'maximum': 12}, 'color': {'$ref': '#/$defs/color'},
+    'tail': {'type': 'number', 'minimum': 0, 'maximum': 200}}}
 
 def layer(t, props, required=()):
     base = {'type': {'const': t}, 'id': {'$ref': '#/$defs/id'}, 'when': {'$ref': '#/$defs/states'},
@@ -45,10 +46,12 @@ LAYERS = [
     layer('dial', {'radius': {'type': 'number', 'minimum': 20, 'maximum': 400}, 'cycle': {'$ref': '#/$defs/id'},
                    'ticks': {'type': 'object', 'additionalProperties': False, 'properties': {'major': {'type': 'integer', 'minimum': 2, 'maximum': 120}, 'minor': {'type': 'integer', 'minimum': 0, 'maximum': 600}}},
                    'labels': {'type': 'object', 'additionalProperties': False, 'properties': {'count': {'type': 'integer', 'minimum': 0, 'maximum': 60}, 'format': {'enum': ['minutes', 'hours', 'none']}}},
-                   'hand': {'$ref': '#/$defs/hand'},
-                   'subdials': {'type': 'array', 'maxItems': 3, 'items': {'type': 'object', 'additionalProperties': False, 'required': ['cycle'], 'properties': {
+                   'hand': {'$ref': '#/$defs/hand'}, 'batons': {'type': 'integer', 'minimum': 0, 'maximum': 60},
+                   # a subdial is a small dial with its own hand, or (face: hand) a further hand from the centre
+                   'subdials': {'type': 'array', 'maxItems': 8, 'items': {'type': 'object', 'additionalProperties': False, 'required': ['cycle'], 'properties': {
                        'cycle': {'$ref': '#/$defs/id'}, 'radius': {'type': 'number', 'minimum': 8, 'maximum': 200}, 'offset': {'type': 'array', 'items': {'type': 'number'}, 'minItems': 2, 'maxItems': 2},
-                       'labels': {'type': 'integer', 'minimum': 0, 'maximum': 24}, 'hand': {'$ref': '#/$defs/hand'}}}}}, ['cycle']),
+                       'labels': {'type': 'integer', 'minimum': 0, 'maximum': 24}, 'ticks': {'type': 'integer', 'minimum': 0, 'maximum': 120}, 'topColor': {'$ref': '#/$defs/color'},
+                       'hand': {'$ref': '#/$defs/hand'}, 'face': {'enum': ['dial', 'hand']}}}}}, ['cycle']),
     layer('track', {'width': {'type': 'number', 'minimum': 80, 'maximum': 1200}, 'pxPerMinute': {'type': 'number', 'minimum': 0.5, 'maximum': 60},
                     'ticks': {'type': 'object', 'additionalProperties': False, 'properties': {'every': {'type': 'number', 'minimum': 1}, 'labelEvery': {'type': 'number', 'minimum': 1}, 'format': {'enum': ['hh:mm', 'value']}}},
                     'fadeEnds': {'type': 'boolean'}, 'past': {'$ref': '#/$defs/color'}, 'future': {'$ref': '#/$defs/color'}, 'drawBeforeStart': {'type': 'boolean'},
@@ -213,26 +216,30 @@ SCHEMA = {
 T = {'type': 'theme'}
 def sl(i, kind, default, **kw): return dict(id=i, kind=kind, default='builtin:' + default, **kw)
 R = {}
+# the standard modes as their frames draw them (plan version 13: the frames win); the time's size is the design
+# system's shared size (104 px alone, 48 px inside a ring or above a track), so these recipes give it none of their own
 R['digits'] = dict(recipe=1, id='digits', name='digits', icon='digits', measure=dict(unit='time', perMinute=1), environment=T,
-    layers=[dict(type='time', id='time', size=104, position='center', seconds='setting')],
+    layers=[dict(type='time', id='time', position='center', seconds='setting')],
     states=dict(paused=dict(blur='display'), checkin=dict(blur='display')),
     results=dict(replay=dict(seconds=1.4, easing='fast', longSessionExtra=True), view=dict(type='strip')))
 R['ring'] = dict(recipe=1, id='ring', name='ring', icon='ring', measure=dict(unit='time', perMinute=1), environment=T, cycles=[dict(id='hour', minutes=60)],
-    layers=[dict(type='ring', id='ring', cycle='hour', radius=112, thickness=8, track='theme.faint', fill='theme.accent', tail=dict(degrees=55, growIn=True, fade='ease'), head=dict(size=8)),
-            dict(type='time', id='time', size=52, position='center', seconds='setting')],
+    layers=[dict(type='ring', id='ring', cycle='hour', radius=126, thickness=8, track='theme.faint', fill='theme.accent', tail=dict(degrees=55, growIn=True, fade='ease'), head=dict(size=8)),
+            dict(type='time', id='time', position='center', seconds='setting')],
     states=dict(paused=dict(blur='display'), checkin=dict(blur='display')),
     results=dict(replay=dict(seconds=2.0, easing='fast', longSessionExtra=True), view=dict(type='rings-per-hour', hand=True, fitAfterHours=6)))
 R['timeline'] = dict(recipe=1, id='timeline', name='timeline', icon='timeline', measure=dict(unit='time', perMinute=1), environment=T,
-    layers=[dict(type='time', id='time', size=56, position=[0.5, 0.42], seconds='setting'),
-            dict(type='track', id='track', width=480, pxPerMinute=10, ticks={'every': 5, 'labelEvery': 10, 'format': 'hh:mm'}, fadeEnds=True, past='theme.muted', future='theme.faint',
+    layers=[dict(type='time', id='time', position='top', seconds='setting'),
+            dict(type='track', id='track', width=360, pxPerMinute=10, ticks={'every': 5, 'labelEvery': 10, 'format': 'hh:mm'}, fadeEnds=True, past='theme.muted', future='theme.faint',
                  drawBeforeStart=False, marker=dict(source='personal-record', label='pr: {time}', color='theme.pr'))],
     states=dict(paused=dict(blur='display'), checkin=dict(blur='display')),
     results=dict(replay=dict(seconds=2.0, easing='fast', longSessionExtra=True), view=dict(type='strip')))
 R['analog'] = dict(recipe=1, id='analog', name='analog stopwatch', icon='analog', measure=dict(unit='time', perMinute=1), environment=T,
-    cycles=[dict(id='hour', minutes=60), dict(id='half-day', minutes=720)],
-    layers=[dict(type='dial', id='dial', cycle='hour', radius=150, ticks=dict(major=12, minor=60), labels=dict(count=12, format='minutes'),
-                 hand=dict(length=140, width=2, color='theme.accent'),
-                 subdials=[dict(cycle='half-day', radius=34, offset=[0, 52], labels=12, hand=dict(length=26, width=1.5, color='theme.text'))])],
+    cycles=[dict(id='hour', minutes=60), dict(id='half-day', minutes=720), dict(id='minute', minutes=1)],
+    # the redesigned stopwatch on the shared 260 px dial: batons, the hours hand from the centre, the seconds dial with its red 60
+    layers=[dict(type='dial', id='dial', cycle='hour', radius=130, ticks=dict(major=12, minor=60), labels=dict(count=12, format='minutes'), batons=12,
+                 hand=dict(length=99, tail=16, width=2.4, color='theme.accent'),
+                 subdials=[dict(cycle='half-day', face='hand', offset=[0, 0], hand=dict(length=45, tail=10, width=4.4, color='theme.accent')),
+                           dict(cycle='minute', radius=36, offset=[0, 60], labels=6, ticks=60, topColor='theme.red', hand=dict(length=33, tail=5, width=1.2, color='theme.text'))])],
     states=dict(paused=dict(blur='display'), checkin=dict(blur='display')),
     results=dict(replay=dict(seconds=2.0, easing='fast', longSessionExtra=True), view=dict(type='rings-per-hour', hand=True, fitAfterHours=6)))
 OCEAN_ZONES = [['sunlight', 'sunlight zone', 0], ['twilight', 'twilight zone', 200], ['midnight', 'midnight zone', 1000], ['abyssal', 'abyssal zone', 4000], ['hadal', 'hadal zone', 6000]]
@@ -371,11 +378,11 @@ COVER = {
  'digits': [('seconds blur-away follows the setting', lambda r: L(r, 'time')[0]['seconds'] == 'setting'), ('whole display blurs on pause', lambda r: r['states']['paused']['blur'] == 'display'),
             ('focus strip replay, 1.4 s fast', lambda r: r['results']['view']['type'] == 'strip' and r['results']['replay'] == dict(seconds=1.4, easing='fast', longSessionExtra=True))],
  'ring': [('one turn an hour', lambda r: r['cycles'][0]['minutes'] == 60), ('55° tail that grows in and fades', lambda r: L(r, 'ring')[0]['tail'] == dict(degrees=55, growIn=True, fade='ease')),
-          ('round head', lambda r: L(r, 'ring')[0]['head']['size'] > 0), ('rings-per-hour replay behind the hand, tighter past 6 h', lambda r: r['results']['view'] == dict(type='rings-per-hour', hand=True, fitAfterHours=6))],
- 'timeline': [('480 px track, 10 px a minute', lambda r: L(r, 'track')[0]['width'] == 480 and L(r, 'track')[0]['pxPerMinute'] == 10), ('faded ends, nothing before start', lambda r: L(r, 'track')[0]['fadeEnds'] and not L(r, 'track')[0]['drawBeforeStart']),
-              ('personal record marker', lambda r: L(r, 'track')[0]['marker']['source'] == 'personal-record'), ('56 px time', lambda r: L(r, 'time')[0]['size'] == 56)],
+          ('round head', lambda r: L(r, 'ring')[0]['head']['size'] > 0), ('the shared 260 px dial', lambda r: 2 * L(r, 'ring')[0]['radius'] + L(r, 'ring')[0]['thickness'] == 260), ('rings-per-hour replay behind the hand, tighter past 6 h', lambda r: r['results']['view'] == dict(type='rings-per-hour', hand=True, fitAfterHours=6))],
+ 'timeline': [('compact 360 px track, 10 px a minute', lambda r: L(r, 'track')[0]['width'] == 360 and L(r, 'track')[0]['pxPerMinute'] == 10), ('faded ends, nothing before start', lambda r: L(r, 'track')[0]['fadeEnds'] and not L(r, 'track')[0]['drawBeforeStart']),
+              ('personal record marker', lambda r: L(r, 'track')[0]['marker']['source'] == 'personal-record'), ('the shared 48 px time above the track', lambda r: 'size' not in L(r, 'time')[0] and L(r, 'time')[0]['position'] == 'top')],
  'analog': [('one turn an hour, labels every 5 minutes', lambda r: L(r, 'dial')[0]['labels']['count'] == 12), ('hours subdial', lambda r: L(r, 'dial')[0]['subdials'][0]['cycle'] == 'half-day'),
-            ('accent hand', lambda r: L(r, 'dial')[0]['hand']['color'] == 'theme.accent')],
+            ('accent hand', lambda r: L(r, 'dial')[0]['hand']['color'] == 'theme.accent'), ('the shared 260 px dial', lambda r: L(r, 'dial')[0]['radius'] == 130)],
  'ocean-depth': [('idle: calm water whose middle is where the dive begins', lambda r: next(l for l in L(r, 'shape') if l['id'] == 'calm')['fill']['linear'][1] == [0.45, '#1F6485']),
  ('idle: a glow drifting and breathing on slow loops', lambda r: next(l for l in L(r, 'shape') if l['id'] == 'glow')['x']['by'] == 'cycle:glow-drift'),
  ('idle: marine snow in three depths, sinking and swaying', lambda r: next(l for l in L(r, 'particles') if l['id'] == 'snow')['field']['crossSeconds'] == [90, 60, 38]),

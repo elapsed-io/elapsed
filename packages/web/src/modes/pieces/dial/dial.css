@@ -1,6 +1,6 @@
 /*
  * The dial (dial.ts), drawn as the redesigned "analog" frame: the dial is an SVG in the frame's own units (a
- * 340 × 336 drawing, one unit a reference pixel at a radius of 150); each hand and the pin are HTML over it, each
+ * 300 × 296 drawing, one unit a reference pixel at a radius of 130); each hand and the pin are HTML over it, each
  * a drawing of the whole dial that CSS turns about the point it is pinned at, so the compositor can turn them.
  * Everything scales with the window like the time.
  */

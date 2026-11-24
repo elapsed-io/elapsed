@@ -272,8 +272,11 @@ export const CONFIG = {
       /** Time sizes at reference. */
       timePx: 104,
       resultsHeadlinePx: 60,
-      timelineTimePx: 56,
-      ringTimePx: 52,
+      /**
+       * The time inside a mode's figure, shared (plan, Design system): inside the ring and above the timeline's
+       * track, 48 px. Every mode's main block sits in the same slot, the buttons 26 px below it (timeToButtonsPx).
+       */
+      modeTimePx: 48,
       pausedForPx: 44,
       treeTimePx: 30,
       labelPx: { min: 11, max: 13 },

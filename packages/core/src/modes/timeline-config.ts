@@ -13,7 +13,7 @@ export const TIMELINE_CONFIG = {
    * so lines and ticks stay on whole pixels. The track never grows past
    * its frame width; on narrow windows less of it shows.
    */
-  widthPx: 480,
+  widthPx: 360,
   heightPx: 64,
   lineYPx: 20,
   lineHeightPx: 2,
@@ -26,7 +26,6 @@ export const TIMELINE_CONFIG = {
   fadeShare: 0.14,
   /** On windows narrower than the track, it keeps this far from each edge. */
   edgePx: 16,
-  /** The time sits 18 px above the track; the track 30 px above the buttons. */
-  innerGapPx: 18,
-  gapPx: 30,
+  /** The compact timeline (plan, Design system): the track 14 px below the time, the buttons the shared 26 px below it. */
+  innerGapPx: 14,
 } as const;

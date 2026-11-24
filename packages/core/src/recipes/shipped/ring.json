@@ -21,7 +21,7 @@
       "type": "ring",
       "id": "ring",
       "cycle": "hour",
-      "radius": 112,
+      "radius": 126,
       "thickness": 8,
       "track": "theme.faint",
       "fill": "theme.accent",
@@ -51,7 +51,7 @@
   },
   "results": {
     "replay": {
-      "seconds": 2,
+      "seconds": 2.0,
       "easing": "fast",
       "longSessionExtra": true
     },
