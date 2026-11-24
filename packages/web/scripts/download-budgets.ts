@@ -40,10 +40,11 @@ const CEILINGS_KB: Readonly<Record<string, Ceiling>> = {
   'environment:light-falloff': { code: 1.5, art: 0.0 }, // 1.42
   'environment:stops': { code: 0.5, art: 0.0 }, // 0.35
   camera: { code: 2.5, art: 0.0 }, // 1.95
-  'part:settings panel': { code: 19.5, art: 0.0 }, // 18.35
+  'part:settings panel': { code: 17.0, art: 0.0 }, // 16.14 (round 2.12: the test modes' tiles and options moved out)
   'part:results': { code: 4.0, art: 0.0 }, // 3.64
   'part:custom CSS editor': { code: 3.5, art: 0.0 }, // 3.22
-  'part:test modes': { code: 0.5, art: 0.0 }, // 0.46
+  'part:test modes (flagged visits)': { code: 1.5, art: 0.0 }, // 1.10 (round 2.12)
+  'part:test-mode settings (flagged visits)': { code: 5.5, art: 0.0 }, // 5.01 (round 2.12)
   'part:downloaded modes list': { code: 1.0, art: 0.0 }, // 0.92
   'part:image store': { code: 1.0, art: 0.0 }, // 0.93
   'part:service worker': { code: 3.0, art: 0.0 }, // 2.40

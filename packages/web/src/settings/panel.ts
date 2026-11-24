@@ -16,8 +16,8 @@
  * category first opens (On choice).
  */
 
-import { ANIMATION_SPEEDS, BRAND, CLOCK_FORMATS, CONFIG, declarationOf, FOCUS_HIDES, LEAVE_FULLSCREEN, MODE_CHOICES, normaliseHex, OCEAN_CONFIG, resetCategory, SECONDS_DISPLAYS, SETTINGS_CATEGORIES, SETTINGS_COPY, TEST_MODES, THEME_IDS, TREE_CONFIG, TREE_VIEWS, withSetting } from '@stopwatch/core';
-import type { AnimationSpeed, ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId, TreeView, FocusHide, LeaveFullscreen } from '@stopwatch/core';
+import { ANIMATION_SPEEDS, BRAND, CLOCK_FORMATS, CONFIG, declarationOf, FOCUS_HIDES, LEAVE_FULLSCREEN, normaliseHex, resetCategory, SECONDS_DISPLAYS, SETTINGS_CATEGORIES, SETTINGS_COPY, shownMode, STANDARD_MODES, THEME_IDS, withSetting } from '@stopwatch/core';
+import type { AnimationSpeed, ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId, FocusHide, LeaveFullscreen } from '@stopwatch/core';
 import { parseSettingsFile, settingsFile, settingsFileName } from '@stopwatch/core/settings-file';
 import 'virtual:tokens/settings.css';
 import { html, svg } from '../dom.ts';
@@ -46,6 +46,7 @@ import {
 } from './controls.ts';
 import type { SettingsController } from './controller.ts';
 import type * as CssEditorModule from './css-editor.ts';
+import type * as TestModesModule from './test-modes.ts';
 import type { CssEditor } from './css-editor.ts';
 import './panel.css';
 
@@ -67,8 +68,11 @@ export interface PanelHost {
   close(): void;
   /** Asks to show system notifications, only when a notification setting is switched on. */
   requestNotifications(): Promise<NotificationAccess>;
-  /** The test-modes switch: offered on this device or not, and on or off (storage/test-modes-store.ts). */
-  readonly testModes: { readonly offered: boolean; readonly on: boolean; setOn(on: boolean): void; shown(chosen: ModeChoice): ModeChoice };
+  /**
+   * A flagged visit's test-mode tiles and options (test-modes.ts, test-flag.ts); null on a visit without the flag,
+   * which shows only the standard modes and never fetches that module.
+   */
+  readonly testModes: typeof TestModesModule | null;
 }
 
 interface Item {
@@ -104,8 +108,6 @@ export class SettingsPanel {
   readonly #reducedMotion: MediaQueryList | null;
   readonly #fontTiles = new Map<FontChoice, HTMLButtonElement>();
   #ownTile: HTMLButtonElement | null = null;
-  #modeTiles: ((mode: ModeChoice) => void) | null = null;
-  #renderModes: (() => void) | null = null;
   #fontNote: HTMLDivElement | null = null;
   #storageValue: HTMLDivElement | null = null;
   #downloadsGroup: HTMLDivElement | null = null;
@@ -434,7 +436,7 @@ export class SettingsPanel {
       case 'timer':
         return [this.#seconds(), this.#rangeItem('checkInInterval', copy.checkIn, formatHoursMinutes), this.#rangeItem('pauseLimit', copy.pauseLimit, formatMinutes), this.#shortcuts()];
       case 'display':
-        return [this.#modes(), this.#modeOptions(), this.#focusView(), this.#downloads()];
+        return [this.#modes(), ...this.#modeOptions(), this.#focusView(), this.#downloads()];
       case 'appearance':
         return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat(), this.#animationSpeed(), this.#lowPower()];
       case 'notifications':
@@ -486,98 +488,42 @@ export class SettingsPanel {
 
   #modes(): Item {
     const doc = this.#doc;
-    // The tiles re-render when the test-modes switch changes which modes are offered (refreshModes).
-    const box = html(doc, 'div', { class: 'mode-tiles-box' });
-    const render = (): void => {
-      const grid = html(doc, 'div', { class: 'mode-tiles', attrs: { 'aria-label': copy.mode.label } });
-      // A test mode's tile shows only while the test-modes switch is on; while it is off, a test mode chosen shows
-      // digits, and its tile is digits'.
-      const testModes = this.#host.testModes;
-      const chosen = testModes.shown(this.#host.controller.current.mode);
-      const offered = MODE_CHOICES.filter((value) => !TEST_MODES.includes(value) || testModes.on);
-      const tiles = offered.map((value) => ({
-        value,
-        element: html(doc, 'button', { class: 'mode-tile' }, [modePreview(doc, value), BRAND.copy.modes[value]]),
-      }));
-      grid.append(...tiles.map((tile) => tile.element));
-      const update = radioGroup<ModeChoice>(tiles, grid, (value) => {
-        this.#set('mode', value);
-      });
-      update(chosen);
-      this.#modeTiles = update;
-      // While test modes are on, a note under the tiles says why their tiles are there (the Release 2 display frame).
-      box.replaceChildren(grid, ...(testModes.on ? [html(doc, 'div', { class: 'setting__help' }, [copy.testModes.note])] : []));
-    };
-    render();
-    this.#renderModes = render;
-    this.#updates.push((settings) => {
-      this.#modeTiles?.(this.#host.testModes.shown(settings.mode));
+    // The standard modes' tiles; on a flagged visit the test modes' follow, with the line under the tiles that the
+    // Release 2 display frame draws.
+    const test = this.#host.testModes;
+    const shown = (chosen: ModeChoice): ModeChoice => shownMode(chosen, test !== null);
+    const grid = html(doc, 'div', { class: 'mode-tiles', attrs: { 'aria-label': copy.mode.label } });
+    const standard = STANDARD_MODES.map((value) => ({ value, name: BRAND.copy.modes[value] }));
+    const offered = [...standard, ...(test?.MODES ?? []).map((value) => ({ value, name: test?.modeName(value) ?? value }))];
+    const tiles = offered.map(({ value, name }) => ({ value, element: html(doc, 'button', { class: 'mode-tile' }, [modePreview(doc, value, test), name]) }));
+    grid.append(...tiles.map((tile) => tile.element));
+    const update = radioGroup<ModeChoice>(tiles, grid, (value) => {
+      this.#set('mode', value);
     });
-    return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.mode.label]), [box]), search: searchText(copy.mode.label, ...MODE_CHOICES.map((value) => BRAND.copy.modes[value])) };
-  }
-
-  /** The test-modes switch changed which modes are offered: the tiles show it at once. */
-  refreshModes(): void {
-    this.#renderModes?.();
+    update(shown(this.#host.controller.current.mode));
+    this.#updates.push((settings) => {
+      update(shown(settings.mode));
+    });
+    const box = html(doc, 'div', { class: 'mode-tiles-box' }, [grid, ...(test === null ? [] : [html(doc, 'div', { class: 'setting__help' }, [test.LINE])])]);
+    return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.mode.label]), [box]), search: searchText(copy.mode.label, ...offered.map((tile) => tile.name)) };
   }
 
   /**
-   * Each mode's own options, in its own box under the tiles, as the Release 2 display frame draws "ocean depth
-   * options" (owner, changes 3: every mode has its own options box); shown only while that mode is chosen (plan,
-   * Interface: "each display mode's options live in the display mode section"): ocean depth's ocean life and
-   * results landmarks, height's own results landmarks, and the tree's view as a segmented control.
+   * Each test mode's own options box under the tiles, on a flagged visit only (test-modes.ts); none otherwise, as no
+   * standard mode has options.
    */
-  #modeOptions(): Item {
-    const doc = this.#doc;
-    const text = copy.resultsLandmarks;
-    const row = (label: string, control: HTMLElement, help: string | null): HTMLDivElement =>
-      html(doc, 'div', { class: 'setting' }, [
-        html(doc, 'div', { class: 'setting__row' }, [html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [label]), control]),
-        ...(help === null ? [] : [html(doc, 'div', { class: 'setting__help' }, [help])]),
-      ]);
-    const box = (mode: ModeChoice, title: string, rows: readonly HTMLElement[]): HTMLDivElement => {
-      const group = html(doc, 'div', { class: 'mode-options', attrs: { role: 'group', 'aria-label': title, 'data-options': mode } }, [html(doc, 'div', { class: 'mode-options__title' }, [title]), ...rows]);
-      this.#updates.push((settings) => {
-        group.hidden = settings.mode !== mode;
-      });
-      return group;
-    };
-    const switchRow = (key: 'oceanLife' | 'resultsLandmarks' | 'heightLandmarks', label: string, help: string): HTMLDivElement => {
-      const control = toggle(doc, label, (on) => {
-        this.#set(key, on);
-      });
-      this.#updates.push((settings) => {
-        control.update(settings[key]);
-      });
-      return row(label, control.element, help);
-    };
-    const views = TREE_VIEWS.map((value) => ({ value, label: copy.treeView.options[value] }));
-    const view = segmented<TreeView>(doc, copy.treeView.label, views, (value) => {
-      this.#set('treeView', value);
+  #modeOptions(): Item[] {
+    const test = this.#host.testModes;
+    if (test === null) return [];
+    const boxes = test.optionsBoxes(this.#doc, {
+      set: (key, value) => {
+        this.#set(key, value);
+      },
+      onUpdate: (update) => {
+        this.#updates.push(update);
+      },
     });
-    this.#updates.push((settings) => {
-      view.update(settings.treeView);
-    });
-    const boxes = [
-      box('ocean', copy.modeOptions.ocean, [switchRow('oceanLife', copy.oceanLife.label, copy.oceanLife.help), switchRow('resultsLandmarks', text.label, text.help.ocean)]),
-      box('height', copy.modeOptions.height, [switchRow('heightLandmarks', text.label, text.help.height)]),
-      box('tree', copy.modeOptions.tree, [row(copy.treeView.label, view.element, null)]),
-    ];
-    return {
-      element: html(doc, 'div', { class: 'settings__item-contents' }, boxes),
-      search: searchText(
-        copy.modeOptions.ocean,
-        copy.oceanLife.label,
-        copy.oceanLife.help,
-        text.label,
-        text.help.ocean,
-        copy.modeOptions.height,
-        text.help.height,
-        copy.modeOptions.tree,
-        copy.treeView.label,
-        ...views.map((option) => option.label),
-      ),
-    };
+    return [{ element: boxes.element, search: searchText(...boxes.search) }];
   }
 
   /**
@@ -643,11 +589,15 @@ export class SettingsPanel {
     const list = this.#downloadsList;
     const group = this.#downloadsGroup;
     if (view === null || list === null || group === null) return;
-    const modes = await listDownloadedModes(view, MODE_CHOICES);
+    // A visit without the flag lists only the standard modes: a test mode downloaded on a flagged visit stays on the
+    // device (until it goes unused for 30 days) but appears nowhere.
+    const test = this.#host.testModes;
+    const order: readonly string[] = [...STANDARD_MODES, ...(test?.MODES ?? [])];
+    const modes = (await listDownloadedModes(view, order)).filter((mode) => order.includes(mode.id));
     const doc = this.#doc;
     list.replaceChildren(
       ...modes.map((mode) => {
-        const name = (MODE_CHOICES as readonly string[]).includes(mode.id) ? BRAND.copy.modes[mode.id as ModeChoice] : mode.id;
+        const name = (BRAND.copy.modes as Readonly<Record<string, string>>)[mode.id] ?? test?.modeName(mode.id) ?? mode.id;
         const remove = html(doc, 'button', { class: 'downloads__remove', attrs: { type: 'button', 'aria-label': copy.downloadedModes.removeName.replace('{mode}', name) } }, [copy.downloadedModes.remove]);
         remove.addEventListener('click', () => {
           void removeDownloadedMode(view, mode.id).then(() => this.refreshDownloads());
@@ -989,18 +939,6 @@ export class SettingsPanel {
     );
     const fileItem = html(doc, 'div', { class: 'setting-confirm' }, [fileRow, this.#importConfirm.element]);
 
-    // The test-modes switch: offered only once the address asked for it on this device.
-    const testModes = this.#host.testModes;
-    const testItems: Item[] = [];
-    if (testModes.offered) {
-      const testSwitch = toggle(doc, copy.testModes.label, (on) => {
-        testModes.setOn(on);
-        testSwitch.update(testModes.on);
-      });
-      testSwitch.update(testModes.on);
-      testItems.push({ element: settingRow(doc, html(doc, 'div', { class: 'setting__label' }, [copy.testModes.label]), testSwitch.element, copy.testModes.help), search: searchText(copy.testModes.label, copy.testModes.help) });
-    }
-
     const resetAll = confirmItem(doc, { ...copy.resetAll, cancel: copy.cancel, help: null }, () => {
       this.#host.controller.resetAll();
       this.#flashSaved();
@@ -1010,7 +948,6 @@ export class SettingsPanel {
       { element: css, search: searchText(copy.customCss.label, copy.customCss.help) },
       { element: safeItem, search: searchText(copy.safeMode.label, copy.safeMode.action, copy.safeMode.help) },
       { element: fileItem, search: searchText(copy.settingsFile.label, copy.settingsFile.export, copy.settingsFile.import, copy.settingsFile.help) },
-      ...testItems,
       { element: resetAll, search: searchText(copy.resetAll.label) },
     ];
   }
@@ -1150,7 +1087,7 @@ const ANALOG_TILE_TICKS: readonly (readonly [number, number, number, number])[] 
   [22.8, 6.9, 22.0, 5.6],
 ];
 
-function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
+function modePreview(doc: Document, mode: ModeChoice, test: typeof TestModesModule | null): SVGSVGElement {
   const { previewWidthPx: width, previewHeightPx: height } = CONFIG.design.settings.tiles;
   const root = svg(doc, 'svg', { class: 'mode-tile__preview', width, height, viewBox: `0 0 ${String(width)} ${String(height)}`, fill: 'none', 'stroke-linecap': 'round', 'aria-hidden': 'true' });
   if (mode === 'digits') {
@@ -1171,47 +1108,9 @@ function modePreview(doc: Document, mode: ModeChoice): SVGSVGElement {
       svg(doc, 'line', { class: 'mode-tile__accent', x1: 28, y1: 16, x2: 35, y2: 10, 'stroke-width': 2 }),
       svg(doc, 'circle', { class: 'mode-tile__head', cx: 28, cy: 16, r: 1.6 }),
     );
-  } else if (mode === 'ocean') {
-    // The Release 2 display frame's ocean depth tile: water darkening downward, a wave and two bubbles, in
-    // the frame's own colours whatever the theme.
-    const { top, bottom, wave } = OCEAN_CONFIG.tile;
-    const id = uniqueId('ocean-tile');
-    root.append(
-      svg(doc, 'defs', {}, [
-        svg(doc, 'linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, [svg(doc, 'stop', { offset: 0, 'stop-color': top }), svg(doc, 'stop', { offset: 1, 'stop-color': bottom })]),
-      ]),
-      svg(doc, 'rect', { x: 10, y: 6, width: 36, height: 22, rx: 4, fill: `url(#${id})` }),
-      svg(doc, 'path', { d: 'M10 10 q4.5 -3 9 0 t9 0 t9 0 t9 0', stroke: wave, 'stroke-width': 1.5 }),
-      svg(doc, 'circle', { cx: 24, cy: 20, r: 1.4, fill: wave }),
-      svg(doc, 'circle', { cx: 30, cy: 23, r: 1, fill: wave }),
-    );
-  } else if (mode === 'height') {
-    // The Release 2 display frame's height tile: a muted mountain, its summit in the text colour, an accent star.
-    root.append(
-      svg(doc, 'path', { class: 'mode-tile__muted', d: 'M8 27 L22 9 L29 18 L34 13 L48 27 Z', 'stroke-width': 1.5, 'stroke-linejoin': 'round' }),
-      svg(doc, 'path', { class: 'mode-tile__text', d: 'M19.5 12.2 L22 9 L24.6 12.3', 'stroke-width': 1.5 }),
-      svg(doc, 'circle', { class: 'mode-tile__head', cx: 42, cy: 7, r: 1.3 }),
-    );
-  } else if (mode === 'tree') {
-    // The Release 2 display frame's tree tile: a trunk and a summer crown in the tree's own colours, on muted ground.
-    const { trunk } = TREE_CONFIG.colours;
-    const crown = TREE_CONFIG.leaves[2];
-    root.append(
-      svg(doc, 'line', { x1: 28, y1: 27, x2: 28, y2: 16, stroke: trunk, 'stroke-width': 2.5 }),
-      svg(doc, 'circle', { cx: 28, cy: 12, r: 7, fill: crown }),
-      svg(doc, 'circle', { cx: 22.5, cy: 15, r: 4.5, fill: crown }),
-      svg(doc, 'circle', { cx: 33.5, cy: 15, r: 4.5, fill: crown }),
-      svg(doc, 'line', { class: 'mode-tile__muted', x1: 16, y1: 27.5, x2: 40, y2: 27.5, 'stroke-width': 1.5 }),
-    );
-  } else if (mode === 'interstellar') {
-    // The Release 2 display frame's interstellar tile: an accent sun in a muted orbit, a planet and two stars.
-    root.append(
-      svg(doc, 'circle', { class: 'mode-tile__head', cx: 28, cy: 16, r: 3 }),
-      svg(doc, 'ellipse', { class: 'mode-tile__muted', cx: 28, cy: 16, rx: 16, ry: 8, 'stroke-width': 1.2 }),
-      svg(doc, 'circle', { class: 'mode-tile__dot', cx: 43, cy: 18.5, r: 1.6 }),
-      svg(doc, 'circle', { class: 'mode-tile__dot', cx: 12, cy: 6, r: 0.9 }),
-      svg(doc, 'circle', { class: 'mode-tile__dot', cx: 46, cy: 5, r: 0.7 }),
-    );
+  } else if (mode !== 'timeline') {
+    // A test mode's, from the flagged visit's module.
+    test?.drawPreview(root, mode);
   } else {
     root.append(
       svg(doc, 'line', { class: 'mode-tile__muted', x1: 4, y1: 20, x2: 28, y2: 20, 'stroke-width': 2 }),

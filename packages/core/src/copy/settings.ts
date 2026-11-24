@@ -33,11 +33,6 @@ export const SETTINGS_COPY = {
   pauseLimit: { label: 'pause limit', help: 'a longer pause ends the session' },
   shortcuts: { label: 'shortcuts', items: ['space · start or pause', 'e · end', ', · settings'] },
   mode: { label: 'display mode' },
-  /** Each mode's options, under the tiles while that mode is chosen (the Release 2 display frame). */
-  modeOptions: { ocean: 'ocean depth options', height: 'height options', tree: 'tree options' },
-  oceanLife: { label: 'ocean life', help: 'sea life drifts in while you’re paused' },
-  resultsLandmarks: { label: 'results landmarks', help: { ocean: 'up to two per 1,000 m on the results', height: 'up to two per 10 km on the results' } },
-  treeView: { label: 'tree view', options: { side: 'side', isometric: 'isometric' } },
   focusView: {
     title: 'focus view',
     hide: {
@@ -96,12 +91,6 @@ export const SETTINGS_COPY = {
     help: 'cleaned when saved: @import, @font-face and outside links are removed. stays on this device.',
     removed: 'cleaned when saved: what isn’t allowed was removed, and the rest is kept. stays on this device.',
     tooLarge: 'that is over {size}. it was not saved.',
-  },
-  /** The test-modes switch (the Release 2 advanced frame) and the note under the tiles while it is on. */
-  testModes: {
-    label: 'test modes',
-    help: 'early modes that may change or disappear. shown after opening elapsed with ?test=interstellar.',
-    note: 'interstellar appears only while test modes are on.',
   },
   safeMode: {
     label: 'safe mode',

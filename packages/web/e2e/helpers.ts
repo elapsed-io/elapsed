@@ -37,28 +37,24 @@ export const ENVIRONMENT_IN_TESTING = "ocean depth and height keep the theme's b
 /** The test modes (core TEST_MODES). */
 export const TEST_MODE_IDS: readonly string[] = ['ocean', 'height', 'tree', 'interstellar'];
 
-/** The test-modes switch offered and on, as if the address had asked for it and the switch been turned on. */
-export async function switchTestModesOn(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    if (localStorage.getItem('test-modes') === null) localStorage.setItem('test-modes', '{"schema":1,"offered":true,"on":true}');
-  });
-}
+/** The address of a visit flagged for the test modes (src/test-flag.ts): only it offers them. */
+export const FLAGGED = '/?test=modes';
 
 /**
  * Opens the site with a controllable clock (Date, performance.now and timers),
  * then holds the clock at T_READY so every later moment is exact. `mode`
- * chooses the display mode through stored settings.
+ * chooses the display mode through stored settings; a test mode's visit is
+ * flagged (or any visit, with `flagged`).
  */
 export async function openApp(
   page: Page,
-  options: { mode?: string; width?: number; height?: number; settings?: Readonly<Record<string, unknown>> } = {},
+  options: { mode?: string; width?: number; height?: number; settings?: Readonly<Record<string, unknown>>; flagged?: boolean } = {},
 ): Promise<void> {
   await page.setViewportSize({ width: options.width ?? 720, height: options.height ?? 450 });
   if (options.mode !== undefined || options.settings !== undefined) await seedSettings(page, { ...options.settings, ...(options.mode === undefined ? {} : { mode: options.mode }) });
-  // A test mode shows only with the test-modes switch on (storage/test-modes-store.ts).
-  if (options.mode !== undefined && TEST_MODE_IDS.includes(options.mode)) await switchTestModesOn(page);
   await page.clock.install({ time: T0 });
-  await page.goto('/');
+  // A test mode shows only on a visit opened with the test flag (src/test-flag.ts).
+  await page.goto((options.flagged ?? (options.mode !== undefined && TEST_MODE_IDS.includes(options.mode))) ? FLAGGED : '/');
   await page.evaluate(() => document.fonts.ready);
   await page.locator('.button--primary').waitFor();
   // The page's own markup shows before the script runs: the site answers input once it says it is ready.

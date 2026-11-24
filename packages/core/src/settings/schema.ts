@@ -36,19 +36,22 @@ export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
 /** The display modes, in the tiles' order (Release 2 adds each in its round: analog in 2.2). */
 export const MODE_CHOICES = ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'interstellar'] as const;
+/** The standard modes: what ships (plan, Display modes; owner, 2026-11-24). */
+export const STANDARD_MODES = ['digits', 'ring', 'timeline', 'analog'] as const;
 /**
- * Test modes: early modes that may change or disappear, in testing until their graphics are agreed and they meet
- * the performance budgets (plan-release-2, rounds 2.9 and 2.10). Their tiles show only while the test-modes switch
- * is on (offered once the site has been opened with `?test=modes` or `?test=interstellar`).
+ * Test modes: proofs of concept for the recipe system, not part of any release until promoted (plan, Display modes >
+ * Interstellar). They are offered only on a visit opened with the test flag (`?test=modes`, or the older
+ * `?test=interstellar`), for that visit; the settings keep them as choices so a choice made on a flagged visit is
+ * kept for the next.
  */
 export const TEST_MODES: readonly (typeof MODE_CHOICES)[number][] = ['ocean', 'height', 'tree', 'interstellar'];
 
 /**
- * The mode shown for a chosen one: a test mode chosen while the test-modes switch is off shows digits, the choice
- * itself kept for when testing ends (owner, 2026-11-17).
+ * The mode shown for a chosen one: a test mode chosen shows digits on a visit without the test flag, the choice
+ * itself kept for the next flagged visit (owner, 2026-11-24).
  */
-export function shownMode(chosen: (typeof MODE_CHOICES)[number], testModesOn: boolean): (typeof MODE_CHOICES)[number] {
-  return TEST_MODES.includes(chosen) && !testModesOn ? 'digits' : chosen;
+export function shownMode(chosen: (typeof MODE_CHOICES)[number], flagged: boolean): (typeof MODE_CHOICES)[number] {
+  return TEST_MODES.includes(chosen) && !flagged ? 'digits' : chosen;
 }
 export type ModeChoice = (typeof MODE_CHOICES)[number];
 

@@ -7,7 +7,7 @@
 
 import { expect, test } from './test.ts';
 import type { CDPSession, Page } from '@playwright/test';
-import { MINUTE, SECOND, TIMER_END, openApp, settle, switchTestModesOn, untilEndNowAccepts } from './helpers.ts';
+import { MINUTE, SECOND, TIMER_END, openApp, settle, untilEndNowAccepts } from './helpers.ts';
 
 const tile = (page: Page, name: string) => page.getByRole('radio', { name, exact: true });
 
@@ -32,8 +32,7 @@ async function holdDownload(page: Page, pattern: RegExp): Promise<() => void> {
 }
 
 test('ending a session while interstellar loads: end wins, the display never changes mid-end, and the chosen mode shows once back', async ({ page }) => {
-  await switchTestModesOn(page);
-  await openApp(page, { width: 1280, height: 800 });
+  await openApp(page, { width: 1280, height: 800, flagged: true });
   await page.locator('.button--primary').click();
   await page.clock.runFor(2 * MINUTE);
   const release = await holdDownload(page, /\/assets\/interstellar-[\w-]+\.js$/);
@@ -64,8 +63,7 @@ test('ending a session while interstellar loads: end wins, the display never cha
 });
 
 test('pausing while a mode loads: the pause applies at once, and the chosen mode still arrives', async ({ page }) => {
-  await switchTestModesOn(page);
-  await openApp(page, { width: 1280, height: 800 });
+  await openApp(page, { width: 1280, height: 800, flagged: true });
   await page.locator('.button--primary').click();
   await page.clock.runFor(MINUTE);
   const release = await holdDownload(page, /\/assets\/tree-[\w-]{8}\.js$/);
@@ -124,8 +122,7 @@ test('a switch among digits, ring and timeline lands on the frame of the choice,
 
 for (const mode of ['ocean depth', 'height'] as const) {
   test(`${mode} keeps the theme's background at all times while in testing: no flash, no environment colours`, async ({ page }) => {
-    await switchTestModesOn(page);
-    await openApp(page, { width: 1280, height: 800 });
+    await openApp(page, { width: 1280, height: 800, flagged: true });
     const theme = await page.locator('.screen').evaluate((screen) => getComputedStyle(screen).backgroundColor);
     const foreground = await page.locator('.time--main').first().evaluate((time) => getComputedStyle(time).color);
     // Every change from the choice on: the screen's own background, and nothing drawn over it as an environment.
@@ -215,8 +212,7 @@ for (const [id, caption] of [
 }
 
 test('every mode follows the same mount and teardown contract: switched away, nothing of it is left', async ({ page, browserName }) => {
-  await switchTestModesOn(page);
-  await openApp(page, { width: 1280, height: 800 });
+  await openApp(page, { width: 1280, height: 800, flagged: true });
   await openDisplaySettings(page);
   const cdp = browserName === 'chromium' ? await page.context().newCDPSession(page) : null;
   /** The window's and the document's own listeners (Chromium alone can list them). */
@@ -274,8 +270,7 @@ test.describe('performance', () => {
   }
 
   test('switching among the test modes 20 times quickly never blocks the main thread past 50 ms, and memory returns to its baseline', async ({ page }) => {
-    await switchTestModesOn(page);
-    await openApp(page, { width: 1280, height: 800 });
+    await openApp(page, { width: 1280, height: 800, flagged: true });
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('HeapProfiler.enable');
     await page.evaluate(() => {

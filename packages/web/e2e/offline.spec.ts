@@ -92,10 +92,9 @@ function modeCacheNames(page: Page): Promise<string[]> {
 async function useMode(page: Page, mode: string): Promise<void> {
   await page.evaluate((id) => {
     localStorage.setItem('settings', JSON.stringify({ schema: 2, mode: id }));
-    // A test mode shows with the test-modes switch on.
-    if (id !== 'analog') localStorage.setItem('test-modes', '{"schema":1,"offered":true,"on":true}');
   }, mode);
-  await page.goto('/');
+  // A test mode shows only on a flagged visit.
+  await page.goto(mode === 'analog' ? '/' : '/?test=modes');
   await page.locator(`.screen[data-mode="${mode}"]`).waitFor();
   await expect.poll(async () => (await modeCaches(page)).find((cache) => cache.name.endsWith(`-${mode}`))?.lastUse ?? null).not.toBeNull();
 }
@@ -175,7 +174,7 @@ test('a mode unused for 30 days is removed when the page loads, but never the on
     localStorage.setItem('settings', JSON.stringify({ schema: 2, mode: 'tree' }));
   });
   await page.clock.setSystemTime(start + 60 * day);
-  await page.goto('/');
+  await page.goto('/?test=modes');
   await page.locator('.tree').waitFor();
   await expect.poll(() => modeCacheNames(page)).toEqual(['timer-offline-mode-tree']);
   await expect.poll(async () => (await modeCaches(page)).map(({ name, lastUse }) => [name, (lastUse ?? 0) >= start + 60 * day])).toEqual([['timer-offline-mode-tree', true]]);

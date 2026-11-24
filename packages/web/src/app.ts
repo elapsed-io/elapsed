@@ -13,8 +13,8 @@ import type { ModeChoice, Session, TimerEvents, TimerView } from '@stopwatch/cor
 import { CountClient } from './counts/client.ts';
 import { CrashReporter } from './crash/reporter.ts';
 import type { DisplayMode, ModeOptions } from './modes/contract.ts';
-import { DEFAULT_MODE_ID } from './modes/manifests.ts';
-import { findMode } from './modes/registry.ts';
+import { DEFAULT_MODE_ID } from './modes/standard-manifests.ts';
+import { findMode, registerModes } from './modes/registry.ts';
 import type { RegisteredMode } from './modes/registry.ts';
 import { registerServiceWorker } from './offline/register.ts';
 import type * as ResultsModule from './results/results.ts';
@@ -43,7 +43,6 @@ import { titleFor } from './shell/title.ts';
 import { FinishedStore, browserSessionStorage } from './storage/finished-store.ts';
 import { LocalCustomCssStore, watchCustomCss } from './storage/custom-css-store.ts';
 import { LocalNoticeStore } from './storage/notice-store.ts';
-import { TEST_MODES_KEY, asksForTestModes } from './storage/test-modes-ask.ts';
 import { lazyMediaStore } from './storage/lazy-media.ts';
 import { hasModeCaches } from './storage/offline-cache.ts';
 import type * as ModeCache from './storage/mode-cache.ts';
@@ -52,6 +51,7 @@ type ModeCacheModule = typeof ModeCache;
 import { LocalSessionStore, browserLocalStorage, watchLocalStorage } from './storage/session-store.ts';
 import { LocalSettingsStore, watchSettings } from './storage/settings-store.ts';
 import { TabSync, openTabChannel } from './sync/tabs.ts';
+import { forgetTestModesSwitch, isFlaggedVisit } from './test-flag.ts';
 import { systemClock } from './time/system-clock.ts';
 
 type Screen = 'timer' | 'ending' | 'results' | 'maximum';
@@ -91,35 +91,17 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   const settingsStore = new LocalSettingsStore(browserLocalStorage(win), report);
   const customCssStore = new LocalCustomCssStore(browserLocalStorage(win), report);
   const noticeStore = new LocalNoticeStore(browserLocalStorage(win), report);
-  // The test-modes switch: `?test=modes` (or `?test=interstellar`) offers it on this device, once and for good
-  // (nothing else does). Its store is fetched only where the address asks or the switch was offered before.
+  // The test flag (test-flag.ts): read from the address on every load and kept in memory for this visit only. Round
+  // 2.9's switch is gone; whatever it stored is removed. Only a flagged visit loads the test modes' manifests.
   const local = browserLocalStorage(win);
-  const asked = asksForTestModes(win.location.search);
-  const hadTestModes = ((): boolean => {
-    try {
-      return local?.getItem(TEST_MODES_KEY) !== null && local !== null;
-    } catch {
-      return false;
-    }
-  })();
-  const testModes = asked || hadTestModes ? new (await import('./storage/test-modes-store.ts')).TestModesStore(local, report) : null;
-  if (asked) testModes?.offer();
-  /** The mode shown for a chosen one: digits for a test mode while test modes are off, the choice kept. */
-  const shownFor = (chosen: ModeChoice): ModeChoice => shownMode(chosen, testModes?.state.on ?? false);
-  /** Clear device data removes the switch whether or not its store was fetched. */
-  const testModesClearer = {
-    clear(): void {
-      if (testModes !== null) {
-        testModes.clear();
-        return;
-      }
-      try {
-        local?.removeItem(TEST_MODES_KEY);
-      } catch (error) {
-        report(error);
-      }
-    },
-  };
+  forgetTestModesSwitch(local, report);
+  const flagged = isFlaggedVisit(win.location.search);
+  if (flagged) {
+    const { TEST_MODE_MANIFESTS, TEST_MODE_SOURCES } = await import('./modes/test-modes.ts');
+    registerModes(TEST_MODE_MANIFESTS, TEST_MODE_SOURCES);
+  }
+  /** The mode shown for a chosen one: digits for a test mode on a visit without the flag, the choice kept. */
+  const shownFor = (chosen: ModeChoice): ModeChoice => shownMode(chosen, flagged);
   const settings = new SettingsController({
     doc,
     store: settingsStore,
@@ -151,7 +133,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       },
     },
     onError: report,
-    alsoClears: [noticeStore, testModesClearer],
+    alsoClears: [noticeStore],
   });
   setClockFormat(settings.current.clockFormat);
   const fontReady = settings.start();
@@ -203,8 +185,8 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   // The display mode is a setting; a restored session switches to it if another tab left it elsewhere.
   /** Settings' list of downloaded modes follows a mode's caching; set once the panel can exist. */
   let downloadsChanged = (): void => undefined;
-  // A test mode chosen while test modes are off (switched off in another tab, or cleared) shows digits; the choice
-  // stays in the settings for when testing ends.
+  // A test mode chosen shows digits on a visit without the flag; the choice stays in the settings for the next
+  // flagged visit.
   let registered: RegisteredMode = findMode(shownFor(settings.current.mode)) ?? fallbackMode();
   // Downloaded modes unused for 30 days go when the page loads, never on a timer (plan, Loading and performance).
   // Fetched when the page has loaded, so the first visit's download carries none of it.
@@ -674,7 +656,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     if (engine.state !== null) engine.switchMode(next.manifest.id);
     stage.show(next);
   };
-  /** The chosen mode as shown (digits for a test mode while test modes are off). */
+  /** The chosen mode as shown (digits for a test mode on a visit without the flag). */
   function chosenMode(): RegisteredMode {
     return findMode(shownFor(settings.current.mode)) ?? fallbackMode();
   }
@@ -715,21 +697,8 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       controller: settings,
       close: closeSettings,
       requestNotifications,
-      testModes: {
-        get offered() {
-          return testModes?.state.offered ?? false;
-        },
-        get on() {
-          return testModes?.state.on ?? false;
-        },
-        setOn: (on) => {
-          testModes?.setOn(on);
-          // Turned off while a test mode is chosen, digits shows (the choice kept); turned on, it shows again.
-          effects.mode(shownFor(settings.current.mode));
-          panel?.refreshModes();
-        },
-        shown: (chosen) => shownFor(chosen),
-      },
+      // A flagged visit's test-mode tiles and options, fetched with the panel; none on a visit without the flag.
+      testModes: flagged ? await import('./settings/test-modes.ts') : null,
     });
     if (!doc.body.contains(panel.element)) doc.body.append(panel.element);
     panel.open();

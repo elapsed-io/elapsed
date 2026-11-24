@@ -109,15 +109,12 @@ export const BRAND = {
       paused: 'paused for {time} · {name}',
       checkIn: 'check in · {time} · {name}',
     },
+    /** The standard modes' names; the test modes' are in copy/test-modes.ts, loaded only on a flagged visit. */
     modes: {
       digits: 'digits',
       ring: 'ring',
       timeline: 'timeline',
       analog: 'analog',
-      ocean: 'ocean depth',
-      height: 'height',
-      tree: 'tree',
-      interstellar: 'interstellar',
     },
     themes: {
       graphite: 'graphite',

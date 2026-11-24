@@ -10,7 +10,7 @@
 import { expect, test } from './test.ts';
 import { CONFIG } from '@stopwatch/core';
 import type { Page } from '@playwright/test';
-import { MINUTE, SECOND, T0, TEST_MODE_IDS, seedSettings, switchTestModesOn } from './helpers.ts';
+import { FLAGGED, MINUTE, SECOND, T0, TEST_MODE_IDS, seedSettings } from './helpers.ts';
 
 /** Counts timers and wake-ups, and lets the test hide and show the tab. Runs after the test clock is installed. */
 async function instrument(page: Page): Promise<void> {
@@ -137,14 +137,13 @@ test('memory and the page stay flat over two hours', async ({ page, browserName 
   expect(late.heap - early.heap).toBeLessThan(512 * 1024);
 });
 
-/** Opens the site in `mode` on the test's clock (a test mode with the test-modes switch on). */
+/** Opens the site in `mode` on the test's clock (a test mode on a flagged visit). */
 async function openIn(page: Page, mode: string): Promise<void> {
   await page.setViewportSize({ width: 720, height: 450 });
   // Check-ins as far apart as the setting allows (3 hours); the long run answers each one.
   await seedSettings(page, { mode, checkInInterval: CONFIG.session.checkInInterval.max });
-  if (TEST_MODE_IDS.includes(mode)) await switchTestModesOn(page);
   await page.clock.install({ time: T0 });
-  await page.goto('/');
+  await page.goto(TEST_MODE_IDS.includes(mode) ? FLAGGED : '/');
   await page.locator('html[data-ready]').waitFor({ state: 'attached' });
   await expect(page.locator('.screen')).toHaveAttribute('data-mode', mode);
 }

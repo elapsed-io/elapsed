@@ -19,6 +19,7 @@ export { HEIGHT_COPY } from './copy/height.ts';
 export { OCEAN_COPY } from './copy/ocean.ts';
 export { SETTINGS_COPY } from './copy/settings.ts';
 export { SPACE_COPY } from './copy/space.ts';
+export { TEST_MODES_COPY } from './copy/test-modes.ts';
 export { TREE_COPY } from './copy/tree.ts';
 export { COUNT_EVENTS, COUNT_PATH, countBody, isCountEvent, parseCountBody } from './counts.ts';
 export type { CountEvent } from './counts.ts';
@@ -77,6 +78,7 @@ export {
   MODE_CHOICES,
   FOCUS_HIDES,
   LEAVE_FULLSCREEN,
+  STANDARD_MODES,
   TEST_MODES,
   TREE_VIEWS,
   shownMode,

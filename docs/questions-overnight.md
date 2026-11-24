@@ -414,6 +414,11 @@ and the Oort cloud and Proxima Centauri (no action needed).
   fading in, one HYG sky everywhere; ocean depth's and height's captions throughout while in testing; "leave
   fullscreen" defaulting to never (settings schema 3); the credits page.
 
+- 2026-11-24, after plan version 13 and answer 38: round 2.12, test modes behind the flag only (decisions 404 to
+  407): the flag read from the address for the visit, no switch, nothing stored (the old record removed on load),
+  and nothing of the test modes downloaded or shown without it. `npm run check` passes (776 unit tests); the
+  reference run in Chromium, Firefox and WebKit: 1,031 passed, 100 skipped, 0 failed.
+
 ## Questions for the owner
 
 Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 and 9; their answers are built in

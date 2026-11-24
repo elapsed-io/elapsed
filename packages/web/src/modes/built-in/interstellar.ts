@@ -1,8 +1,8 @@
 /**
- * Interstellar, from its recipe (a test mode, behind the test-modes switch; plan-release-2, round 2.9): space
- * behind everything, one sky (every HYG star to magnitude 5; round 2.11), still while running and turning while paused,
- * the true-scale map on the camera (orbits, the Sun, the route and the bodies on it), comets while paused, the
- * distance line, and the journey replayed on the results. Its art is its slots' defaults: the bodies through the
+ * Interstellar, from its recipe (a test mode, offered only on a visit opened with the test flag; plan-release-2,
+ * rounds 2.9 and 2.12): space behind everything, one sky (every HYG star to magnitude 5; round 2.11), still while
+ * running and turning while paused, the true-scale map on the camera (orbits, the Sun, the route and the bodies on
+ * it), comets while paused, the distance line, and the journey replayed on the results. Its art is its slots' defaults: the bodies through the
  * asset registry, the landmark list built in, and the sky and the results card's star field drawn by the build as
  * images (build/sky.ts, round 2.10).
  */
