@@ -605,15 +605,23 @@ and easy to change; and 27, on which round 2.10 waits.
     frame draws −15°. Proposed: the frames and the plan win for the standard modes, the archive's
     additions come in with the rounds that draw them, and the reconciled recipes go back into the archive so
     `recipe-check.py` writes them. Confirm, or say which wins where.
+    **Answered (plan version 13):** for the standard modes the frames are the source of truth; where an archive
+    recipe differs from a frame, the frame wins and the corrected recipe is written back into the archive, then
+    checked again. Round 2.13 builds it.
 36. **Seconds "always" for people who never changed it (round 2.14).** The default moves from "blur away" to
     "always show". As with "leave fullscreen" (decision 397), a stored record still at the old default could
     read as the new one, while any other choice is kept. Proposed: the same rule. Or keep stored records as
     they are?
+    **Answered (plan version 13):** stored settings that were never changed move to the new defaults (seconds
+    "always", leave fullscreen "never"); a choice the person made is kept. Round 2.14.
 37. **The seconds tip's timing (round 2.14).** It is drawn on the idle screen, above the time, with "change"
     and dismiss; the plan says it shows once and only one notice shows at a time. The fullscreen tip also shows
     on the idle screen until dismissed. Proposed: the seconds tip first, on the first idle screen; the
     fullscreen tip on a later visit once the seconds tip is gone. "change" sets seconds to "blur away" and opens
     settings on it, highlighted. Or another order or moment (for instance after the first session)?
+    **Answered (plan version 13):** the fullscreen tip first, on the idle screen before the first session; the
+    seconds tip on the idle screen after the person's first completed session, and only if seconds are still
+    "always". A dismissed or acted-on tip never returns. Round 2.14.
 38. **What the standard modes' release contains, and whether it is the public launch.** Your in-scope list
     names the standard modes and the shared screens. The plan's Release 2 also lists the layout editor (held),
     picture-in-picture, the screen wake lock and the check-ins switch, and the Release 2 settings frames draw
@@ -621,6 +629,13 @@ and easy to change; and 27, on which round 2.10 waits.
     the layout editor and the proofs of concept come after the release. If this release is also the public
     launch, Release 1's launch list applies (privacy and terms served by the app, the header check against
     elapsed.io, secret scanning, the HSTS preload). Which do you want?
+    **Answered (owner, 2026-11-24):** Release 2 is the public launch on elapsed.io. Keep screen awake and the
+    check-ins switch ship in it (round 2.15); picture-in-picture moves to a later release, its code behind the
+    test flag and its row and corner button hidden. Release 1's launch list applies in full (round 2.16 and
+    `docs/release-readiness.md`); the final legal review of the privacy and terms pages and making the
+    repository public are the owner's tasks, and the source code link stays hidden until then.
 39. **The Release 2 display frame's "leave fullscreen".** It still shows "on end" chosen, while the plan and
     your round 2.11 answer make never the default; the tests apply your rule to the frame. Redraw the frame
     with never chosen, or leave it?
+    **Answered (canvas version 1795558050-f326):** the display frame now shows never chosen and no
+    picture-in-picture row.

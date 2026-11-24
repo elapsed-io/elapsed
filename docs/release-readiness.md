@@ -1,8 +1,9 @@
 # Release readiness: the standard modes
 
-Written 2026-11-24 for the owner's review, before any further building. Sources: `docs/plan.md` (version 12),
-the design canvas (version 1795511372-98fb, every frame read), the owner's message of 2026-11-24, and the code
-on `claude/release-2` at round 2.11 (commit `b396113`).
+Written 2026-11-24 for the owner's review, before any further building; updated the same day with the owner's
+answers (plan version 13: questions 35 to 39). Sources: `docs/plan.md` (version 13), the design canvas (version
+1795558050-f326, every frame read), the owner's messages of 2026-11-24, and the code on `claude/release-2`
+(round 2.11, commit `b396113`). Each round that lands updates this page.
 
 ## 1. What this release is
 
@@ -17,11 +18,10 @@ motion, the credits page, results replays that never stall, and the shared layou
 system, available only on a visit opened with `?test=modes` (or `?test=interstellar`), never downloaded
 otherwise; work on them goes only as far as it tests or improves the recipe system.
 
-**To settle (question 38):** the plan's Release 2 roadmap also lists the layout editor (held for its frames),
-picture-in-picture, the screen wake lock and the check-ins switch, and the Release 2 settings frames draw the
-last three. They are not in the owner's in-scope list. Section 5 orders them after the standard work and before
-the release review, so they ship only if the owner keeps them in this release. Whether this release is also the
-public launch decides whether Release 1's launch list applies (section 4).
+**Release 2 is elapsed's public launch on elapsed.io** (owner, answer 38). It also ships **keep screen awake**
+and **the check-ins switch** (round 2.15). **Picture-in-picture moves to a later release:** its code stays behind
+the test flag, its settings row and corner button hidden at launch (the Release 2 display frame no longer shows
+the row). The layout editor comes after the launch. **Release 1's launch list applies in full** (section 4).
 
 ## 2. The standard modes
 
@@ -68,14 +68,14 @@ what of that blocks the release. "Frame" names are the canvas titles.
 
 | Screen | Done | Left against the frames and the plan | Blocks the release |
 | --- | --- | --- | --- |
-| **Idle** | Built and matched (graphite and paper); the fullscreen tip above the time; the ambient idle for modes with an environment. | The seconds tip (frame "the seconds tip, once only"), with "only one notice shows at a time": when it shows and in which order with the fullscreen tip is not drawn (question 37). Its "change" must point to a choice (seconds: blur away), where the pill's "change" today turns on a switch. | The tip. |
-| **Running** | Built and matched: the blur-away at every moment of the running frame (an option now), focus view (the three focus frames, decisions 339 to 341). | Default seconds "always": the focus frames now show 01:24:37. | The default and the re-taken frames. |
+| **Idle** | Built and matched (graphite and paper); the fullscreen tip above the time; the ambient idle for modes with an environment. | The seconds tip (frame "the seconds tip, once only"), with "only one notice shows at a time": the fullscreen tip first, on the idle screen before the first session; the seconds tip on the idle screen after the first completed session, only while seconds are still "always"; a dismissed or acted-on tip never returns (plan version 13). Its "change" must point to a choice (seconds: blur away), where the pill's "change" today turns on a switch. | The tip. |
+| **Running** | Built and matched: the blur-away at every moment of the running frame (an option now), focus view (the three focus frames, decisions 339 to 341). | Default seconds "always" (stored settings never changed move to it; a choice the person made is kept): the focus frames now show 01:24:37. | The default and the re-taken frames. |
 | **Check-in** | Built and matched; never hides its controls; the layer order keeps every mode's art under it. | The frame shows 02:00:00 with seconds. | The re-taken frame. |
 | **Paused** | Built and matched, with "paused after a missed check-in"; the pause blur. | Both frames now show seconds; ring and timeline have paused frames of their own at the new sizes (section 2). | The re-taken frames. |
 | **Ending** | Built and matched; unchanged. | Nothing. | No. |
 | **Session maximum** | Built and matched; unchanged. | Nothing. | No. |
 | **Results** | Built and matched: digits and timeline, analog and ring, the paper theme; replays never stall and sweep evenly through pauses (decision 348). | Nothing against the frames. | No. |
-| **Settings** | Built and matched: every Release 1 and Release 2 frame as it was; search, resets, the settings file, custom CSS, safe mode; "leave fullscreen" defaulting to never (decision 397); the credits link. | Frames "settings open on display, now first" and "settings panel: slides in and out": display is the first category and the panel opens on it, display mode at the top; the panel slides 24 px in from the right while fading in over 200 ms and out over 160 ms (built: opens on timer, no slide). Frame "seconds: always (default), blur away, never": the options in that order. Frame "settings, advanced (release 2)": no test-modes switch. The Release 2 display frame: the analog tile redrawn, and on a flagged visit the line "test modes appear here only for a visit opened with ?test=modes." under the tiles. The Release 2 display frame still shows "leave fullscreen: on end" chosen, against the plan's default never; the tests apply the owner's rule (question 39). The Release 2 timer frame's check-ins switch and "keep screen awake", and the display frame's picture-in-picture row, are not built (question 38). | Display first, the motion, the seconds row, the advanced frame and the analog tile. |
+| **Settings** | Built and matched: every Release 1 and Release 2 frame as it was; search, resets, the settings file, custom CSS, safe mode; "leave fullscreen" defaulting to never (decision 397); the credits link. | Frames "settings open on display, now first" and "settings panel: slides in and out": display is the first category and the panel opens on it, display mode at the top; the panel slides 24 px in from the right while fading in over 200 ms and out over 160 ms (built: opens on timer, no slide). Frame "seconds: always (default), blur away, never": the options in that order. Frame "settings, advanced (release 2)": no test-modes switch. The Release 2 display frame: the analog tile redrawn, "leave fullscreen" with never chosen, no picture-in-picture row, and on a flagged visit the line "test modes appear here only for a visit opened with ?test=modes." under the tiles. The Release 2 timer frame's check-ins switch and "keep screen awake" are not built (round 2.15). | Display first, the motion, the seconds row, the advanced frame, the analog tile, the check-ins switch and keep screen awake. |
 | **Credits page** | Built (decision 398): every third-party work and its licence, under the site's security policy, reached from the footer. | Plan version 12: it follows the person's chosen theme and the site's typeface, laid out like the privacy and terms pages (built: the default theme, its own layout). | Yes. |
 
 ### Across every screen
@@ -84,37 +84,51 @@ what of that blocks the release. "Frame" names are the canvas titles.
 | --- | --- | --- | --- |
 | **Shared layout and layer order** | One layer order in tokens for every mode and screen; no mode may set a z-index; the shared time, gap and buttons in the time modes (decisions 388 to 392). | The figure modes join the shared slot at the shared sizes (section 2): plan version 12 answers question 32. | With section 2. |
 | **Test modes behind the flag only** | Ocean depth, height, the tree and interstellar are test modes behind a settings switch offered by `?test=modes` (decision 369). | The owner's item 2: no switch and nothing stored; a flagged visit (the address keeps the flag, so a reload stays flagged) adds the four tiles until the tab closes; a stored switch value is cleared on update; a stored test-mode choice shows digits without the flag and is kept; no test-mode code or test-only piece in a visit without the flag; tests for both. | Yes: the release must not carry the switch, or download or store anything for the proofs of concept. |
-| **The recipe archive** | `docs/recipes/` replaced with the owner's archive of 2026-11-24 (its checker passes: all eight recipes valid, 62 features). | The archive was written from an earlier copy: its standard recipes predate the analog redesign and carry ring's 52 px and timeline's 56 px time, where the frames and plan version 12 say 48; its schema adds fields the site does not draw yet and a keyword its validator lacks (`minProperties`). So the site still builds from its own copies (`packages/core/src/recipes/shipped/`, unchanged from round 2.11) until the two are reconciled, the frames winning for the standard modes (question 35). Then `recipe-check.py`'s validation, feature checks and safety tests become permanent tests. | The standard recipes must match the frames; the reconciliation and the permanent checks come with the sizes round. |
+| **The recipe archive** | `docs/recipes/` replaced with the owner's archive of 2026-11-24 (its checker passes: all eight recipes valid, 62 features). | The archive was written from an earlier copy: its standard recipes predate the analog redesign and carry ring's 52 px and timeline's 56 px time, where the frames and plan version 12 say 48; its schema adds fields the site does not draw yet and a keyword its validator lacks (`minProperties`). So the site still builds from its own copies (`packages/core/src/recipes/shipped/`, unchanged from round 2.11) until the two are reconciled: for the standard modes the frames win, and each corrected recipe is written back into the archive and checked again (plan version 13). Then `recipe-check.py`'s validation, feature checks and safety tests become permanent tests. | The standard recipes must match the frames; the reconciliation and the permanent checks come with the sizes round. |
 | **Hardening** | Release 1's passes (accessibility, performance, cross-browser, device checks) and every round's tests since. | The Release 2 pass over the standard modes and the new screens: WCAG 2.2 AA with axe-core, keyboard and screen readers, 44 px targets, reduced motion and low power; the budgets; the device checklist; the release review `docs/safety/release-2.md`; the owner's sign-off. | Yes. |
 
 ## 4. What else blocks a release
 
-- **The owner's open answers that touch the standard modes** (`docs/questions-overnight.md`): 13 (the analog
-  crown's dip on E), 14 (the dial red on the other themes), 15 (focus view in modes drawn round their time),
-  16 (a tap on hidden controls), 17 (fullscreen after a resume), 18 (the analog seconds hand at rest), 19 (how
-  brief the outline is), 20 (the focus frames' 13 px), 21 ("change" and the tip). Each is built one way and
-  works; an answer that changes one becomes a small fix in the round it touches. 35 to 39 are new.
-- **If this release is the public launch**, Release 1's launch list (plan, Release 1, round 8; `docs/known-
-  issues.md`): the privacy and terms pages served by the app at `/privacy` and `/terms` (today they live in
-  the soon page's project), the header check against elapsed.io, GitHub secret scanning and push protection,
-  and the HSTS preload submission once every subdomain serves HTTPS. The owner runs every deploy.
+### The launch list (plan version 13; Release 1, round 8)
+
+Release 2 is the public launch, so Release 1's launch list applies in full. Each item is in round 2.16's release
+review; the owner runs every step that touches Cloudflare or GitHub's settings.
+
+| Item | Who | Status |
+| --- | --- | --- |
+| Serve the privacy and terms pages from the app (`/privacy`, `/terms`), from the same sources as today's | Built in round 2.16 | Today they live in the soon page's project |
+| A final legal review of the privacy and terms pages | **Owner** | To be confirmed by the owner before the release review |
+| Check the security headers against elapsed.io (`tooling/check-deployed.ts`) | Prepared in 2.16; run by the owner after the switch | Checked today against the test build only |
+| HSTS preload, only once every subdomain serves HTTPS | Owner, after the check | Not submitted |
+| GitHub secret scanning and push protection | Owner (repository settings) | Off |
+| Replace the soon page with the app on elapsed.io | Owner (`docs/deploy.md`, updated in 2.16) | The soon page is live |
+| Take production out from behind Cloudflare Access, keeping the test build behind it | Owner (`docs/deploy.md`, updated in 2.16) | Everything is behind Access |
+| The source code link in the settings footer | Built in 2.16, kept hidden | Hidden until the owner confirms the repository is public |
+| Make the repository public | **Owner** | To be confirmed by the owner before the release review; the source code link shows only then (serving the GPL-3.0 JavaScript likely counts as distributing it) |
+
+### Answers that touch the standard modes
+
+- `docs/questions-overnight.md` 13 to 21 (the analog crown's dip on E, the dial red on the other themes, focus view
+  in modes drawn round their time, a tap on hidden controls, fullscreen after a resume, the analog seconds hand
+  at rest, how brief the outline is, the focus frames' 13 px, "change" and the tip): each is built one way and
+  works; an answer that changes one becomes a small fix in the round it touches.
 - **Nothing else known:** no failing test (the reference run on 2026-11-24, after the recipes moved: 1,028
   passed, 100 skipped, 0 failed in Chromium, Firefox and WebKit; `npm run check` passes), and every download
   within its ceiling.
 
 ## 5. The remaining work, in order
 
-Ordered to release the standard modes soonest: first the work with no open question, then the work that
-waits on an answer, then what the owner may defer, then the release review. Each round finishes completely
+Ordered to release the standard modes soonest (every question that held a round is answered by plan version
+13 and the owner's answer to question 38). Each round finishes completely
 (checks, the reference run in three browsers, its safety overview, decisions) before the next starts.
 
 | Round | Builds | Frames | Waits on |
 | --- | --- | --- | --- |
 | **2.12** Test modes behind the flag only | The owner's item 2 in full, with its tests; the advanced category without the switch. | "settings, advanced (release 2)"; the Release 2 display frame's flagged-visit line. | Nothing. |
-| **2.13** The standard sizes and the recipe archive | The 260 px dial for ring and analog, the 48 px time inside ring and timeline, the compact 360 px timeline, every main block in the shared slot 26 px above the buttons, the analog rescale and its tile; the shipped recipes reconciled with the archive (frames win for the standard modes), the validator taking the archive's schema, and `recipe-check.py`'s checks made permanent tests. | The three ring frames, the three timeline frames, the analog frame, the Release 2 display frame's analog tile. | Question 35 for the archive's additions; the sizes need no answer. |
-| **2.14** Seconds, settings and notices | Seconds default "always" with the settings migration, the once-only seconds tip with "change" and one notice at a time, settings opening on display (first) with display mode at the top, the panel's slide, the seconds options' order, the credits page in the chosen theme and the legal pages' layout; every shared timer frame re-taken with seconds. | "the seconds tip, once only", "settings panel: slides in and out", "settings open on display, now first", "seconds: always (default), blur away, never", the running, focus, check-in and paused frames. | Questions 36 and 37. |
-| **2.15** Check-ins switch, keep screen awake, picture-in-picture | As the old round 2.13 set out, if the owner keeps them in this release. | Release 2 settings: timer and display. | Question 38. |
-| **2.16** Hardening and the release review | The Release 2 passes over the standard modes and screens, `docs/safety/release-2.md`, and, if this is the public launch, Release 1's launch list prepared for the owner. | Every frame of the release. | The owner's sign-off. |
+| **2.13** The standard sizes and the recipe archive | The 260 px dial for ring and analog, the 48 px time inside ring and timeline, the compact 360 px timeline, every main block in the shared slot 26 px above the buttons, the analog rescale and its tile; the recipes reconciled (the frames win for the standard modes, and each corrected recipe is written back into the archive and checked again), the validator taking the archive's schema, and `recipe-check.py`'s checks made permanent tests. | The three ring frames, the three timeline frames, the analog frame, the Release 2 display frame's analog tile. | Nothing. |
+| **2.14** Seconds, settings and notices | Seconds default "always" (stored settings never changed move to it), the seconds tip on the idle screen after the first completed session while seconds are still "always" (the fullscreen tip before the first session; one notice at a time; a dismissed or acted-on tip never returns), settings opening on display (first) with display mode at the top, the panel's slide, the seconds options' order, the credits page in the chosen theme and the legal pages' layout; every shared timer frame re-taken with seconds. | "the seconds tip, once only", "settings panel: slides in and out", "settings open on display, now first", "seconds: always (default), blur away, never", the running, focus, check-in and paused frames. | Nothing. |
+| **2.15** Check-ins switch and keep screen awake | The two Release 2 timer controls; picture-in-picture's code behind the test flag, its row and button hidden at launch. | Release 2 settings: timer and display. | Nothing. |
+| **2.16** Hardening, the launch list and the release review | The Release 2 passes over the standard modes and screens; the privacy and terms pages served by the app; the launch list prepared for the owner (section 4); `docs/safety/release-2.md`. | Every frame of the release. | The owner's two tasks (legal review, the repository public) and sign-off. |
 
 **After the release, behind the flag** (no earlier, unless the owner says so):
 
@@ -124,7 +138,7 @@ waits on an answer, then what the owner may defer, then the release review. Each
   opacity, three depths of marine snow as half-resolution strips slid by CSS, no timers and no blend modes,
   removed on start with a 2 s crossfade into the running colours from #1F6485, still with reduced motion or
   low power; tests for zero repaints a frame, under 3 MB of GPU memory, and 4.5:1 at the glow's brightest.
-  "When the standard modes allow": after 2.16, or earlier if the owner prefers (question 38).
+  "When the standard modes allow": after the launch, unless the owner says otherwise.
 - **2.19 Height's falcon** (the five height frames): after the standard modes have shipped, as the proof of
   concept for the cinematic recipe pieces.
 - **Recipe pieces only when a recipe uses them**, each its own small download; no beam particles or drifting
