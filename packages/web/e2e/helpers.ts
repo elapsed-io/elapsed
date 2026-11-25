@@ -44,13 +44,17 @@ export const FLAGGED = '/?test=modes';
  * Opens the site with a controllable clock (Date, performance.now and timers),
  * then holds the clock at T_READY so every later moment is exact. `mode`
  * chooses the display mode through stored settings; a test mode's visit is
- * flagged (or any visit, with `flagged`).
+ * flagged (or any visit, with `flagged`). The browser's picture-in-picture
+ * window is taken away unless `pip` asks for it.
  */
 export async function openApp(
   page: Page,
-  options: { mode?: string; width?: number; height?: number; settings?: Readonly<Record<string, unknown>>; flagged?: boolean } = {},
+  options: { mode?: string; width?: number; height?: number; settings?: Readonly<Record<string, unknown>>; flagged?: boolean; pip?: boolean } = {},
 ): Promise<void> {
   await page.setViewportSize({ width: options.width ?? 720, height: options.height ?? 450 });
+  // Picture-in-picture is behind the test flag until its release, and the frames draw the launch's panel without it:
+  // unless a test asks for it, the browser's window for a page is taken away (Chromium offers one).
+  if (options.pip !== true) await withoutPip(page);
   if (options.mode !== undefined || options.settings !== undefined) await seedSettings(page, { ...options.settings, ...(options.mode === undefined ? {} : { mode: options.mode }) });
   await page.clock.install({ time: T0 });
   // A test mode shows only on a visit opened with the test flag (src/test-flag.ts).
@@ -60,6 +64,13 @@ export async function openApp(
   // The page's own markup shows before the script runs: the site answers input once it says it is ready.
   await page.locator('html[data-ready]').waitFor({ state: 'attached' });
   await page.clock.pauseAt(T_READY);
+}
+
+/** Takes the Document Picture-in-Picture API away, as a browser without it (Firefox, Safari). */
+export async function withoutPip(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'documentPictureInPicture', { value: undefined, configurable: true });
+  });
 }
 
 /**

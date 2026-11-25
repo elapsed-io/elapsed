@@ -28,6 +28,31 @@ describe('check-ins', () => {
   });
 });
 
+describe('with check-ins switched off (Release 2)', () => {
+  const off = { ...rules, checkIns: false };
+
+  it('none falls due, at any interval', () => {
+    const state = fresh();
+    expect(checkInDueAt(state, off)).toBeNull();
+    expect(pendingCheckIn(state, off, T0 + 10 * HOUR)).toBeNull();
+  });
+
+  it('a running session runs on to the session maximum, never paused for a missed check-in', () => {
+    const state = fresh();
+    expect(nextTrigger(state, off)).toEqual({ kind: 'max-duration', decidedAt: T0 + 16 * HOUR, effectiveAt: T0 + 16 * HOUR });
+    expect(advance(state, off, T0 + 15 * HOUR)).toEqual([]);
+    const [outcome] = advance(state, off, T0 + 20 * HOUR);
+    expect(outcome).toMatchObject({ kind: 'ended', reason: 'max_duration', at: T0 + 16 * HOUR });
+  });
+
+  it('the pause limit still ends a long pause', () => {
+    let state = fresh();
+    state = { ...state, session: pauseSession(state.session, T0 + HOUR), presenceAt: T0 + HOUR };
+    const [outcome] = advance(state, off, T0 + HOUR + 31 * MINUTE);
+    expect(outcome).toMatchObject({ kind: 'ended', reason: 'pause_timeout', at: T0 + HOUR });
+  });
+});
+
 describe('rules in order', () => {
   it('pause a session whose check-in goes unanswered for an hour, backdated to the check-in', () => {
     const [outcome] = advance(fresh(), rules, T0 + 3 * HOUR);
@@ -70,8 +95,10 @@ describe('rules in order', () => {
   });
 
   it('keep thresholds inside the plan ranges', () => {
-    expect(normaliseRules({ checkInInterval: MINUTE, pauseLimit: 5 * HOUR })).toEqual({ checkInInterval: 30 * MINUTE, pauseLimit: 60 * MINUTE });
-    expect(normaliseRules({ checkInInterval: Number.NaN, pauseLimit: 7 * MINUTE })).toEqual({ checkInInterval: 2 * HOUR, pauseLimit: 7 * MINUTE });
+    expect(normaliseRules({ checkIns: true, checkInInterval: MINUTE, pauseLimit: 5 * HOUR })).toEqual({ checkIns: true, checkInInterval: 30 * MINUTE, pauseLimit: 60 * MINUTE });
+    expect(normaliseRules({ checkIns: false, checkInInterval: Number.NaN, pauseLimit: 7 * MINUTE })).toEqual({ checkIns: false, checkInInterval: 2 * HOUR, pauseLimit: 7 * MINUTE });
+    // Anything but false leaves check-ins on (the default).
+    expect(normaliseRules({ checkIns: 'no', checkInInterval: HOUR, pauseLimit: 7 * MINUTE } as unknown as typeof rules).checkIns).toBe(true);
   });
 });
 

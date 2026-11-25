@@ -244,7 +244,7 @@ export class SettingsController {
     if (serializeSettings(previous) === serializeSettings(next)) return;
     this.#settings = next;
     if (next.seconds !== previous.seconds) this.#effects.seconds(next.seconds);
-    if (next.checkInInterval !== previous.checkInInterval || next.pauseLimit !== previous.pauseLimit) this.#effects.rules(rulesFrom(next));
+    if (next.checkIns !== previous.checkIns || next.checkInInterval !== previous.checkInInterval || next.pauseLimit !== previous.pauseLimit) this.#effects.rules(rulesFrom(next));
     if (next.mode !== previous.mode) this.#effects.mode(next.mode);
     if (next.clockFormat !== previous.clockFormat) this.#effects.clockFormat(next.clockFormat);
     if (next.lowPower !== previous.lowPower) this.#effects.lowPower(next.lowPower);

@@ -118,8 +118,12 @@ export interface Settings {
   readonly schema: typeof SETTINGS_SCHEMA;
   // Timer
   readonly seconds: SecondsDisplay;
+  /** Whether check-ins fall due (Release 2; on by default). */
+  readonly checkIns: boolean;
   readonly checkInInterval: number;
   readonly pauseLimit: number;
+  /** A screen wake lock while the site is the active tab (Release 2; on by default). */
+  readonly keepAwake: boolean;
   // Display
   readonly mode: ModeChoice;
   /** Mode option (ocean depth): sea life drifts in while a session is paused. */
@@ -136,6 +140,11 @@ export interface Settings {
   readonly leaveFullscreen: LeaveFullscreen;
   /** Mode option (tree): the side view or the isometric one. */
   readonly treeView: TreeView;
+  /**
+   * Picture-in-picture: a corner button that opens a floating timer. Moved to a later release (owner, answer 38):
+   * declared so a choice made on a visit with the test flag is kept, offered only there.
+   */
+  readonly pictureInPicture: boolean;
   // Appearance
   readonly theme: ThemeId;
   /** The theme's colours when the user has changed them; null means the preset's own. */
@@ -164,8 +173,8 @@ export type SettingKey = Exclude<keyof Settings, 'schema'>;
 export type SettingTarget =
   | { readonly css: `--${string}` }
   | { readonly theme: 'preset' | 'colors' }
-  | { readonly engine: 'secondsDisplay' | 'checkInInterval' | 'pauseLimit' }
-  | { readonly site: 'mode' | 'modeOptions' | 'focusView' | 'clockFormat' | 'lowPower' | 'notifications' | 'usageCounts' | 'crashReports' };
+  | { readonly engine: 'secondsDisplay' | 'checkIns' | 'checkInInterval' | 'pauseLimit' }
+  | { readonly site: 'mode' | 'modeOptions' | 'focusView' | 'keepAwake' | 'pictureInPicture' | 'clockFormat' | 'lowPower' | 'notifications' | 'usageCounts' | 'crashReports' };
 
 interface Declared<K extends SettingKey> {
   readonly key: K;
@@ -196,8 +205,10 @@ export interface ColorsSetting<K extends SettingKey> extends Declared<K> {
 
 export type SettingDeclaration =
   | ChoiceSetting<'seconds'>
+  | SwitchSetting<'checkIns'>
   | RangeSetting<'checkInInterval'>
   | RangeSetting<'pauseLimit'>
+  | SwitchSetting<'keepAwake'>
   | ChoiceSetting<'mode'>
   | SwitchSetting<'oceanLife'>
   | SwitchSetting<'resultsLandmarks'>
@@ -206,6 +217,7 @@ export type SettingDeclaration =
   | SwitchSetting<'fullscreenOnStart'>
   | ChoiceSetting<'leaveFullscreen'>
   | ChoiceSetting<'treeView'>
+  | SwitchSetting<'pictureInPicture'>
   | ChoiceSetting<'theme'>
   | ColorsSetting<'colors'>
   | ChoiceSetting<'font'>
@@ -224,6 +236,7 @@ const { timeSizePercent } = CONFIG.settings;
 /** Every setting, in the order the panel shows them. */
 export const SETTINGS: readonly SettingDeclaration[] = [
   { key: 'seconds', kind: 'choice', category: 'timer', options: SECONDS_DISPLAYS, default: 'always', target: { engine: 'secondsDisplay' } },
+  { key: 'checkIns', kind: 'switch', category: 'timer', default: true, target: { engine: 'checkIns' } },
   {
     key: 'checkInInterval',
     kind: 'range',
@@ -244,6 +257,7 @@ export const SETTINGS: readonly SettingDeclaration[] = [
     default: pauseLimit.default,
     target: { engine: 'pauseLimit' },
   },
+  { key: 'keepAwake', kind: 'switch', category: 'timer', default: true, target: { site: 'keepAwake' } },
   { key: 'mode', kind: 'choice', category: 'display', options: MODE_CHOICES, default: 'digits', target: { site: 'mode' } },
   { key: 'oceanLife', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
   { key: 'resultsLandmarks', kind: 'switch', category: 'display', default: true, target: { site: 'modeOptions' } },
@@ -252,6 +266,7 @@ export const SETTINGS: readonly SettingDeclaration[] = [
   { key: 'fullscreenOnStart', kind: 'switch', category: 'display', default: false, target: { site: 'focusView' } },
   { key: 'leaveFullscreen', kind: 'choice', category: 'display', options: LEAVE_FULLSCREEN, default: 'never', target: { site: 'focusView' } },
   { key: 'treeView', kind: 'choice', category: 'display', options: TREE_VIEWS, default: 'side', target: { site: 'modeOptions' } },
+  { key: 'pictureInPicture', kind: 'switch', category: 'display', default: false, target: { site: 'pictureInPicture' } },
   { key: 'theme', kind: 'choice', category: 'appearance', options: THEME_IDS, default: 'graphite', target: { theme: 'preset' } },
   { key: 'colors', kind: 'colors', category: 'appearance', default: null, target: { theme: 'colors' } },
   { key: 'font', kind: 'choice', category: 'appearance', options: FONT_CHOICES, default: 'archivo', target: { css: '--font-family' } },
@@ -294,7 +309,7 @@ export function resetCategory(settings: Settings, category: SettingsCategory): S
 
 /** The engine's rules from the settings. */
 export function rulesFrom(settings: Settings): RuleSettings {
-  return { checkInInterval: settings.checkInInterval, pauseLimit: settings.pauseLimit };
+  return { checkIns: settings.checkIns, checkInInterval: settings.checkInInterval, pauseLimit: settings.pauseLimit };
 }
 
 const HEX = /^#[0-9a-f]{6}$/;

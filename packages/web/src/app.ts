@@ -43,6 +43,7 @@ import { titleFor } from './shell/title.ts';
 import { FinishedStore, browserSessionStorage } from './storage/finished-store.ts';
 import { LocalCustomCssStore, watchCustomCss } from './storage/custom-css-store.ts';
 import { LocalNoticeStore } from './storage/notice-store.ts';
+import { ScreenWake, browserWakeLock } from './shell/wake-lock.ts';
 import { lazyMediaStore } from './storage/lazy-media.ts';
 import { hasModeCaches } from './storage/offline-cache.ts';
 import type * as ModeCache from './storage/mode-cache.ts';
@@ -100,6 +101,10 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     const { TEST_MODE_MANIFESTS, TEST_MODE_SOURCES } = await import('./modes/test-modes.ts');
     registerModes(TEST_MODE_MANIFESTS, TEST_MODE_SOURCES);
   }
+  // Picture-in-picture, moved to a later release (owner, answer 38): its code only on a flagged visit, and only where
+  // the browser offers a window for a page (pip/pip.ts). Elsewhere neither its row nor its button exists.
+  const offersPip = (win as unknown as { readonly documentPictureInPicture?: unknown }).documentPictureInPicture !== undefined;
+  const pipModule = flagged && offersPip ? await import('./pip/pip.ts') : null;
   /** The mode shown for a chosen one: digits for a test mode on a visit without the flag, the choice kept. */
   const shownFor = (chosen: ModeChoice): ModeChoice => shownMode(chosen, flagged);
   const settings = new SettingsController({
@@ -518,6 +523,34 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     },
   });
 
+  const pipApi = pipModule?.browserPip(win) ?? null;
+  const pip =
+    pipModule === null || pipApi === null
+      ? null
+      : new pipModule.PictureInPicture(doc, pipApi, {
+          corner,
+          settingsButton,
+          view: () => engine.view,
+          onView: (listener) =>
+            bus.on('view.changed', ({ view }) => {
+              listener(view);
+            }),
+          primary: toggle,
+          end: beginEnding,
+          onError: report,
+        });
+  pip?.set(settings.current.pictureInPicture);
+  settings.subscribe((next) => {
+    pip?.set(next.pictureInPicture);
+  });
+
+  // Keep screen awake (Release 2): a screen wake lock while the setting is on and the tab is seen.
+  const screenWake = new ScreenWake(doc, browserWakeLock(win), report);
+  screenWake.set(settings.current.keepAwake);
+  settings.subscribe((next) => {
+    screenWake.set(next.keepAwake);
+  });
+
   // An ended session shows the idle screen behind the results.
   const shown = (view: TimerView): TimerView => (view.status === 'ended' ? computeView(null, view.at, context.seconds) : view);
   // In a hidden tab nothing is drawn (plan, Loading and performance > Rendering): only the tab title, which is
@@ -708,6 +741,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
       requestNotifications,
       // A flagged visit's test-mode tiles and options, fetched with the panel; none on a visit without the flag.
       testModes: flagged ? await import('./settings/test-modes.ts') : null,
+      pictureInPicture: pip === null || pipModule === null ? null : { label: pipModule.PIP_COPY.label, help: pipModule.PIP_COPY.help },
     });
     if (!doc.body.contains(panel.element)) doc.body.append(panel.element);
     panel.open();
@@ -826,8 +860,9 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   doc.addEventListener('visibilitychange', () => {
     const hidden = doc.visibilityState === 'hidden';
     engine.setBackground(hidden);
-    // The focus view waits only while the tab is seen.
+    // The focus view waits only while the tab is seen; the wake lock is let go while hidden and asked for again.
     focusView.update();
+    screenWake.update();
     if (hidden) return;
     refresh();
     if (behind) render(engine.view);

@@ -51,8 +51,11 @@ interface ManifestChunk {
   readonly assets?: readonly string[];
 }
 
-/** The modules only a flagged visit loads: the test modes' registration and their part of the settings panel. */
-const FLAGGED_SOURCES = ['src/modes/test-modes.ts', 'src/settings/test-modes.ts'];
+/**
+ * The modules only a flagged visit loads: the test modes' registration and their part of the settings panel, and
+ * picture-in-picture (round 2.15: behind the flag until its release).
+ */
+const FLAGGED_SOURCES = ['src/modes/test-modes.ts', 'src/settings/test-modes.ts', 'src/pip/pip.ts'];
 
 /**
  * Every file of the build that only a flagged visit can fetch: what the flagged-only modules load, now or later (the
@@ -109,7 +112,8 @@ async function visitEverything(page: Page): Promise<void> {
 test('a visit without the flag shows only the four standard modes, downloads no test-mode file and stores nothing about the flag', async ({ page }) => {
   const fetched = new Set<string>();
   page.on('request', (request) => fetched.add(new URL(request.url()).pathname));
-  await openApp(page, { width: 1280, height: 800 });
+  // In a browser that offers picture-in-picture's window, so its code too is shown never to load without the flag.
+  await openApp(page, { width: 1280, height: 800, pip: true });
   await expectStandardTilesOnly(page);
   await openCategory(page, 'advanced');
   await expect(page.getByRole('switch', { name: 'test modes' })).toHaveCount(0);

@@ -180,7 +180,19 @@ describe('settings schema', () => {
 
   it('gives the engine its rules', () => {
     const settings = withSetting(withSetting(defaultSettings(), 'checkInInterval', 45 * MINUTE), 'pauseLimit', 5 * MINUTE);
-    expect(rulesFrom(settings)).toEqual({ checkInInterval: 45 * MINUTE, pauseLimit: 5 * MINUTE });
+    expect(rulesFrom(settings)).toEqual({ checkIns: true, checkInInterval: 45 * MINUTE, pauseLimit: 5 * MINUTE });
+    expect(rulesFrom(withSetting(settings, 'checkIns', false)).checkIns).toBe(false);
+  });
+
+  it('declares the Release 2 timer switches, on by default, in the frame\'s order, and picture-in-picture off', () => {
+    expect(declarationOf('checkIns')).toMatchObject({ kind: 'switch', category: 'timer', default: true });
+    expect(declarationOf('keepAwake')).toMatchObject({ kind: 'switch', category: 'timer', default: true });
+    expect(declarationOf('pictureInPicture')).toMatchObject({ kind: 'switch', category: 'display', default: false });
+    expect(SETTINGS.filter((setting) => setting.category === 'timer').map((setting) => setting.key)).toEqual(['seconds', 'checkIns', 'checkInInterval', 'pauseLimit', 'keepAwake']);
+    // Older settings, without the switches, read them at their defaults; a stored choice is kept.
+    expect(migrateSettings({ schema: 3, seconds: 'never' })).toMatchObject({ checkIns: true, keepAwake: true, pictureInPicture: false });
+    expect(migrateSettings({ schema: 4, checkIns: false, keepAwake: false, pictureInPicture: true })).toMatchObject({ checkIns: false, keepAwake: false, pictureInPicture: true });
+    expect(migrateSettings({ schema: 4, checkIns: 'off' }).checkIns).toBe(true);
   });
 
   it.each([

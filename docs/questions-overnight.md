@@ -442,6 +442,14 @@ and the Oort cloud and Proxima Centauri (no action needed).
   hidden-tab test, which had failed once in round 2.13, failed 9 times in 12 here: it depended on real time
   against the simulated clock, now fixed (decision 420).
 
+- Round 2.15, the check-ins switch and keep screen awake; picture-in-picture behind the flag (decisions 421 to
+  425): check-ins can be switched off (none falls due, the session maximum and the pause limit still apply; back on,
+  they count from that moment), with the plan's warning under the switch; keep screen awake holds a wake lock while
+  the tab is seen, allowed by the unchanged Permissions-Policy; picture-in-picture only on a flagged visit in a
+  browser that offers the window, its row and button hidden at launch and its code never fetched otherwise; the
+  Release 2 timer frame matched. `npm run check` passes (913 unit tests). The reference run in Chromium, Firefox and
+  WebKit: 1,159 passed, 104 skipped, 0 failed. Question 40 is new.
+
 ## Questions for the owner
 
 Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 and 9; their answers are built in
@@ -667,3 +675,8 @@ and easy to change; and 27, on which round 2.10 waits.
     with never chosen, or leave it?
     **Answered (canvas version 1795558050-f326):** the display frame now shows never chosen and no
     picture-in-picture row.
+40. **Keep screen awake while nothing runs (round 2.15; decision 423).** The plan says "only while the site is the
+    active tab", so the screen is kept awake whenever the setting is on and the tab is seen: on the idle screen, the
+    paused screen and the results too. Many timers keep the screen awake only while a session runs (or runs or is
+    paused), which saves battery when the page is left open with nothing to watch. Keep it as built, or hold the
+    lock only while a session runs (or while one is open, running or paused)?

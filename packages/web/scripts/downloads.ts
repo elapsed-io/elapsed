@@ -25,6 +25,7 @@ export const PARTS: Readonly<Record<string, string>> = {
   'image store': 'src/storage/media-store.ts',
   'service worker': 'src/sw/sw.ts',
   'credits page theme': 'src/credits/theme.ts',
+  'picture-in-picture (flagged visits)': 'src/pip/pip.ts',
 };
 
 export interface Download {

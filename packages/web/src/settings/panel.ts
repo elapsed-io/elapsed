@@ -74,6 +74,11 @@ export interface PanelHost {
    * which shows only the standard modes and never fetches that module.
    */
   readonly testModes: typeof TestModesModule | null;
+  /**
+   * Picture-in-picture's row (moved to a later release, owner answer 38): its words on a flagged visit where the
+   * browser offers a window for a page (pip/pip.ts); null everywhere else, where the row does not exist.
+   */
+  readonly pictureInPicture: { readonly label: string; readonly help: string } | null;
 }
 
 interface Item {
@@ -494,9 +499,18 @@ export class SettingsPanel {
   #items(id: CategoryId): Item[] {
     switch (id) {
       case 'timer':
-        return [this.#seconds(), this.#rangeItem('checkInInterval', copy.checkIn, formatHoursMinutes), this.#rangeItem('pauseLimit', copy.pauseLimit, formatMinutes), this.#shortcuts()];
+        // The Release 2 timer frame's order: the check-ins switch with its warning above the interval, which has no
+        // help line of its own any more; keep screen awake after the pause limit.
+        return [
+          this.#seconds(),
+          this.#switchItem('checkIns', copy.checkIns),
+          this.#rangeItem('checkInInterval', { label: copy.checkIn.label, help: null }, formatHoursMinutes),
+          this.#rangeItem('pauseLimit', copy.pauseLimit, formatMinutes),
+          this.#switchItem('keepAwake', { label: copy.keepAwake.label, help: copy.keepAwake.help.replace('{name}', BRAND.name) }),
+          this.#shortcuts(),
+        ];
       case 'display':
-        return [this.#modes(), ...this.#modeOptions(), this.#focusView(), this.#downloads()];
+        return [this.#modes(), ...this.#modeOptions(), ...this.#pictureInPicture(), this.#focusView(), this.#downloads()];
       case 'appearance':
         return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat(), this.#animationSpeed(), this.#lowPower()];
       case 'notifications':
@@ -527,18 +541,38 @@ export class SettingsPanel {
     };
   }
 
-  #rangeItem(key: 'checkInInterval' | 'pauseLimit', text: { readonly label: string; readonly help: string }, format: (value: number) => string): Item {
+  #rangeItem(key: 'checkInInterval' | 'pauseLimit', text: { readonly label: string; readonly help: string | null }, format: (value: number) => string): Item {
     const declaration = declarationOf(key);
     const id = uniqueId(`settings-${key}`);
-    const helpId = uniqueId('settings-help');
-    const control = slider(this.#doc, { id, min: declaration.min, max: declaration.max, step: declaration.step, format, describedBy: helpId }, (value) => {
+    const helpId = text.help === null ? undefined : uniqueId('settings-help');
+    const control = slider(this.#doc, { id, min: declaration.min, max: declaration.max, step: declaration.step, format, ...(helpId === undefined ? {} : { describedBy: helpId }) }, (value) => {
       this.#set(key, value);
     });
     this.#updates.push((settings) => {
       control.update(settings[key]);
     });
     const element = settingRow(this.#doc, label(this.#doc, text.label, id), control.element, text.help);
-    element.querySelector('.setting__help')?.setAttribute('id', helpId);
+    if (helpId !== undefined) element.querySelector('.setting__help')?.setAttribute('id', helpId);
+    return { element, search: searchText(text.label, ...(text.help === null ? [] : [text.help])) };
+  }
+
+  /** A timer switch with its line under it (the Release 2 timer frame): check-ins, keep screen awake. */
+  #switchItem(key: 'checkIns' | 'keepAwake', text: { readonly label: string; readonly help: string }): Item {
+    const doc = this.#doc;
+    const control = toggle(doc, text.label, (on) => {
+      this.#set(key, on);
+    });
+    this.#updates.push((settings) => {
+      control.update(settings[key]);
+    });
+    const element = settingRow(doc, html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [text.label]), control.element, text.help);
+    element.dataset['setting'] = key;
+    const help = element.querySelector('.setting__help');
+    if (help !== null) {
+      const helpId = uniqueId('settings-help');
+      help.setAttribute('id', helpId);
+      control.element.setAttribute('aria-describedby', helpId);
+    }
     return { element, search: searchText(text.label, text.help) };
   }
 
@@ -587,6 +621,22 @@ export class SettingsPanel {
       },
     });
     return [{ element: boxes.element, search: searchText(...boxes.search) }];
+  }
+
+  /** Picture-in-picture's switch, after the mode options as the plan's catalog lists it; only where the host offers it. */
+  #pictureInPicture(): Item[] {
+    const text = this.#host.pictureInPicture;
+    if (text === null) return [];
+    const doc = this.#doc;
+    const control = toggle(doc, text.label, (on) => {
+      this.#set('pictureInPicture', on);
+    });
+    this.#updates.push((settings) => {
+      control.update(settings.pictureInPicture);
+    });
+    const element = settingRow(doc, html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [text.label]), control.element, text.help);
+    element.dataset['setting'] = 'pictureInPicture';
+    return [{ element, search: searchText(text.label, text.help) }];
   }
 
   /**

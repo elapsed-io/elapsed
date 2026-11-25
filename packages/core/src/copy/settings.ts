@@ -29,8 +29,13 @@ export const SETTINGS_COPY = {
     advanced: { name: 'advanced', reset: null },
   },
   seconds: { label: 'seconds', options: { 'blur-away': 'blur away', always: 'always', never: 'never' } },
+  /** The check-ins switch (Release 2) and its warning, shown under it as the Release 2 timer frame draws it. */
+  checkIns: { label: 'check-ins', help: 'sessions without check-ins count towards your history, but won’t count towards competitions' },
+  /** Since the Release 2 timer frame the interval has no help line of its own: the switch's warning is above it. */
   checkIn: { label: 'check-in every', help: 'a quiet prompt to confirm you’re still here' },
   pauseLimit: { label: 'pause limit', help: 'a longer pause ends the session' },
+  /** Keep screen awake (Release 2): a screen wake lock while the site is the active tab. */
+  keepAwake: { label: 'keep screen awake', help: 'only while {name} is the active tab' },
   shortcuts: { label: 'shortcuts', items: ['space · start or pause', 'e · end', ', · settings'] },
   mode: { label: 'display mode' },
   focusView: {

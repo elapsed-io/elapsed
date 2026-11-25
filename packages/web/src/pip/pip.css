@@ -1,0 +1,20 @@
+/*
+ * Picture-in-picture's corner button (flagged visits only; pip.ts): the corner icons' size and colour, and its own
+ * invisible 44 px tap area, grown away from settings (left, up and down). Settings, now between two controls, grows
+ * its area to the right instead, over the account icon, which is not a control, so no two areas overlap.
+ */
+@layer base {
+  .icon-button--pip::before {
+    content: "";
+    position: absolute;
+    top: calc((var(--icon-box) - var(--tap-target)) / 2);
+    bottom: calc((var(--icon-box) - var(--tap-target)) / 2);
+    left: calc(var(--icon-box) - var(--tap-target));
+    right: 0;
+  }
+
+  .corner:has(.icon-button--pip) .icon-button--settings::before {
+    left: 0;
+    right: calc(var(--icon-box) - var(--tap-target));
+  }
+}
