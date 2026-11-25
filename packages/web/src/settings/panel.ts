@@ -329,8 +329,8 @@ export class SettingsPanel {
       gone();
       return;
     }
-    // Closing: the corner icons are back at once (focus returns to the settings button), while the timer keeps its
-    // place beside the panel until the panel has gone.
+    // Closing: the timer keeps its place beside the panel and the corner icons stay out of sight until the panel has
+    // gone; then they fade in where they are (panel.css). Focus returns to the settings button meanwhile.
     root.dataset['settings'] = 'closing';
     for (const animation of this.element.getAnimations()) animation.cancel();
     const closing = this.element.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: `translateX(${String(motion.slide)}px)`, opacity: 0 }], {

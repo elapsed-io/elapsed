@@ -1,6 +1,7 @@
 /*
- * The dial (dial.ts), drawn as the redesigned "analog" frame: the dial is an SVG in the frame's own units (a
- * 300 × 296 drawing, one unit a reference pixel at a radius of 130); each hand and the pin are HTML over it, each
+ * The dial (dial.ts), drawn as the redesigned "analog" frame: the dial is an SVG in the frame's own units (its
+ * block the 260 × 260 around the dial, one unit a reference pixel at a radius of 130, the crown overhanging the
+ * block above, so nothing clips it); each hand and the pin are HTML over it, each
  * a drawing of the whole dial that CSS turns about the point it is pinned at, so the compositor can turn them.
  * Everything scales with the window like the time.
  */
@@ -23,6 +24,7 @@
     inset: 0;
     width: 100%;
     height: 100%;
+    overflow: visible;
   }
 
   /* The polished case and the crown: the frame's gradients, from the pause button's grey to the track. */
@@ -98,6 +100,10 @@
     inset: 0;
     width: 100%;
     height: 100%;
+  }
+
+  .analog__hand-drawing {
+    overflow: visible;
   }
 
   .analog__hand-line {

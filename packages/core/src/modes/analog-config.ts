@@ -16,13 +16,13 @@ export const ANALOG_CONFIG = {
   /** The hours hand turns once in this long. */
   hoursRevolution: 12 * HOUR,
   /**
-   * Geometry from the "analog: the shared 260 px dial" frame (canvas version 1795558050-f326): the redesigned
-   * stopwatch on the shared dial (plan, Design system), a 300 × 296 drawing whose case is 260 px across, the
-   * buttons the shared 26 px below it. In the drawing's own units, one a reference pixel at the case's radius of
-   * 130; everything below is in those units.
+   * Geometry from the "analog" frame (canvas version 1795591127-3d31): the redesigned stopwatch on the shared dial
+   * (plan, Design system). Its block is the 260 px square around the dial, the frame's view box (20, 32, 260, 260)
+   * of a drawing whose units go on from round 2.8's 300 × 296 sheet; the crown overhangs the block above, and the
+   * buttons are the shared 26 px below it, so the dial's centre is where the ring's is. In the drawing's own units,
+   * one a reference pixel at the case's radius of 130; everything below is in those units.
    */
-  widthPx: 300,
-  heightPx: 296,
+  box: { x: 20, y: 32, width: 260, height: 260 },
   centre: { x: 150, y: 162 },
   /** The polished case, its hairline rim, and the face. */
   caseRadius: 130,

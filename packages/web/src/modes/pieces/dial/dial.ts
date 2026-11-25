@@ -2,7 +2,8 @@
  * The dial piece (the analog stopwatch's recipe; plan, Design system > Display
  * modes > Analog stopwatch; the redesigned "analog" frame).
  *
- * The dial is the frame's own drawing, an SVG of 300 × 296 units (one a reference pixel at a radius of 130),
+ * The dial is the frame's own drawing, an SVG whose block is the 260 × 260 units around the dial (one a reference
+ * pixel at a radius of 130; the crown overhangs it above, round 2.13),
  * drawn once: a polished case with a ridged crown at 12 that dips whenever end is pressed, an outer track of
  * ticks with its numbers turned to follow the edge, slim baton indices that stop short of (or leave out) any
  * small dial in their way, and the small dials. Each hand and the centre pin are HTML on top of it, each a
@@ -31,7 +32,9 @@ const MINUTE_MS = 60_000;
 /** The dial's centre, in the drawing's own units. */
 const CENTRE = ANALOG.centre;
 const FRAME_RADIUS = ANALOG.caseRadius;
-const VIEW_BOX = `0 0 ${String(ANALOG.widthPx)} ${String(ANALOG.heightPx)}`;
+/** The block: the 260 px square around the dial (the frame's view box); the crown overhangs it above. */
+const BOX = ANALOG.box;
+const VIEW_BOX = `${String(BOX.x)} ${String(BOX.y)} ${String(BOX.width)} ${String(BOX.height)}`;
 const SVG_HIDDEN = { 'aria-hidden': 'true', focusable: 'false' } as const;
 
 /** Each dial's gradients need ids of their own in the page. */
@@ -257,8 +260,9 @@ export function dialPiece({ doc, layer, recipe, context }: PieceSetup<DialLayer>
         svg(doc, 'line', { class: 'analog__hand-line', 'stroke-linecap': 'round', x1: about.x, y1: about.y + tail, x2: about.x, y2: about.y - length, 'stroke-width': width }),
       ]),
     ]);
-    element.style.setProperty('--hand-x', String(about.x));
-    element.style.setProperty('--hand-y', String(about.y));
+    // The pivot, from the block's corner.
+    element.style.setProperty('--hand-x', String(about.x - BOX.x));
+    element.style.setProperty('--hand-y', String(about.y - BOX.y));
     element.style.setProperty('--hand-colour', colour);
     return element;
   };
@@ -317,11 +321,11 @@ export function dialPiece({ doc, layer, recipe, context }: PieceSetup<DialLayer>
     ...overHubs.map((hand) => hand.element),
     pin,
   ]);
-  // The recipe's size: a radius of 130 is the frame's 300 × 296 box (the shared 260 px dial).
+  // The recipe's size: a radius of 130 is the frame's 260 px block (the shared dial).
   const scale = (layer.radius ?? FRAME_RADIUS) / FRAME_RADIUS;
   const style: Record<string, string> = {
-    '--analog-width': String(ANALOG.widthPx * scale),
-    '--analog-height': String(ANALOG.heightPx * scale),
+    '--analog-width': String(BOX.width * scale),
+    '--analog-height': String(BOX.height * scale),
     '--analog-unit': String(scale),
   };
 

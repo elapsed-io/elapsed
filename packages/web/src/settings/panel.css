@@ -21,6 +21,16 @@
   }
 
   /*
+   * Closing, the corner icons stay out of sight (transparent, still focusable so focus can return to settings) until
+   * the panel has gone; then, the attribute removed, their own opacity transition fades them in where they are, at
+   * the window's corner, so they never show beside the closing panel or move (plan version 14).
+   */
+  :root[data-settings="closing"] .corner {
+    opacity: 0;
+    transition: none;
+  }
+
+  /*
    * Positioned like the frames' panel (the page itself never scrolls). It
    * becomes a scroll container only when its content is taller than the
    * window: a scroll container is drawn on its own layer, which shifts edges

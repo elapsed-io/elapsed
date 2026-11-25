@@ -59,7 +59,7 @@ what of that blocks the release. "Frame" names are the canvas titles.
 
 | | |
 | --- | --- |
-| **Done** | **Round 2.13:** the redesigned stopwatch on the shared 260 px dial, from the frame's own coordinates (a 300 × 296 drawing; case, rim and face 130, 126 and 120; the seconds dial of radius 36; numbers at 10 and 8.5 px; the hands 99, 45 and 33 long), 26 px above the buttons; frame "analog: the shared 260 px dial" matched; its settings tile redrawn as the stopwatch (decision 409). Before: the hands gliding and stepping as the ring's do, the crown dipping when end is pressed; results as rings per hour (matched); a downloaded mode, cached for offline use. |
+| **Done** | **Round 2.13, revised (plan version 14):** the block is the 260 px square around the dial, the crown overhanging it, so the analog and ring dials sit at the same point with the buttons 26 px below (decision 436). **Round 2.13:** the redesigned stopwatch on the shared 260 px dial, from the frame's own coordinates (a 300 × 296 drawing; case, rim and face 130, 126 and 120; the seconds dial of radius 36; numbers at 10 and 8.5 px; the hands 99, 45 and 33 long), 26 px above the buttons; frame "analog: the shared 260 px dial" matched; its settings tile redrawn as the stopwatch (decision 409). Before: the hands gliding and stepping as the ring's do, the crown dipping when end is pressed; results as rings per hour (matched); a downloaded mode, cached for offline use. |
 | **Left against the frames** | Nothing. |
 | **Left against the plan** | Nothing. |
 | **Blocks the release** | No. |

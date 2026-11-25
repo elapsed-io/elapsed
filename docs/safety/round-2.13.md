@@ -62,3 +62,19 @@ No change: no new endpoint, header, permission, script, storage or request. The 
 1. **The frames show seconds** ("always", the default from round 2.14); until then the frame tests set it.
 2. **The test modes' recipes** differ from the archive's until rounds 2.18 and 2.19 build the calm water and the
    falcon; the archive's ocean depth and height are checked as the owner wrote them.
+
+## Revision, 2026-11-25 (plan version 14; canvas version 1795591127-3d31)
+
+- **Ring and analog centred alike** (decision 436): the analog stopwatch's block is now the 260 px square around
+  its dial (the frame's view box 20, 32, 260, 260), its crown overhanging the block above, so both dials sit at
+  the same point with the buttons 26 px below. The drawing's units, the hands' pivots and every coordinate are
+  unchanged; only the box it is cut from moved. The analog frame is compared again from the new canvas.
+- **The corner icons when the panel closes** (decision 437): they stay out of sight until the panel has finished
+  closing, then fade in where they are (their own opacity transition), never shown beside the closing panel; focus
+  still returns to the settings button.
+- **Data, inputs, dependencies, security surface:** unchanged. No new request, storage or permission.
+- **Tests:** `e2e/design-system.spec.ts` (ring and analog: each block 260 px square, centred on its dial, the two
+  dial centres within half a pixel of each other, the buttons 26 reference px below, the crown above the analog
+  block; at 720 × 450 and 1280 × 800), `e2e/settings.spec.ts` (halfway through closing, the icons transparent,
+  focus on settings; then an opacity transition at their final place, which is where they were before the panel
+  opened), and the analog frame (`e2e/frames.spec.ts`).

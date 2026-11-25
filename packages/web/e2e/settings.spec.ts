@@ -413,6 +413,42 @@ test.describe('opening and closing', () => {
     await expect(primary(page)).toHaveAccessibleName('pause');
   });
 
+  // Plan version 14 (bug, round 2.13's revision): closing, the corner icons never show beside the panel; they stay
+  // hidden until it has gone, then fade in where they are.
+  test('the corner icons stay hidden while the panel closes, then fade in where they are, never moving', async ({ page }) => {
+    await openApp(page, { width: 1280, height: 800 });
+    const corner = page.locator('.corner');
+    const before = near(await corner.boundingBox());
+    await page.keyboard.press(',');
+    await panel(page).waitFor();
+    await expect(corner).toBeHidden();
+    await page.keyboard.press('Escape');
+    // Halfway out, the panel half seen: the icons are still out of sight, though focus is back on settings.
+    const halfway = await panel(page).evaluate((element) => {
+      const [animation] = element.getAnimations();
+      animation?.pause();
+      if (animation !== undefined) animation.currentTime = Number(animation.effect?.getTiming().duration ?? 0) / 2;
+      const icons = document.querySelector('.corner');
+      const result = {
+        state: document.documentElement.dataset['settings'] ?? null,
+        opacity: icons === null ? null : getComputedStyle(icons).opacity,
+        focused: document.activeElement?.getAttribute('aria-label') ?? null,
+      };
+      animation?.finish();
+      return result;
+    });
+    expect(halfway).toEqual({ state: 'closing', opacity: '0', focused: 'settings' });
+    await expect(panel(page)).toBeHidden();
+    // Then they fade in, by opacity alone, at the window's corner, where they were before the panel opened.
+    const fade = await corner.evaluate((element) =>
+      element.getAnimations().map((animation) => ({ property: animation instanceof CSSTransition ? animation.transitionProperty : '', duration: animation.effect?.getTiming().duration })),
+    );
+    expect(fade.map((animation) => animation.property)).toContain('opacity');
+    expect(near(await corner.boundingBox())).toEqual(before);
+    await expect.poll(() => corner.evaluate((element) => getComputedStyle(element).opacity)).toBe('1');
+    expect(near(await corner.boundingBox())).toEqual(before);
+  });
+
   test('with reduced motion the panel only fades', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openApp(page, { width: 1280, height: 800 });

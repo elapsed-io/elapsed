@@ -192,6 +192,59 @@ test.describe('the standard modes share one slot (round 2.13)', () => {
     expect(caseWidth).toBeCloseTo(260, 1);
   });
 
+  // Plan version 14 (bug, round 2.13's revision): ring and analog are both 260 px blocks centred on their dials (the
+  // analog crown overhanging its block above), so both dials sit at exactly the same point, the buttons 26 px below.
+  for (const size of [
+    { width: 720, height: 450 },
+    { width: 1280, height: 800 },
+  ]) {
+    test(`ring and analog: one 260 px block each, centred on its dial, the two dials at the same point (${String(size.width)} × ${String(size.height)})`, async ({ browser }) => {
+      // Each mode in a browser context of its own, so nothing stored by one reaches the other.
+      const measure = async (mode: 'ring' | 'analog') => {
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        await openApp(page, { mode, ...size });
+        await settle(page);
+        const result = await page.evaluate((which) => {
+          const box = (selector: string) => document.querySelector(selector)?.getBoundingClientRect() ?? new DOMRect();
+          const block = which === 'ring' ? box('.mode-root .ring') : box('.mode-root .analog-stack');
+          // The dial: the ring's track circle, or the analog case (the drawing's largest circle).
+          const dial =
+            which === 'ring'
+              ? box('.mode-root .ring__track')
+              : [...document.querySelectorAll('.mode-root .analog__dial circle')].map((circle) => circle.getBoundingClientRect()).sort((a, b) => b.width - a.width)[0] ?? new DOMRect();
+          const buttons = [...document.querySelectorAll('.controls .button')].filter((button) => button.getClientRects().length > 0).map((button) => button.getBoundingClientRect())[0] ?? new DOMRect();
+          const crown = which === 'analog' ? box('.mode-root .analog__crown') : null;
+          const u = Math.min(window.innerWidth / 720, window.innerHeight / 450);
+          return {
+            block: { width: block.width / u, height: block.height / u },
+            centre: { x: dial.x + dial.width / 2, y: dial.y + dial.height / 2 },
+            blockCentre: { x: block.x + block.width / 2, y: block.y + block.height / 2 },
+            gap: (buttons.y - (block.y + block.height)) / u,
+            crownAbove: crown === null ? null : (block.y - crown.y) / u,
+          };
+        }, mode);
+        await context.close();
+        return result;
+      };
+      const ring = await measure('ring');
+      const analog = await measure('analog');
+      for (const [name, measured] of [['ring', ring], ['analog', analog]] as const) {
+        const what = `${name}: ${JSON.stringify(measured)}`;
+        expect(measured.block.width, what).toBeCloseTo(260, 0);
+        expect(measured.block.height, what).toBeCloseTo(260, 0);
+        expect(Math.abs(measured.centre.x - measured.blockCentre.x), what).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(measured.centre.y - measured.blockCentre.y), what).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(measured.gap - 26), what).toBeLessThanOrEqual(0.5);
+      }
+      // The same point on the screen.
+      expect(Math.abs(ring.centre.x - analog.centre.x)).toBeLessThanOrEqual(0.5);
+      expect(Math.abs(ring.centre.y - analog.centre.y)).toBeLessThanOrEqual(0.5);
+      // The crown overhangs the analog block above.
+      expect(analog.crownAbove).toBeGreaterThan(10);
+    });
+  }
+
   test('timeline: the time 48 px, the compact track 360 px wide and 14 px below it', async ({ page }) => {
     await openApp(page, { mode: 'timeline' });
     await settle(page);

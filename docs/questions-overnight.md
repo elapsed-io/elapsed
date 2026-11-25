@@ -542,6 +542,12 @@ and the Oort cloud and Proxima Centauri (no action needed).
   performance test saw 52 to 74 ms tasks while I was running a local suite on the same machine, and the timing
   tests waited on it; the whole Chromium suite run again alone passed (411 passed, 28 skipped).
 
+- Round 2.13 revised (decisions 436, 437): the analog block is the 260 px square around its dial, the crown
+  overhanging it, so ring and analog dials sit at the same point with the buttons 26 px below (tested at two window
+  sizes); the corner icons stay out of sight while the settings panel closes, then fade in where they are (tested).
+  `npm run check` passes (916 unit tests). The reference run in Chromium, Firefox and WebKit: 1,222 passed, 104
+  skipped, 0 failed.
+
 ## Questions for the owner
 
 Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 and 9; their answers are built in
