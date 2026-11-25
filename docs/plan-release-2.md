@@ -60,9 +60,10 @@ standard mode and shared screen and orders the rest by what releases the standar
 **Release 2 is the public launch (owner, 2026-11-24; plan version 13).** It ships the four standard modes and
 everything around them, plus keep screen awake and the check-ins switch; picture-in-picture moves to a later
 release, its code behind the test flag and its settings row and corner button hidden at launch. Release 1's
-launch list applies in full and is prepared in round 2.16; two of its items are the owner's (a final legal
-review of the privacy and terms pages, and making the repository public), and the source code link stays
-hidden until the owner confirms the second. The owner asked for the rounds to continue in order, each finished
+launch list applies in full and is prepared in round 2.16; six tasks are the owner's, in the plan's launch order
+(plan version 14: the legal review, the repository public, secret scanning and push protection, the source code
+link, the device checks, the deploy and sign-off), and the source code link stays hidden until the owner confirms
+the repository is public. The owner asked for the rounds to continue in order, each finished
 completely before the next starts.
 
 | Round | Builds | Frames |
@@ -534,7 +535,7 @@ default for the site's own pages), data (the switches are settings on the device
 **Builds:**
 
 - The accessibility pass over the standard modes and every changed screen (WCAG 2.2 AA, axe-core, keyboard
-  and screen readers, 44 px targets, reduced motion and low power), the performance pass (budgets, a long
+  and screen readers, 44 px targets, reduced motion), the performance pass (budgets, a long
   session in each standard mode, the slow-phone checklist), the cross-browser pass, and the device checks
   extended for the new features.
 - Release 1's launch list, in full (plan version 13), each item in the release review:
@@ -549,10 +550,14 @@ default for the site's own pages), data (the switches are settings on the device
     the owner);
   - the source code link in the settings footer, kept hidden until the owner confirms the repository is
     public.
-- Two items are the owner's, kept as owner tasks in `docs/release-readiness.md` and confirmed by the owner
-  before the release review: a final legal review of the privacy and terms pages, and making the repository
-  public.
-- The release review (`docs/safety/release-2.md`), then the owner's sign-off.
+- The owner's tasks, kept in `docs/release-readiness.md` in the plan's launch order (plan version 14): 1 the
+  legal review, with the effective date set to the launch day; 2 the repository made public; 3 secret scanning
+  and push protection switched on right after (free on public repositories); 4 the source code link switched on;
+  5 the device checks; 6 the deploy and sign-off (`docs/deploy.md`, Part 7).
+- Before the repository is made public, the full git history (not only the current files) scanned for secrets,
+  and the result reported to the owner.
+- The release review (`docs/safety/release-2.md`), then the owner's sign-off; the developer stops for it before
+  the deploy.
 
 ### 2.17 Layout editor, background images, and each mode's replaceable art
 

@@ -370,9 +370,44 @@ and its database.
 ## Part 7. The public launch (Release 2)
 
 Release 2 is elapsed's public launch on elapsed.io (`docs/release-readiness.md`, section 4, has the whole launch
-list and who does what). Do these steps in order, once the release review (`docs/safety/release-2.md`) is signed
-off. Two things come before them and are yours alone: the final legal review of the privacy and terms pages
-(`docs/legal`), and making the repository public.
+list and who does what). Your six tasks come in this order (plan version 14): tasks 1 to 5 are before the deploy,
+lettered A to E below; task 6 is the deploy itself, steps 1 to 7, and the sign-off, step 8.
+
+### A. The legal review (task 1)
+
+Read the app's edition of the privacy page and the terms (`docs/legal/privacy.md` and `docs/legal/terms.md`; the
+app shows everything but the parts between `<!-- soon only -->` and `<!-- end -->`, and the soon page everything
+but the parts between `<!-- app only -->` and `<!-- end -->`; decision 427 lists every change from the published
+text). Set the effective date at the top of both ("Effective November 15, 2026." today) to the launch day, and tell
+the developer of any change; the developer rebuilds and runs the checks. The soon page keeps serving its own
+edition until step 4.
+
+### B. Make the repository public (task 2)
+
+First settle question 41 in `docs/questions-overnight.md`: the full history was scanned (decision 446) and holds
+no key, token or password, but three merge commits made on GitHub carry the private admin address as their
+author. Then, on GitHub: the repository → **Settings** → **General** → **Danger Zone** → **Change visibility** →
+**Make public**.
+
+### C. Secret scanning and push protection, right after (task 3)
+
+They are free on public repositories. On GitHub: the repository → **Settings** → **Advanced Security** (or **Code
+security**) → turn on **Secret Protection** (secret scanning) and **Push protection**. GitHub then scans the whole
+history itself; it should find nothing.
+
+### D. The source code link (task 4)
+
+Tell the developer the repository is public: the settings footer's source code link is switched on in one place
+(`REPOSITORY_PUBLIC` in `packages/core/src/brand.ts`), checked and committed, so the launch deploy in step 3 carries
+it.
+
+### E. The device checks (task 5)
+
+Run `docs/device-checks.md` (Release 1's checks and Release 2's, 32 to 37) on the iPhone, the Mac (Safari), the
+Android phone and one Chrome or Edge computer, against the test build of the commit you will launch. Send the
+developer anything that fails.
+
+Then the deploy (task 6), in order:
 
 ### 1. Get the build that passed its checks
 
@@ -438,15 +473,10 @@ max-age=63072000; includeSubDomains; preload`). Preloading builds that into brow
 first: in the dashboard, **DNS** → **Records**, open each name listed (elapsed.io, www, and any other) over
 https:// and check each answers. Only then submit elapsed.io at https://hstspreload.org.
 
-### 8. GitHub secret scanning and push protection
+### 8. Sign-off
 
-On GitHub: the repository → **Settings** → **Advanced Security** (or **Code security**) → turn on **Secret
-Protection** (secret scanning) and **Push protection**.
-
-### 9. The source code link
-
-Once the repository is public, tell the developer: the settings footer's source code link is switched on in one
-place (`REPOSITORY_PUBLIC` in `packages/core/src/brand.ts`), checked, and deployed again with steps 1 and 3.
+Open https://elapsed.io once more in a private window, start and end a short session, and tell the developer the
+launch is done; the release review (`docs/safety/release-2.md`) is then closed with the date.
 
 ### Rolling back the launch
 

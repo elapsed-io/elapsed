@@ -73,5 +73,25 @@ attestations).
 1. **The app edition's wording and date** await the owner's final legal review (decision 427).
 2. **The deployed checks** (headers on elapsed.io, production outside Access, the test build inside it) can only
    run once the owner has launched (`docs/deploy.md`, Part 7, steps 5 and 6).
-3. **GitHub's own secret scanning** cannot run until the owner turns on Advanced Security (Part 7, step 8); until
+3. **GitHub's own secret scanning** cannot run until the owner turns it on (`docs/deploy.md`, Part 7, C, right after the repository is made public); until
    then the repository's pattern test and the local scan stand in.
+
+## Revision, 2026-11-25 (plan version 14)
+
+- **The owner's launch tasks in the plan's order** (decision 447): the legal review with the effective date set to
+  the launch day, the repository public, secret scanning and push protection right after, the source code link, the
+  device checks, then the deploy and sign-off. `docs/deploy.md`, Part 7, has the first five as A to E before the
+  deploy, and a sign-off step; `docs/release-readiness.md` (section 4) and `docs/safety/release-2.md` (part E) list
+  them the same way.
+- **The full git history scanned for secrets** (decision 446): every blob, path and commit message reachable from
+  any of the remote's 11 refs (branches and pull request refs), 98 commits and 1,838 blobs. No key, token, password
+  or private key was ever committed. The private admin address is in no file or message, but is the author address
+  of three merge commits made on GitHub's website; question 41 asks the owner how to handle it before the repository
+  is made public. The scan ran locally; nothing was sent to a service.
+- **The release review** (`docs/safety/release-2.md`) is revised: question 40's risk closed (decision 444), the
+  secrets item answered from the full history, the six tasks in order, questions 13 to 22 and 28 to 33 kept as built
+  until answered.
+- **Data, inputs, dependencies, security surface:** unchanged by this revision. Open risk 3 above now reads: GitHub's
+  scanner runs once the owner switches it on right after making the repository public (task 3).
+- **Tests:** the reference run in Chromium, Firefox and WebKit and `npm run check` (results in the morning summary,
+  `docs/questions-overnight.md`).

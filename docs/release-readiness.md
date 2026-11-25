@@ -91,22 +91,22 @@ what of that blocks the release. "Frame" names are the canvas titles.
 
 ## 4. What else blocks a release
 
-### The launch list (plan version 13; Release 1, round 8)
+### The owner's tasks, in the plan's launch order (plan version 14)
 
-Release 2 is the public launch, so Release 1's launch list applies in full. Each item is in round 2.16's release
-review; the owner runs every step that touches Cloudflare or GitHub's settings.
+Release 2 is the public launch, so Release 1's launch list applies in full. These six are the owner's, in this
+order; `docs/deploy.md`, Part 7, has the steps for each (A to E before the deploy, then steps 1 to 8).
 
-| Item | Who | Status |
+| # | Task | Status |
 | --- | --- | --- |
-| Serve the privacy and terms pages from the app (`/privacy`, `/terms`), from the same sources as today's | Built in round 2.16 | **Built** (decisions 426, 427): the app's edition of `docs/legal`, in the chosen theme; the settings footer links them on the site's own origin |
-| A final legal review of the privacy and terms pages | **Owner** | To be confirmed by the owner before the release review: the app's edition (decision 427 lists every change from the published text) and its effective date |
-| Check the security headers against elapsed.io (`tooling/check-deployed.ts`) | Prepared in 2.16; run by the owner after the switch | **Prepared**: the check now covers `/privacy`, `/terms`, `/credits/` and `pages.css`; run it as `docs/deploy.md`, Part 7, step 6 |
-| HSTS preload, only once every subdomain serves HTTPS | Owner, after the check | Not submitted; the steps are `docs/deploy.md`, Part 7, step 7 |
-| GitHub secret scanning and push protection | Owner (repository settings) | Off (GitHub's scanner refuses a scan until Advanced Security is on); a local scan of every tracked file found no secret (decision 430); steps in Part 7, step 8 |
-| Replace the soon page with the app on elapsed.io | Owner (`docs/deploy.md`, Part 7, steps 2 to 4) | The soon page is live; `npm run deploy:production` is ready (decision 429) |
-| Take production out from behind Cloudflare Access, keeping the test build behind it | Owner (`docs/deploy.md`, Part 7, step 5) | The test build is behind Access |
-| The source code link in the settings footer | Built in 2.16, kept hidden | **Built, hidden** (decision 428): one switch, `REPOSITORY_PUBLIC`, false until the owner confirms |
-| Make the repository public | **Owner** | To be confirmed by the owner before the release review; the source code link shows only then (serving the GPL-3.0 JavaScript likely counts as distributing it) |
+| 1 | **The legal review** of the privacy page and terms in the app's edition, with the effective date set to the launch day | Waiting on the owner. The app serves its edition at `/privacy` and `/terms` (decisions 426, 427; every change from the published text is listed in decision 427); both pages read "Effective November 15, 2026." until the owner sets the launch day (Part 7, A). |
+| 2 | **Make the repository public** | Waiting on the owner, after question 41: the full history holds no key, token or password (decision 446), but the private admin address is the author of three merge commits made on GitHub, which would show once public (Part 7, B). |
+| 3 | **Secret scanning and push protection**, switched on right after (free on public repositories) | Off until then; the full-history scan and the repository's pattern test stand in (Part 7, C). |
+| 4 | **The source code link** switched on | Built, hidden (decision 428): one switch, `REPOSITORY_PUBLIC`, flipped and checked once the owner confirms the repository is public, before the deploy (Part 7, D). |
+| 5 | **The device checks** | `docs/device-checks.md`, Release 1's 1 to 31 and Release 2's 32 to 37, on the iPhone, a Mac with Safari, the Android phone and a Chrome or Edge computer (Part 7, E). |
+| 6 | **The deploy and sign-off** | Prepared: the production database, `npm run deploy:production` (decision 429), elapsed.io moved from the soon page to the app, production out of Cloudflare Access with the test build still behind it, the deployed-header check (now covering `/privacy`, `/terms`, `/credits/` and `pages.css`), HSTS preload only once every subdomain serves HTTPS, and the sign-off (Part 7, steps 1 to 8). |
+
+Built for the launch list already: the privacy page and terms served by the app from the same sources as the soon
+page's (round 2.16), the deployed-header check, the production deploy script and the source code link's switch.
 
 ### Answers that touch the standard modes
 
@@ -114,10 +114,10 @@ review; the owner runs every step that touches Cloudflare or GitHub's settings.
   in modes drawn round their time, a tap on hidden controls, fullscreen after a resume, the analog seconds hand
   at rest, how brief the outline is, the focus frames' 13 px, "change" and the tip): each is built one way and
   works; an answer that changes one becomes a small fix in the round it touches.
-- **Nothing else known:** no failing test (round 2.16's reference run in Chromium, Firefox and WebKit: 1,210
-  passed, 103 skipped, one test-only rounding failure in a test mode's test, fixed and passed again with the
-  live-session test in all three, and WebKit's timing tests run on their own; `npm run check` passes), and every
-  download within its ceiling.
+- **Nothing else known:** no failing test (the revised rounds' last reference run, 2.15's, in Chromium, Firefox and
+  WebKit: 1,209 passed, 98 skipped, one test-only failure in a test mode's seven-hour test, fixed (decision 445) and
+  the performance spec passed twice over in all three, with the timing tests on their own; `npm run check`
+  passes), and every download within its ceiling.
 
 ## 5. The remaining work, in order
 

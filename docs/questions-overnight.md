@@ -3,7 +3,97 @@
 Working unattended on `claude/release-2` (owner, 2026-11-16 evening). The morning summary goes at the top
 when the run stops; questions for the owner are collected below as they come up.
 
-## Morning summary, 2026-11-25: rounds 2.12 to 2.16, ready for your review and sign-off
+## Morning summary, 2026-11-25 (plan version 14): rounds 2.12 to 2.16 revised, stopped for your sign-off
+
+Built on `claude/release-2` from your message with plan version 14 and the reorganised canvas (version
+1795591127-3d31), revising rounds 2.12 to 2.16 in order. Every round finished completely before the next:
+`npm run check`, the reference run in Chromium, Firefox and WebKit, its safety overview's revision section, its
+decisions (432 to 447), then a commit and a push. Release 1's branch had no new fixes to merge. Nothing was
+deployed, nothing was merged into Release 1's branch, and no Cloudflare or GitHub setting was touched. I stopped
+before round 2.16's deploy for your sign-off, as you asked. GitHub now answers pushes with "this repository moved"
+(to its new name); pushes still land.
+
+**No `mode-recipes.zip` came with this message.** The only archive on hand is the one from 2026-11-24, so
+`docs/recipes/` is that archive with answer 35's corrections, which `recipe-check.py` writes back unchanged
+(decision 434). Send the new archive if there is one, and I will replace the folder and run the checks again.
+
+### What each round built
+
+- **2.12, test modes behind the flag only** (`7ae00c1`; decisions 432 to 435): plan version 14 in `docs/plan.md`
+  (the private admin address redacted as before); the flag rules confirmed against it; the unflagged visit now
+  tested to fetch none of the twelve piece, environment and results-view modules that only the test modes' recipes
+  use, after choosing each standard mode.
+- **2.13, the standard sizes** (`e9ef2c7`; 436, 437): ring and analog are both 260 px blocks centred on their
+  dials (analog's drawing exactly 260 × 260 around its dial, its crown overhanging above), both dials at the same
+  point with the buttons 26 px below, tested at two window sizes; the corner icons stay hidden while the settings
+  panel closes, then fade in where they are, tested.
+- **2.14, seconds, settings and notices** (`b6c0f60`; 438 to 443): settings schema 5. "Hide seconds after
+  starting" (never, blur away, right away; default never) in display's plain "focus mode" group, with "hide
+  buttons after starting" and its line, "fullscreen after starting" and "leave fullscreen"; "mode" with the chosen
+  mode's options in a darkened box; timer as check-ins (new line), "check-in every" in a darkened box, "pause before
+  ending" (renamed everywhere, notifications too), keep screen awake ("while elapsed is the active tab"), clock
+  format ("system settings" first and default), shortcuts; appearance as eight larger theme tiles four to a row,
+  lightest to darkest, the theme colours in a darkened box, font, time size, animation speed with its line;
+  oxblood, lilac and low power removed. Your migration mapping, never-changed settings to the new defaults and
+  choices kept. The settings frames re-taken from the canvas, the launch display frame added, each matched in three
+  browsers.
+- **2.15, keep screen awake** (`02c6610`; 444, 445): held only while a session is running or paused in the visible tab;
+  let go on the idle screen, on the results, when hidden or switched off; with unit and end-to-end tests. The
+  seven-hour performance test now lets the held display's 180 ms fade end before counting animations (it caught
+  one right after the key that answers a check-in, under load).
+- **2.16, the launch list and the release review** (this commit; 446, 447): your six tasks in the plan's launch
+  order in `docs/release-readiness.md`, the release review and `docs/deploy.md`, Part 7 (A to E before the deploy,
+  then steps 1 to 8 with a sign-off); the full git history scanned for secrets (below); the release review revised.
+
+### The full git history, scanned for secrets (before you make the repository public)
+
+Every blob, path and commit message reachable from any of the 11 refs GitHub would show once public (the four
+branches and every pull request's head and merge refs): 98 commits, 1,838 blobs (28.3 MB), 671 paths, for keys
+and tokens of 16 kinds, private key blocks, credentials in addresses, bearer tokens, high-entropy values assigned to
+key, secret, token or password names, file names that usually hold secrets, and the private admin address. The
+scan ran locally; nothing was sent anywhere.
+
+- **No key, token, password or private key was ever committed.** The one such-named file, `.npmrc`, holds install
+  settings only; the D1 database ids are identifiers, not credentials.
+- **The private admin address is in no file and no commit message**, but it is the **author address of three
+  merge commits made on GitHub's website**: "Merge pull request #2", "Merge pull request #3" (both in
+  `claude/release-2`'s history) and GitHub's test merge for pull request 4. A public repository shows them.
+  Question 41 sets out the choices; until you answer, nothing is rewritten and the repository stays private.
+- One commit on `claude/release-2.1` ("Test database id") carries your name with a personal address.
+
+### Test results
+
+| Round | `npm run check` | Reference run (Chromium, Firefox, WebKit) |
+| --- | --- | --- |
+| 2.12 | passes | 1,209 passed, 104 skipped, 1 failed (a performance test slowed by a local run I started alongside) and 3 not run; run again alone, the affected specs 411 passed, 28 skipped |
+| 2.13 | passes | 1,222 passed, 104 skipped, 0 failed |
+| 2.14 | passes, 914 unit tests (low power's removed) | 1,210 passed, 98 skipped, 0 failed |
+| 2.15 | passes, 916 | 1,209 passed, 98 skipped, 1 failed (a test mode's seven-hour test counting a 180 ms fade; decision 445) and 3 not run (the timing tests, which wait on it); after the fix, the performance spec run twice in all three browsers 104 passed, 4 skipped, and the timing tests on their own 7 passed, 2 skipped (Chromium only) |
+| 2.16 | passes, 916 | its revision changed documents only, so the code is 2.15's, run above |
+
+The size check passes throughout: core JavaScript 41.3 of 50 KB, core total 70.5 of 150 KB, analog 7.0 of 30 KB,
+every part under its own ceiling.
+
+### Skipped, and why
+
+- **Nothing in the rounds was skipped.** The new recipes archive was not attached (above).
+- **Section D (after launch, `?test=modes` only)** waits for after the launch, as written: ocean depth's calm idle
+  water with its three tests, then height's falcon, each recipe piece only when a recipe uses it.
+- **Yours, not done:** every deploy and every Cloudflare or GitHub setting; GitHub's own secret scanning (task 3).
+
+### Waiting for you, in the plan's launch order
+
+1. **The legal review** of the privacy page and terms in the app's edition, with the effective date set to the
+   launch day (`docs/deploy.md`, Part 7, A).
+2. **Question 41**, then **making the repository public** (Part 7, B).
+3. **Secret scanning and push protection**, right after (Part 7, C).
+4. **The source code link:** tell me, and I switch on `REPOSITORY_PUBLIC`, check it and commit it (Part 7, D).
+5. **The device checks**, `docs/device-checks.md` 1 to 37 (Part 7, E).
+6. **The deploy and sign-off** (`docs/safety/release-2.md`; `docs/deploy.md`, Part 7, steps 1 to 8).
+
+Still open, kept as built until you answer: questions 13 to 22 and 28 to 33.
+
+## Earlier summary, 2026-11-25 (plan version 13): rounds 2.12 to 2.16, before their revision
 
 Built on `claude/release-2` from your message with plan version 13 and answer 38, in the order of
 `docs/release-readiness.md`. Every round finished completely before the next: `npm run check`, the reference run
@@ -782,3 +872,26 @@ only; and 40, from round 2.15.
     **Answered (owner, 2026-11-25; plan version 14):** keep screen awake holds the screen on only while a session
     is running or paused, in the visible tab, and releases it on the idle screen and on the results; with a test.
     Round 2.15's revision builds it (decision 444).
+41. **The private admin address in three merge commits' metadata (round 2.16; decision 446).** Before you make the
+    repository public, the whole git history was scanned: every blob, path and commit message reachable from any of
+    the 11 refs GitHub would show (the four branches, and every pull request's head and merge refs), 98 commits and
+    1,838 blobs. No key, token, password or private key was ever committed, and the private admin address is in no
+    file and no message. But it is the **author address of three merge commits made on GitHub's website** by the
+    account that owns the repository: "Merge pull request #2" and "Merge pull request #3" (both in
+    `claude/release-2`'s history, so in what would launch) and GitHub's own test merge for pull request 4
+    (`refs/pull/4/merge`, remade by GitHub whenever that pull request changes). Anyone can read a public
+    repository's commit addresses (`git log`, or a commit's `.patch` page). One other commit ("Test database id",
+    on `claude/release-2.1`) carries your name with a personal address; it is not in `claude/release-2`'s history,
+    but its branch and pull request 2's refs would be public. The ways I see, none of which I can or should take
+    myself (each changes GitHub or rewrites published history):
+    (a) **Publish a fresh public repository** from `claude/release-2` with its history rewritten so those commits
+        carry GitHub's no-reply address (or as one first commit), and keep this one private. Complete: nothing old
+        is reachable. The source code link then points at the new repository (one constant).
+    (b) **Rewrite this repository's history** with a mailmap and force-push every branch. Incomplete on its own:
+        GitHub keeps every pull request's `refs/pull/*` pointing at the old commits, and only GitHub Support can
+        remove them.
+    (c) **Accept it:** the address is an account's login address, not a credential; it shows only in three merge
+        commits' metadata.
+    Whichever you choose, turning on **Keep my email addresses private** (and **Block command line pushes that
+    expose my email**) in the owning account's GitHub email settings makes future merges on the website use the
+    no-reply address. Which do you want? Until you answer, the repository stays private and nothing is rewritten.

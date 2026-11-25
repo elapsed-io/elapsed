@@ -8,7 +8,8 @@ closed, accepted with its reason, or waiting on the owner (part E).
 (owner, answer 38): the four standard modes (digits, ring, timeline, analog) and the screens around them, keep
 screen awake and the check-ins switch. Ocean depth, height, the tree, interstellar and picture-in-picture are
 behind the test flag and not part of it. Nothing is deployed: the owner runs every deploy (`docs/deploy.md`,
-Part 7). Before the sign-off, the owner confirms two items of their own (part E).
+Part 7). Revised for plan version 14 (rounds 2.12 to 2.16 revised, 2026-11-25): the owner's six launch tasks are in
+part E, in the plan's order, and the full git history has been scanned for secrets (part B; question 41).
 
 ## A. Round 2.16
 
@@ -25,8 +26,8 @@ the launch steps and the production deploy script; the hardening pass.
 | The CSP and headers are verified on the deployed build, not only locally. | Ready, pending the launch: `node tooling/check-deployed.ts app https://elapsed.io` (`docs/deploy.md`, Part 7, step 6) compares every response, now including `/privacy`, `/terms`, `/credits/` and `pages.css`, with the `_headers` deployed. Locally, the exact CSP, Trusted Types and Permissions-Policy are tested on the production build in all three engines, on the timer and on the plain pages. **Owner action after the launch.** |
 | The malicious-CSS corpus passes and safe mode works. | Done: `e2e/custom-css.spec.ts` (the corpus, scoping and lock tests, safe mode) passes in Chromium, Firefox and WebKit. |
 | The threat model is updated for the new features. | Done: part D. |
-| Accessibility checks and performance budgets pass. | Done in CI: axe-core's WCAG 2.2 A and AA rules over the four standard modes idle, running, paused and checking in, the ending countdown and results in four themes, every settings category at desktop and phone widths, the idle screen with each tip, and the three plain pages in a dark and a light theme; keyboard, focus, screen-reader, 44 px target, reflow and reduced-motion tests; every download within its ceiling (core JavaScript 41.4 of 50 KB, core total 70.7 of 150 KB, analog 6.9 of 30 KB, every part under its own ceiling); 100 ms responses, long tasks, layout shift; every standard mode for seven hours and in a hidden tab. What needs a real device is part F. |
-| From Release 3: auth flows, rate limits, session expiry, export and deletion are reviewed, and no secrets are in the repository. | Not applicable until Release 3, apart from secrets: the repository's pattern test, a local scan of all 535 tracked files for common key and token patterns (none found), and no private admin address anywhere. GitHub's own secret scanning refused a scan because Advanced Security is not on yet (the owner's launch item, part E). |
+| Accessibility checks and performance budgets pass. | Done in CI: axe-core's WCAG 2.2 A and AA rules over the four standard modes idle, running, paused and checking in, the ending countdown and results in four themes, every settings category at desktop and phone widths, the idle screen with each tip, and the three plain pages in a dark and a light theme; keyboard, focus, screen-reader, 44 px target, reflow and reduced-motion tests; every download within its ceiling (core JavaScript 41.3 of 50 KB, core total 70.5 of 150 KB, analog 7.0 of 30 KB, every part under its own ceiling; plan version 14's revision); 100 ms responses, long tasks, layout shift; every standard mode for seven hours and in a hidden tab. What needs a real device is part F. |
+| From Release 3: auth flows, rate limits, session expiry, export and deletion are reviewed, and no secrets are in the repository. | Not applicable until Release 3, apart from secrets. **The full git history** (decision 446): every blob, path and commit message reachable from any of the repository's 11 refs (its four branches and every pull request's head and merge refs, which GitHub keeps and shows once the repository is public): 98 commits, 1,838 blobs (28.3 MB), 671 paths, scanned for keys and tokens of 16 kinds, private key blocks, credentials in addresses, bearer tokens, high-entropy values assigned to key, secret, token or password names, and file names that usually hold secrets. **No key, token, password or private key was ever committed**; the one such-named file, `.npmrc`, holds only install settings; the D1 database ids in `packages/endpoint/wrangler.jsonc` are identifiers, not credentials. **One finding for the owner (question 41):** the private admin address is the author of three merge commits made on GitHub (two pull request merges on `claude/release-2`, and GitHub's own test merge for pull request 4), so it would show in their metadata once the repository is public; it appears in no file and no message. One other commit carries the owner's name with a personal address. GitHub's own secret scanning runs once it is switched on (the owner's task 3, right after making the repository public). |
 | A rollback plan is written. | Done: `docs/rollback.md` (the app's versions, the offline kill switch, the soon page, the database, the domain at launch) and `docs/deploy.md`, Part 7 ("Rolling back the launch"). |
 | The owner signs off. | **Waiting** on the owner's two items and the sign-off (part E). |
 
@@ -60,7 +61,7 @@ anything that reaches a visit without the flag (round 2.12 shows nothing does).
 | 2.13 | The test modes' recipes differ from the archive's. | Behind the flag, until rounds 2.18 and 2.19. |
 | 2.14 | People who finished sessions in Release 1 see the fullscreen tip first. | Accepted: nothing before Release 3 records earlier sessions. |
 | 2.14 | The timer re-lays itself beside the panel when it opens. | Accepted: every settings frame places it there (decision 416); it never moves while the panel moves. |
-| 2.15 | Keep screen awake holds on every screen while the tab is seen. | Open with the owner (question 40). |
+| 2.15 | Keep screen awake holds on every screen while the tab is seen. | Closed (answer 40, decision 444): it holds only while a session is running or paused in the visible tab. |
 | 2.15 | With check-ins off, a shut lid is credited up to the session maximum. | Accepted: it follows from the plan (the lid rule is the check-in's); Release 6 marks such sessions. |
 | 2.15 | The floating window has no frame. | Behind the flag until its release. |
 | 2.16 | The app edition's wording and date; the deployed checks; GitHub's secret scanning. | The owner's (part E). |
@@ -84,25 +85,25 @@ Release 1's model (`docs/safety/release-1.md`, part D) stands; these rows are ne
 
 ## E. For the owner
 
-### Before the sign-off (answer 38)
+### The six launch tasks, in the plan's order (plan version 14; `docs/release-readiness.md`, section 4)
 
-1. **A final legal review of the privacy page and terms** in the app's edition (decision 427 lists every change
-   from the published text: the "today" sections gone, "the tips you have seen" added, the kept files of a chosen
-   display mode) and the effective date to print for the launch. Read them at `/privacy` and `/terms` on the test
-   build after its next deploy, or in `docs/legal/*.md` (the `app only` blocks).
-2. **Making the repository public.** Once it is, the source code link is switched on in one place and checked
-   (`docs/deploy.md`, Part 7, step 9).
-
-### The launch steps (`docs/deploy.md`, Part 7)
-
-The production database, `npm run deploy:production`, moving elapsed.io from the soon page to the app, production
-out of Cloudflare Access with the test build still behind it, the deployed-header check against elapsed.io, HSTS
-preload only once every subdomain answers over HTTPS, and GitHub's secret scanning and push protection.
+1. **The legal review** of the privacy page and terms in the app's edition (decision 427 lists every change from
+   the published text), with the effective date set to the launch day (`docs/deploy.md`, Part 7, A).
+2. **Make the repository public** (Part 7, B), once question 41 (the private admin address in three merge commits'
+   metadata) is settled.
+3. **Secret scanning and push protection**, switched on right after: free on public repositories (Part 7, C).
+4. **The source code link** switched on (`REPOSITORY_PUBLIC`), checked and committed before the deploy (Part 7, D).
+5. **The device checks** (`docs/device-checks.md`, part F below; Part 7, E).
+6. **The deploy and sign-off** (`docs/deploy.md`, Part 7, steps 1 to 8): the production database,
+   `npm run deploy:production`, moving elapsed.io from the soon page to the app, production out of Cloudflare
+   Access with the test build still behind it, the deployed-header check against elapsed.io, HSTS preload only once
+   every subdomain answers over HTTPS, and the sign-off.
 
 ### Open questions (`docs/questions-overnight.md`)
 
-13 to 22 (round 2.8's focus view, notices and analog details; each built one way), 40 (keep screen awake while
-nothing runs), and, for the test modes only, 28 to 31 and 33. None blocks the launch unless the owner says so.
+13 to 22 (round 2.8's focus view, notices and analog details) and 28 to 33 (the test modes): still open, each
+kept as built until answered (owner, 2026-11-25). None blocks the launch unless the owner says so. Question 41 (the
+private admin address in three merge commits' metadata) is to be settled before task 2.
 
 ## F. What needs a real device
 
