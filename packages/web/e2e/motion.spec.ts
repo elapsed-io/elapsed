@@ -5,7 +5,7 @@
 
 import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
-import { CONFIG, DIGITS_RECIPE } from '@stopwatch/core';
+import { CONFIG, DIGITS_RECIPE, SETTINGS_SCHEMA } from '@stopwatch/core';
 import { MINUTE, SECOND, TIMER_END, endThroughCountdown, openApp, settle } from './helpers.ts';
 
 const primary = (page: Page) => page.locator('.button--primary');
@@ -57,7 +57,7 @@ test('low power is switched on in settings, and stops the modes gliding', async 
   await lowPower.click();
   await expect(lowPower).toHaveAttribute('aria-checked', 'true');
   await expect(page.locator('html')).toHaveAttribute('data-low-power', '');
-  expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ schema: 3, lowPower: true });
+  expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ schema: SETTINGS_SCHEMA, lowPower: true });
   await page.keyboard.press(',');
   await primary(page).click();
   await page.clock.runFor(90 * SECOND);

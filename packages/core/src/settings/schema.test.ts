@@ -34,7 +34,7 @@ describe('settings schema', () => {
   it('has the plan defaults and ranges', () => {
     const defaults = defaultSettings();
     expect(defaults).toMatchObject({
-      seconds: 'blur-away',
+      seconds: 'always',
       checkInInterval: 120 * MINUTE,
       pauseLimit: 30 * MINUTE,
       mode: 'digits',
@@ -98,7 +98,7 @@ describe('settings schema', () => {
 
   it('migrates leave fullscreen to never where it was never changed (round 2.11): an older record at the old default, end', () => {
     expect(defaultSettings().leaveFullscreen).toBe('never');
-    expect(migrateSettings({ schema: 2, leaveFullscreen: 'end', theme: 'sky' })).toMatchObject({ schema: 3, leaveFullscreen: 'never', theme: 'sky' });
+    expect(migrateSettings({ schema: 2, leaveFullscreen: 'end', theme: 'sky' })).toMatchObject({ schema: SETTINGS_SCHEMA, leaveFullscreen: 'never', theme: 'sky' });
     expect(migrateSettings({ schema: 1, leaveFullscreen: 'end' }).leaveFullscreen).toBe('never');
     // A choice the person made is kept.
     expect(migrateSettings({ schema: 2, leaveFullscreen: 'pause-or-end' }).leaveFullscreen).toBe('pause-or-end');
@@ -112,8 +112,26 @@ describe('settings schema', () => {
     const stored = { schema: 1, seconds: 'always', mode: 'ring', theme: 'sky', timeSize: 120, clockFormat: '12h', usageCounts: false };
     const settings = migrateSettings(stored);
     expect(settings).toMatchObject({ ...stored, schema: SETTINGS_SCHEMA, animationSpeed: 'normal', lowPower: false });
-    expect(SETTINGS_SCHEMA).toBe(3);
-    expect(JSON.parse(serializeSettings(settings))).toMatchObject({ schema: 3, animationSpeed: 'normal', lowPower: false });
+    expect(SETTINGS_SCHEMA).toBe(4);
+    expect(JSON.parse(serializeSettings(settings))).toMatchObject({ schema: 4, animationSpeed: 'normal', lowPower: false });
+  });
+
+  it('migrates seconds to always where they were never changed (round 2.14): an older record at the old default, blur away', () => {
+    expect(defaultSettings().seconds).toBe('always');
+    expect(declarationOf('seconds')).toMatchObject({ options: ['always', 'blur-away', 'never'], default: 'always' });
+    for (const schema of [1, 2, 3]) {
+      expect(migrateSettings({ schema, seconds: 'blur-away', theme: 'sky' })).toMatchObject({ schema: 4, seconds: 'always', theme: 'sky' });
+      // A choice the person made is kept.
+      expect(migrateSettings({ schema, seconds: 'never' }).seconds).toBe('never');
+      expect(migrateSettings({ schema, seconds: 'always' }).seconds).toBe('always');
+    }
+    // A record with no schema is older still.
+    expect(migrateSettings({ seconds: 'blur-away' }).seconds).toBe('always');
+    // From schema 4 on, blur away is a choice like any other, kept as stored.
+    expect(migrateSettings({ schema: 4, seconds: 'blur-away' }).seconds).toBe('blur-away');
+    expect(migrateSettings(JSON.parse(serializeSettings(migrateSettings({ schema: 4, seconds: 'blur-away' })))).seconds).toBe('blur-away');
+    // Leave fullscreen's own rule still holds alongside.
+    expect(migrateSettings({ schema: 3, seconds: 'blur-away', leaveFullscreen: 'end' })).toMatchObject({ seconds: 'always', leaveFullscreen: 'end' });
   });
 
   it('adds animation speed (slower, normal, faster) and low power to appearance', () => {

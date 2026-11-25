@@ -428,6 +428,20 @@ and the Oort cloud and Proxima Centauri (no action needed).
   with every glyph transparent (decision 412), the frame and interstellar specs passed in all three browsers (115
   passed, 22 skipped), and the frame spec again after the last fix (71 passed, 22 skipped).
 
+- Round 2.14, seconds, settings and notices (decisions 413 to 420): seconds "always" by default (settings schema 4;
+  stored settings never changed move to it, choices kept); the seconds tip after the first completed session while
+  seconds are "always", the fullscreen tip before it, one at a time, never returning once dismissed or acted on
+  (the notices record gains `firstSession`); settings opening on display, now first; the panel's 24 px slide and
+  fade (200 ms in, 160 ms out), the timer still beside it; the credits page in the chosen theme, laid out like the
+  privacy and terms pages; every shared timer frame re-taken with seconds. `npm run check` passes (899 unit
+  tests). The reference run in Chromium, Firefox and WebKit: 1,124 passed, 98 skipped, 5 failed and 6 not run, all
+  in the tests: Firefox and WebKit write the credits page's font family without quotes, Firefox read the timer's
+  box a few millionths of a pixel apart, and two tree tests (a test mode) timed out in WebKit simulating hours of
+  per-second updates; after fixing the tests (the tree's long runs choose blur away, as its frames are drawn;
+  decision 419), the four affected specs passed in all three browsers (263 passed, 4 skipped). The tree's
+  hidden-tab test, which had failed once in round 2.13, failed 9 times in 12 here: it depended on real time
+  against the simulated clock, now fixed (decision 420).
+
 ## Questions for the owner
 
 Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 and 9; their answers are built in

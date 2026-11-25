@@ -71,9 +71,9 @@ test.describe('a session survives', () => {
     await page.reload();
     await primary(page).waitFor();
     await expect(primary(page)).toHaveAccessibleName('pause');
-    expect(await shownTime(page)).toBe('00:10');
+    expect(await shownTime(page)).toBe('00:10:00');
     await page.clock.runFor(5 * MINUTE);
-    expect(await shownTime(page)).toBe('00:15');
+    expect(await shownTime(page)).toBe('00:15:00');
     expect(await page.title()).toBe(`00:15 · ${NAME}`);
   });
 
@@ -100,13 +100,13 @@ test.describe('a session survives', () => {
     await expect(primary(later)).toHaveAccessibleName('resume');
     await expect(paused(later)).toBeVisible();
     await expect(missed(later)).toHaveText('a check-in went unanswered at 4:00 pm');
-    expect(await shownTime(later)).toBe('02:00');
+    expect(await shownTime(later)).toBe('02:00:00');
     expect(await later.title()).toBe(`paused for 03:10 · ${NAME}`);
 
     // Resume continues the same session from the check-in.
     await primary(later).click();
     await later.clock.runFor(MINUTE);
-    expect(await shownTime(later)).toBe('02:01');
+    expect(await shownTime(later)).toBe('02:01:00');
     await expect(missed(later)).toBeHidden();
   });
 });
@@ -147,7 +147,7 @@ test.describe('check-ins', () => {
     await expect(checkIn(page)).toBeHidden();
     await expect(primary(page)).toHaveAccessibleName('resume');
     await expect(missed(page)).toBeHidden();
-    expect(await shownTime(page)).toBe('02:05');
+    expect(await shownTime(page)).toBe('02:05:00');
   });
 
   test('a tap anywhere answers', async ({ page }) => {
@@ -166,7 +166,7 @@ test.describe('check-ins', () => {
     await expect(primary(page)).toHaveAccessibleName('resume');
     await expect(missed(page)).toHaveText('a check-in went unanswered at 4:00 pm');
     await expect(page.locator('[role="status"]')).toHaveText('a check-in went unanswered at 4:00 pm');
-    expect(await shownTime(page)).toBe('02:00');
+    expect(await shownTime(page)).toBe('02:00:00');
     expect(await shownTime(page, '.time--paused-for')).toBe('01:10:00');
     // Past the 30-minute pause limit, the session still waits.
     await page.clock.runFor(40 * MINUTE);
@@ -280,7 +280,7 @@ test('tabs show one session: started, paused and ended from either', async ({ pa
   await other.goto('/');
   await primary(other).waitFor();
   await expect(primary(other)).toHaveAccessibleName('pause');
-  expect(await shownTime(other)).toBe('00:04');
+  expect(await shownTime(other)).toBe('00:04:00');
 
   await primary(other).click();
   await expect(primary(page)).toHaveAccessibleName('resume');

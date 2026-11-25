@@ -6,7 +6,7 @@
 
 import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
-import { compareWithReference, openApp, settle } from './helpers.ts';
+import { MINUTE, compareWithReference, endThroughCountdown, openApp, openSettingsOn, settle } from './helpers.ts';
 import { GRAPHITE } from './fixtures/frames.ts';
 import { focusFrame } from './fixtures/focus-frames.ts';
 import { SMOOTHED_LIMIT, expectLikeFrame } from './pixels.ts';
@@ -62,7 +62,7 @@ test('the pill never moves the time, and a dismissed tip stays dismissed', async
   expect(await time.boundingBox()).toEqual(withTip);
   // Focus moves on to start rather than being lost with the pill.
   await expect(page.locator('.button--primary')).toBeFocused();
-  expect(await page.evaluate(() => localStorage.getItem('notices'))).toBe('{"schema":1,"dismissed":["fullscreen"]}');
+  expect(await page.evaluate(() => localStorage.getItem('notices'))).toBe('{"schema":2,"dismissed":["fullscreen"],"firstSession":false}');
   await page.reload();
   await page.locator('.button--primary').waitFor();
   await expect(pill(page)).toHaveCount(0);
@@ -96,8 +96,7 @@ test('without page fullscreen (iPhones) there is no tip, and neither fullscreen 
   await pageFullscreen(page, false);
   await openApp(page, { width: 1280, height: 800 });
   await expect(pill(page)).toHaveCount(0);
-  await page.keyboard.press(',');
-  await page.locator('.settings__row', { hasText: /^display$/ }).click();
+  await openSettingsOn(page, 'display');
   await expect(page.getByRole('group', { name: 'focus view' })).toBeVisible();
   await expect(page.locator('[data-setting="fullscreenOnStart"]')).toBeHidden();
   await expect(page.locator('[data-setting="leaveFullscreen"]')).toBeHidden();
@@ -126,4 +125,109 @@ test('clear device data brings a dismissed tip back', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => localStorage.getItem('notices'))).toBeNull();
   await page.keyboard.press('Escape');
   await expect(pill(page)).toHaveCount(1);
+});
+
+// The seconds tip (round 2.14; plan version 13, answer 37; the "notice: seconds tip" frame): on the idle screen
+// after the person's first completed session, only while seconds are "always"; the fullscreen tip comes before it.
+
+/** Starts a session, lets it run, ends it and goes back to the timer: a first completed session. */
+async function completeSession(page: Page): Promise<void> {
+  await page.locator('.button--primary').click();
+  await page.clock.runFor(3 * MINUTE);
+  await endThroughCountdown(page);
+  await page.getByRole('button', { name: 'back to the timer' }).click();
+  await expect(page.locator('.results')).toBeHidden();
+}
+
+/** Stores a notices record before the first load, unless one is stored (a reload keeps what the page wrote). */
+async function seedNotices(page: Page, record: string): Promise<void> {
+  await page.addInitScript((text) => {
+    if (localStorage.getItem('notices') === null) localStorage.setItem('notices', text);
+  }, record);
+}
+
+const SECONDS_TIP = 'seconds can fade out after a minute, for a calmer screenchange';
+
+test('after the first completed session the idle screen shows the seconds tip instead, as the "notice: seconds tip" frame', async ({ page, browser, browserName }) => {
+  await pageFullscreen(page, true);
+  await openApp(page);
+  // Before the first session: the fullscreen tip, alone.
+  await expect(pill(page)).toHaveText('fullscreen hides your other tabschange');
+  await completeSession(page);
+  // After it: the seconds tip, alone, though the fullscreen tip was never dismissed.
+  await expect(pill(page)).toHaveCount(1);
+  await expect(pill(page)).toHaveText(SECONDS_TIP);
+  await expect(pill(page)).toHaveAttribute('role', 'status');
+  expect(await page.evaluate(() => localStorage.getItem('notices'))).toBe('{"schema":2,"dismissed":[],"firstSession":true}');
+  await settle(page);
+  const diff = await compareWithReference(page, browser, focusFrame('noticeSeconds', GRAPHITE));
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(NOTICE_LIMIT);
+    expect(diff.smoothedMaxDelta, JSON.stringify(diff)).toBeLessThanOrEqual(SMOOTHED_LIMIT);
+  });
+  // The moment is kept: a reload shows the seconds tip again until it is dismissed or acted on.
+  await page.reload();
+  await page.locator('.button--primary').waitFor();
+  await expect(pill(page)).toHaveText(SECONDS_TIP);
+});
+
+test('without page fullscreen (iPhones) the seconds tip still comes after the first session', async ({ page }) => {
+  await pageFullscreen(page, false);
+  await openApp(page);
+  await expect(pill(page)).toHaveCount(0);
+  await completeSession(page);
+  await expect(pill(page)).toHaveText(SECONDS_TIP);
+});
+
+test('"change" on the seconds tip sets seconds to blur away and opens settings on them, outlined in the accent colour', async ({ page }) => {
+  await pageFullscreen(page, true);
+  await seedNotices(page, '{"schema":2,"dismissed":[],"firstSession":true}');
+  await openApp(page, { width: 1280, height: 1220 });
+  await expect(pill(page)).toHaveText(SECONDS_TIP);
+  await page.getByRole('button', { name: 'change' }).click();
+  const row = page.locator('[data-setting="seconds"]');
+  await expect(row).toHaveClass(/setting--highlight/);
+  await expect(row).toBeInViewport();
+  await expect(page.getByRole('radiogroup', { name: 'seconds' }).getByRole('radio', { name: 'blur away' })).toHaveAttribute('aria-checked', 'true');
+  expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ seconds: 'blur-away' });
+  await expect(pill(page)).toHaveCount(0);
+  // Acted on, it never returns; nor does the fullscreen tip, whose moment has passed.
+  await page.keyboard.press('Escape');
+  await expect(pill(page)).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('notices'))).toBe('{"schema":2,"dismissed":["seconds"],"firstSession":true}');
+  await page.reload();
+  await page.locator('.button--primary').waitFor();
+  await expect(pill(page)).toHaveCount(0);
+});
+
+test('the seconds tip shows only while seconds are "always", and a dismissed one never returns', async ({ page }) => {
+  await pageFullscreen(page, true);
+  await seedNotices(page, '{"schema":2,"dismissed":[],"firstSession":true}');
+  await openApp(page, { width: 1280, height: 800, settings: { seconds: 'never' } });
+  await expect(pill(page)).toHaveCount(0);
+  // Seconds back to always: the tip's moment has come.
+  await openSettingsOn(page, 'timer');
+  await page.getByRole('radiogroup', { name: 'seconds' }).getByRole('radio', { name: 'always' }).click();
+  await page.keyboard.press('Escape');
+  await expect(pill(page)).toHaveText(SECONDS_TIP);
+  await page.getByRole('button', { name: 'dismiss' }).click();
+  await expect(pill(page)).toHaveCount(0);
+  await expect(page.locator('.button--primary')).toBeFocused();
+  // Another session and a reload bring nothing back.
+  await completeSession(page);
+  await expect(pill(page)).toHaveCount(0);
+  await page.reload();
+  await page.locator('.button--primary').waitFor();
+  await expect(pill(page)).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('notices'))).toBe('{"schema":2,"dismissed":["seconds"],"firstSession":true}');
+});
+
+test('a fullscreen tip dismissed before the first session leaves the seconds tip its own moment', async ({ page }) => {
+  await pageFullscreen(page, true);
+  await openApp(page);
+  await page.getByRole('button', { name: 'dismiss' }).click();
+  await expect(pill(page)).toHaveCount(0);
+  await completeSession(page);
+  await expect(pill(page)).toHaveText(SECONDS_TIP);
+  expect(await page.evaluate(() => localStorage.getItem('notices'))).toBe('{"schema":2,"dismissed":["fullscreen"],"firstSession":true}');
 });

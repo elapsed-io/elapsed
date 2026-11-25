@@ -24,7 +24,7 @@ function browsers(): { name: string; use: NonNullable<PlaywrightTestConfig['use'
  * Every test starts with the fullscreen tip already dismissed, so the idle screen is the one the earlier frames
  * draw; the tip's own tests start without it (e2e/notices.spec.ts).
  */
-export const TIP_DISMISSED = { cookies: [], origins: [{ origin: 'http://localhost:4173', localStorage: [{ name: 'notices', value: '{"schema":1,"dismissed":["fullscreen"]}' }] }] };
+export const TIP_DISMISSED = { cookies: [], origins: [{ origin: 'http://localhost:4173', localStorage: [{ name: 'notices', value: '{"schema":1,"dismissed":["fullscreen","seconds"]}' }] }] };
 
 export default defineConfig({
   testDir: './e2e',

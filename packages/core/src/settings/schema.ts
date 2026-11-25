@@ -19,6 +19,11 @@
  * Schema 3 (round 2.11): "leave fullscreen" defaults to never, so leaving fullscreen never delays the results.
  * Stored settings hold every field, so the only sign a person never changed it is that it still holds the old
  * default (end): an older record with end reads as never; any other choice is kept (owner, round 2.11).
+ *
+ * Schema 4 (round 2.14): seconds default to "always show" (plan version 13, Settings catalog), the options in the
+ * order always, blur away, never. By the same rule, stored settings never changed move to the new default: a
+ * record older than schema 4 still at the old default (blur away) reads as always; any other choice is kept, and
+ * from schema 4 on, blur away is kept like any choice (plan version 13, answer 36).
  */
 
 import { CONFIG } from '../config.ts';
@@ -26,12 +31,15 @@ import { SECONDS_DISPLAYS } from '../engine/view.ts';
 import type { SecondsDisplay } from '../engine/view.ts';
 import type { RuleSettings } from '../session/rules.ts';
 
-export const SETTINGS_SCHEMA = 3;
+export const SETTINGS_SCHEMA = 4;
 
 /** The default "leave fullscreen" had before schema 3, which an older record holding it never chose. */
 const LEAVE_FULLSCREEN_BEFORE_3 = 'end';
+/** The default seconds had before schema 4, which an older record holding it never chose. */
+const SECONDS_BEFORE_4 = 'blur-away';
 
-export const SETTINGS_CATEGORIES = ['timer', 'display', 'appearance', 'notifications', 'privacy'] as const;
+/** In the panel's order: display first (round 2.14, the Release 2 frames), then timer, appearance, notifications, privacy. */
+export const SETTINGS_CATEGORIES = ['display', 'timer', 'appearance', 'notifications', 'privacy'] as const;
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
 /** The display modes, in the tiles' order (Release 2 adds each in its round: analog in 2.2). */
@@ -215,7 +223,7 @@ const { timeSizePercent } = CONFIG.settings;
 
 /** Every setting, in the order the panel shows them. */
 export const SETTINGS: readonly SettingDeclaration[] = [
-  { key: 'seconds', kind: 'choice', category: 'timer', options: SECONDS_DISPLAYS, default: 'blur-away', target: { engine: 'secondsDisplay' } },
+  { key: 'seconds', kind: 'choice', category: 'timer', options: SECONDS_DISPLAYS, default: 'always', target: { engine: 'secondsDisplay' } },
   {
     key: 'checkInInterval',
     kind: 'range',
@@ -337,11 +345,17 @@ export function migrateSettings(raw: unknown): Settings {
   const record = raw as Record<string, unknown>;
   const result: Record<string, unknown> = { schema: SETTINGS_SCHEMA };
   const before3 = typeof record['schema'] !== 'number' || record['schema'] < 3;
+  const before4 = typeof record['schema'] !== 'number' || record['schema'] < 4;
   for (const setting of SETTINGS) {
     // Height's landmarks had ocean depth's switch until each mode had its own options box: kept as it was.
     const value = setting.key === 'heightLandmarks' && !(setting.key in record) ? record['resultsLandmarks'] : record[setting.key];
     // Leave fullscreen left at its old default reads as the new one (schema 3).
     if (setting.key === 'leaveFullscreen' && before3 && value === LEAVE_FULLSCREEN_BEFORE_3) {
+      result[setting.key] = defaults[setting.key];
+      continue;
+    }
+    // Seconds left at their old default read as the new one (schema 4).
+    if (setting.key === 'seconds' && before4 && value === SECONDS_BEFORE_4) {
       result[setting.key] = defaults[setting.key];
       continue;
     }

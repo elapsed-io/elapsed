@@ -31,7 +31,8 @@ function transitions(page: Page): Promise<Record<string, string>> {
 test('untouched for 3 seconds while running, the controls step aside and the time grows, as the "running, untouched" frame', async ({ page, browser, browserName }) => {
   await openApp(page);
   await page.locator('.button--primary').click();
-  await page.clock.runFor(84 * MINUTE);
+  // The frames show 01:24:37: seconds always (the default from round 2.14).
+  await page.clock.runFor(84 * MINUTE + 37 * SECOND);
   expect(await focused(page)).toBe(true);
   await settle(page);
   const diff = await compareWithReference(page, browser, focusFrame('focusQuiet', GRAPHITE));
@@ -46,7 +47,8 @@ test('untouched for 3 seconds while running, the controls step aside and the tim
 test('any mouse move brings everything back exactly, as the "running, recently touched" frame, until 3 more quiet seconds', async ({ page, browser, browserName }) => {
   await openApp(page);
   await page.locator('.button--primary').click();
-  await page.clock.runFor(84 * MINUTE);
+  // The frames show 01:24:37: seconds always (the default from round 2.14).
+  await page.clock.runFor(84 * MINUTE + 37 * SECOND);
   expect(await focused(page)).toBe(true);
   await page.mouse.move(100, 100);
   expect(await focused(page)).toBe(false);

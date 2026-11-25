@@ -177,6 +177,17 @@ export async function compareWithReference(page: Page, browser: Browser, markup:
   return diff;
 }
 
+/**
+ * Opens settings (if they are not open) on a category, expanding it only if it is closed: since round 2.14 the panel
+ * opens on display, the first category, so a click on an open category's row would close it.
+ */
+export async function openSettingsOn(page: Page, name: string): Promise<void> {
+  if (!(await page.locator('.settings').isVisible())) await page.keyboard.press(',');
+  await page.locator('.settings').waitFor();
+  const row = page.locator('.settings__row', { hasText: new RegExp(`^${name}$`) });
+  if ((await row.getAttribute('aria-expanded')) !== 'true') await row.click();
+}
+
 /** Every glyph (and every icon drawn in the text colour) made transparent, on the site and in a frame. */
 const NO_TEXT = '* { color: transparent !important; -webkit-text-fill-color: transparent !important; } text { fill: transparent !important; }';
 

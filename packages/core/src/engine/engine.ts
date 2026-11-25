@@ -108,7 +108,7 @@ export class TimerEngine {
     this.#events = options.events;
     this.#newId = options.newId;
     this.#timeZone = options.timeZone ?? systemTimeZone;
-    this.#seconds = options.seconds ?? 'blur-away';
+    this.#seconds = options.seconds ?? 'always';
     this.#rules = options.rules === null ? null : normaliseRules(options.rules ?? defaultRules());
     this.#heartbeatOn = options.heartbeat ?? true;
     this.#beforeWake = options.beforeWake ?? null;

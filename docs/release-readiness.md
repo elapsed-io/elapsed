@@ -32,28 +32,28 @@ what of that blocks the release. "Frame" names are the canvas titles.
 
 | | |
 | --- | --- |
-| **Done** | Idle, running (seconds blur-away), check-in, paused, paused after a missed check-in, ending countdown, session maximum and results (focus strip) all built and compared pixel for pixel with their frames in Chromium, Firefox and WebKit; the shared layout (time, 26 px gap, buttons) measured identical to the other time modes; focus view; the tab title; keyboard control; reduced motion and low power. |
-| **Left against the frames** | The timer frames now show seconds (running at 01:24:37, "running, untouched" and "recently touched", check-in at 02:00:00, paused at 01:24:37 for 00:04:12, missed check-in at 02:00:00): the site shows hh:mm after the first minute because its seconds default is still "blur away". "seconds: blur away" stays as an option, its frame unchanged. |
-| **Left against the plan** | Seconds default "always show" (Settings catalog); the once-only seconds tip ("seconds can fade out after a minute, for a calmer screen", with "change"; frame "the seconds tip, once only"). |
-| **Blocks the release** | The seconds default and its tip, and the frame tests re-taken from the current frames. |
+| **Done** | **Round 2.14:** seconds "always" by default and every timer frame re-taken with seconds (running at 01:24:37, the focus frames, check-in at 02:00:00, paused, paused after a missed check-in), matched in three browsers; the once-only seconds tip (decisions 413, 414, 419). Before: idle, running (seconds blur away, now an option, its frame unchanged), check-in, paused, paused after a missed check-in, ending countdown, session maximum and results (focus strip) all built and compared pixel for pixel with their frames in Chromium, Firefox and WebKit; the shared layout (time, 26 px gap, buttons) measured identical to the other time modes; focus view; the tab title; keyboard control; reduced motion and low power. |
+| **Left against the frames** | Nothing. |
+| **Left against the plan** | Nothing. |
+| **Blocks the release** | No. |
 
 ### Ring
 
 | | |
 | --- | --- |
 | **Done** | **Round 2.13:** the shared 260 px dial (an 8 px track filling it), the time at the shared 48 px inside it, the buttons 26 px below; frames "ring: the shared 260 px dial, time 48 px", "ring at the start" and "ring, paused" matched in three browsers (decision 408). Before: the fading tail growing in behind the head, the head gliding 6° a minute on its own layer and stepping with reduced motion or low power, holding while paused; the paused screen blurring the whole figure; results as one ring per hour (frame "results: analog and ring", matched). |
-| **Left against the frames** | The frames show the time with seconds; the tests set "always" until it is the default (round 2.14). |
+| **Left against the frames** | Nothing: the frames' seconds are the default since round 2.14. |
 | **Left against the plan** | Nothing. |
-| **Blocks the release** | The seconds default (round 2.14). |
+| **Blocks the release** | No. |
 
 ### Timeline
 
 | | |
 | --- | --- |
 | **Done** | **Round 2.13:** the compact timeline, the shared 48 px time 14 px above a 360 px track (its ends fading over 14 %), the buttons 26 px below; frames "timeline: compact, time 48 px", "timeline at the start" and "timeline, paused" matched in three browsers (decision 408). Before: the track gliding 10 px a minute on its own layers (stepping with reduced motion or low power), nothing before the start, ticks and labels on whole pixels; results as the focus strip (matched). The personal-record marker stays hidden until records arrive (Release 3), as the frame index says. |
-| **Left against the frames** | As ring: seconds, with round 2.14. |
+| **Left against the frames** | Nothing: the frames' seconds are the default since round 2.14. |
 | **Left against the plan** | Nothing. |
-| **Blocks the release** | The seconds default (round 2.14). |
+| **Blocks the release** | No. |
 
 ### Analog
 
@@ -68,15 +68,15 @@ what of that blocks the release. "Frame" names are the canvas titles.
 
 | Screen | Done | Left against the frames and the plan | Blocks the release |
 | --- | --- | --- | --- |
-| **Idle** | Built and matched (graphite and paper); the fullscreen tip above the time; the ambient idle for modes with an environment. | The seconds tip (frame "the seconds tip, once only"), with "only one notice shows at a time": the fullscreen tip first, on the idle screen before the first session; the seconds tip on the idle screen after the first completed session, only while seconds are still "always"; a dismissed or acted-on tip never returns (plan version 13). Its "change" must point to a choice (seconds: blur away), where the pill's "change" today turns on a switch. | The tip. |
-| **Running** | Built and matched: the blur-away at every moment of the running frame (an option now), focus view (the three focus frames, decisions 339 to 341). | Default seconds "always" (stored settings never changed move to it; a choice the person made is kept): the focus frames now show 01:24:37. | The default and the re-taken frames. |
-| **Check-in** | Built and matched; never hides its controls; the layer order keeps every mode's art under it. | The frame shows 02:00:00 with seconds. | The re-taken frame. |
-| **Paused** | Built and matched, with "paused after a missed check-in"; the pause blur. | Both frames now show seconds; ring and timeline have paused frames of their own at the new sizes (section 2). | The re-taken frames. |
+| **Idle** | Built and matched (graphite and paper); the ambient idle for modes with an environment. **Round 2.14:** the fullscreen tip before the first session and the seconds tip after the first completed session while seconds are "always", one at a time, each never returning once dismissed or acted on; frame "the seconds tip, once only" matched (decision 414). | Nothing. | No. |
+| **Running** | Built and matched: seconds "always" by default (stored settings never changed move to it, a choice made is kept; decision 413), the focus frames at 01:24:37, and the blur away at every moment of the running frame, as an option; focus view (decisions 339 to 341). | Nothing. | No. |
+| **Check-in** | Built and matched, at 02:00:00 with seconds (round 2.14); never hides its controls; the layer order keeps every mode's art under it. | Nothing. | No. |
+| **Paused** | Built and matched with seconds (round 2.14), with "paused after a missed check-in"; the pause blur; ring and timeline's own paused frames (round 2.13). | Nothing. | No. |
 | **Ending** | Built and matched; unchanged. | Nothing. | No. |
 | **Session maximum** | Built and matched; unchanged. | Nothing. | No. |
 | **Results** | Built and matched: digits and timeline, analog and ring, the paper theme; replays never stall and sweep evenly through pauses (decision 348). | Nothing against the frames. | No. |
-| **Settings** | Built and matched: every Release 1 and Release 2 frame as it was; search, resets, the settings file, custom CSS, safe mode; "leave fullscreen" defaulting to never (decision 397); the credits link. | Frames "settings open on display, now first" and "settings panel: slides in and out": display is the first category and the panel opens on it, display mode at the top; the panel slides 24 px in from the right while fading in over 200 ms and out over 160 ms (built: opens on timer, no slide). Frame "seconds: always (default), blur away, never": the options in that order. The Release 2 display frame (the analog tile redrawn in round 2.13; the advanced frame without the switch, "leave fullscreen" with never chosen, no picture-in-picture row and the flagged visit's line under the tiles are built and matched, round 2.12). The Release 2 timer frame's check-ins switch and "keep screen awake" are not built (round 2.15). | Display first, the motion, the seconds row, the advanced frame, the analog tile, the check-ins switch and keep screen awake. |
-| **Credits page** | Built (decision 398): every third-party work and its licence, under the site's security policy, reached from the footer. | Plan version 12: it follows the person's chosen theme and the site's typeface, laid out like the privacy and terms pages (built: the default theme, its own layout). | Yes. |
+| **Settings** | Built and matched: every Release 1 and Release 2 frame as it was; search, resets, the settings file, custom CSS, safe mode; "leave fullscreen" defaulting to never (decision 397); the credits link. **Round 2.14:** display first, the panel opening on it with display mode at the top (frame "settings open on display, now first"); the panel sliding 24 px in from the right while fading in over 200 ms and out over 160 ms, the timer still beside it (frame "settings panel: slides in and out"); seconds offered as always, blur away, never (frame "seconds: always (default), blur away, never"); decisions 415 to 417. | The Release 2 timer frame's check-ins switch and "keep screen awake", and the display frame without the picture-in-picture row (round 2.15). | The check-ins switch and keep screen awake. |
+| **Credits page** | Built (decision 398): every third-party work and its licence, under the site's security policy, reached from the footer. **Round 2.14:** in the person's chosen theme (each of the ten, and colours of their own) and the site's typeface, laid out like the privacy and terms pages (decision 418). | Nothing. | No. |
 
 ### Across every screen
 
@@ -126,7 +126,7 @@ Ordered to release the standard modes soonest (every question that held a round 
 | --- | --- | --- | --- |
 | **2.12** Test modes behind the flag only (**done**) | The owner's item 2 in full, with its tests; the advanced category without the switch. | "settings, advanced (release 2)"; the Release 2 display frame's flagged-visit line. | Nothing. |
 | **2.13** The standard sizes and the recipe archive (**done**) | The 260 px dial for ring and analog, the 48 px time inside ring and timeline, the compact 360 px timeline, every main block in the shared slot 26 px above the buttons, the analog rescale and its tile; the recipes reconciled (the frames win for the standard modes, and each corrected recipe is written back into the archive and checked again), the validator taking the archive's schema, and `recipe-check.py`'s checks made permanent tests. | The three ring frames, the three timeline frames, the analog frame, the Release 2 display frame's analog tile. | Nothing. |
-| **2.14** Seconds, settings and notices | Seconds default "always" (stored settings never changed move to it), the seconds tip on the idle screen after the first completed session while seconds are still "always" (the fullscreen tip before the first session; one notice at a time; a dismissed or acted-on tip never returns), settings opening on display (first) with display mode at the top, the panel's slide, the seconds options' order, the credits page in the chosen theme and the legal pages' layout; every shared timer frame re-taken with seconds. | "the seconds tip, once only", "settings panel: slides in and out", "settings open on display, now first", "seconds: always (default), blur away, never", the running, focus, check-in and paused frames. | Nothing. |
+| **2.14** Seconds, settings and notices (**done**) | Seconds default "always" (stored settings never changed move to it), the seconds tip on the idle screen after the first completed session while seconds are still "always" (the fullscreen tip before the first session; one notice at a time; a dismissed or acted-on tip never returns), settings opening on display (first) with display mode at the top, the panel's slide, the seconds options' order, the credits page in the chosen theme and the legal pages' layout; every shared timer frame re-taken with seconds. | "the seconds tip, once only", "settings panel: slides in and out", "settings open on display, now first", "seconds: always (default), blur away, never", the running, focus, check-in and paused frames. | Nothing. |
 | **2.15** Check-ins switch and keep screen awake | The two Release 2 timer controls; picture-in-picture's code behind the test flag, its row and button hidden at launch. | Release 2 settings: timer and display. | Nothing. |
 | **2.16** Hardening, the launch list and the release review | The Release 2 passes over the standard modes and screens; the privacy and terms pages served by the app; the launch list prepared for the owner (section 4); `docs/safety/release-2.md`. | Every frame of the release. | The owner's two tasks (legal review, the repository public) and sign-off. |
 

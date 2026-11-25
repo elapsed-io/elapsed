@@ -48,6 +48,7 @@ const CEILINGS_KB: Readonly<Record<string, Ceiling>> = {
   'part:downloaded modes list': { code: 1.0, art: 0.0 }, // 0.92
   'part:image store': { code: 1.0, art: 0.0 }, // 0.93
   'part:service worker': { code: 3.0, art: 0.0 }, // 2.40
+  'part:credits page theme': { code: 0.5, art: 0.0 }, // 0.29 (round 2.14; the theme code it uses is the core's)
 };
 
 /** A download's ceiling in bytes, or undefined if it has none. */

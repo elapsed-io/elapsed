@@ -180,6 +180,13 @@ export const CONFIG = {
     },
     /** A notice's "change" outlines the setting it opened for this long, then the outline fades. */
     highlightMs: 2000,
+    /**
+     * The settings panel's motion (the "settings panel: slides in and out" frame; plan, Design system): it slides
+     * this far in from the right while fading in, easing out (quartic), and closes the same way, easing in
+     * (quadratic), so the timer behind it never moves. Scaled by the animation speed; with reduced motion it only
+     * fades.
+     */
+    panel: { slidePx: 24, inMs: 200, outMs: 160 },
     /** A change of environment (a mode's water or sky coming or going) crossfades over this long. */
     environmentFade: 2000,
     /**

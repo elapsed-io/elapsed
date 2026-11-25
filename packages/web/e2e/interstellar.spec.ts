@@ -11,14 +11,19 @@ import { expectLikeFrame } from './pixels.ts';
 test.use({ locale: 'en-GB', timezoneId: 'UTC' });
 const primary = (page: Page) => page.locator('.button--primary');
 
-/** Opens the site with an interstellar session `focusMs` in (restored, so no check-in has come due). */
-async function restoreAt(page: Page, focusMs: number, settings?: Readonly<Record<string, unknown>>): Promise<void> {
+/**
+ * Opens the site with an interstellar session `focusMs` in (restored, so no check-in has come due). Interstellar's
+ * frames (a test mode's, drawn before round 2.14) show hh:mm, as seconds blurring away do after a minute: so its
+ * sessions blur them away unless a test says otherwise.
+ */
+async function restoreAt(page: Page, focusMs: number, own?: Readonly<Record<string, unknown>>): Promise<void> {
+  const settings = { seconds: 'blur-away', ...own };
   const session = createSession({ id: '7d1e3a5c-2b4f-4c6d-8e0a-1b3c5d7e9f20', mode: 'interstellar', at: T_READY - focusMs, timeZone: 'UTC' });
   await page.goto('/sw-control.json');
   await page.evaluate((text) => {
     localStorage.setItem('timer.active', text);
   }, serializeActiveState({ ...startState(session), presenceAt: T0 - 10 * SECOND }));
-  await openApp(page, { mode: 'interstellar', ...(settings === undefined ? {} : { settings }) });
+  await openApp(page, { mode: 'interstellar', settings });
 }
 
 /**

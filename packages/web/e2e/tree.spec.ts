@@ -14,8 +14,13 @@ const primary = (page: Page) => page.locator('.button--primary');
 const YEAR = 60 * MINUTE;
 const TREE_PARTS = '.tree__cluster, .tree__stage, .tree__layer';
 
-async function sessionAt(page: Page, focus: number, settings: Readonly<Record<string, unknown>> = {}): Promise<void> {
-  await openApp(page, { mode: 'tree', settings });
+/**
+ * A tree session `focus` in. The tree's frames (a test mode's, drawn before round 2.14) show hh:mm, as seconds blurring
+ * away do after a minute, and its year is re-pinned only when what is shown changes: so its sessions blur seconds away
+ * unless a test says otherwise.
+ */
+async function sessionAt(page: Page, focus: number, own: Readonly<Record<string, unknown>> = {}): Promise<void> {
+  await openApp(page, { mode: 'tree', settings: { seconds: 'blur-away', ...own } });
   await primary(page).click();
   await page.clock.runFor(focus);
   await page.locator('.tree__svg').waitFor();
@@ -150,7 +155,9 @@ test('control: the tree a season off fails its frame by far', async ({ page, bro
 });
 
 test('results for the tree match the "results: tree" frame: full grown, in the season the session ended in', async ({ page, browser, browserName }) => {
-  await openApp(page, { width: 720, height: 520, mode: 'tree' });
+  // Seconds blurring away, as the tree's frames are drawn (decision 419): a session of three hours otherwise
+  // re-places the tree's animations every simulated second.
+  await openApp(page, { width: 720, height: 520, mode: 'tree', settings: { seconds: 'blur-away' } });
   await page.clock.runFor(90 * SECOND);
   await primary(page).click();
   await page.clock.runFor(92 * MINUTE);

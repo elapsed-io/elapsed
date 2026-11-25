@@ -8,7 +8,7 @@
 
 import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
-import { MINUTE, SECOND, openApp, settle } from './helpers.ts';
+import { MINUTE, SECOND, openApp, settle, openSettingsOn } from './helpers.ts';
 
 /** The screen's colour at a few points away from the time and the controls. */
 async function backdrop(page: Page): Promise<string[]> {
@@ -55,8 +55,7 @@ test('leaving an environment crossfades over 120 ms, by opacity alone, held wher
   await openApp(page, { mode: 'interstellar', width: 1280, height: 800 });
   await page.locator('.button--primary').click();
   await page.clock.runFor(5 * MINUTE);
-  await page.keyboard.press(',');
-  await page.locator('.settings__row', { hasText: /^display$/ }).click();
+  await openSettingsOn(page, 'display');
   await page.getByRole('radio', { name: 'digits' }).click();
   await expect(page.locator('.screen[data-mode="digits"]')).toHaveCount(1);
   // To a mode without an environment, space fades out on its own, held still.
@@ -78,8 +77,7 @@ test('leaving an environment crossfades over 120 ms, by opacity alone, held wher
 test('with reduced motion an environment changes at once', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openApp(page, { mode: 'interstellar', width: 1280, height: 800 });
-  await page.keyboard.press(',');
-  await page.locator('.settings__row', { hasText: /^display$/ }).click();
+  await openSettingsOn(page, 'display');
   await page.getByRole('radio', { name: 'digits' }).click();
   await expect(page.locator('.screen[data-mode="digits"]')).toHaveCount(1);
   await expect(page.locator('.environment')).toHaveCount(0);
@@ -87,8 +85,7 @@ test('with reduced motion an environment changes at once', async ({ page }) => {
 
 test('the settings panel opens over the chosen mode, which shows behind it', async ({ page }) => {
   await openApp(page, { mode: 'interstellar', width: 1280, height: 800 });
-  await page.keyboard.press(',');
-  await page.locator('.settings__row', { hasText: /^display$/ }).click();
+  await openSettingsOn(page, 'display');
   await expect(page.locator('.mode-root > .environment')).toBeVisible();
   // Space fills the screen to the panel's edge.
   const space = await page.locator('.mode-root > .environment').boundingBox();

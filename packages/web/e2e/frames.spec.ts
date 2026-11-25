@@ -28,7 +28,8 @@ const RUNNING_MOMENTS = [0.5, 3, 7.5, 9.9, 12, 35, 47.5, 59.5];
 
 for (const seconds of RUNNING_MOMENTS) {
   test(`running at ${String(seconds)} s matches the running frame as the seconds blur away`, async ({ page, browser, browserName }) => {
-    await openApp(page);
+    // The running frame is "seconds: blur away", a choice since round 2.14 (always is the default).
+    await openApp(page, { settings: { seconds: 'blur-away' } });
     await page.locator('.button--primary').click();
     await page.clock.runFor(seconds * SECOND);
     await settle(page);
@@ -42,7 +43,7 @@ for (const seconds of RUNNING_MOMENTS) {
 }
 
 test('the comparison tells the blur-away apart from a moment 4.5 s away (a control check)', async ({ page, browser }) => {
-  await openApp(page);
+  await openApp(page, { settings: { seconds: 'blur-away' } });
   await page.locator('.button--primary').click();
   await page.clock.runFor(3 * SECOND);
   await settle(page);
@@ -52,8 +53,8 @@ test('the comparison tells the blur-away apart from a moment 4.5 s away (a contr
   expect(diff.visible).toBeGreaterThan(60);
 });
 
-test('running after a minute shows hh:mm exactly as the running frame', async ({ page, browser, browserName }) => {
-  await openApp(page);
+test('with seconds blurring away, running after a minute shows hh:mm exactly as the running frame', async ({ page, browser, browserName }) => {
+  await openApp(page, { settings: { seconds: 'blur-away' } });
   await page.locator('.button--primary').click();
   await page.clock.runFor(75 * SECOND);
   await settle(page);
@@ -83,17 +84,15 @@ test('the idle frame reconstruction matches the graphite idle screen too', async
   });
 });
 
-test('paused matches the paused frame exactly', async ({ page, browser, browserName }) => {
+test('paused matches the paused frame: exactly without text, within a glyph edge with it', async ({ page, browser, browserName }) => {
   await openApp(page);
   await page.locator('.button--primary').click();
-  await page.clock.runFor(84 * MINUTE);
+  await page.clock.runFor(84 * MINUTE + 37 * SECOND);
   await page.locator('.button--primary').click();
   await page.clock.runFor(4 * MINUTE + 12 * SECOND);
   await settle(page);
   const diff = await compareWithReference(page, browser, pausedFrame());
-  expectLikeFrame(diff, browserName, () => {
-    expect(diff).toMatchObject({ differing: 0 });
-  });
+  expectDrawingAndText(diff, await compareWithoutText(page, browser, pausedFrame()), browserName, 0, HELD_TEXT_EDGES);
 });
 
 /** Runs a session in `mode` to `focus`, then optionally pauses it for `paused`; `seconds` as the frame shows them. */
@@ -126,9 +125,16 @@ const RING_GLIDING_LIMIT = 100;
 const TEXT_EDGES = 1600;
 const TEXT_SMOOTHED = 40;
 
-function expectDrawingAndText(whole: PixelDiff, drawing: PixelDiff, browserName: string, drawingLimit: number): void {
+/**
+ * The held frames (paused, check-in, paused after a missed check-in) since round 2.14: their text now lies over the
+ * wider blurred 01:24:37 or 02:00:00, and one glyph's edge lands a few levels from the frame's (39 to 42 pixels
+ * measured, at most 63 levels); with every glyph transparent they match exactly.
+ */
+const HELD_TEXT_EDGES = 100;
+
+function expectDrawingAndText(whole: PixelDiff, drawing: PixelDiff, browserName: string, drawingLimit: number, textLimit = TEXT_EDGES): void {
   if (browserName === 'chromium' && PIXEL_REFERENCE) {
-    expect(whole.visible, JSON.stringify(whole)).toBeLessThanOrEqual(TEXT_EDGES);
+    expect(whole.visible, JSON.stringify(whole)).toBeLessThanOrEqual(textLimit);
     expect(drawing.visible, JSON.stringify(drawing)).toBeLessThanOrEqual(drawingLimit);
   }
   expect(whole.smoothedMaxDelta, JSON.stringify(whole)).toBeLessThanOrEqual(TEXT_SMOOTHED);
@@ -247,32 +253,28 @@ test('control: a gliding ring 3° from the frame fails the ring frame by far', a
   expect(diff.smoothedMaxDelta).toBeGreaterThan(SMOOTHED_LIMIT);
 });
 
-test('a check-in waiting matches the check-in frame exactly', async ({ page, browser, browserName }) => {
+test('a check-in waiting matches the check-in frame: exactly without text, within a glyph edge with it', async ({ page, browser, browserName }) => {
   await openApp(page);
   await page.locator('.button--primary').click();
   await page.clock.runFor(120 * MINUTE);
   await page.mouse.move(0, 0);
   await settle(page);
   const diff = await compareWithReference(page, browser, checkInFrame());
-  expectLikeFrame(diff, browserName, () => {
-    expect(diff).toMatchObject({ differing: 0 });
-  });
+  expectDrawingAndText(diff, await compareWithoutText(page, browser, checkInFrame()), browserName, 0, HELD_TEXT_EDGES);
 });
 
 test.describe('paused after a missed check-in', () => {
   // The check-in falls due at 16:00:30 UTC: 2:00 pm two hours west of UTC, as in the frame.
   test.use({ locale: 'en-US', timezoneId: 'Etc/GMT+2' });
 
-  test('matches its frame exactly', async ({ page, browser, browserName }) => {
+  test('matches its frame: exactly without text, within a glyph edge with it', async ({ page, browser, browserName }) => {
     await openApp(page);
     await page.locator('.button--primary').click();
     await page.clock.runFor(120 * MINUTE + 72 * MINUTE + 40 * SECOND);
     await page.mouse.move(0, 0);
     await settle(page);
     const diff = await compareWithReference(page, browser, pausedMissedFrame());
-    expectLikeFrame(diff, browserName, () => {
-      expect(diff).toMatchObject({ differing: 0 });
-    });
+    expectDrawingAndText(diff, await compareWithoutText(page, browser, pausedMissedFrame()), browserName, 0, HELD_TEXT_EDGES);
   });
 });
 

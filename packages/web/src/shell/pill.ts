@@ -1,8 +1,8 @@
 /**
  * Notices (plan, Interface; the "notice: fullscreen tip" frame): one small reusable pill, 20 px tall with
  * 11 px text, shown just above the time without moving it, with a dismiss ×. A notice that points to a
- * setting carries the one universal link, "change", which turns that setting on at once and opens settings
- * on it. Which notice shows, and when, is the shell's call; the pill only draws one and reports the presses.
+ * setting carries the one universal link, "change", which makes that change at once (turns a switch on, or picks a
+ * choice: the seconds tip's blur away) and opens settings on it. Which notice shows, and when, is the shell's call; the pill only draws one and reports the presses.
  *
  * The pill hangs from the top of the time (position absolute, bottom 100%), so the time never moves when it
  * appears or goes.
@@ -12,20 +12,20 @@ import { BRAND, type SettingKey, type Settings } from '@stopwatch/core';
 import { html, svg } from '../dom.ts';
 import { ICONS } from '../icons/icons.ts';
 
-/** A setting that is a plain switch: what "change" can turn on. */
-export type SwitchKey = { [K in SettingKey]: Settings[K] extends boolean ? K : never }[SettingKey];
+/** What a notice's "change" sets: one setting to one value (a switch turned on, or a choice). */
+export type NoticeChange = { [K in SettingKey]: { readonly key: K; readonly value: Settings[K] } }[SettingKey];
 
 export interface Notice {
   /** Kept when dismissed; lowercase words joined by hyphens. */
   readonly id: string;
   readonly text: string;
-  /** The switch "change" turns on, when the notice points to one. */
-  readonly setting?: SwitchKey;
+  /** What "change" sets, when the notice points to a setting. */
+  readonly change?: NoticeChange;
 }
 
 export interface PillHost {
   dismiss(notice: Notice): void;
-  change(notice: Notice, setting: SwitchKey): void;
+  change(notice: Notice, change: NoticeChange): void;
 }
 
 export class Pill {
@@ -41,7 +41,7 @@ export class Pill {
     this.#change = html(doc, 'button', { class: 'pill__change', attrs: { type: 'button' } }, [copy.change]);
     this.#change.addEventListener('click', () => {
       const notice = this.#notice;
-      if (notice?.setting !== undefined) host.change(notice, notice.setting);
+      if (notice?.change !== undefined) host.change(notice, notice.change);
     });
     const cross = svg(
       doc,
@@ -75,7 +75,7 @@ export class Pill {
     if (notice.id !== this.#notice?.id) {
       this.#notice = notice;
       this.#text.data = notice.text;
-      this.#change.hidden = notice.setting === undefined;
+      this.#change.hidden = notice.change === undefined;
     }
     if (this.element.parentElement !== time) time.append(this.element);
   }

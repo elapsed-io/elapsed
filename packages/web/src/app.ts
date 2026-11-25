@@ -538,25 +538,32 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     showNotice();
   };
 
-  // Notices (plan, Interface): one pill above the time. The first is the fullscreen tip on the idle screen,
-  // shown where the page can go fullscreen, while the setting is off and until it is dismissed. "change" turns
-  // the setting on and opens settings on it; the tip has then done its job, so it counts as dismissed too.
-  const fullscreenTip: Notice = { id: 'fullscreen', text: BRAND.copy.notices.fullscreen, setting: 'fullscreenOnStart' };
+  // Notices (plan, Interface): one pill above the time on the idle screen, one at a time, each at its moment (plan
+  // version 13). Before the first completed session, the fullscreen tip, as it is about setting up: shown where the
+  // page can go fullscreen and while the setting is off. After it, once the person has watched the seconds tick, the
+  // seconds tip, while seconds are still "always". "change" makes the tip's change and opens settings on it; a tip
+  // dismissed or acted on has done its job and never returns.
+  const fullscreenTip: Notice = { id: 'fullscreen', text: BRAND.copy.notices.fullscreen, change: { key: 'fullscreenOnStart', value: true } };
+  const secondsTip: Notice = { id: 'seconds', text: BRAND.copy.notices.seconds, change: { key: 'seconds', value: 'blur-away' } };
   const noticeNow = (): Notice | null => {
     if (current !== 'timer' || shown(engine.view).status !== 'idle') return null;
-    if (!fullscreenAvailable() || settings.current.fullscreenOnStart || noticeStore.dismissed(fullscreenTip.id)) return null;
-    return fullscreenTip;
+    if (!noticeStore.firstSession) {
+      if (!fullscreenAvailable() || settings.current.fullscreenOnStart || noticeStore.dismissed(fullscreenTip.id)) return null;
+      return fullscreenTip;
+    }
+    if (settings.current.seconds !== 'always' || noticeStore.dismissed(secondsTip.id)) return null;
+    return secondsTip;
   };
   const pill = new Pill(doc, {
     dismiss: (notice) => {
       noticeStore.dismiss(notice.id);
       showNotice();
     },
-    change: (notice, setting) => {
+    change: (notice, change) => {
       noticeStore.dismiss(notice.id);
-      settings.change(withSetting(settings.current, setting, true));
+      settings.change(withSetting(settings.current, change.key, change.value));
       void openSettings()
-        .then(() => panel?.openOn(setting, true))
+        .then(() => panel?.openOn(change.key, true))
         .catch(report);
     },
   });
@@ -599,6 +606,8 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     counts.session();
   });
   bus.on('session.ended', ({ session, reason }) => {
+    // The first completed session: from now on the idle screen's tip is the seconds tip's (noticeNow).
+    noticeStore.completeSession();
     leaveFullscreen('end');
     sync.ended(session);
     finished.save(session);

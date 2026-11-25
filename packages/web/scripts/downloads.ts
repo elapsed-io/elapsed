@@ -2,7 +2,8 @@
  * Every download the site fetches after the core, measured from the build (round 2.10's per-download budgets): each
  * downloaded mode (its descriptor, pieces, environment, view and art: mode-downloads.ts), each piece, results view,
  * environment and the camera on its own, and the optional parts (settings, results, the custom CSS editor, a flagged
- * visit's test modes and their settings tiles, the downloaded-modes list, the image store, the service worker). A part counts what loading
+ * visit's test modes and their settings tiles, the downloaded-modes list, the image store, the service worker, the
+ * credits page's theme script). A part counts what loading
  * it fetches at once; a mode, a piece or a view counts what it fetches later too (its art).
  */
 
@@ -23,6 +24,7 @@ export const PARTS: Readonly<Record<string, string>> = {
   'downloaded modes list': 'src/storage/mode-cache.ts',
   'image store': 'src/storage/media-store.ts',
   'service worker': 'src/sw/sw.ts',
+  'credits page theme': 'src/credits/theme.ts',
 };
 
 export interface Download {

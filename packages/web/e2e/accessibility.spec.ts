@@ -173,7 +173,8 @@ test.describe('keyboard', () => {
 
 test.describe('screen readers', () => {
   test('the time is read on request in words, never announced; paused, the pause length is read instead', async ({ page }) => {
-    await openApp(page);
+    // What is read follows what is shown; with seconds blurring away (a choice), the ones digit goes after 10 s.
+    await openApp(page, { settings: { seconds: 'blur-away' } });
     const time = page.locator('.time--main');
     await expect(time).toHaveAttribute('role', 'timer');
     await expect(time).toHaveAttribute('aria-label', '0 seconds focused');

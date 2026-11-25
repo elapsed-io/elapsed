@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from './test.ts';
 import type { Browser, Page } from '@playwright/test';
+import { SETTINGS_SCHEMA } from '@stopwatch/core';
 import { FONT, MINUTE, SECOND, endThroughCountdown, finishResults, openApp, seedSettings, settle } from './helpers.ts';
 import { FRAME_FONTS, SETTINGS_FRAME_HEIGHT, settingsFrame } from './fixtures/settings-frames.ts';
 import type { Palette, SettingsFrameName } from './fixtures/settings-frames.ts';
@@ -75,8 +76,9 @@ export const FRAME_CSS = '/* your custom css */\n.time {\n  letter-spacing: -0.0
 async function showLikeFrame(page: Page, name: SettingsFrameName): Promise<void> {
   await openPanel(page);
   await openCategory(page, 'timer');
-  await page.getByRole('radio', { name: 'always' }).click();
+  // A change, so "saved" shows, ending on always (the default since round 2.14, as the timer frame draws it).
   await page.getByRole('radio', { name: 'blur away' }).click();
+  await page.getByRole('radio', { name: 'always' }).click();
   await openCategory(page, name === 'privacy' ? 'privacy and data' : name);
   if (name === 'appearance') await expect(page.locator('.font-tile--loading')).toHaveCount(0);
   if (name === 'advanced') {
@@ -324,6 +326,115 @@ test.describe('opening and closing', () => {
     await expect(panel(page)).toBeHidden();
   });
 
+  test('opens on display, now the first category, with display mode at the top', async ({ page }) => {
+    await openApp(page, { width: 1280, height: 800 });
+    await page.keyboard.press(',');
+    await panel(page).waitFor();
+    await expect(page.locator('.settings__row')).toHaveText(['display', 'timer', 'appearance', 'notifications', 'privacy and data', 'advanced']);
+    await expect(row(page, 'display')).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('.settings__row[aria-expanded="true"]')).toHaveCount(1);
+    // Display mode is the first setting on the page.
+    await expect(page.locator('.settings .setting:visible').first()).toContainText('display mode');
+  });
+
+  /** The panel's running animations, as the test reads them: duration, easing and keyframes. */
+  const panelMotion = (page: Page) =>
+    panel(page).evaluate((element) =>
+      element.getAnimations().map((animation) => ({
+        duration: animation.effect?.getTiming().duration,
+        easing: animation.effect?.getTiming().easing,
+        frames: (animation.effect instanceof KeyframeEffect ? animation.effect.getKeyframes() : []).map((frame) => ({ transform: frame['transform'], opacity: frame['opacity'] })),
+      })),
+    );
+
+  /** Holds the panel's animation halfway, reads where the timer is, and lets the animation finish. */
+  const timerHalfway = (page: Page) =>
+    panel(page).evaluate((element) => {
+      const [animation] = element.getAnimations();
+      if (animation === undefined) return null;
+      animation.pause();
+      animation.currentTime = Number(animation.effect?.getTiming().duration ?? 0) / 2;
+      const opacity = getComputedStyle(element).opacity;
+      const box = document.querySelector('.time--main')?.getBoundingClientRect();
+      animation.finish();
+      return { opacity: Number(opacity), box: { x: box?.x ?? 0, y: box?.y ?? 0, width: box?.width ?? 0 } };
+    });
+
+  /** Where a box is, to a hundredth of a pixel: Firefox reads the same box a few millionths apart from one moment to the next. */
+  const near = (box: { x: number; y: number; width: number } | null | undefined) => {
+    const round = (value: number | undefined): number => Math.round((value ?? 0) * 100) / 100;
+    return { x: round(box?.x), y: round(box?.y), width: round(box?.width) };
+  };
+
+  test('slides 24 px in from the right while fading in over 200 ms, and out over 160 ms; the timer never moves meanwhile', async ({ page }) => {
+    await openApp(page, { width: 1280, height: 800 });
+    await primary(page).click();
+    await page.clock.runFor(MINUTE);
+    const time = page.locator('.time--main');
+    const alone = near(await time.boundingBox());
+    await page.keyboard.press(',');
+    await panel(page).waitFor();
+    // Transform and opacity only, easing out (the frame's quartic curve).
+    expect(await panelMotion(page)).toEqual([
+      {
+        duration: 200,
+        easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+        frames: [
+          { transform: 'translateX(24px)', opacity: '0' },
+          { transform: 'translateX(0px)', opacity: '1' },
+        ],
+      },
+    ]);
+    const opening = await timerHalfway(page);
+    const open = near(await time.boundingBox());
+    // Halfway in, the panel is half seen and the timer already where it stays: beside the panel, as the frames draw it.
+    expect(opening?.opacity).toBeGreaterThan(0);
+    expect(opening?.opacity).toBeLessThan(1);
+    expect(near(opening?.box)).toEqual(open);
+    expect(open.x + open.width / 2).toBeCloseTo(PANEL.x / 2, 0);
+
+    await page.keyboard.press('Escape');
+    // Out the same way, faster, easing in (the frame's quadratic curve); the panel stays until it is out of sight.
+    expect(await panelMotion(page)).toEqual([
+      {
+        duration: 160,
+        easing: 'cubic-bezier(0.11, 0, 0.5, 0)',
+        frames: [
+          { transform: 'translateX(0px)', opacity: '1' },
+          { transform: 'translateX(24px)', opacity: '0' },
+        ],
+      },
+    ]);
+    const closing = await timerHalfway(page);
+    expect(near(closing?.box)).toEqual(open);
+    await expect(panel(page)).toBeHidden();
+    // Then the timer has the whole screen again; the session ran on throughout.
+    await expect.poll(async () => near(await time.boundingBox())).toEqual(alone);
+    await expect(primary(page)).toHaveAccessibleName('pause');
+  });
+
+  test('with reduced motion the panel only fades', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await openApp(page, { width: 1280, height: 800 });
+    await page.keyboard.press(',');
+    await panel(page).waitFor();
+    expect((await panelMotion(page)).map((motion) => motion.frames)).toEqual([
+      [
+        { transform: 'translateX(0px)', opacity: '0' },
+        { transform: 'translateX(0px)', opacity: '1' },
+      ],
+    ]);
+    await timerHalfway(page);
+    await page.keyboard.press('Escape');
+    expect((await panelMotion(page)).map((motion) => motion.frames)).toEqual([
+      [
+        { transform: 'translateX(0px)', opacity: '1' },
+        { transform: 'translateX(0px)', opacity: '0' },
+      ],
+    ]);
+    await expect(panel(page)).toBeHidden();
+  });
+
   test('loads its code only when first opened, and opens over a running session without disturbing it', async ({ page }) => {
     const scripts: string[] = [];
     page.on('request', (request) => {
@@ -356,7 +467,7 @@ test.describe('changes', () => {
     const background = (target: Page) => target.evaluate(() => getComputedStyle(document.body).backgroundColor);
     expect(await background(page)).toBe('rgb(246, 245, 242)');
     await expect.poll(() => background(other)).toBe('rgb(246, 245, 242)');
-    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ schema: 3, theme: 'paper' });
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ schema: SETTINGS_SCHEMA, theme: 'paper' });
     await page.reload();
     await page.locator('.button--primary').waitFor();
     expect(await background(page)).toBe('rgb(246, 245, 242)');
@@ -425,6 +536,41 @@ test.describe('changes', () => {
     // The seconds are in the text but not shown.
     await expect.poll(() => page.locator('.time--main').evaluate((element) => (element as HTMLElement).innerText)).toBe('00:02');
   });
+
+  test('seconds are always shown by default, offered as always, blur away, never', async ({ page }) => {
+    await openApp(page, { width: 1280, height: 800 });
+    await primary(page).click();
+    await page.clock.runFor(2 * MINUTE + 5 * SECOND);
+    await settle(page);
+    await expect.poll(() => page.locator('.time--main').evaluate((element) => (element as HTMLElement).innerText)).toBe('00:02:05');
+    await openPanel(page);
+    await openCategory(page, 'timer');
+    const seconds = page.getByRole('radiogroup', { name: 'seconds' });
+    await expect(seconds.getByRole('radio')).toHaveText(['always', 'blur away', 'never']);
+    await expect(seconds.getByRole('radio', { name: 'always' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  // Plan version 13, answer 36: stored settings never changed move to the new defaults; a choice made is kept.
+  for (const { stored, shown } of [
+    { stored: { schema: 3, seconds: 'blur-away' }, shown: 'always' },
+    { stored: { schema: 2, seconds: 'blur-away', leaveFullscreen: 'end' }, shown: 'always' },
+    { stored: { schema: 3, seconds: 'never' }, shown: 'never' },
+    { stored: { schema: 4, seconds: 'blur-away' }, shown: 'blur away' },
+  ]) {
+    test(`stored ${JSON.stringify(stored)} shows seconds "${shown}"`, async ({ page }) => {
+      await page.addInitScript((record) => {
+        if (localStorage.getItem('settings') === null) localStorage.setItem('settings', record);
+          }, JSON.stringify(stored));
+      await openApp(page, { width: 1280, height: 800 });
+      await openPanel(page);
+      await openCategory(page, 'timer');
+      await expect(page.getByRole('radiogroup', { name: 'seconds' }).getByRole('radio', { name: shown })).toHaveAttribute('aria-checked', 'true');
+      if ('leaveFullscreen' in stored) {
+        await openCategory(page, 'display');
+        await expect(page.getByRole('radiogroup', { name: 'leave fullscreen' }).getByRole('radio', { name: 'never' })).toHaveAttribute('aria-checked', 'true');
+      }
+    });
+  }
 
   test('time size scales the time and its gap only', async ({ page }) => {
     await openApp(page, { width: 720, height: 450, settings: { timeSize: 150 } });

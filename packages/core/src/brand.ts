@@ -71,6 +71,8 @@ export const BRAND = {
       change: 'change',
       dismiss: 'dismiss',
       fullscreen: 'fullscreen hides your other tabs',
+      /** The seconds tip (frame "the seconds tip, once only"). */
+      seconds: 'seconds can fade out after a minute, for a calmer screen',
     },
     /** The ending countdown and results frames. */
     ending: {

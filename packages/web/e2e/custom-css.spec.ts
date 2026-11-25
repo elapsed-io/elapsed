@@ -321,7 +321,7 @@ test.describe('the settings file', () => {
     expect(file.suggestedFilename()).toBe('elapsed-settings.json');
     const contents = JSON.parse(readFileSync(await file.path(), 'utf8')) as Record<string, unknown>;
     expect(contents).toMatchObject({ app: 'elapsed', kind: 'settings', version: 1, customCss: '.time { color: rgb(7, 8, 9) }' });
-    expect(contents['settings']).toMatchObject({ theme: 'sky', font: 'own', seconds: 'blur-away' });
+    expect(contents['settings']).toMatchObject({ theme: 'sky', font: 'own', seconds: 'always' });
     expect(JSON.stringify(contents)).not.toContain('woff');
   });
 

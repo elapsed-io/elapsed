@@ -73,6 +73,8 @@ test.describe('wakes', () => {
 
   test('a two-hour session: one timer at a time, nothing drawn while hidden, the display caught up on return', async ({ page }) => {
     await page.setViewportSize({ width: 720, height: 450 });
+    // The wakes counted here are blur away's (every second, then every ten, then every minute).
+    await seedSettings(page, { seconds: 'blur-away' });
     await page.clock.install({ time: T0 });
     await instrument(page);
     await page.goto('/');
@@ -140,8 +142,11 @@ test('memory and the page stay flat over two hours', async ({ page, browserName 
 /** Opens the site in `mode` on the test's clock (a test mode on a flagged visit). */
 async function openIn(page: Page, mode: string): Promise<void> {
   await page.setViewportSize({ width: 720, height: 450 });
-  // Check-ins as far apart as the setting allows (3 hours); the long run answers each one.
-  await seedSettings(page, { mode, checkInInterval: CONFIG.session.checkInInterval.max });
+  // Check-ins as far apart as the setting allows (3 hours); the long run answers each one. The standard modes run
+  // with the default seconds (always); the test modes, drawn without seconds, with blur away (decision 419), which
+  // also spares WebKit re-placing the tree's year of animations every simulated second for seven hours.
+  const seconds = TEST_MODE_IDS.includes(mode) ? { seconds: 'blur-away' } : {};
+  await seedSettings(page, { mode, checkInInterval: CONFIG.session.checkInInterval.max, ...seconds });
   await page.clock.install({ time: T0 });
   await page.goto(TEST_MODE_IDS.includes(mode) ? FLAGGED : '/');
   await page.locator('html[data-ready]').waitFor({ state: 'attached' });
@@ -194,7 +199,7 @@ test.describe('hidden', () => {
       await page.evaluate(() => {
         const scope = window as unknown as { __drawn: number; __animations: number };
         scope.__drawn = 0;
-        scope.__animations = document.getAnimations().length;
+        scope.__animations = document.getAnimations().filter((animation) => !(animation instanceof CSSTransition)).length;
         new MutationObserver((records) => {
           scope.__drawn += records.length;
         }).observe(document.querySelector('.mode-root') ?? document.body, { subtree: true, childList: true, characterData: true, attributes: true });
@@ -205,6 +210,9 @@ test.describe('hidden', () => {
       const woke = (await wakes(page)) - before;
       expect(woke).toBeLessThanOrEqual(30 * 2 + 1);
       expect(await page.evaluate(() => (window as unknown as { __drawn: number }).__drawn)).toBe(0);
+      // Hiding the tab brings the focus view's controls back, so they are there on return: a few one-off CSS
+      // transitions, which run on the browser's own clock and end. Nothing else may be left running.
+      await expect.poll(() => page.evaluate(() => document.getAnimations().filter((animation) => animation instanceof CSSTransition).length)).toBe(0);
       expect(await page.evaluate(() => document.getAnimations().length)).toBeLessThanOrEqual(await page.evaluate(() => (window as unknown as { __animations: number }).__animations));
       await hide(page, false);
       await expect(page.locator('.time--main').first()).toHaveAttribute('aria-label', '35 minutes focused');

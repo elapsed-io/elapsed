@@ -27,6 +27,10 @@ export type Recorded = { [K in keyof TimerEvents]: { readonly type: K; readonly 
 
 export interface HarnessOptions {
   readonly now?: number;
+  /**
+   * The seconds setting; blur away unless a test asks otherwise (the engine's default is always, from round 2.14;
+   * these tests count the wakes blur away paces, which the settings still offer).
+   */
   readonly seconds?: SecondsDisplay;
   readonly timeZone?: string;
   /** Abandonment rules; off (null) unless a test is about them. */
@@ -55,7 +59,7 @@ export function harness(options: HarnessOptions = {}) {
     rules: options.rules ?? null,
     heartbeat: options.heartbeat ?? false,
     ...(options.beforeWake === undefined ? {} : { beforeWake: options.beforeWake }),
-    ...(options.seconds === undefined ? {} : { seconds: options.seconds }),
+    seconds: options.seconds ?? 'blur-away',
   });
   let log: Recorded[] = [];
   for (const type of EVENT_TYPES) {

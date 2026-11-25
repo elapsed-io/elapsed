@@ -8,8 +8,11 @@
  */
 
 @layer base {
-  /* Beside the panel, the timer has the rest of the window (wide layouts only). */
-  :root[data-settings="open"]:not([data-settings-layout="phone"]) {
+  /*
+   * Beside the panel, the timer has the rest of the window (wide layouts only), from before the panel slides in until
+   * after it has slid out (closing), so the timer never moves while the panel does (panel.ts).
+   */
+  :root[data-settings]:not([data-settings-layout="phone"]) {
     --view-width: calc(100vw - var(--settings-width));
   }
 
@@ -991,12 +994,14 @@
    * A setting a notice's "change" opened settings on (panel.ts openOn): briefly outlined in the accent colour, as the
    * "change opens settings on it" frame draws it, then fading (only its outline's opacity moves).
    */
-  .mode-options .setting {
+  .mode-options .setting,
+  .setting[data-setting] {
     position: relative;
     isolation: isolate;
   }
 
-  .mode-options .setting::after {
+  .mode-options .setting::after,
+  .setting[data-setting]::after {
     content: "";
     position: absolute;
     inset: calc(-1 * var(--highlight-inset-y)) calc(-1 * var(--highlight-inset-x));
@@ -1009,7 +1014,8 @@
   }
 
   /* Briefly: in, held, and out again, by opacity alone and with no timer (panel.ts restarts it). */
-  .mode-options .setting.setting--highlight::after {
+  .mode-options .setting.setting--highlight::after,
+  .setting[data-setting].setting--highlight::after {
     animation: setting-highlight var(--highlight-duration) linear both;
   }
 

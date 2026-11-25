@@ -38,7 +38,8 @@ test('starts, pauses, resumes and ends with the buttons', async ({ page }) => {
   expect(await page.title()).toBe(`00:00 · ${NAME}`);
 
   await page.clock.runFor(2 * MINUTE);
-  expect(await timeText(page)).toBe('00:02');
+  // Seconds always show (the default from round 2.14); the tab title keeps hh:mm.
+  expect(await timeText(page)).toBe('00:02:05');
   expect(await page.title()).toBe(`00:02 · ${NAME}`);
 
   await primary(page).click();
@@ -47,13 +48,13 @@ test('starts, pauses, resumes and ends with the buttons', async ({ page }) => {
   await page.clock.runFor(61 * SECOND);
   expect(await timeText(page, '.time--paused-for')).toBe('00:01:01paused for');
   expect(await page.title()).toBe(`paused for 00:01 · ${NAME}`);
-  expect(await timeText(page)).toBe('00:02');
+  expect(await timeText(page)).toBe('00:02:05');
 
   await primary(page).click();
   await expect(primary(page)).toHaveAccessibleName('pause');
   await expect(page.locator('.paused')).toBeHidden();
   await page.clock.runFor(MINUTE);
-  expect(await timeText(page)).toBe('00:03');
+  expect(await timeText(page)).toBe('00:03:05');
 
   // End opens the countdown; cancel goes back with no time lost.
   await end(page).click();
@@ -166,7 +167,7 @@ test('end only fades in: it never slides in from elsewhere', async ({ page }) =>
 
 test('with reduced motion the seconds cut out with a short crossfade instead of blurring', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await openApp(page);
+  await openApp(page, { settings: { seconds: 'blur-away' } });
   await primary(page).click();
   await page.clock.runFor(5 * SECOND);
   const names = await page.locator('.time--main .time__ones').evaluate((element) => getComputedStyle(element).animationName);
@@ -180,11 +181,11 @@ test('a device clock set back mid-session loses no time', async ({ page }) => {
   await page.clock.runFor(5 * MINUTE);
   await page.clock.setSystemTime(Date.UTC(2026, 10, 16, 13, 0, 0));
   await page.clock.runFor(MINUTE);
-  expect(await timeText(page)).toBe('00:06');
+  expect(await timeText(page)).toBe('00:06:00');
 });
 
 test('a seconds digit that has blurred away stays away: it never starts over at the next ten seconds', async ({ page }) => {
-  await openApp(page);
+  await openApp(page, { settings: { seconds: 'blur-away' } });
   await primary(page).click();
   // Renders at 10 s and 20 s re-pin the blur animations to focused time while they play.
   await page.clock.runFor(25 * SECOND);

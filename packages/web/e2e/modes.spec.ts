@@ -3,7 +3,7 @@
 import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { createSession, oceanColour, serializeActiveState, startState } from '@stopwatch/core';
-import { ENVIRONMENT_IN_TESTING, MINUTE, SECOND, T0, openApp, settle } from './helpers.ts';
+import { ENVIRONMENT_IN_TESTING, MINUTE, SECOND, T0, openApp, settle, openSettingsOn } from './helpers.ts';
 
 test('digits, ring and timeline are in the core: shown without another download; a downloaded mode loads only when chosen', async ({ page }) => {
   const scripts: string[] = [];
@@ -16,8 +16,7 @@ test('digits, ring and timeline are in the core: shown without another download;
   // Round 2.10: the core holds what the timer, digits, ring and timeline need; nothing else loads for them.
   const atStart = [...scripts];
   expect(atStart.some((path) => /\/assets\/(?:ring|timeline|track|dial|analog)-/.test(path))).toBe(false);
-  await page.keyboard.press(',');
-  await page.locator('.settings__row', { hasText: /^display$/ }).click();
+  await openSettingsOn(page, 'display');
   await page.getByRole('radio', { name: 'timeline', exact: true }).click();
   await expect(page.locator('.screen')).toHaveAttribute('data-mode', 'timeline');
   expect(scripts.some((path) => /\/assets\/(?:timeline|track)-/.test(path))).toBe(false);
@@ -631,8 +630,7 @@ test('turning ocean life on while paused brings it in; off takes it away', async
   await page.locator('.button--primary').click();
   await page.clock.runFor(6 * MINUTE);
   await page.locator('.button--primary').click();
-  await page.keyboard.press(',');
-  await page.locator('.settings__row', { hasText: /^display$/ }).click();
+  await openSettingsOn(page, 'display');
   const option = page.getByRole('switch', { name: 'ocean life' });
   await expect(option).toHaveAttribute('aria-checked', 'false');
   await option.click();

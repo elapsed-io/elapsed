@@ -121,22 +121,22 @@ export function runningFrame(t: number): string {
   return root(26, time + runningButtons());
 }
 
-/** The paused frame: 01:24 held behind the blur, paused for 00:04:12. */
+/** The paused frame: 01:24:37 held behind the blur (seconds always, round 2.14), paused for 00:04:12. */
 export function pausedFrame(): string {
-  const time = `<div style="position: relative; display: flex; align-items: center; justify-content: center"><div aria-hidden="true" style="${TIME_STYLE}; font-size: 104px; filter: blur(10px); opacity: 0.4">01${COLON}24</div><div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="position: relative; ${TIME_STYLE}; font-size: 44px">00${COLON}04${COLON}12<div style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; font-size: 12px; font-weight: 400; font-stretch: 100%; color: ${C.muted}; letter-spacing: 0.14em">paused for</div></div></div></div>`;
+  const time = `<div style="position: relative; display: flex; align-items: center; justify-content: center"><div aria-hidden="true" style="${TIME_STYLE}; font-size: 104px; filter: blur(10px); opacity: 0.4">01${COLON}24${COLON}37</div><div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="position: relative; ${TIME_STYLE}; font-size: 44px">00${COLON}04${COLON}12<div style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; font-size: 12px; font-weight: 400; font-stretch: 100%; color: ${C.muted}; letter-spacing: 0.14em">paused for</div></div></div></div>`;
   const buttons = `<div style="display: flex; gap: 14px">${BUTTON('resume', C.accent)}${BUTTON('end', C.end)}</div>`;
   return root(26, time + buttons);
 }
 
-/** The check-in frame: 02:00 held behind the blur, with the line asking for any key. */
+/** The check-in frame: 02:00:00 held behind the blur, with the line asking for any key. */
 export function checkInFrame(): string {
-  const time = `<div style="position: relative; display: flex; align-items: center; justify-content: center"><div aria-hidden="true" style="${TIME_STYLE}; font-size: 104px; filter: blur(10px); opacity: 0.4">02${COLON}00</div><div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="font-size: 15px; color: ${C.text}; text-align: center">press any key if you’re still here</div></div></div>`;
+  const time = `<div style="position: relative; display: flex; align-items: center; justify-content: center"><div aria-hidden="true" style="${TIME_STYLE}; font-size: 104px; filter: blur(10px); opacity: 0.4">02${COLON}00${COLON}00</div><div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="font-size: 15px; color: ${C.text}; text-align: center">press any key if you’re still here</div></div></div>`;
   return root(26, time + runningButtons());
 }
 
-/** The "paused after a missed check-in" frame: 02:00 held, paused for 01:12:40, the check-in at 2:00 pm. */
+/** The "paused after a missed check-in" frame: 02:00:00 held, paused for 01:12:40, the check-in at 2:00 pm. */
 export function pausedMissedFrame(): string {
-  const time = `<div style="position: relative; display: flex; align-items: center; justify-content: center"><div aria-hidden="true" style="${TIME_STYLE}; font-size: 104px; filter: blur(10px); opacity: 0.4">02${COLON}00</div><div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="position: relative; ${TIME_STYLE}; font-size: 44px">01${COLON}12${COLON}40<div style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; font-size: 12px; font-weight: 400; color: ${C.muted}; letter-spacing: 0.14em; white-space: nowrap">paused for</div><div style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 12px; font-size: 13px; font-weight: 400; color: ${C.muted}; white-space: nowrap; font-variant-numeric: normal">a check-in went unanswered at 2:00 pm</div></div></div></div>`;
+  const time = `<div style="position: relative; display: flex; align-items: center; justify-content: center"><div aria-hidden="true" style="${TIME_STYLE}; font-size: 104px; filter: blur(10px); opacity: 0.4">02${COLON}00${COLON}00</div><div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center"><div style="position: relative; ${TIME_STYLE}; font-size: 44px">01${COLON}12${COLON}40<div style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; font-size: 12px; font-weight: 400; color: ${C.muted}; letter-spacing: 0.14em; white-space: nowrap">paused for</div><div style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 12px; font-size: 13px; font-weight: 400; color: ${C.muted}; white-space: nowrap; font-variant-numeric: normal">a check-in went unanswered at 2:00 pm</div></div></div></div>`;
   const buttons = `<div style="display: flex; gap: 14px">${BUTTON('resume', C.accent)}${BUTTON('end', C.end)}</div>`;
   return root(26, time + buttons);
 }

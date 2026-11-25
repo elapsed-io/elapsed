@@ -6,7 +6,7 @@
 
 import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
-import { corePaths } from './helpers.ts';
+import { corePaths, openSettingsOn } from './helpers.ts';
 
 test.use({ serviceWorkers: 'allow' });
 
@@ -129,9 +129,7 @@ test('settings list downloaded modes with their size, and remove one by hand wit
   await page.goto('/');
   await untilOffline(page);
   await useMode(page, 'analog');
-  await page.keyboard.press(',');
-  await page.locator('.settings').waitFor();
-  await page.locator('.settings__row', { hasText: /^display$/ }).click();
+  await openSettingsOn(page, 'display');
   const rows = page.locator('.downloads__row');
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('analog');

@@ -25,6 +25,7 @@ import { formatBytes } from '../fonts/font-file.ts';
 import { listDownloadedModes, removeDownloadedMode } from '../storage/mode-cache.ts';
 import { BUILT_IN_FONTS, OWN_FONT_FAMILY, familyStack, previewFamily } from '../fonts/registry.ts';
 import { iconElement } from '../icons/icon-element.ts';
+import { motionScale, readMotion } from '../shell/motion.ts';
 import { restartInSafeMode } from '../shell/safe-mode.ts';
 import { getPreset } from '../theme/presets.ts';
 import { presetColors } from './appearance.ts';
@@ -125,7 +126,10 @@ export class SettingsPanel {
   #importConfirm: ReturnType<typeof confirmStep> | null = null;
   /** The last exported file's address, released at the next export. */
   #exportUrl: string | null = null;
-  #open: CategoryId | null = 'timer';
+  /** Settings open on display, the first category, with display mode at the top (round 2.14). */
+  #open: CategoryId | null = 'display';
+  /** The panel's own motion while it closes; the panel is gone once it ends. */
+  #closing: Animation | null = null;
   #previewsRequested = false;
   #savedAnimation: Animation | null = null;
 
@@ -227,11 +231,35 @@ export class SettingsPanel {
     this.#toggle(this.#open);
   }
 
+  /** Open, or opening; a panel that is closing no longer counts as shown. */
   get shown(): boolean {
-    return !this.element.hidden;
+    return !this.element.hidden && this.#closing === null;
+  }
+
+  /**
+   * The panel's motion (CONFIG.motion.panel; the "settings panel: slides in and out" frame): 24 px in from the
+   * right while fading in over 200 ms, easing out; out the same way over 160 ms, easing in. Only the panel moves:
+   * the timer beside it is laid out for the open panel before it comes in, and back after it has gone. Durations
+   * follow the animation speed; with reduced motion the panel only fades.
+   */
+  #motion(): { readonly slide: number; readonly inMs: number; readonly outMs: number; readonly easeIn: string; readonly easeOut: string } {
+    const { slidePx, inMs, outMs } = CONFIG.motion.panel;
+    const scale = motionScale(this.#doc);
+    const { easeIn, easeOut } = CONFIG.motion.focus;
+    return {
+      slide: readMotion(this.#doc).reduced ? 0 : slidePx,
+      inMs: inMs * scale,
+      outMs: outMs * scale,
+      easeIn: `cubic-bezier(${easeIn.join(', ')})`,
+      easeOut: `cubic-bezier(${easeOut.join(', ')})`,
+    };
   }
 
   open(): void {
+    const closing = this.#closing;
+    this.#closing = null;
+    closing?.cancel();
+    const coming = this.element.hidden || closing !== null;
     this.element.hidden = false;
     // Phones open on the list of categories, each its own page; wide windows keep the last open category.
     if (this.#phone.matches) this.#open = null;
@@ -240,6 +268,10 @@ export class SettingsPanel {
     this.#refreshOpenCategory();
     this.#fit();
     this.element.focus({ preventScroll: true });
+    const motion = this.#motion();
+    if (coming && motion.inMs > 0) {
+      this.element.animate([{ transform: `translateX(${String(motion.slide)}px)`, opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }], { duration: motion.inMs, easing: motion.easeOut });
+    }
   }
 
   /**
@@ -280,8 +312,36 @@ export class SettingsPanel {
   }
 
   hide(): void {
-    this.element.hidden = true;
-    delete this.#doc.documentElement.dataset['settings'];
+    if (this.element.hidden || this.#closing !== null) return;
+    const root = this.#doc.documentElement;
+    const gone = (): void => {
+      this.#closing = null;
+      this.element.hidden = true;
+      delete root.dataset['settings'];
+    };
+    const motion = this.#motion();
+    if (motion.outMs <= 0) {
+      gone();
+      return;
+    }
+    // Closing: the corner icons are back at once (focus returns to the settings button), while the timer keeps its
+    // place beside the panel until the panel has gone.
+    root.dataset['settings'] = 'closing';
+    for (const animation of this.element.getAnimations()) animation.cancel();
+    const closing = this.element.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: `translateX(${String(motion.slide)}px)`, opacity: 0 }], {
+      duration: motion.outMs,
+      easing: motion.easeIn,
+      fill: 'forwards',
+    });
+    this.#closing = closing;
+    void closing.finished.then(
+      () => {
+        if (this.#closing !== closing) return;
+        gone();
+        closing.cancel();
+      },
+      () => undefined,
+    );
   }
 
   // ---- Changes -----------------------------------------------------------
@@ -458,8 +518,11 @@ export class SettingsPanel {
     this.#updates.push((settings) => {
       control.update(settings.seconds);
     });
+    const row = settingRow(this.#doc, label(this.#doc, copy.seconds.label), control.element, null);
+    // A notice's "change" can open settings on it (the seconds tip), outlined as the fullscreen switch is.
+    row.dataset['setting'] = 'seconds';
     return {
-      element: settingRow(this.#doc, label(this.#doc, copy.seconds.label), control.element, null),
+      element: row,
       search: searchText(copy.seconds.label, ...options.map((option) => option.label)),
     };
   }
