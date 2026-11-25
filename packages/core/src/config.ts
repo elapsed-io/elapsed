@@ -154,7 +154,46 @@ export const CONFIG = {
      */
     startMorph: 160,
     fade: 180,
+    /**
+     * A glide a minute long (the ring's, the timeline's, the dials', the light's, the sky's, the camera's) is
+     * started again only when it is this far from where the time puts it, in milliseconds.
+     */
+    glideDriftMs: 250,
     control: 120,
+    /** The contrast switch crossfades its two stacked copies over this long (owner, changes 4: about 220 ms). */
+    contrastFade: 220,
+    /**
+     * Focus view (plan, Interface; the "the motion, on a loop" frame): after this long untouched while a session
+     * runs, pause and end drop 10 px while fading out over 180 ms (the corner icons fade with them), and the time
+     * grows to 1.32 times its size and settles 25 px lower over 220 ms; any touch reverses it just as fast.
+     */
+    focus: {
+      quietMs: { '3s': 3000, '10s': 10_000 },
+      controlsMs: 180,
+      controlsDropPx: 10,
+      timeMs: 220,
+      timeScale: 1.32,
+      timeDropPx: 25,
+      /** The frame's curves: hiding eases in (quadratic), the time and every return ease out (quartic). */
+      easeIn: [0.11, 0, 0.5, 0] as const,
+      easeOut: [0.25, 1, 0.5, 1] as const,
+    },
+    /** A notice's "change" outlines the setting it opened for this long, then the outline fades. */
+    highlightMs: 2000,
+    /**
+     * The settings panel's motion (the "settings panel: slides in and out" frame; plan, Design system): it slides
+     * this far in from the right while fading in, easing out (quartic), and closes the same way, easing in
+     * (quadratic), so the timer behind it never moves. Scaled by the animation speed; with reduced motion it only
+     * fades.
+     */
+    panel: { slidePx: 24, inMs: 200, outMs: 160 },
+    /** A change of environment (a mode's water or sky coming or going) crossfades over this long. */
+    environmentFade: 2000,
+    /**
+     * A change of display mode (round 2.10, owner: switches start on the frame of the choice, and any crossfade
+     * lasts 120 ms or less): the leaving mode's environment crossfades over `fadeMs`.
+     */
+    modeSwitch: { fadeMs: 120 },
     /** The slight spring of the start morph: a damped spring drawn through CSS linear() at this many points. */
     spring: { dampingRatio: 0.75, settle: 5, points: 24 },
     /** Seconds blur-away: the ones digit clears over 0 to 10 s, the tens digit and colon over 10 to 60 s. */
@@ -169,6 +208,11 @@ export const CONFIG = {
     /** Check-in and pause: time blurred 10 px at 40 % opacity. */
     heldBlurPx: 10,
     heldOpacity: 0.4,
+    /**
+     * Held, the frost under the dialog (round 2.11) is whole to this share of the way from its centre to its edge
+     * (the display and three blur radii round it), then fades out, so it has no edge of its own.
+     */
+    frostSolidShare: 0.55,
     /** The seconds blur-away's last fade, as the running frame draws it (not an interface transition). */
     blurAwayFade: 200,
     /** Results: tabulating holds 0.3 s then fades out over 0.25 s. */
@@ -179,10 +223,15 @@ export const CONFIG = {
     resultsFadeIn: 300,
     resultsRisePx: 6,
     /**
-     * The replay starts at 0.5 s; its length and curve are each mode's own (CONFIG.modes.*.replay). Sessions
+     * The replay starts at 0.5 s; its length and curve are each mode's own (its recipe's results.replay). Sessions
      * over 2 hours replay longer: 0.5 s more for each doubling past 2 hours, at most 1.5 s more.
      */
     replayDelay: 500,
+    /**
+     * The replay curves a recipe chooses from (results.replay.easing): fast, the fast exponential ease-out of digits,
+     * ring, timeline, analog and interstellar; gentle, the gentler ease-out of ocean depth, height and tree.
+     */
+    replayEasing: { fast: [0.16, 1, 0.3, 1] as const, gentle: [0.33, 1, 0.68, 1] as const },
     replayLongSession: { fromHours: 2, perDoubling: 500, max: 1500 },
     /**
      * Every interface animation's duration is multiplied by this ("normal"
@@ -190,6 +239,12 @@ export const CONFIG = {
      * --motion-scale custom property.
      */
     durationScale: 1,
+    /**
+     * The animation speed setting's multipliers for --motion-scale (Settings catalog > Appearance; owner,
+     * 2026-11-16: "normal" is the Design system's timing). Slower is half as long again; faster is the
+     * reciprocal, so the two are equally far from normal.
+     */
+    speeds: { slower: 1.5, normal: 1, faster: 2 / 3 },
     /** After copying the share text, the share icon shows a check for this long (owner decision, 2026-11-15). */
     copiedConfirmation: 2000,
     /** The fast ease-out of every interface transition: cubic-bezier control points. */
@@ -198,6 +253,13 @@ export const CONFIG = {
 
   /** Sizes at the design canvas's reference frames (Design system > Type, Controls and icons, Screens). */
   design: {
+    /**
+     * One layer order for every mode and screen (plan v11, Design system; round 2.11), bottom to top: the mode's
+     * background and art; the time, its figure and the buttons (and the screens that take the timer's place:
+     * the ending countdown, the results, the session maximum); pause, check-in and other dialogs; notices; the
+     * corner icons, over every screen; settings. Stylesheets stack by these alone (tokens `--layer-*`).
+     */
+    layers: { art: 0, display: 1, dialog: 2, notice: 3, chrome: 4, settings: 5 },
     /** Timer screens are drawn at 720 × 450, results at 720 × 520, settings and dashboard 1280 wide. */
     reference: {
       timer: { width: 720, height: 450 },
@@ -217,8 +279,11 @@ export const CONFIG = {
       /** Time sizes at reference. */
       timePx: 104,
       resultsHeadlinePx: 60,
-      timelineTimePx: 56,
-      ringTimePx: 52,
+      /**
+       * The time inside a mode's figure, shared (plan, Design system): inside the ring and above the timeline's
+       * track, 48 px. Every mode's main block sits in the same slot, the buttons 26 px below it (timeToButtonsPx).
+       */
+      modeTimePx: 48,
       pausedForPx: 44,
       treeTimePx: 30,
       labelPx: { min: 11, max: 13 },
@@ -246,6 +311,9 @@ export const CONFIG = {
       /** The "paused after a missed check-in" frame: the check-in's time 12 px below the pause length, 13 px muted. */
       missedPx: 13,
       missedGapPx: 12,
+      /** A recipe's paused caption (height's altitude and layer, the "height, paused" frame): 11 px, 16 px above the bottom. */
+      captionPx: 11,
+      captionBottomPx: 16,
     },
     /** The check-in frame: "press any key if you're still here" in 15 px foreground text over the held time. */
     checkIn: {
@@ -269,6 +337,9 @@ export const CONFIG = {
       narrowBelowPx: 720,
       gapPx: 22,
       ringGapPx: 16,
+      /** A drawing over the stats (the "results: tree" frame): 10 px apart, 20 px from the top and bottom. */
+      figureGapPx: 10,
+      figurePaddingYPx: 20,
       labelPx: 11,
       labelTrackingEm: 0.16,
       labelGapPx: 6,
@@ -335,6 +406,20 @@ export const CONFIG = {
       bodyLineHeight: 1.6,
       bodyMaxWidthPx: 400,
     },
+    /** The notice pill (plan, Interface; the "notice: fullscreen tip" frame): 20 px tall, 11 px text, 20 px above the time. */
+    pill: {
+      heightPx: 20,
+      textPx: 11,
+      gapPx: 7,
+      paddingStartPx: 9,
+      paddingEndPx: 2,
+      radiusPx: 10,
+      aboveTimePx: 20,
+      underlineOffsetPx: 2,
+      dismissPx: 16,
+      crossPx: 9,
+      crossStrokeWidth: 2.4,
+    },
     icons: {
       strokeWidth: 1.6,
       /** Settings and account: 16 px icons in 28 px boxes, 14 px from the top-right corner, 4 px apart. */
@@ -348,6 +433,8 @@ export const CONFIG = {
     },
     /** The settings panel, from the five Release 1 settings frames (1280 × 800). */
     settings: {
+      /** The outline "change" draws around a setting (the "change opens settings on it" frame). */
+      highlight: { insetYPx: 6, insetXPx: 8, radiusPx: 6, linePx: 1 },
       paddingYPx: 22,
       paddingXPx: 26,
       gapPx: 14,
@@ -371,8 +458,13 @@ export const CONFIG = {
       slider: { widthPx: 150, heightPx: 4, radiusPx: 2, thumbPx: 16, endPx: 11, valuePx: 13, valueWidthPx: 40, gapPx: 10 },
       toggle: { widthPx: 32, heightPx: 18, knobPx: 14, insetPx: 2 },
       shortcuts: { textPx: 12, gapPx: 4 },
-      tiles: { columns: 3, gapPx: 8, paddingTopPx: 10, paddingBottomPx: 8, radiusPx: 8, innerGapPx: 6, textPx: 12, previewWidthPx: 56, previewHeightPx: 32, previewDigitsPx: 15 },
-      themes: { columns: 5, gapPx: 8, swatchHeightPx: 42, radiusPx: 6, samplePx: 11, barWidthPx: 26, barHeightPx: 3, barRadiusPx: 2, namePx: 10, innerGapPx: 4, outlinePx: 2, outlineOffsetPx: 2 },
+      /** A mode's options (the Release 2 display frame's "ocean depth options"): a box on the page colour. */
+      modeOptions: { paddingPx: 12, gapPx: 12, radiusPx: 8, titlePx: 12 },
+      /** The focus mode group's label and rows (the launch display frame: a plain column, 14 px apart). */
+      focusGroup: { gapPx: 14 },
+      tiles: { columns: 4, gapPx: 8, paddingTopPx: 10, paddingBottomPx: 8, radiusPx: 8, innerGapPx: 6, textPx: 12, previewWidthPx: 56, previewHeightPx: 32, previewDigitsPx: 15 },
+      /** The launch appearance frame's larger tiles, four to a row (plan version 14). */
+      themes: { columns: 4, gapPx: 10, swatchHeightPx: 64, radiusPx: 8, samplePx: 15, barWidthPx: 34, barHeightPx: 3, barRadiusPx: 2, namePx: 11, innerGapPx: 4, outlinePx: 2, outlineOffsetPx: 2 },
       colors: { labelWidthPx: 74, swatchPx: 18, swatchRadiusPx: 4, textPx: 12, gapPx: 8 },
       fonts: { columns: 3, gapPx: 6, heightPx: 32, radiusPx: 6, paddingXPx: 6, textPx: 12 },
       selectedBorderPx: 2,
@@ -416,112 +508,14 @@ export const CONFIG = {
     /** A background with relative luminance at or above this is a light theme. */
     lightBackgroundLuminance: 0.4,
     /** Minimum contrast ratios every preset must pass. */
-    minContrast: { text: 4.5, accentGraphic: 2.5 },
+    minContrast: { text: 4.5, accentGraphic: 2.5, large: 3 },
+    /**
+     * The analog seconds dial's face: the track over the background at this share (its fill-opacity, the
+     * "analog" frame's); the theme's dial red is chosen against it (theme/derive.ts).
+     */
+    dialFaceFill: 0.35,
   },
 
-  /** Display modes (Design system > Display modes; Decisions already made). */
-  modes: {
-    /**
-     * Each mode's results replay: its length and curve (plan, Design system > Motion). Digits 1.4 s; ring,
-     * timeline, analog and interstellar 2.0 s; ocean depth, height and tree, whose visuals are the point,
-     * 3.0 s on a gentler ease-out.
-     */
-    digits: { replay: { durationMs: 1400, easing: [0.16, 1, 0.3, 1] as const } },
-    ring: {
-      replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const },
-      revolution: 1 * HOUR,
-      trackPx: 8,
-      /** The tail: up to 55° long, one smooth conic gradient fading from the accent at the head to nothing. */
-      tailDegrees: 55,
-      /** The gradient's stops, from the far end: the accent at these shares of full strength, at these shares of the tail's length. */
-      tailStops: [
-        { at: 0.45, strength: 0.15 },
-        { at: 0.75, strength: 0.55 },
-      ],
-      /** Geometry at reference, from the ring frame: a 280 px box, the ring's centre line at 112 px, an 8 px round head. */
-      boxPx: 280,
-      radiusPx: 112,
-      headPx: 8,
-      /** The ring sits 20 px above the buttons. */
-      gapPx: 20,
-    },
-    analog: { revolution: 1 * HOUR, labelEveryMinutes: 5, replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const } },
-    timeline: {
-      replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const },
-      minutesPer100Px: 10,
-      tickEveryMinutes: 5,
-      labelEveryMinutes: 10,
-      /**
-       * Geometry from the revised timeline frame, in CSS pixels: never scaled,
-       * so lines and ticks stay on whole pixels. The track never grows past
-       * its frame width; on narrow windows less of it shows.
-       */
-      widthPx: 480,
-      heightPx: 64,
-      lineYPx: 20,
-      lineHeightPx: 2,
-      tickWidthPx: 1,
-      minorTickPx: 5,
-      majorTickPx: 8,
-      labelYPx: 46,
-      labelPx: 11,
-      /** Both ends fade out over this share of the track. */
-      fadeShare: 0.14,
-      /** On windows narrower than the track, it keeps this far from each edge. */
-      edgePx: 16,
-      /** The time sits 18 px above the track; the track 30 px above the buttons. */
-      innerGapPx: 18,
-      gapPx: 30,
-    },
-    ocean: {
-      replay: { durationMs: 3000, easing: [0.33, 1, 0.68, 1] as const },
-      metresPerFocusedMinute: 15,
-      maxDepthMetres: 10_935,
-      surfaceLinearRgb: [0.0232, 0.212, 0.392],
-      attenuationPerMetre: [0.3, 0.06, 0.023],
-      gradientHalfSpanMetres: 6,
-      landmarksPerBand: 2,
-      landmarkBandMetres: 1000,
-    },
-    height: {
-      replay: { durationMs: 3000, easing: [0.33, 1, 0.68, 1] as const },
-      metresPerFocusedMinute: 140,
-      maxHeightMetres: 100_000,
-      groundLinearRgb: [0.078, 0.275, 0.597],
-      attenuation: [1.25, 1.1, 0.95],
-      scaleHeightMetres: 8500,
-      gradientHalfSpanMetres: 1500,
-      starsFadeMetres: { start: 18_000, end: 42_000 },
-      landmarksPerBand: 2,
-      landmarkBandMetres: 10_000,
-    },
-    tree: {
-      replay: { durationMs: 3000, easing: [0.33, 1, 0.68, 1] as const },
-      yearPerFocused: 1 * HOUR,
-      season: 15 * MINUTE,
-      /** Each leaf cluster is offset by up to a quarter season. */
-      clusterOffsetSeasons: 0.25,
-      /** The results tree reaches full size at 60 focused minutes. */
-      fullSizeFocus: 60 * MINUTE,
-    },
-    interstellar: {
-      replay: { durationMs: 2000, easing: [0.16, 1, 0.3, 1] as const },
-      /** Map radius at reference: 26 + 30·log10(AU / 0.3) px. */
-      mapRadiusBasePx: 26,
-      mapRadiusPerDecadePx: 30,
-      mapRadiusOriginAu: 0.3,
-      kuiperEdgeAu: 50,
-      heliopauseAu: 120,
-      oortCloudAu: { min: 2000, max: 100_000 },
-      proximaCentauriAu: 268_000,
-      travelHeadingDegrees: -32,
-      projection: { rightAscensionHours: 5.5, declinationDegrees: 6, pxPerDegree: 8 },
-      /** Star radius: max(0.7, 2.7 − 0.42 × magnitude) px. */
-      starRadius: { minPx: 0.7, basePx: 2.7, perMagnitudePx: 0.42 },
-      speedOfLightMetresPerSecond: 299_792_458,
-      metresPerAu: 149_597_870_700,
-    },
-  },
 
   /** On-device data (Loading and performance; Custom CSS safety). */
   device: {

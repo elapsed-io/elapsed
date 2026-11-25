@@ -20,6 +20,12 @@ function browsers(): { name: string; use: NonNullable<PlaywrightTestConfig['use'
   return [chromium, { name: 'firefox', use: { ...devices['Desktop Firefox'] } }, { name: 'webkit', use: { ...devices['Desktop Safari'] } }];
 }
 
+/**
+ * Every test starts with the fullscreen tip already dismissed, so the idle screen is the one the earlier frames
+ * draw; the tip's own tests start without it (e2e/notices.spec.ts).
+ */
+export const TIP_DISMISSED = { cookies: [], origins: [{ origin: 'http://localhost:4173', localStorage: [{ name: 'notices', value: '{"schema":1,"dismissed":["fullscreen","seconds"]}' }] }] };
+
 export default defineConfig({
   testDir: './e2e',
   forbidOnly: inCi,
@@ -30,6 +36,7 @@ export default defineConfig({
     trace: 'off',
     // The service worker would answer requests out of reach of page.route; offline tests turn it on.
     serviceWorkers: 'block',
+    storageState: TIP_DISMISSED,
   },
   // Each browser runs the suite, then its timing tests alone (one worker, after everything else in that
   // browser has finished), so nothing competes with them for the processor (e2e/timing.spec.ts).

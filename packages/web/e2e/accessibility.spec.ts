@@ -11,7 +11,7 @@
 
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { MINUTE, SECOND, endThroughCountdown, finishResults, openApp, settle } from './helpers.ts';
 
@@ -64,9 +64,11 @@ test.describe('WCAG 2.2 AA rules (axe-core)', () => {
     expect((await violations(page)).map((finding) => finding.id)).toContain('button-name');
   });
 
-  for (const mode of ['digits', 'ring', 'timeline']) {
+  // The four standard modes, as Release 2 ships them (analog since round 2.16's pass).
+  for (const mode of ['digits', 'ring', 'timeline', 'analog']) {
     test(`the timer in ${mode}: idle, running, paused, a check-in waiting`, async ({ page }) => {
       await openApp(page, { mode });
+      await settle(page);
       expect(await violations(page), 'idle').toEqual([]);
       await primary(page).click();
       await page.clock.runFor(84 * MINUTE);
@@ -83,7 +85,7 @@ test.describe('WCAG 2.2 AA rules (axe-core)', () => {
     });
   }
 
-  for (const theme of ['graphite', 'paper', 'sky', 'oxblood']) {
+  for (const theme of ['graphite', 'paper', 'sky', 'plum']) {
     test(`the ending countdown and the results in ${theme}`, async ({ page }) => {
       await openApp(page, { settings: { theme, mode: theme === 'sky' ? 'ring' : 'digits' } });
       await primary(page).click();
@@ -98,9 +100,43 @@ test.describe('WCAG 2.2 AA rules (axe-core)', () => {
     });
   }
 
+  // Round 2.16: the idle screen with each tip (the fullscreen tip before a first session, the seconds tip after).
+  for (const [tip, notices] of [
+    ['fullscreen', null],
+    ['seconds', '{"schema":2,"dismissed":[],"firstSession":true}'],
+  ] as const) {
+    test(`the idle screen with the ${tip} tip`, async ({ page }) => {
+      await page.addInitScript((record) => {
+        localStorage.removeItem('notices');
+        if (record !== null) localStorage.setItem('notices', record);
+        // A page that can go fullscreen, as on a computer, whatever the test browser says.
+        Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get: () => true, configurable: true });
+      }, notices);
+      await openApp(page, { settings: { theme: 'paper' } });
+      await expect(page.locator('.pill')).toContainText(tip === 'fullscreen' ? 'fullscreen hides your other tabs' : 'seconds can fade out');
+      await settle(page);
+      expect(await violations(page)).toEqual([]);
+    });
+  }
+
+  // Round 2.16: the site's plain pages, served by the app, in a dark and a light theme.
+  for (const path of ['/privacy', '/terms', '/credits/']) {
+    for (const theme of ['graphite', 'sand']) {
+      test(`${path} in ${theme}`, async ({ page }) => {
+        await page.addInitScript((chosen) => {
+          localStorage.setItem('settings', JSON.stringify({ schema: 4, theme: chosen }));
+        }, theme);
+        await page.clock.install();
+        await page.goto(path);
+        await page.locator('html[data-scheme]').waitFor({ state: 'attached' });
+        expect(await violations(page)).toEqual([]);
+      });
+    }
+  }
+
   for (const width of [1280, 390]) {
     test(`every settings category, ${String(width)} px wide`, async ({ page }) => {
-      await openApp(page, { width, height: 900, settings: { theme: 'lilac' } });
+      await openApp(page, { width, height: 900, settings: { theme: 'mint' } });
       await page.keyboard.press(',');
       await page.locator('.settings').waitFor();
       for (const name of ['timer', 'display', 'appearance', 'notifications', 'privacy and data', 'advanced']) {
@@ -172,7 +208,8 @@ test.describe('keyboard', () => {
 
 test.describe('screen readers', () => {
   test('the time is read on request in words, never announced; paused, the pause length is read instead', async ({ page }) => {
-    await openApp(page);
+    // What is read follows what is shown; with seconds blurring away (a choice), the ones digit goes after 10 s.
+    await openApp(page, { settings: { hideSeconds: 'blur-away' } });
     const time = page.locator('.time--main');
     await expect(time).toHaveAttribute('role', 'timer');
     await expect(time).toHaveAttribute('aria-label', '0 seconds focused');

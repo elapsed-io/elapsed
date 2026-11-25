@@ -42,6 +42,7 @@ Set them on `.screen` (or `:scope`). Colours are any CSS colour.
 | `--color-pause` | The pause and cancel buttons |
 | `--color-end` | The end button |
 | `--color-record` | The personal-record marker |
+| `--color-red` | Marks on a dial: the analog seconds dial's 60 (round 2.8) |
 | `--font-family` | The font of the time and the timer view |
 | `--font-stretch` | Its width (`92%` for the default font) |
 | `--font-weight-time` | The time's weight (300) |
@@ -69,7 +70,7 @@ appearance instead.
 | `.controls`, `.button` | The buttons under the time |
 | `.button--primary`, `.button--secondary`, `.button--end` | Start, pause or resume; cancel (in the ending countdown); end |
 | `.ring`, `.ring__track`, `.ring__rotor`, `.ring__tail`, `.ring__head` | The ring display mode; the rotor turns once a minute (`--ring-angle`), and the tail is `--ring-tail` degrees long |
-| `.timeline`, `.timeline__track`, `.timeline__frame` | The timeline display mode, its fading track and the 480 px drawing |
+| `.timeline`, `.timeline__track`, `.timeline__frame` | The timeline display mode, its fading track and the 360 px drawing |
 | `.timeline__glide`, `.timeline__svg`, `.timeline__label` | The strip's three layers (past line, future line, labels), each an SVG that glides 10 px a minute; `.timeline__glide--still` while it stands still |
 | `.ending`, `.ending__bar`, `.ending__fill`, `.ending__text` | The ending countdown |
 | `.notice` | The session maximum notice |

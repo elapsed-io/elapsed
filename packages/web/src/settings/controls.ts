@@ -73,7 +73,7 @@ export function radioGroup<T extends string>(
   };
 }
 
-/** Segmented choice: "blur away / always / never", "12-hour / 24-hour / follow region". */
+/** Segmented choice: "never / blur away / right away", "system settings / 12-hour / 24-hour". */
 export function segmented<T extends string>(
   doc: Document,
   name: string,
@@ -165,7 +165,7 @@ export function formatHoursMinutes(ms: number): string {
   return rest === 0 ? `${String(hours)}h` : `${String(hours)}h ${String(rest)}m`;
 }
 
-/** "30m", "60m" for the pause limit, as the timer frame writes it. */
+/** "30m", "60m" for pause before ending, as the timer frame writes it. */
 export function formatMinutes(ms: number): string {
   return `${String(Math.round(ms / 60_000))}m`;
 }

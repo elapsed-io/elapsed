@@ -6,7 +6,8 @@
  *
  * - Check-in: due after a full interval of running time since the last sign
  *   of presence, using the interval in force at that sign. It can be answered
- *   until an hour after it fell due.
+ *   until an hour after it fell due. With check-ins switched off (Release 2)
+ *   none falls due, and a running session runs on to the session maximum.
  * - Missed check-in: unanswered for an hour, the session pauses, backdated to
  *   when the check-in appeared. That pause ignores the pause limit and waits
  *   up to 12 hours (from the check-in), then the session ends dated to the
@@ -29,6 +30,8 @@ import { freezeState } from './state.ts';
 import type { ActiveState } from './state.ts';
 
 export interface RuleSettings {
+  /** Whether check-ins fall due at all (the check-ins switch, on by default; plan, Settings catalog). */
+  readonly checkIns: boolean;
   /** Running time since the last sign of presence before a check-in falls due. */
   readonly checkInInterval: number;
   /** Longest pause before the session ends. Fixed for each pause when it begins. */
@@ -37,6 +40,7 @@ export interface RuleSettings {
 
 export function defaultRules(): RuleSettings {
   return {
+    checkIns: true,
     checkInInterval: CONFIG.session.checkInInterval.default,
     pauseLimit: CONFIG.session.pauseLimit.default,
   };
@@ -49,7 +53,8 @@ export function normaliseRules(rules: RuleSettings): RuleSettings {
   const { checkInInterval, pauseLimit } = CONFIG.session;
   const pick = (value: number, range: { min: number; max: number; default: number }): number =>
     Number.isFinite(value) ? clamp(Math.round(value), range.min, range.max) : range.default;
-  return { checkInInterval: pick(rules.checkInInterval, checkInInterval), pauseLimit: pick(rules.pauseLimit, pauseLimit) };
+  // Only an explicit false switches check-ins off (a damaged value keeps them on, the default).
+  return { checkIns: (rules.checkIns as unknown) !== false, checkInInterval: pick(rules.checkInInterval, checkInInterval), pauseLimit: pick(rules.pauseLimit, pauseLimit) };
 }
 
 /** The interval in force since the last sign of presence: fixed then, or the current setting for older states. */
@@ -57,9 +62,9 @@ export function checkInIntervalFor(state: ActiveState, rules: RuleSettings): num
   return state.checkInIntervalMs ?? rules.checkInInterval;
 }
 
-/** When the check-in falls due, for a running session; otherwise null. */
+/** When the check-in falls due, for a running session with check-ins on; otherwise null. */
 export function checkInDueAt(state: ActiveState, rules: RuleSettings): number | null {
-  return sessionStatus(state.session) === 'running' ? state.presenceAt + checkInIntervalFor(state, rules) : null;
+  return rules.checkIns && sessionStatus(state.session) === 'running' ? state.presenceAt + checkInIntervalFor(state, rules) : null;
 }
 
 /** The check-in waiting for an answer at `now`, or null. */
@@ -86,6 +91,7 @@ export function nextTrigger(state: ActiveState, rules: RuleSettings): RuleTrigge
     const segment = lastSegment(session);
     const closed = focusedMs(session, segment.start);
     const maxAt = segment.start + Math.max(0, CONFIG.session.maxFocus - closed);
+    if (!rules.checkIns) return { kind: 'max-duration', decidedAt: maxAt, effectiveAt: maxAt };
     const due = state.presenceAt + checkInIntervalFor(state, rules);
     const missedAt = due + CONFIG.session.checkInResponseWindow;
     return missedAt < maxAt

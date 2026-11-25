@@ -1,0 +1,93 @@
+/*
+ * What the recipe mode itself draws (recipe-mode.ts): the time kept for screen readers when a recipe shows none,
+ * and a state's caption (height's altitude while paused, the "height, paused" frame: 11 px, 16 px above the
+ * bottom, fading in and out as the paused text does).
+ */
+@layer mode {
+  .recipe__unseen {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .recipe__caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: var(--caption-bottom);
+    text-align: center;
+    font-size: var(--caption-size);
+    color: var(--color-muted);
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--motion-fade) var(--ease-standard),
+      visibility 0s linear var(--motion-fade);
+  }
+
+  .recipe__caption--shown {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--motion-fade) var(--ease-standard);
+  }
+
+  /*
+   * The contrast switch (recipe-mode.ts, contrast.ts; owner, changes 4): two stacked copies of the time and the
+   * caption, one in the mode's own light colours and one in its dark colour, crossfaded by opacity alone as the
+   * screen's data-contrast changes. The corner icons do the same (app.ts adds their dark copies).
+   */
+  .contrast {
+    display: grid;
+  }
+
+  .contrast > * {
+    grid-area: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .contrast__shade {
+    --color-foreground: var(--contrast-dark);
+    --color-muted: var(--contrast-dark);
+    color: var(--contrast-dark);
+  }
+
+  .recipe__caption {
+    display: grid;
+  }
+
+  .recipe__caption > * {
+    grid-area: 1 / 1;
+  }
+
+  .contrast__lit,
+  .contrast__shade,
+  .icon-lit,
+  .icon-shade {
+    transition: opacity var(--motion-contrast) var(--ease-standard);
+  }
+
+  /* The corner icons follow only while the timer shows (not over the results, which have their own light). */
+  .contrast__shade,
+  .screen[data-contrast="dark"] .contrast__lit,
+  .icon-shade,
+  .screen[data-contrast="dark"]:has(> .mode-root:not([hidden])) > .corner .icon-lit {
+    opacity: 0;
+  }
+
+  .screen[data-contrast="dark"] .contrast__shade,
+  .screen[data-contrast="dark"]:has(> .mode-root:not([hidden])) > .corner .icon-shade {
+    opacity: 1;
+  }
+
+  .icon-shade {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    color: var(--contrast-dark);
+  }
+}

@@ -1,0 +1,272 @@
+{
+  "recipe": 1,
+  "id": "tree",
+  "name": "tree",
+  "icon": "tree",
+  "measure": {
+    "unit": "years",
+    "perMinute": 0.016666666666666666,
+    "records": "mode-only"
+  },
+  "cycles": [
+    {
+      "id": "year",
+      "minutes": 60,
+      "phases": [
+        [
+          "spring",
+          0,
+          0.25
+        ],
+        [
+          "summer",
+          0.25,
+          0.5
+        ],
+        [
+          "autumn",
+          0.5,
+          0.75
+        ],
+        [
+          "winter",
+          0.75,
+          1
+        ]
+      ]
+    }
+  ],
+  "environment": {
+    "type": "theme"
+  },
+  "layers": [
+    {
+      "type": "tree",
+      "id": "tree-side",
+      "view": "side",
+      "year": "year",
+      "variantOf": {
+        "option": "tree-view",
+        "value": "side"
+      },
+      "growth": {
+        "by": "measure",
+        "stops": [
+          [
+            0,
+            0.45
+          ],
+          [
+            60,
+            1
+          ]
+        ],
+        "ease": "smooth"
+      },
+      "leaves": {
+        "clusters": 70,
+        "offsetMax": 0.25,
+        "spring": [
+          "#C2DE8E",
+          "#86C060"
+        ],
+        "summer": [
+          "#3E8B47"
+        ],
+        "autumn": [
+          "#D9822F",
+          "#A9502A"
+        ],
+        "fallBy": "autumn-end"
+      },
+      "snow": {
+        "phase": "winter",
+        "branches": true,
+        "ground": true
+      },
+      "trunk": "#6E4636",
+      "ground": "line",
+      "grass": "#7FAF5A"
+    },
+    {
+      "type": "tree",
+      "id": "tree-isometric",
+      "view": "isometric",
+      "year": "year",
+      "variantOf": {
+        "option": "tree-view",
+        "value": "isometric"
+      },
+      "growth": {
+        "by": "measure",
+        "stops": [
+          [
+            0,
+            0.45
+          ],
+          [
+            60,
+            1
+          ]
+        ],
+        "ease": "smooth"
+      },
+      "leaves": {
+        "clusters": 70,
+        "offsetMax": 0.25,
+        "spring": [
+          "#C2DE8E",
+          "#86C060"
+        ],
+        "summer": [
+          "#3E8B47"
+        ],
+        "autumn": [
+          "#D9822F",
+          "#A9502A"
+        ],
+        "fallBy": "autumn-end"
+      },
+      "snow": {
+        "phase": "winter",
+        "branches": true,
+        "ground": true
+      },
+      "trunk": "#6E4636",
+      "ground": "field",
+      "grass": "#7FAF5A"
+    },
+    {
+      "type": "sprite",
+      "id": "tree-art",
+      "slot": "tree.seasons",
+      "frames": 4,
+      "frameBy": {
+        "cycle": "year"
+      },
+      "crossfade": 180,
+      "position": "center",
+      "size": [
+        360,
+        300
+      ],
+      "scale": {
+        "by": "measure",
+        "stops": [
+          [
+            0,
+            0.45
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "ease": "smooth"
+      },
+      "variantOf": {
+        "option": "tree-view",
+        "value": "your art"
+      }
+    },
+    {
+      "type": "particles",
+      "id": "falling-snow",
+      "when": [
+        "running",
+        "paused"
+      ],
+      "shape": "flake",
+      "visibleWhen": {
+        "phase": "winter"
+      },
+      "every": [
+        0.5,
+        1.5
+      ],
+      "maxAtOnce": 12,
+      "lifetime": [
+        4,
+        8
+      ],
+      "size": {
+        "scale": [
+          0.6,
+          1.4
+        ]
+      },
+      "colors": [
+        "#FFFFFF"
+      ],
+      "angle": [
+        80,
+        100
+      ],
+      "distance": [
+        200,
+        320
+      ],
+      "blurOnPause": false
+    },
+    {
+      "type": "time",
+      "id": "time",
+      "size": 30,
+      "position": "top",
+      "seconds": "setting"
+    }
+  ],
+  "states": {
+    "paused": {
+      "blur": [
+        "time"
+      ]
+    },
+    "checkin": {
+      "blur": [
+        "time"
+      ]
+    }
+  },
+  "results": {
+    "replay": {
+      "seconds": 3.0,
+      "easing": "gentle",
+      "longSessionExtra": true
+    },
+    "view": {
+      "type": "scene",
+      "layers": [
+        "tree-side",
+        "tree-isometric",
+        "tree-art"
+      ],
+      "camera": false
+    }
+  },
+  "options": [
+    {
+      "id": "tree-view",
+      "label": "tree view",
+      "kind": "segmented",
+      "choices": [
+        "side",
+        "isometric",
+        "your art"
+      ],
+      "default": "side"
+    }
+  ],
+  "slots": [
+    {
+      "id": "tree.seasons",
+      "kind": "image-strip",
+      "default": "builtin:tree/seasons-strip.png",
+      "frames": 4,
+      "size": [
+        360,
+        300
+      ]
+    }
+  ]
+}

@@ -72,7 +72,7 @@ describe('waking only for visible changes', () => {
   });
 
   it('in the background, a check-in falls due at the next heartbeat, dated when it fell due', () => {
-    const h = harness({ heartbeat: true, rules: { checkInInterval: CONFIG.session.checkInInterval.default, pauseLimit: CONFIG.session.pauseLimit.default } });
+    const h = harness({ heartbeat: true, rules: { checkIns: true, checkInInterval: CONFIG.session.checkInInterval.default, pauseLimit: CONFIG.session.pauseLimit.default } });
     h.engine.start('digits');
     h.engine.setBackground(true);
     h.take();

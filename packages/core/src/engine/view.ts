@@ -17,7 +17,8 @@ const SECOND = 1000;
 const TEN_SECONDS = 10 * SECOND;
 const MINUTE = 60 * SECOND;
 
-export const SECONDS_DISPLAYS = ['blur-away', 'always', 'never'] as const;
+/** In the settings' order: always (the default from round 2.14), blur away, never. */
+export const SECONDS_DISPLAYS = ['always', 'blur-away', 'never'] as const;
 export type SecondsDisplay = (typeof SECONDS_DISPLAYS)[number];
 
 export type TimerStatus = 'idle' | SessionStatus;

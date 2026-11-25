@@ -4,11 +4,12 @@
  * sessions that end on their own.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
-import { BRAND, CONFIG, createSession, serializeActiveState, startState } from '@stopwatch/core';
-import { PAPER, endingFrame, inPalette, resultsRingFrame, resultsStripFrame } from './fixtures/frames.ts';
-import type { ResultsData } from './fixtures/frames.ts';
+import { BRAND, CONFIG, createSession, OCEAN_CONFIG, OCEAN_COPY, replayTimingFor, serializeActiveState, startState } from '@stopwatch/core';
+import { builtInRecipe } from './fixtures/recipes.ts';
+import { PAPER, endingFrame, inPalette, resultsDepthLitFrame, resultsRingFrame, resultsStripFrame } from './fixtures/frames.ts';
+import type { FrameLandmark, ResultsData } from './fixtures/frames.ts';
 import { MINUTE, SECOND, T0, TIMER_END, compareWithReference, endThroughCountdown, finishResults, freezeAnimations, openApp, settle, untilEndNowAccepts } from './helpers.ts';
 import { expectLikeFrame } from './pixels.ts';
 
@@ -95,13 +96,15 @@ test('results in the paper theme match the "results, paper theme" frame exactly'
   });
 });
 
-test('results for ring match the "results: analog and ring" frame exactly', async ({ page, browser, browserName }) => {
-  await playSampleSession(page, 'ring');
-  const diff = await compareWithReference(page, browser, resultsRingFrame(SAMPLE));
-  expectLikeFrame(diff, browserName, () => {
-    expect(diff).toMatchObject({ differing: 0 });
+for (const mode of ['ring', 'analog']) {
+  test(`results for ${mode} match the "results: analog and ring" frame exactly`, async ({ page, browser, browserName }) => {
+    await playSampleSession(page, mode);
+    const diff = await compareWithReference(page, browser, resultsRingFrame(SAMPLE));
+    expectLikeFrame(diff, browserName, () => {
+      expect(diff).toMatchObject({ differing: 0 });
+    });
   });
-});
+}
 
 /** The results screen's own animations: what each moves, for how long, on which curve, and when it starts. */
 function resultsMotion(page: Page): Promise<{ moves: string; duration: number; easing: string; start: number }[]> {
@@ -154,6 +157,200 @@ test('a session over 2 hours replays longer: 8 hours of ring, 1 s more', async (
   const replay = (await resultsMotion(page)).find((animation) => animation.moves === '--replay-progress');
   // 2 s for ring, 0.5 s × log2(8 ÷ 2) more (the session ran a few seconds past 8 hours).
   expect(replay?.duration).toBeCloseTo(3000, -1);
+});
+
+/** Edge noise allowed on the line under the landmark dots (see the test). */
+const LANDMARK_EDGES = 250;
+const LANDMARK_SMOOTHED = 20;
+
+/** The landmarks the dive profile drew, as the frame lists them: depth and name (from the list read aloud). */
+function drawnLandmarks(page: Page): Promise<FrameLandmark[]> {
+  return page.locator('.profile li').evaluateAll((items) =>
+    items.map((item): [number, string] => {
+      const [name = '', depth = ''] = item.textContent.split(' · ');
+      return [Number(depth.replace(/[^0-9]/g, '')), name];
+    }),
+  );
+}
+
+test('results for ocean depth match the "results: ocean depth (build this one)" frame exactly, without landmarks', async ({ page, browser, browserName }) => {
+  await playSampleSession(page, 'ocean', { resultsLandmarks: false });
+  await expect(page.locator('.profile__landmark')).toHaveCount(0);
+  const diff = await compareWithReference(page, browser, resultsDepthLitFrame(SAMPLE, []));
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff, JSON.stringify(diff)).toMatchObject({ differing: 0 });
+  });
+});
+
+test('results for ocean depth match the frame exactly with the landmarks they picked: only their dots once the labels fade', async ({ page, browser, browserName }) => {
+  await playSampleSession(page, 'ocean');
+  // The last press left the pointer over the chart, which would show the labels (as hovering does).
+  await page.mouse.move(0, 0);
+  await settle(page);
+  const landmarks = await drawnLandmarks(page);
+  expect(landmarks.length).toBeGreaterThan(0);
+  await expect.poll(() => page.locator('.profile__landmark-tag').evaluateAll((tags) => tags.every((tag) => getComputedStyle(tag).opacity === '0'))).toBe(true);
+  const diff = await compareWithReference(page, browser, resultsDepthLitFrame(SAMPLE, landmarks));
+  // With the dots over it, Chromium draws the line's anti-aliased edges a few levels differently from the
+  // frame's page, depending on which landmarks were picked (measured: at most 174 pixels past 8 levels,
+  // smoothed 15); without landmarks the card matches exactly (above), and every dot is checked on the path.
+  expectLikeFrame(diff, browserName, () => {
+    expect(diff.visible, JSON.stringify(diff)).toBeLessThanOrEqual(LANDMARK_EDGES);
+    expect(diff.smoothedMaxDelta, JSON.stringify(diff)).toBeLessThanOrEqual(LANDMARK_SMOOTHED);
+  });
+});
+
+test('the dive profile shows at most six landmarks, at most two from each 1,000 m band, only from the catalog and only where the dive went', async ({ page }) => {
+  await playSampleSession(page, 'ocean');
+  const catalog = new Map<number, string>(OCEAN_CONFIG.landmarks.map(([depth, id]): [number, string] => [depth, OCEAN_COPY.landmarks[id]]));
+  const reached = (167 + 40 / 60) * OCEAN_CONFIG.metresPerFocusedMinute;
+  const landmarks = await drawnLandmarks(page);
+  expect(landmarks.length).toBeGreaterThan(0);
+  expect(landmarks.length).toBeLessThanOrEqual(6);
+  await expect(page.locator('.profile__landmark')).toHaveCount(landmarks.length);
+  for (const [depth, name] of landmarks) {
+    expect(catalog.get(depth)).toBe(name);
+    expect(depth).toBeLessThanOrEqual(reached);
+  }
+  const perBand = new Map<number, number>();
+  for (const [depth] of landmarks) perBand.set(Math.floor(depth / 1000), (perBand.get(Math.floor(depth / 1000)) ?? 0) + 1);
+  for (const count of perBand.values()) expect(count).toBeLessThanOrEqual(2);
+});
+
+test('every landmark dot lies on the path, within 1 px, at rest and as the chart zooms during the replay', async ({ page }) => {
+  await playSampleSession(page, 'ocean');
+  const offPath = (): Promise<number[]> =>
+    page.locator('.profile__chart').evaluate((chart) => {
+      const line = chart.querySelector<SVGPolylineElement>('.profile__line');
+      const matrix = line?.getScreenCTM();
+      if (line === null || matrix === null || matrix === undefined) throw new Error('no path');
+      const points = [...line.points].map((point) => new DOMPoint(point.x, point.y).matrixTransform(matrix));
+      return [...chart.querySelectorAll('.profile__landmark-dot')].map((dot) => {
+        const box = dot.getBoundingClientRect();
+        const cx = box.x + box.width / 2;
+        const cy = box.y + box.height / 2;
+        let best = Number.POSITIVE_INFINITY;
+        for (let i = 1; i < points.length; i += 1) {
+          const a = points[i - 1];
+          const b = points[i];
+          if (a === undefined || b === undefined) continue;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const t = Math.max(0, Math.min(1, ((cx - a.x) * dx + (cy - a.y) * dy) / (dx * dx + dy * dy || 1)));
+          best = Math.min(best, Math.hypot(cx - (a.x + t * dx), cy - (a.y + t * dy)));
+        }
+        return best;
+      });
+    });
+  const atRest = await offPath();
+  expect(atRest.length).toBeGreaterThan(0);
+  for (const distance of atRest) expect(distance).toBeLessThanOrEqual(1);
+  // Again during a replay, zoomed in: retry the same results by reloading them, held a third of the way.
+  await page.evaluate(() => {
+    const results = document.querySelector('.results');
+    results?.removeAttribute('data-replayed');
+    results?.animate([{ '--replay-progress': 0.4 }, { '--replay-progress': 0.4 }], { duration: 1000, fill: 'forwards' }).pause();
+  });
+  const zoomed = await page.locator('.profile__zoom').first().evaluate((group) => getComputedStyle(group).transform);
+  expect(zoomed).not.toBe('none');
+  for (const distance of await offPath()) expect(distance).toBeLessThanOrEqual(1);
+});
+
+test('landmark labels fade after the replay, leaving the dots; hover, focus or a tap brings them back, a dot only its own', async ({ page }) => {
+  await playSampleSession(page, 'ocean');
+  await page.mouse.move(0, 0);
+  await settle(page);
+  const tags = page.locator('.profile__landmark-tag');
+  const count = await tags.count();
+  expect(count).toBeGreaterThan(1);
+  const shown = (): Promise<string[]> => tags.evaluateAll((elements) => elements.map((element) => getComputedStyle(element).opacity));
+  await expect.poll(shown).toEqual(Array.from({ length: count }, () => '0'));
+  await expect(page.locator('.profile__landmark-dot').first()).not.toHaveCSS('opacity', '0');
+  const chart = page.locator('.profile__chart');
+  const box = await chart.boundingBox();
+  if (box === null) throw new Error('no chart');
+  // Hovering the chart (away from any dot) shows every label.
+  await page.mouse.move(box.x + box.width / 2, box.y + 2);
+  await settle(page);
+  await expect.poll(shown).toEqual(Array.from({ length: count }, () => '1'));
+  // Hovering one dot shows only its own.
+  await page.locator('.profile__landmark-dot').nth(1).hover();
+  await settle(page);
+  await expect.poll(shown).toEqual(Array.from({ length: count }, (_, index) => (index === 1 ? '1' : '0')));
+  await page.mouse.move(0, 0);
+  await settle(page);
+  await expect.poll(shown).toEqual(Array.from({ length: count }, () => '0'));
+  // Keyboard focus on the chart shows them all; so does a tap, until the next.
+  await chart.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await settle(page);
+  await expect.poll(shown).toEqual(Array.from({ length: count }, () => '1'));
+  await page.locator('.results__buttons .action').first().focus();
+  await chart.dispatchEvent('click');
+  await settle(page);
+  await expect.poll(shown).toEqual(Array.from({ length: count }, () => '1'));
+  // Every landmark is listed for screen readers.
+  await expect(page.locator('.profile ul[aria-label="landmarks passed"] li')).toHaveCount(count);
+});
+
+test('the ocean results card is lit by the dive: it opens in the colour the session ended in, then follows the replay from the surface', async ({ page }) => {
+  await openApp(page, { width: 720, height: 520, mode: 'ocean' });
+  await primary(page).click();
+  await page.clock.runFor(4 * MINUTE);
+  await endThroughCountdown(page);
+  await page.locator('.results[data-ready]').waitFor();
+  const lit = page.locator('.lit');
+  // Before the replay begins the colour the session ended in covers the card; it has crossed by 0.35 s.
+  const end = await page.locator('.lit__end').evaluate((element) => {
+    const fade = element.getAnimations()[0];
+    const timing = fade?.effect?.getComputedTiming();
+    return { duration: timing?.duration, fill: fade?.effect?.getTiming().fill, from: (fade?.effect as KeyframeEffect | undefined)?.getKeyframes()[0]?.['opacity'] };
+  });
+  expect(end).toEqual({ duration: OCEAN_CONFIG.results.lit.crossfadeMs, fill: 'backwards', from: '1' });
+  // At the start of the replay the card shows the surface: no shift, stretched to 0–60 m.
+  await page.evaluate(() => {
+    document.querySelector('.results')?.animate([{ '--replay-progress': 0 }, { '--replay-progress': 0 }], { duration: 1000, fill: 'forwards' }).pause();
+  });
+  const surface = await lit.evaluate((element) => getComputedStyle(element.querySelector('.lit__strip') ?? element).transform);
+  // 80 m of light over the card, here only 0 to 60 m: stretched by 4/3 (WebKit writes six decimals).
+  expect(surface).toMatch(/^matrix\(1, 0, 0, 1\.3333\d*, 0, 0\)$/);
+  // Two sonar pings, timed from the replay's start to its end, and gone after.
+  const pings = await page.locator('.profile__ping').evaluateAll((elements) => elements.map((element) => element.getAnimations()[0]?.effect?.getTiming().delay));
+  const length = replayTimingFor(builtInRecipe('ocean-depth')).durationMs;
+  expect(pings).toEqual([length, length + OCEAN_CONFIG.results.pings.lagMs]);
+});
+
+test('the dive profile replays from one progress: the depth counts on the final text\'s baseline, the zone follows and the chart zooms', async ({ page }) => {
+  await openApp(page, { width: 720, height: 520, mode: 'ocean' });
+  await primary(page).click();
+  await page.clock.runFor(100 * MINUTE);
+  await endThroughCountdown(page);
+  await page.locator('.results[data-ready]').waitFor();
+  await page.evaluate(() => {
+    document.querySelector('.results')?.animate([{ '--replay-progress': 0.3 }, { '--replay-progress': 0.3 }], { duration: 1000, fill: 'forwards' }).pause();
+  });
+  const state = await page.locator('.profile__chart').evaluate((chart) => ({
+    zones: [...chart.querySelectorAll<SVGTextElement>('.profile__zone')].filter((zone) => Number(getComputedStyle(zone).opacity) > 0).map((zone) => zone.dataset['zone']),
+    count: getComputedStyle(chart.querySelector('.profile__count') ?? chart).opacity,
+    depth: getComputedStyle(chart.querySelector('.profile__depth') ?? chart).opacity,
+    zoom: getComputedStyle(chart.querySelector('.profile__zoom') ?? chart).transform,
+    baseline: (chart.querySelector('.profile__baseline')?.getBoundingClientRect().top ?? 0) - chart.getBoundingClientRect().top,
+  }));
+  // 100 focused minutes, all focus: at progress 0.3 the dive is at 450 m, in the twilight zone; the chart's
+  // scale is 517.5 m against its final 1,725 m.
+  expect(state).toMatchObject({ zones: ['twilight'], count: '1', depth: '0' });
+  expect(state.zoom).toMatch(/^matrix\(1, 0, 0, 3\.333/);
+  expect(Math.abs(state.baseline - OCEAN_CONFIG.results.depthBaselinePx)).toBeLessThanOrEqual(1);
+});
+
+test('with reduced motion the ocean results show their final state at once: lit, dots without labels, no pings', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await playSampleSession(page, 'ocean');
+  await expect(page.locator('.results[data-replayed]')).toBeAttached();
+  await expect(page.locator('.profile__ping').first()).toHaveCSS('opacity', '0');
+  await expect(page.locator('.lit__end')).toHaveCSS('opacity', '0');
+  await expect(page.locator('.profile__depth')).toHaveText('2,515 m');
 });
 
 test('timeline replays as the focus strip too', async ({ page }) => {

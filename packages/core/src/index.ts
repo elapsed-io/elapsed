@@ -1,7 +1,26 @@
 export { CONFIG } from './config.ts';
 export type { Adjustable, Config } from './config.ts';
+export { ANALOG_CONFIG } from './modes/analog-config.ts';
+export { HEIGHT_CONFIG } from './modes/height-config.ts';
+export { OCEAN_CONFIG } from './modes/ocean-config.ts';
+export { RING_CONFIG } from './modes/ring-config.ts';
+export { SPACE_CONFIG } from './modes/space-config.ts';
+export { TIMELINE_CONFIG } from './modes/timeline-config.ts';
+export { TREE_CONFIG } from './modes/tree-config.ts';
+export { HEIGHT_METEORS_CONFIG } from './modes/height-meteors-config.ts';
+export { OCEAN_LIFE_CONFIG } from './modes/ocean-life-config.ts';
+export { SPACE_COMETS_CONFIG } from './modes/space-comets-config.ts';
+export { PIECES_CONFIG } from './modes/pieces-config.ts';
 export { BRAND } from './brand.ts';
 export type { Brand } from './brand.ts';
+export { CREDITS_COPY } from './copy/credits.ts';
+export type { CreditedWork } from './copy/credits.ts';
+export { HEIGHT_COPY } from './copy/height.ts';
+export { OCEAN_COPY } from './copy/ocean.ts';
+export { SETTINGS_COPY } from './copy/settings.ts';
+export { SPACE_COPY } from './copy/space.ts';
+export { TEST_MODES_COPY } from './copy/test-modes.ts';
+export { TREE_COPY } from './copy/tree.ts';
 export { COUNT_EVENTS, COUNT_PATH, countBody, isCountEvent, parseCountBody } from './counts.ts';
 export type { CountEvent } from './counts.ts';
 
@@ -53,9 +72,17 @@ export { SECONDS_DISPLAYS, computeView, focusPrecision, isSecondsDisplay, msUnti
 export type { SecondsDisplay, TimerStatus, TimerView } from './engine/view.ts';
 
 export {
+  ANIMATION_SPEEDS,
   CLOCK_FORMATS,
   FONT_CHOICES,
   MODE_CHOICES,
+  FOCUS_HIDES,
+  HIDE_SECONDS,
+  LEAVE_FULLSCREEN,
+  STANDARD_MODES,
+  TEST_MODES,
+  TREE_VIEWS,
+  shownMode,
   SETTINGS,
   SETTINGS_CATEGORIES,
   SETTINGS_SCHEMA,
@@ -68,15 +95,21 @@ export {
   parseSettings,
   resetCategory,
   rulesFrom,
+  secondsDisplayFor,
   serializeSettings,
   withSetting,
 } from './settings/schema.ts';
 export type {
+  AnimationSpeed,
   BuiltInFont,
   ClockFormat,
   FontChoice,
   HexColor,
   ModeChoice,
+  TreeView,
+  FocusHide,
+  HideSeconds,
+  LeaveFullscreen,
   SettingDeclaration,
   SettingKey,
   SettingTarget,
@@ -96,3 +129,39 @@ export type { BrowserFamily, CrashReport } from './crash.ts';
 export { utf8Bytes } from './utf8.ts';
 export { longSessionReplayExtraMs, replayLengthMs } from './replay.ts';
 export type { ReplayTiming } from './replay.ts';
+
+export { attenuated, contrast, hex, luminance, parseHexColour, srgbChannel } from './modes/light.ts';
+export type { LinearRgb } from './modes/light.ts';
+export { OCEAN_LANDMARKS, oceanColour, oceanDepth, oceanLitColour, oceanZone, pickLandmarks, spreadLandmarks } from './modes/ocean.ts';
+export type { Landmark, LandmarkId, OceanZone } from './modes/ocean.ts';
+export { HEIGHT_LANDMARKS, atmosphereLayer, heightReached, pickHeightLandmarks, skyColour, skyLitColour, spreadHeightLandmarks, starsOpacity } from './modes/height.ts';
+export type { AtmosphereLayer, HeightLandmark, HeightLandmarkId } from './modes/height.ts';
+export { pickByBand, spreadBy } from './modes/landmarks.ts';
+export { grassColour, grassWeights, leafColour, leafScale, leafState, mixColour, seasonPhase, shares, stackedColour, weather, yearPhase } from './modes/tree.ts';
+export type { LeafState, Weather } from './modes/tree.ts';
+export { SPACE_LANDMARKS, bodyOpacity, headingDirection, keptLabels, mapPoint, mapState, ringOpacity, spaceScale, startOpacity, usablePath } from './modes/space.ts';
+export type { MapState, SpaceBody, SpaceBodyId } from './modes/space.ts';
+export { checkRecipe, parseRecipe, recipeOrDigits } from './recipes/load.ts';
+export { DIGITS_RECIPE, builtInRecipe } from './recipes/built-in.ts';
+export type { LoadOptions, RecipeResult } from './recipes/load.ts';
+export { RECIPE_LIMITS } from './recipes/limits.ts';
+export {
+  RECIPE_MINUTE_MS,
+  TEXT_CONTRAST,
+  bindingAt,
+  contrastText,
+  cycleShare,
+  environmentColour,
+  focusFor,
+  lightColour,
+  measureAt,
+  measureText,
+  phaseAt,
+  replayTimingFor,
+  smoothstep,
+  sourceValue,
+  stopsAt,
+  zoneAt,
+} from './recipes/measure.ts';
+export type { BindingInputs } from './recipes/measure.ts';
+export type * from './recipes/types.ts';

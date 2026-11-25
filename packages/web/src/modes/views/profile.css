@@ -1,0 +1,67 @@
+/*
+ * What the profile view adds to the shared profile chart (profile.ts): the sonar pings from the deepest point as the
+ * replay ends, and on the lit card the results' starfields and shapes (height's stars and horizon). Each follows its
+ * recipe binding of the value the replay has reached (--pd) while it replays, and rests at the session's own.
+ */
+@layer mode {
+  .profile__ping {
+    position: absolute;
+    left: var(--ping-x);
+    top: var(--ping-y);
+    width: var(--ping-size);
+    height: var(--ping-size);
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .profile__ping-ring {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .profile__ping-ring circle {
+    fill: none;
+    stroke: var(--ping-colour);
+  }
+
+  .card-stars {
+    position: absolute;
+    inset: 0;
+    opacity: var(--stars-final);
+  }
+
+  .card-stars .card-stars__art {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .results:not([data-replayed]) .card-stars {
+    opacity: var(--stars-replay);
+  }
+
+  .card-shape {
+    position: absolute;
+    top: 0;
+    left: calc(var(--shape-x) * 100%);
+    width: var(--shape-width);
+    height: var(--shape-height);
+    margin-left: calc(var(--shape-width) / -2);
+    background: var(--shape-fill);
+    box-shadow: var(--shape-glow);
+    transform: translateY(calc(var(--shape-y-final) * 100cqh));
+    opacity: var(--shape-final);
+  }
+
+  .card-shape--round {
+    border-radius: 50%;
+  }
+
+  .results:not([data-replayed]) .card-shape {
+    transform: translateY(calc(var(--shape-y-replay) * 100cqh));
+    opacity: var(--shape-replay);
+  }
+}

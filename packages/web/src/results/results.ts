@@ -28,13 +28,12 @@ import { BRAND, CONFIG, durationParts, replayLengthMs, summarise } from '@stopwa
 import type { ReplayTiming, Session, SessionSummary } from '@stopwatch/core';
 import { html } from '../dom.ts';
 import { iconElement } from '../icons/icon-element.ts';
-import type { DisplayMode } from '../modes/contract.ts';
+import type { DisplayMode, ModeOptions } from '../modes/contract.ts';
 import { formatClockTime } from '../shell/clock-time.ts';
 import { motionScale } from '../shell/motion.ts';
 import { shareResult } from './share.ts';
 
 const pad = (value: number): string => String(value).padStart(2, '0');
-const RING_LAYOUT = new Set(['ring', 'analog']);
 
 function clockDuration(ms: number): string {
   const { hours, minutes, seconds } = durationParts(ms);
@@ -108,11 +107,12 @@ export class ResultsScreen {
     return !this.element.hidden;
   }
 
-  async show(session: Session, mode: DisplayMode, timing: ResultsTiming): Promise<void> {
+  async show(session: Session, mode: DisplayMode, timing: ResultsTiming, options?: ModeOptions): Promise<void> {
     const doc = this.#doc;
     const summary = summarise(session);
     const copy = BRAND.copy.results;
-    const ring = RING_LAYOUT.has(mode.id);
+    const ring = mode.replayLayout === 'ring';
+    const layout = `results--${mode.replayLayout}`;
 
     const final = clockDuration(summary.focusedMs);
     const [h = '00', m = '00', s = '00'] = final.split(':');
@@ -160,19 +160,25 @@ export class ResultsScreen {
     const actions = html(doc, 'div', { class: 'results__actions' }, [html(doc, 'div', { class: 'results__buttons' }, [retry, share])]);
 
     const graphic = html(doc, 'div', { class: 'results__graphic' });
+    // Behind the whole card: for a replay that lights it or passes things across it (contract, ReplaySurface).
+    const backdrop = html(doc, 'div', { class: 'results__backdrop', attrs: { 'aria-hidden': 'true' } });
     delete this.element.dataset['ready'];
     delete this.element.dataset['replayed'];
+    this.element.dataset['replay'] = mode.id;
     // Laid out but unseen until its timing is set: the replay's drawing code may still be loading.
-    this.element.className = `results results--preparing ${ring ? 'results--ring' : 'results--strip'}`;
+    this.element.className = `results results--preparing ${layout}`;
     this.element.replaceChildren(
+      backdrop,
       focused,
       ...(ring ? [html(doc, 'div', { class: 'results__row' }, [graphic, stats])] : [graphic, stats]),
       actions,
     );
     this.element.hidden = false;
 
-    await mode.replay(graphic, session);
-    this.#time(time, session, summary, timing, mode.replayTiming);
+    const scale = motionScale(doc);
+    const lengthMs = replayLengthMs(mode.replayTiming, summary.elapsedMs) * scale;
+    await mode.replay({ graphic, backdrop, lengthMs, scale }, session, options);
+    this.#time(time, session, summary, timing, mode.replayTiming, [graphic, backdrop], mode.replayCounts ?? 'session');
     this.element.classList.remove('results--preparing');
     // Everything is drawn and timed (tests and custom CSS can rely on it).
     this.element.dataset['ready'] = '';
@@ -192,14 +198,27 @@ export class ResultsScreen {
     this.#retry = null;
   }
 
-  #time(time: HTMLElement, session: Session, summary: SessionSummary, timing: ResultsTiming, replayTiming: ReplayTiming): void {
+  #time(time: HTMLElement, session: Session, summary: SessionSummary, timing: ResultsTiming, replayTiming: ReplayTiming, surface: readonly HTMLElement[], counts: 'session' | 'focus'): void {
+    // Anything the replay animates besides its progress (contract, ReplaySurface): started with the replay,
+    // or finished at once when there is no replay.
+    const own = surface.flatMap((element) => element.getAnimations({ subtree: true }));
     const replayed = (): void => {
       this.element.dataset['replayed'] = '';
+    };
+    const settled = (): void => {
+      for (const animation of own) {
+        try {
+          animation.finish();
+        } catch {
+          // An endless animation has no end; it is left as it is.
+        }
+      }
+      replayed();
     };
     const { start, reducedMotion } = timing;
     const { motion } = CONFIG;
     if (start === null) {
-      replayed();
+      settled();
       return;
     }
     const scale = motionScale(this.#doc);
@@ -220,13 +239,15 @@ export class ResultsScreen {
       animation.startTime = start + appear.delay * scale;
     }
     if (reducedMotion || !canReplay()) {
-      replayed();
+      settled();
       return;
     }
     const counting = canCount();
     if (counting) {
       time.classList.add('results__time--counting');
-      time.style.setProperty('--results-focused', countExpression(countTerms(session, summary), Math.max(1, summary.elapsedMs) / 1000));
+      // A replay that draws distance counts with it, evenly through the focused time (contract, replayCounts).
+      const terms = counts === 'focus' ? [{ from: 0, length: summary.focusedMs / 1000 }] : countTerms(session, summary);
+      time.style.setProperty('--results-focused', countExpression(terms, Math.max(1, counts === 'focus' ? summary.focusedMs : summary.elapsedMs) / 1000));
     }
     // The replay: one property, from 0 to 1. Everything that moves is calculated from it.
     const replay = this.element.animate([{ '--replay-progress': 0 }, { '--replay-progress': 1 }], {
@@ -235,6 +256,7 @@ export class ResultsScreen {
       fill: 'both',
     });
     replay.startTime = start + motion.replayDelay * scale;
+    for (const animation of own) animation.startTime = start + motion.replayDelay * scale;
     void replay.finished.then(
       () => {
         // Landed: the final drawing and plain text from here on, with no animation left.

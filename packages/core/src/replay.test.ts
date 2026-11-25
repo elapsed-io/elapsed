@@ -1,6 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { CONFIG } from './config.ts';
+import ANALOG from '../../../packages/core/src/recipes/shipped/analog.json' with { type: 'json' };
+import DIGITS from '../../../packages/core/src/recipes/shipped/digits.json' with { type: 'json' };
+import HEIGHT from '../../../packages/core/src/recipes/shipped/height.json' with { type: 'json' };
+import INTERSTELLAR from '../../../packages/core/src/recipes/shipped/interstellar.json' with { type: 'json' };
+import OCEAN from '../../../packages/core/src/recipes/shipped/ocean-depth.json' with { type: 'json' };
+import RING from '../../../packages/core/src/recipes/shipped/ring.json' with { type: 'json' };
+import TIMELINE from '../../../packages/core/src/recipes/shipped/timeline.json' with { type: 'json' };
+import TREE from '../../../packages/core/src/recipes/shipped/tree.json' with { type: 'json' };
+import { checkRecipe } from './recipes/load.ts';
+import { replayTimingFor } from './recipes/measure.ts';
 import { longSessionReplayExtraMs, replayLengthMs } from './replay.ts';
+import type { ReplayTiming } from './replay.ts';
+
+const timing = (value: unknown): ReplayTiming => {
+  const result = checkRecipe(value, { builtIn: true });
+  if (!result.ok) throw new Error(result.problems.join('; '));
+  return replayTimingFor(result.recipe);
+};
 
 const HOUR = 60 * 60 * 1000;
 
@@ -17,16 +33,12 @@ describe('results replay timing', () => {
     expect(longSessionReplayExtraMs(Number.NaN)).toBe(0);
   });
 
-  it('gives each mode its own base length and curve', () => {
-    const { modes } = CONFIG;
-    expect(modes.digits.replay).toEqual({ durationMs: 1400, easing: [0.16, 1, 0.3, 1] });
-    for (const timing of [modes.ring.replay, modes.timeline.replay, modes.analog.replay, modes.interstellar.replay]) {
-      expect(timing).toEqual({ durationMs: 2000, easing: [0.16, 1, 0.3, 1] });
-    }
-    for (const timing of [modes.ocean.replay, modes.height.replay, modes.tree.replay]) {
-      expect(timing).toEqual({ durationMs: 3000, easing: [0.33, 1, 0.68, 1] });
-    }
-    expect(replayLengthMs(modes.ring.replay, 8 * HOUR)).toBeCloseTo(3000, 9);
-    expect(replayLengthMs(modes.digits.replay, HOUR)).toBe(1400);
+  it('gives each mode its own base length and curve, from its recipe (plan, Design system > Motion)', () => {
+    expect(timing(DIGITS)).toEqual({ durationMs: 1400, easing: [0.16, 1, 0.3, 1], longSessionExtra: true });
+    for (const recipe of [RING, TIMELINE, ANALOG, INTERSTELLAR]) expect(timing(recipe)).toEqual({ durationMs: 2000, easing: [0.16, 1, 0.3, 1], longSessionExtra: true });
+    for (const recipe of [OCEAN, HEIGHT, TREE]) expect(timing(recipe)).toEqual({ durationMs: 3000, easing: [0.33, 1, 0.68, 1], longSessionExtra: true });
+    expect(replayLengthMs(timing(RING), 8 * HOUR)).toBeCloseTo(3000, 9);
+    expect(replayLengthMs(timing(DIGITS), HOUR)).toBe(1400);
+    expect(replayLengthMs({ ...timing(RING), longSessionExtra: false }, 8 * HOUR)).toBe(2000);
   });
 });

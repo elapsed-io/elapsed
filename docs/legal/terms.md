@@ -5,10 +5,14 @@ Effective November 15, 2026.
 These terms cover elapsed, a stopwatch for focused work at elapsed.io, made by humanbn, based in Castro
 Valley, California. By using elapsed, you agree to them.
 
+<!-- soon only -->
+
 ## elapsed.io today
 
 The timer has not opened yet: for now, elapsed.io shows a page saying it is coming soon. These terms cover
 that page and, once it opens, the timer.
+
+<!-- end -->
 
 ## using elapsed
 

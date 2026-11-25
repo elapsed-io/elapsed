@@ -11,7 +11,7 @@
  *   only with that mode.
  */
 
-import { CONFIG } from '@stopwatch/core';
+import { ANALOG_CONFIG, CONFIG, HEIGHT_CONFIG, mixColour, OCEAN_CONFIG, RING_CONFIG, SPACE_CONFIG, TIMELINE_CONFIG, TREE_CONFIG } from '@stopwatch/core';
 import { deriveTheme, themeCustomProperties } from '../theme/derive.ts';
 import { DEFAULT_PRESET_ID, getPreset } from '../theme/presets.ts';
 
@@ -33,7 +33,7 @@ const scaled = (value: number): string => `calc(${ms(value)} * var(--motion-scal
 const percent = (fraction: number): string => `${String(Math.round(fraction * 10_000) / 100)}%`;
 
 export function designCustomProperties(): CustomProperties {
-  const { reference, type, controls, icons, paused, checkIn, notice, ending, results } = CONFIG.design;
+  const { reference, type, controls, icons, paused, checkIn, notice, pill, ending, results } = CONFIG.design;
   const { motion } = CONFIG;
   return {
     '--font-family': `"${DEFAULT_FONT_FAMILY}", system-ui, sans-serif`,
@@ -55,6 +55,8 @@ export function designCustomProperties(): CustomProperties {
     // The active display mode overrides these two.
     '--mode-time-size': 'var(--time-size)',
     '--mode-gap': 'var(--time-gap)',
+    // One layer order for every mode and screen (plan v11, Design system).
+    ...Object.fromEntries(Object.entries(CONFIG.design.layers).map(([name, z]) => [`--layer-${name}`, String(z)])),
 
     '--paused-for-size': String(type.pausedForPx),
     '--paused-label-size': px(paused.labelPx),
@@ -62,6 +64,8 @@ export function designCustomProperties(): CustomProperties {
     '--paused-label-tracking': em(paused.labelTrackingEm),
     '--paused-missed-size': px(paused.missedPx),
     '--paused-missed-gap': px(paused.missedGapPx),
+    '--caption-size': px(paused.captionPx),
+    '--caption-bottom': px(paused.captionBottomPx),
     '--check-in-size': px(checkIn.textPx),
 
     '--notice-gap': px(notice.gapPx),
@@ -72,6 +76,17 @@ export function designCustomProperties(): CustomProperties {
     '--notice-body-size': px(notice.bodyPx),
     '--notice-body-line-height': String(notice.bodyLineHeight),
     '--notice-body-width': px(notice.bodyMaxWidthPx),
+    '--pill-height': px(pill.heightPx),
+    '--pill-text': px(pill.textPx),
+    '--pill-gap': px(pill.gapPx),
+    '--pill-padding-start': px(pill.paddingStartPx),
+    '--pill-padding-end': px(pill.paddingEndPx),
+    '--pill-radius': px(pill.radiusPx),
+    '--pill-above': String(pill.aboveTimePx),
+    '--pill-underline-offset': px(pill.underlineOffsetPx),
+    '--pill-dismiss': px(pill.dismissPx),
+    '--pill-cross': px(pill.crossPx),
+    '--pill-cross-stroke': String(pill.crossStrokeWidth),
 
     '--button-height': px(controls.buttonHeightPx),
     '--button-padding-x': px(controls.buttonPaddingXPx),
@@ -101,6 +116,9 @@ export function designCustomProperties(): CustomProperties {
     '--results-padding-x': px(results.paddingXPx),
     '--results-gap': px(results.gapPx),
     '--results-ring-gap': px(results.ringGapPx),
+    '--results-figure-gap': px(results.figureGapPx),
+    '--results-map-gap': px(SPACE_CONFIG.results.gapPx),
+    '--results-figure-padding-y': px(results.figurePaddingYPx),
     '--results-label-size': px(results.labelPx),
     '--results-label-tracking': em(results.labelTrackingEm),
     '--results-label-gap': px(results.labelGapPx),
@@ -146,13 +164,23 @@ export function designCustomProperties(): CustomProperties {
 
     '--motion-morph': scaled(motion.startMorph),
     '--motion-fade': scaled(motion.fade),
+    '--motion-contrast': scaled(motion.contrastFade),
+    '--focus-controls': scaled(motion.focus.controlsMs),
+    '--focus-time': scaled(motion.focus.timeMs),
+    '--focus-controls-drop': String(motion.focus.controlsDropPx),
+    '--focus-time-drop': String(motion.focus.timeDropPx),
+    '--focus-time-scale': String(motion.focus.timeScale),
+    '--environment-fade': scaled(motion.environmentFade),
     '--motion-control': scaled(motion.control),
     '--ease-standard': `cubic-bezier(${motion.standardEasing.join(', ')})`,
+    '--ease-in-quad': `cubic-bezier(${motion.focus.easeIn.join(', ')})`,
+    '--ease-out-quart': `cubic-bezier(${motion.focus.easeOut.join(', ')})`,
     // The start morph's slight spring; where CSS has no linear() easing, the standard ease-out (springBlock).
     '--ease-spring': 'var(--ease-standard)',
     '--ease-smoothstep': SMOOTHSTEP,
     '--held-blur': px(motion.heldBlurPx),
     '--held-opacity': String(motion.heldOpacity),
+    '--frost-solid': `${String(motion.frostSolidShare * 100)}%`,
     '--blur-away-max': px(motion.blurAwayMaxPx),
     '--blur-ones-start': ms(motion.onesBlurWindow.start),
     '--blur-ones-window': ms(motion.onesBlurWindow.end - motion.onesBlurWindow.start),
@@ -210,7 +238,7 @@ function narrowBlock(): string {
 }
 
 /** Durations scaled by --motion-scale, registered as times so script reads them resolved ("0.2s"). */
-export const SCALED_DURATIONS = ['--motion-morph', '--motion-fade', '--motion-control', '--tabulating-hold', '--tabulating-fade', '--results-fade-delay', '--results-fade', '--replay-delay'] as const;
+export const SCALED_DURATIONS = ['--motion-morph', '--motion-fade', '--motion-contrast', '--focus-controls', '--focus-time', '--environment-fade', '--highlight-duration', '--motion-control', '--tabulating-hold', '--tabulating-fade', '--results-fade-delay', '--results-fade', '--replay-delay'] as const;
 
 function registeredProperties(): string {
   const time = SCALED_DURATIONS.map((name) => `@property ${name} {\n  syntax: "<time>";\n  inherits: true;\n  initial-value: 0s;\n}`);
@@ -312,6 +340,16 @@ export function settingsCustomProperties(): CustomProperties {
     '--shortcuts-size': px(p.shortcuts.textPx),
     '--shortcuts-gap': px(p.shortcuts.gapPx),
     '--tiles-columns': String(p.tiles.columns),
+    '--mode-options-padding': px(p.modeOptions.paddingPx),
+    '--mode-options-gap': px(p.modeOptions.gapPx),
+    '--focus-group-gap': px(p.focusGroup.gapPx),
+    '--mode-options-radius': px(p.modeOptions.radiusPx),
+    '--highlight-inset-y': px(CONFIG.design.settings.highlight.insetYPx),
+    '--highlight-inset-x': px(CONFIG.design.settings.highlight.insetXPx),
+    '--highlight-radius': px(CONFIG.design.settings.highlight.radiusPx),
+    '--highlight-line': px(CONFIG.design.settings.highlight.linePx),
+    '--highlight-duration': scaled(CONFIG.motion.highlightMs),
+    '--mode-options-title': px(p.modeOptions.titlePx),
     '--tiles-gap': px(p.tiles.gapPx),
     '--tile-padding-top': px(p.tiles.paddingTopPx),
     '--tile-padding-bottom': px(p.tiles.paddingBottomPx),
@@ -377,7 +415,7 @@ export function renderSettingsTokensCss(): string {
   return `/* Generated from packages/core/src/config.ts at build time. */\n@layer base {\n${block(':root', settingsCustomProperties())}\n}\n`;
 }
 
-export const MODE_TOKEN_IDS = ['ring', 'timeline'] as const;
+export const MODE_TOKEN_IDS = ['ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'interstellar'] as const;
 export type ModeTokenId = (typeof MODE_TOKEN_IDS)[number];
 
 export function isModeTokenId(value: string): value is ModeTokenId {
@@ -385,20 +423,14 @@ export function isModeTokenId(value: string): value is ModeTokenId {
 }
 
 function ringTokens(): string {
-  const ring = CONFIG.modes.ring;
-  const diameter = 2 * ring.radiusPx + ring.trackPx;
+  const ring = RING_CONFIG;
   const [far, near] = ring.tailStops;
+  // The ring's radius, thickness and head come from its recipe (pieces/ring/ring.ts); these are the frame's own.
   const properties: CustomProperties = {
-    '--mode-time-size': String(CONFIG.design.type.ringTimePx),
-    '--mode-gap': String(ring.gapPx),
+    '--mode-time-size': String(CONFIG.design.type.modeTimePx),
+    '--mode-gap': String(CONFIG.design.controls.timeToButtonsPx),
     // Reference pixels, scaled with the time.
     '--ring-box': String(ring.boxPx),
-    '--ring-diameter': String(diameter),
-    '--ring-inset': String((ring.boxPx - diameter) / 2),
-    '--ring-track': String(ring.trackPx),
-    '--ring-head': String(ring.headPx),
-    '--ring-head-left': String(ring.boxPx / 2 - ring.headPx / 2),
-    '--ring-head-top': String(ring.boxPx / 2 - ring.radiusPx - ring.headPx / 2),
     '--ring-tail-far': String(far.at),
     '--ring-tail-far-strength': share(far.strength),
     '--ring-tail-near': String(near.at),
@@ -408,12 +440,11 @@ function ringTokens(): string {
 }
 
 function timelineTokens(): string {
-  const timeline = CONFIG.modes.timeline;
+  const timeline = TIMELINE_CONFIG;
   const properties: CustomProperties = {
-    '--mode-time-size': String(CONFIG.design.type.timelineTimePx),
-    '--mode-gap': String(timeline.gapPx),
+    '--mode-time-size': String(CONFIG.design.type.modeTimePx),
+    '--mode-gap': String(CONFIG.design.controls.timeToButtonsPx),
     '--timeline-inner-gap': String(timeline.innerGapPx),
-    '--timeline-width': px(timeline.widthPx),
     '--timeline-height': px(timeline.heightPx),
     '--timeline-edge': px(timeline.edgePx),
     '--timeline-fade': share(timeline.fadeShare),
@@ -422,8 +453,259 @@ function timelineTokens(): string {
   return block('[data-mode="timeline"]', properties);
 }
 
+function analogTokens(): string {
+  const analog = ANALOG_CONFIG;
+  // The dial's size comes from its recipe (pieces/dial/dial.ts); the hands carry the points they turn about.
+  const properties: CustomProperties = {
+    '--mode-time-size': String(CONFIG.design.type.modeTimePx),
+    '--mode-gap': String(CONFIG.design.controls.timeToButtonsPx),
+    '--analog-label-size': px(analog.labelPx),
+    '--analog-letter-spacing': em(analog.numbers.letterSpacingEm),
+    '--analog-subdial-label-size': px(analog.subdialLabelPx),
+  };
+  // The dial piece's tokens (the analog stopwatch's).
+  return block('[data-mode="analog"]', properties);
+}
+
+function oceanTokens(): string {
+  const ocean = OCEAN_CONFIG;
+  const properties: CustomProperties = {
+    '--ocean-text': ocean.palette.text,
+    '--ocean-icon': ocean.palette.icon,
+    '--ocean-accent': ocean.palette.accent,
+    '--ocean-end': ocean.palette.end,
+    '--ocean-pause': ocean.palette.pause,
+  };
+  // The dive profile and the lit card, on the results that replay ocean depth (whichever mode is showing).
+  const chart = ocean.results;
+  const { pings, passing } = chart;
+  const profile: CustomProperties = {
+    ...profileTokens({ origin: 0, chart: { ...chart, valuePx: chart.depthPx }, landmark: chart.landmark, near: chart.lit.aboveMetres, far: chart.lit.belowMetres, passing }),
+    '--ping-size': px(2 * pings.toRadiusPx),
+    '--ping-colour': pings.colour,
+    '--passing-silhouette': passing.colours.silhouette,
+    '--passing-deep': passing.colours.deep,
+    '--passing-jelly': passing.colours.jelly,
+    '--passing-jelly-line': passing.colours.jellyLine,
+    '--passing-glow': passing.colours.glow,
+  };
+  return `${block('[data-mode="ocean"]', properties)}\n${block('[data-replay="ocean"]', profile)}\n${lifeTokens()}`;
+}
+
+/** A config literal's shape with its numbers and strings widened, so another mode's values fit it. */
+type Widened<T> = { readonly [K in keyof T]: T[K] extends number ? number : T[K] extends string ? string : Widened<T[K]> };
+
+/** What the profile chart's tokens are made from (ocean depth's and height's results config). */
+interface ProfileTokenSource {
+  /** 0: a dive, measured from the top; 1: a climb, measured from the bottom. */
+  readonly origin: 0 | 1;
+  readonly chart: {
+    readonly widthPx: number;
+    readonly heightPx: number;
+    readonly minScaleMetres: number;
+    readonly scaleHeadroom: number;
+    readonly colours: { readonly line: string; readonly text: string; readonly muted: string };
+    readonly valuePx: number;
+    readonly zonePx: number;
+    readonly zoneOpacity: number;
+    readonly textInsetPx: number;
+    readonly timesPx: number;
+    readonly timesGapPx: number;
+    readonly zoneLines: { readonly opacity: number; readonly scaleShare: number; readonly minYPx: number };
+  };
+  readonly landmark: Widened<(typeof OCEAN_CONFIG.results)['landmark']>;
+  readonly near: number;
+  readonly far: number;
+  readonly passing: { readonly fromPx: number; readonly travelPx: number; readonly cardHeightPx: number };
+}
+
+/** The shared profile chart's tokens (modes/shared/profile-chart.css), for one mode's results. */
+function profileTokens({ origin, chart, landmark: mark, near, far, passing }: ProfileTokenSource): CustomProperties {
+  return {
+    '--profile-origin': String(origin),
+    '--profile-aspect': `${String(chart.widthPx)} / ${String(chart.heightPx)}`,
+    '--profile-min-scale': String(chart.minScaleMetres),
+    '--profile-headroom': String(chart.scaleHeadroom),
+    '--profile-line': chart.colours.line,
+    '--profile-card-text': chart.colours.text,
+    '--profile-card-muted': chart.colours.muted,
+    '--profile-value-size': px(chart.valuePx),
+    '--profile-zone-size': px(chart.zonePx),
+    '--profile-zone-opacity': String(chart.zoneOpacity),
+    '--profile-inset': px(chart.textInsetPx),
+    '--profile-times-size': px(chart.timesPx),
+    '--profile-times-gap': px(chart.timesGapPx),
+    '--profile-zone-line-opacity': String(chart.zoneLines.opacity),
+    '--profile-zone-line-share': String(chart.zoneLines.scaleShare),
+    '--profile-zone-line-min-y': String(chart.zoneLines.minYPx),
+    '--profile-height': String(chart.heightPx),
+    '--landmark-dot': px(mark.dotPx),
+    '--landmark-ring': px(mark.ringPx),
+    '--landmark-gap': px(mark.gapPx),
+    '--landmark-inset': px(mark.insetPx),
+    '--landmark-size': px(mark.textPx),
+    '--landmark-pad-y': px(mark.paddingYPx),
+    '--landmark-pad-x': px(mark.paddingXPx),
+    '--landmark-radius': px(mark.radiusPx),
+    '--landmark-border': px(mark.borderPx),
+    '--landmark-pop-metres': String(mark.popMetres),
+    '--landmark-pop-from': String(mark.popFrom),
+    '--landmark-fade-metres': String(mark.fadeMetres),
+    '--landmark-rest-delay': ms(mark.restDelayMs),
+    '--landmark-rest-fade': ms(mark.restFadeMs),
+    '--landmark-dot-colour': mark.colours.dot,
+    '--landmark-dot-ring': mark.colours.dotRing,
+    '--landmark-text-colour': mark.colours.text,
+    '--landmark-fill': mark.colours.fill,
+    '--landmark-edge': mark.colours.border,
+    '--lit-near': String(near),
+    '--lit-far': String(far),
+    '--passing-from': String(passing.fromPx / passing.cardHeightPx),
+    '--passing-travel': String(passing.travelPx / passing.cardHeightPx),
+  };
+}
+
+/** Ocean life's colours and motions (the "ocean depth, paused" frame), from OCEAN_CONFIG.life. */
+function lifeTokens(): string {
+  const life = OCEAN_CONFIG.life;
+  const sine = (axis: 'X' | 'Y'): string => {
+    const steps = 24;
+    const frames = Array.from({ length: steps + 1 }, (_, i) => `    ${String((i / steps) * 100)}% { transform: translate${axis}(calc(var(--sine-amp) * ${String(Math.round(Math.sin((2 * Math.PI * i) / steps) * 1e6) / 1e6)})); }`);
+    return `  @keyframes life-sine-${axis.toLowerCase()} {\n${frames.join('\n')}\n  }`;
+  };
+  const colours = block('[data-mode="ocean"]', {
+    '--life-far': life.colours.far,
+    '--life-mid': life.colours.mid,
+    '--life-near': life.colours.near,
+    '--life-bubble': life.colours.bubble,
+    '--life-bubble-opacity': String(life.colours.bubbleOpacity),
+    '--life-bubble-stroke': px(life.bubbleStrokePx),
+  });
+  return [
+    colours,
+    sine('X'),
+    sine('Y'),
+  ].join('\n');
+}
+
+function heightTokens(): string {
+  const height = HEIGHT_CONFIG;
+  const stars: CustomProperties = { '--height-star-faint': height.stars.faint, '--height-star-white': height.stars.white, '--height-star-warm': height.stars.warm };
+  const { meteors } = height;
+  const properties: CustomProperties = {
+    '--height-text': height.palette.text,
+    '--height-icon': height.palette.icon,
+    '--height-icon-paused': height.palette.iconPaused,
+    '--height-label': height.palette.label,
+    '--height-accent': height.palette.accent,
+    '--height-end': height.palette.end,
+    '--height-pause': height.palette.pause,
+    '--meteor-radius': px(meteors.radiusPx),
+    '--meteor-shower-period': `${String(meteors.shower.periodSeconds)}s`,
+    ...stars,
+  };
+  // The climb profile and the lit card, on the results that replay height (whichever mode is showing).
+  const chart = height.results;
+  const { passing } = chart;
+  const profile: CustomProperties = {
+    ...profileTokens({
+      origin: 1,
+      chart,
+      // The same markers as ocean depth's (both frames draw them alike), passed over the climb's own distances.
+      landmark: { ...OCEAN_CONFIG.results.landmark, ...chart.landmark },
+      near: chart.lit.belowMetres,
+      far: chart.lit.aboveMetres,
+      passing,
+    }),
+    ...stars,
+    '--passing-silhouette': passing.colours.silhouette,
+    '--passing-cloud': passing.colours.cloud,
+    '--passing-contrail': passing.colours.contrail,
+    '--passing-balloon': passing.colours.balloon,
+    '--passing-rigging': passing.colours.rigging,
+  };
+  // The shooting star and the shower (the "height, paused" frame's keyframes; the shower's scaled to its period).
+  const percent = (share: number): string => `${String(Math.round(share * 1e6) / 1e4)}%`;
+  const streak = (name: string, peak: number, end: number): string =>
+    `  @keyframes ${name} {\n    0% { transform: translate(0, 0) rotate(var(--meteor-angle)); opacity: 0; }\n    ${percent(peak)} { opacity: 1; }\n    ${percent(end)} { transform: translate(var(--meteor-dx), var(--meteor-dy)) rotate(var(--meteor-angle)); opacity: 0; }\n    100% { transform: translate(var(--meteor-dx), var(--meteor-dy)) rotate(var(--meteor-angle)); opacity: 0; }\n  }`;
+  const { shower } = meteors;
+  return [
+    block('[data-mode="height"]', properties),
+    block('[data-replay="height"]', profile),
+    streak('height-shoot', meteors.peakShare, meteors.endShare),
+    streak('height-shower', shower.peakSeconds / shower.periodSeconds, shower.endSeconds / shower.periodSeconds),
+  ].join('\n');
+}
+
+function interstellarTokens(): string {
+  const space = SPACE_CONFIG;
+  const { palette, results } = space;
+  const tones: CustomProperties = Object.fromEntries(Object.entries(space.bodies).map(([tone, colour]) => [`--space-${tone}`, colour]));
+  const properties: CustomProperties = {
+    '--space-text': palette.text,
+    '--space-icon': palette.icon,
+    '--space-label': palette.label,
+    '--space-caption': palette.caption,
+    '--space-end': palette.end,
+    '--space-pause': palette.pause,
+    '--comet-tail-radius': px(space.comets.tailRadiusPx),
+    ...tones,
+  };
+  const card: CustomProperties = {
+    '--space-background': space.background,
+    '--space-card-text': results.card.text,
+    '--space-card-muted': results.card.muted,
+    '--space-map-width': px(results.widthPx),
+    '--space-map-height': px(results.heightPx),
+    '--space-spacer': px(results.spacerPx),
+    '--space-distance-left': px(results.distanceLeftPx),
+    '--space-distance-top': px(results.distanceTopPx),
+    '--space-distance-size': px(results.distancePx),
+    '--space-distance-colour': space.label.colour,
+    '--comet-tail-radius': px(space.comets.tailRadiusPx),
+    ...tones,
+  };
+  // Each body's colours by its art's tones: a fill, or a ring's stroke (art/space/bodies.ts).
+  const strokes = new Set<string>(space.bodyStrokes);
+  const toneRules = Object.keys(space.bodies)
+    .map((tone) => `  .map__art [data-tone="${tone}"] {\n    ${strokes.has(tone) ? `fill: none;\n    stroke: var(--space-${tone});` : `fill: var(--space-${tone});`}\n  }`)
+    .join('\n');
+  // The corner icons over the results card take the frame's colour (built-in/interstellar.css and views/space.css).
+  return [block('[data-mode="interstellar"]', properties), block('[data-replay="interstellar"]', card), block(':root', { '--space-card-icon': results.card.icon }), toneRules].join('\n');
+}
+
+function treeTokens(): string {
+  const tree = TREE_CONFIG;
+  // The leaves' colours and the trunk come from the tree's recipe (pieces/tree/tree.ts); these are the frames' own.
+  const colours: Record<`--${string}`, string> = {
+    '--tree-side-width': String(tree.side.widthPx),
+    '--tree-side-height': String(tree.side.heightPx),
+    '--tree-iso-trunk': tree.colours.isoTrunk,
+    '--tree-snow': tree.colours.snow,
+    '--tree-fall': tree.colours.fall,
+    '--tree-ground-leaf': tree.colours.groundLeaf,
+    '--tree-field-light': tree.colours.isoFieldLight,
+  };
+  // Each grass colour with its blades' darker one, as the frames mix them.
+  tree.grass.forEach((colour, stage) => {
+    colours[`--tree-grass-${String(stage)}`] = colour;
+    colours[`--tree-blade-${String(stage)}`] = mixColour(colour, '#000000', tree.grassDark);
+  });
+  const properties: CustomProperties = {
+    '--mode-time-size': String(tree.timePx),
+    '--mode-gap': String(tree.side.gapPx),
+    '--tree-iso-gap': String(tree.iso.gapPx),
+    '--tree-iso-width': String(tree.iso.widthPx),
+    '--tree-iso-height': String(tree.iso.heightPx),
+  };
+  // The colours on the timer and on the results that replay the tree (whichever mode is showing).
+  return `${block('[data-mode="tree"]', properties)}\n${block('[data-mode="tree"], [data-replay="tree"]', colours)}`;
+}
+
+const MODE_TOKENS: Readonly<Record<ModeTokenId, () => string>> = { ring: ringTokens, timeline: timelineTokens, analog: analogTokens, ocean: oceanTokens, height: heightTokens, tree: treeTokens, interstellar: interstellarTokens };
+
 /** One display mode's tokens, in the `mode` layer. */
 export function renderModeTokensCss(mode: ModeTokenId): string {
-  const body = mode === 'ring' ? ringTokens() : timelineTokens();
+  const body = MODE_TOKENS[mode]();
   return `/* Generated from packages/core/src/config.ts at build time. */\n@layer mode {\n${body}\n}\n`;
 }

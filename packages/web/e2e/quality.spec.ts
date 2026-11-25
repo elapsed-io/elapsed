@@ -4,7 +4,7 @@
  * data the inventory lists). The timing checks are in timing.spec.ts.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import { untilEndNowAccepts } from './helpers.ts';
 
 test('nothing shifts the layout unexpectedly, on load or while using the controls', async ({ page }) => {
@@ -32,7 +32,10 @@ test('nothing shifts the layout unexpectedly, on load or while using the control
 test('stores only the open session, then the finished one in tab storage, and sets no cookies', async ({ page, context }) => {
   const stored = () =>
     page.evaluate(async () => ({
-      local: Object.keys(localStorage).sort(),
+      // Apart from the dismissed tip every test starts with (playwright.config.ts).
+      local: Object.keys(localStorage)
+        .filter((key) => key !== 'notices')
+        .sort(),
       session: Object.keys(sessionStorage).sort(),
       databases: (await indexedDB.databases()).map((database) => database.name),
       caches: await caches.keys(),

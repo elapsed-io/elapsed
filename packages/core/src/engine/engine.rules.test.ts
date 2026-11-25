@@ -19,6 +19,45 @@ const SECOND = 1000;
 const of = <T extends Recorded['type']>(events: readonly Recorded[], type: T) =>
   events.filter((event): event is Extract<Recorded, { type: T }> => event.type === type);
 
+describe('the check-ins switch (Release 2)', () => {
+  it('switched off, no check-in falls due and one waiting goes at once', () => {
+    const h = harness({ rules });
+    h.engine.start('digits');
+    h.clock.advance(2 * HOUR + 5 * MINUTE);
+    expect(h.engine.view.checkInDueAt).toBe(T0 + 2 * HOUR);
+    h.engine.setRules({ ...rules, checkIns: false });
+    expect(h.engine.view.checkInDueAt).toBeNull();
+    h.take();
+    h.clock.advance(10 * HOUR);
+    const events = h.take();
+    expect(of(events, 'checkin.due')).toEqual([]);
+    expect(of(events, 'session.paused')).toEqual([]);
+    expect(h.engine.view).toMatchObject({ status: 'running', focusedMs: 12 * HOUR + 5 * MINUTE });
+  });
+
+  it('switched back on during a session, they count from that moment: never one already due or missed', () => {
+    const h = harness({ rules: { ...rules, checkIns: false } });
+    h.engine.start('digits');
+    h.clock.advance(5 * HOUR);
+    h.engine.setRules(rules);
+    expect(h.engine.view).toMatchObject({ status: 'running', checkInDueAt: null, focusedMs: 5 * HOUR });
+    h.take();
+    h.clock.advance(2 * HOUR - SECOND);
+    expect(h.engine.view.checkInDueAt).toBeNull();
+    h.clock.advance(SECOND);
+    expect(of(h.take(), 'checkin.due').map((event) => event.payload.at)).toEqual([T0 + 7 * HOUR]);
+  });
+
+  it('switched on while already on changes nothing', () => {
+    const h = harness({ rules });
+    h.engine.start('digits');
+    h.clock.advance(HOUR);
+    h.engine.setRules({ ...rules });
+    h.clock.advance(HOUR);
+    expect(h.engine.view.checkInDueAt).toBe(T0 + 2 * HOUR);
+  });
+});
+
 describe('check-ins', () => {
   it('appear after 2 hours of running and are answered by any sign of presence', () => {
     const h = harness({ rules });

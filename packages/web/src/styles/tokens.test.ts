@@ -30,19 +30,19 @@ describe('generated tokens', () => {
     }
   });
 
-  it('gives each mode its own sizes, as the revised frames draw them', () => {
+  it('gives ring, timeline and analog the shared sizes (round 2.13): the 260 px dial, the 48 px time, 26 px to the buttons', () => {
     const ring = renderModeTokensCss('ring');
-    expect(ring).toContain('--mode-gap: 20');
-    // A 232 px ring (112 px to the middle of its 8 px track) in a 280 px box, the head's top-left at 136, 24.
-    expect(ring).toContain('--ring-diameter: 232');
-    expect(ring).toContain('--ring-inset: 24');
-    expect(ring).toContain('--ring-head-left: 136');
-    expect(ring).toContain('--ring-head-top: 24');
-    expect(ring).toContain('--ring-tail-far-strength: 15%');
     const timeline = renderModeTokensCss('timeline');
-    expect(timeline).toContain('--mode-gap: 30');
-    expect(timeline).toContain('--timeline-inner-gap: 18');
-    expect(timeline).toContain('--timeline-width: 480px');
+    const analog = renderModeTokensCss('analog');
+    for (const css of [ring, timeline, analog]) {
+      expect(css).toContain('--mode-gap: 26');
+      expect(css).toContain('--mode-time-size: 48');
+    }
+    // The ring's geometry is its recipe's (checked against the ring frames, e2e/frames.spec.ts); the box and the tail's fade are the frame's.
+    expect(ring).toContain('--ring-box: 260');
+    expect(ring).toContain('--ring-tail-far-strength: 15%');
+    // The compact timeline: its track 14 px below the time.
+    expect(timeline).toContain('--timeline-inner-gap: 14');
     expect(timeline).toContain('--timeline-fade: 14%');
     // Modes move by transforms set once a minute, not by keyframes.
     expect(ring + timeline).not.toContain('@keyframes');

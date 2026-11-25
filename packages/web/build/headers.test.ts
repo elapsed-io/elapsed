@@ -46,6 +46,18 @@ describe('security headers', () => {
     }
   });
 
+  it('leaves the screen wake lock to the site (keep screen awake, Release 2): the Permissions-Policy never disables it', () => {
+    const policy = SECURITY_HEADERS['Permissions-Policy'] ?? '';
+    // Each feature the policy names, with its allowlist.
+    const features = new Map(policy.split(',').map((entry) => entry.trim().split('=') as [string, string]));
+    // Not named, it keeps its default allowlist: the site's own pages ('self').
+    if (features.has('screen-wake-lock')) expect(features.get('screen-wake-lock')).toMatch(/\bself\b/);
+    expect(policy).not.toMatch(/screen-wake-lock=\(\)/);
+    expect([...features.keys()]).toEqual(['camera', 'microphone', 'geolocation']);
+    // And every page is served with that policy.
+    for (const path of ['/', '/index.html', '/credits/']) expect(headersForPath(path)['Permissions-Policy']).toBe(policy);
+  });
+
   it('caches hashed assets forever and pages not at all', () => {
     expect(headersForPath('/assets/timer-sans-abc.woff2')['Cache-Control']).toBe('public, max-age=31536000, immutable');
     expect(headersForPath('/')['Cache-Control']).toBeUndefined();

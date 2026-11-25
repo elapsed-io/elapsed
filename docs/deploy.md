@@ -367,6 +367,126 @@ npx --yes wrangler@4.162.0 rollback --config packages/soon/wrangler.jsonc --mess
 `docs/test-run.md`, step 8: delete the four Access applications and any service token, then the test Worker
 and its database.
 
+## Part 7. The public launch (Release 2)
+
+Release 2 is elapsed's public launch on elapsed.io (`docs/release-readiness.md`, section 4, has the whole launch
+list and who does what). Your six tasks come in this order (plan version 14): tasks 1 to 5 are before the deploy,
+lettered A to E below; task 6 is the deploy itself, steps 1 to 7, and the sign-off, step 8.
+
+### A. The legal review (task 1)
+
+Read the app's edition of the privacy page and the terms (`docs/legal/privacy.md` and `docs/legal/terms.md`; the
+app shows everything but the parts between `<!-- soon only -->` and `<!-- end -->`, and the soon page everything
+but the parts between `<!-- app only -->` and `<!-- end -->`; decision 427 lists every change from the published
+text). Set the effective date at the top of both ("Effective November 15, 2026." today) to the launch day, and tell
+the developer of any change; the developer rebuilds and runs the checks. The soon page keeps serving its own
+edition until step 4.
+
+### B. Make the repository public (task 2)
+
+First settle question 41 in `docs/questions-overnight.md`: the full history was scanned (decision 446) and holds
+no key, token or password, but three merge commits made on GitHub carry the private admin address as their
+author. Then, on GitHub: the repository → **Settings** → **General** → **Danger Zone** → **Change visibility** →
+**Make public**.
+
+### C. Secret scanning and push protection, right after (task 3)
+
+They are free on public repositories. On GitHub: the repository → **Settings** → **Advanced Security** (or **Code
+security**) → turn on **Secret Protection** (secret scanning) and **Push protection**. GitHub then scans the whole
+history itself; it should find nothing.
+
+### D. The source code link (task 4)
+
+Tell the developer the repository is public: the settings footer's source code link is switched on in one place
+(`REPOSITORY_PUBLIC` in `packages/core/src/brand.ts`), checked and committed, so the launch deploy in step 3 carries
+it.
+
+### E. The device checks (task 5)
+
+Run `docs/device-checks.md` (Release 1's checks and Release 2's, 32 to 37) on the iPhone, the Mac (Safari), the
+Android phone and one Chrome or Edge computer, against the test build of the commit you will launch. Send the
+developer anything that fails.
+
+Then the deploy (task 6), in order:
+
+### 1. Get the build that passed its checks
+
+Release 2 lives on the branch `claude/release-2`. Steps 1 of Part 2 again, on that branch: pull, check the
+newest commit's CI run is green in all three browsers, then `npm ci` and `npm run check`.
+
+### 2. Create the production database (first time only)
+
+```bash
+npx --yes wrangler@4.162.0 d1 create elapsed
+```
+
+As in Part 2, step 2, decline Wrangler's offer to edit the configuration. Open
+`packages/endpoint/wrangler.jsonc` and replace the zeros in the `database_id` near the top (the one named
+`elapsed`, not the one under `"test"`) with the printed id. Commit and push it.
+
+```bash
+npx --yes wrangler@4.162.0 d1 migrations apply elapsed --remote --config packages/endpoint/wrangler.jsonc
+```
+
+Answer yes; it should report both migrations as applied.
+
+### 3. Deploy the app
+
+```bash
+npm run deploy:production
+```
+
+The same local check as the test deploy runs first; then it deploys the `elapsed` Worker. It has no address
+yet (no workers.dev address, no domain), so nobody can reach it until step 4.
+
+### 4. Move elapsed.io from the soon page to the app
+
+In the dashboard, **Workers & Pages**:
+
+1. Open **elapsed-soon** → **Settings** → **Domains & Routes**, and remove the custom domain `elapsed.io`.
+2. Open **elapsed** → **Settings** → **Domains & Routes** → **Add** → **Custom domain**, and add `elapsed.io`.
+
+The site is unreachable for the seconds between the two. The redirect from www.elapsed.io (Part 4, step 2)
+keeps working. Open https://elapsed.io in a private window: the timer appears, and the privacy and terms links
+in its settings open the app's own pages.
+
+### 5. Production out of Cloudflare Access, the test build still behind it
+
+Zero Trust → **Access** → **Applications**: no application may cover `elapsed.io` (or `*.elapsed.io`); delete or
+edit any that does. Keep the four test-run applications on `elapsed-test.<your subdomain>.workers.dev`
+(Part 3). Then, from a private window: https://elapsed.io opens without a sign-in, and the test address still
+asks for one.
+
+### 6. Check the deployed security headers
+
+```bash
+node tooling/check-deployed.ts app https://elapsed.io
+```
+
+It needs no service token now. It must end with "Every header matches the build." Then check the test build
+too, with its service token (Part 3, step 6), to be sure it is still behind Access.
+
+### 7. HSTS preload, only once every subdomain serves HTTPS
+
+The site already asks browsers to use HTTPS for two years on every subdomain (`Strict-Transport-Security:
+max-age=63072000; includeSubDomains; preload`). Preloading builds that into browsers, and is hard to undo, so
+first: in the dashboard, **DNS** → **Records**, open each name listed (elapsed.io, www, and any other) over
+https:// and check each answers. Only then submit elapsed.io at https://hstspreload.org.
+
+### 8. Sign-off
+
+Open https://elapsed.io once more in a private window, start and end a short session, and tell the developer the
+launch is done; the release review (`docs/safety/release-2.md`) is then closed with the date.
+
+### Rolling back the launch
+
+If the app on elapsed.io has to go: remove the custom domain from **elapsed** and add it back to
+**elapsed-soon** (step 4 in reverse), and the soon page serves again. To go back one version of the app instead:
+
+```bash
+npx --yes wrangler@4.162.0 rollback --config packages/endpoint/wrangler.jsonc --message "why"
+```
+
 ## If a deploy fails
 
 - **Before deploying, "the Workers failed in Cloudflare's runtime":** the local check caught a Worker that
@@ -380,7 +500,9 @@ and its database.
 ## What never to do before launch
 
 - Never add elapsed.io (or any other domain or route) to `packages/endpoint/wrangler.jsonc`, and never
-  attach a domain to `elapsed-test` in the dashboard.
-- Never deploy the app without `--env test`; use `npm run deploy:test`, which always includes it.
+  attach a domain to `elapsed-test` in the dashboard. At launch the domain is attached in the dashboard, to
+  the `elapsed` Worker only (Part 7, step 4).
+- Never deploy the app without `--env test` before Part 7; use `npm run deploy:test`, which always includes
+  it. `npm run deploy:production` is for Part 7 only.
 - Never put the private admin address, an API token or a service token's secret in a file in the
   repository. The repository is public.

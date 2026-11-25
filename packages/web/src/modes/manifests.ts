@@ -1,32 +1,15 @@
 /**
- * Every display mode's manifest (plan, Loading and performance > Packages and
- * manifests). Pure data, so build scripts can read it without a browser.
+ * Every display mode's manifest, the standard modes' (standard-manifests.ts) and the test modes' (test-manifests.ts),
+ * for the build's scripts and plugins and for the tests. The site itself never imports this module: it registers the
+ * standard modes, and the test modes only on a flagged visit (modes/registry.ts, modes/test-modes.ts).
  */
 
-import { BRAND, CONFIG } from '@stopwatch/core';
+import { STANDARD_MODE_MANIFESTS } from './standard-manifests.ts';
+import type { ModeManifest } from './standard-manifests.ts';
+import { TEST_MODE_MANIFESTS } from './test-manifests.ts';
 
-export interface ModeManifest {
-  readonly id: string;
-  /** Lowercase name for the settings panel. */
-  readonly name: string;
-  /** core: shipped with the first visit. on-choice: downloaded when picked. */
-  readonly tier: 'core' | 'on-choice';
-  /** Compressed size budgets the CI size check enforces. */
-  readonly budget: { readonly codeBytes: number; readonly artBytes: number };
-  /** The module that holds the mode, relative to packages/web; the size check finds its chunk by this. */
-  readonly source: string;
-}
+export { DEFAULT_MODE_ID, MODE_BUDGET, STANDARD_MODE_MANIFESTS } from './standard-manifests.ts';
+export type { ModeManifest, ModeOptionSetting } from './standard-manifests.ts';
+export { TEST_MODE_MANIFESTS } from './test-manifests.ts';
 
-const budget = { codeBytes: CONFIG.budgets.displayMode.codeBytes, artBytes: CONFIG.budgets.displayMode.artBytes };
-
-export const MODE_MANIFESTS: readonly ModeManifest[] = [
-  { id: 'digits', name: BRAND.copy.modes.digits, tier: 'core', budget, source: 'src/modes/digits/digits.ts' },
-  { id: 'ring', name: BRAND.copy.modes.ring, tier: 'on-choice', budget, source: 'src/modes/ring/ring.ts' },
-  { id: 'timeline', name: BRAND.copy.modes.timeline, tier: 'on-choice', budget, source: 'src/modes/timeline/timeline.ts' },
-];
-
-export const DEFAULT_MODE_ID = 'digits';
-
-export function isKnownMode(id: string): boolean {
-  return MODE_MANIFESTS.some((manifest) => manifest.id === id);
-}
+export const MODE_MANIFESTS: readonly ModeManifest[] = [...STANDARD_MODE_MANIFESTS, ...TEST_MODE_MANIFESTS];

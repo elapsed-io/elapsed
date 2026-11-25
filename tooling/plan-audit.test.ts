@@ -7,7 +7,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { renderModeTokensCss, renderSettingsTokensCss, renderTokensCss } from '../packages/web/src/styles/tokens.ts';
+import { MODE_TOKEN_IDS, renderModeTokensCss, renderSettingsTokensCss, renderTokensCss } from '../packages/web/src/styles/tokens.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
@@ -24,7 +24,7 @@ const withoutComments = (code: string): string => code.replace(/\/\*[\s\S]*?\*\/
 const SITE_SOURCE = files(join(root, 'packages/web/src'), /\.ts$/).filter((path) => !path.endsWith('.test.ts'));
 const CORE_SOURCE = files(join(root, 'packages/core/src'), /\.ts$/).filter((path) => !path.endsWith('.test.ts') && !path.includes('/testing/'));
 const STYLESHEETS = files(join(root, 'packages/web/src'), /\.css$/);
-const ALL_CSS = [...STYLESHEETS.map((path) => readFileSync(path, 'utf8')), renderTokensCss(), renderModeTokensCss('ring'), renderModeTokensCss('timeline'), renderSettingsTokensCss()];
+const ALL_CSS = [...STYLESHEETS.map((path) => readFileSync(path, 'utf8')), renderTokensCss(), ...MODE_TOKEN_IDS.map((mode) => renderModeTokensCss(mode)), renderSettingsTokensCss()];
 
 /** Principles > Appealing and fast: animations use only transform, opacity and filter. */
 const ANIMATABLE = new Set(['transform', 'translate', 'rotate', 'scale', 'opacity', 'filter']);
@@ -92,9 +92,10 @@ describe('plan audit: performance', () => {
       '--replay-progress': /packages\/web\/src\/results\/results\.ts$/,
     };
     // Keyframes built away from the call are checked in these files as a whole.
-    const BUILT_ELSEWHERE = ['packages/web/src/results/results.ts'];
+    const BUILT_ELSEWHERE = ['packages/web/src/results/results.ts', 'packages/web/src/modes/pieces/light/light.ts', 'packages/web/src/modes/pieces/tree/tree.ts', 'packages/web/src/modes/recipe/camera.ts'];
+    // A keyframe's `offset` and `easing` time it; they are not properties that move.
     const allowed = (property: string, path: string): boolean =>
-      property === 'transform' || property === 'opacity' || property === 'offset' || (EXCEPTIONS[property]?.test(path) ?? false);
+      property === 'transform' || property === 'opacity' || property === 'offset' || property === 'easing' || (EXCEPTIONS[property]?.test(path) ?? false);
     for (const path of SITE_SOURCE) {
       const text = withoutComments(readFileSync(path, 'utf8'));
       for (const [, first = ''] of text.matchAll(/\.animate\(\s*(\S)/g)) {
@@ -160,6 +161,37 @@ describe('plan audit: design', () => {
     }
   });
 
+  it('keeps one layer order (round 2.11): every z-index is a layer token, and no mode stylesheet sets one', () => {
+    for (const path of STYLESHEETS) {
+      const text = readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+      const values = [...text.matchAll(/z-index:\s*([^;]+);/g)].map((match) => (match[1] ?? '').trim());
+      const name = rel(path);
+      // The settings panel orders its own parts inside its own stacking contexts (the editor's gutter, a highlight
+      // behind its setting); the timer view is one stacking context of its own (0) under the settings panel.
+      if (name.includes('/settings/')) continue;
+      expect(values.filter((value) => !/^var\(--layer-[a-z]+\)$/.test(value) && value !== '0 !important'), name).toEqual([]);
+      // Only the shared time display places its parts (frost, time, dialogs) among the layers; a mode never does.
+      if (name.includes('/modes/') && !name.endsWith('modes/shared/time.css')) expect(values, name).toEqual([]);
+    }
+  });
+
+  it("keeps every colour, size, spacing and duration of a mode in the config (round 2.11): no literal in a mode's code", () => {
+    const modes = SITE_SOURCE.filter((path) => rel(path).startsWith('packages/web/src/modes/'));
+    // Facts of the clock, not design values: a minute and an hour in milliseconds, minutes in an hour, four seasons,
+    // and a clock hand's turn in degrees per minute.
+    const facts = new Set(['MINUTE_MS', 'HOUR', 'MINUTES_PER_RING', 'YEAR_MINUTES', 'MINUTE_HAND_DEGREES', 'HOUR_HAND_DEGREES']);
+    for (const path of modes) {
+      const text = withoutComments(readFileSync(path, 'utf8'));
+      expect([...text.matchAll(/['"`]#[0-9A-Fa-f]{3,8}['"`]/g)].map((match) => match[0]), rel(path)).toEqual([]);
+      const constants = [...text.matchAll(/^(?:export )?const ([A-Z_]+) = -?\d/gm)].map((match) => match[1] ?? '');
+      expect(constants.filter((name) => !facts.has(name)), rel(path)).toEqual([]);
+      // A fallback for what a recipe leaves out comes from the config, unless it is neutral (none, all, the middle).
+      const fallbacks = [...text.matchAll(/\?\? (-?\d[\d_.]*|\[[^\]]*\d[^\]]*\])/g)].map((match) => match[1] ?? '');
+      const neutral = (value: string): boolean => ['0', '1', '0.5', '[0, 0]', '[1, 1]'].includes(value) || /^\[\w+ \/ 2, \w+ \/ 2\]$/.test(value);
+      expect(fallbacks.filter((value) => !neutral(value)), rel(path)).toEqual([]);
+    }
+  });
+
   it('puts user-facing text only in the brand module', () => {
     // theme/contrast.ts names colour pairs for the CI contrast report, which only developers read.
     for (const path of SITE_SOURCE.filter((p) => !p.endsWith('theme/contrast.ts'))) {
@@ -176,5 +208,25 @@ describe('plan audit: design', () => {
         rel(path),
       ).toEqual([]);
     }
+  });
+});
+
+describe('plan audit: internals (round 2.10)', () => {
+  it('keeps the session state machine independent of display modes: it knows a mode only as an id', () => {
+    const machine = CORE_SOURCE.filter((path) => /\/core\/src\/(session|engine)\//.test(path));
+    expect(machine.length).toBeGreaterThan(0);
+    for (const path of machine) {
+      const imports = [...readFileSync(path, 'utf8').matchAll(/from '([^']+)'/g)].map((match) => match[1] ?? '');
+      // Its own modules, the event bus, time, the config and the test clock: never modes, recipes, settings or the brand.
+      expect(imports.filter((source) => !/^\.\.?\/(?:(?:\.\.\/)?(?:session|engine|events|time|testing)\/[\w-]+|[\w-]+|\.\.\/config)\.ts$/.test(source)), rel(path)).toEqual([]);
+      expect(imports.filter((source) => /modes|recipes|settings|brand/.test(source)), rel(path)).toEqual([]);
+    }
+  });
+
+  it('mounts a mode only through the stage, which the session never waits on', () => {
+    const app = readFileSync(join(root, 'packages/web/src/app.ts'), 'utf8');
+    // The first mount is the one direct mount; every switch goes through the stage's one pipeline.
+    expect(app.match(/\.mount\(/g)?.length).toBe(1);
+    expect(withoutComments(app)).not.toMatch(/await\s+stage\b|await\s+[\w.]*\.ready\(/);
   });
 });

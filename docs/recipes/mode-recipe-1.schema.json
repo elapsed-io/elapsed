@@ -1,0 +1,2898 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://elapsed.io/schemas/mode-recipe-1.json",
+  "title": "elapsed display-mode recipe, version 1",
+  "$defs": {
+    "color": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"
+        },
+        {
+          "enum": [
+            "theme.bg",
+            "theme.text",
+            "theme.accent",
+            "theme.muted",
+            "theme.faint",
+            "theme.track",
+            "theme.gray",
+            "theme.end",
+            "theme.pr",
+            "theme.red",
+            "contrast.text",
+            "contrast.muted"
+          ]
+        }
+      ]
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,31}$"
+    },
+    "slotId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,31}(\\.[a-z0-9-]{1,32}){0,2}$"
+    },
+    "source": {
+      "type": "string",
+      "pattern": "^(measure|progress|elapsed|cycle:[a-z][a-z0-9-]{0,31})$"
+    },
+    "states": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "idle",
+          "running",
+          "paused",
+          "checkin",
+          "results"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "range": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "frac": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "point": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/frac"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "template": {
+      "type": "string",
+      "maxLength": 80,
+      "pattern": "^([^{}]|\\{(value|unit|zone|time|pause|landmark|distance)\\})*$"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 48,
+      "pattern": "^[^<>{}]*$"
+    },
+    "binding": {
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "by",
+            "stops"
+          ],
+          "properties": {
+            "by": {
+              "$ref": "#/$defs/source"
+            },
+            "stops": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 16,
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "ease": {
+              "enum": [
+                "linear",
+                "smooth"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "option",
+        "value"
+      ],
+      "properties": {
+        "option": {
+          "$ref": "#/$defs/id"
+        },
+        "value": {
+          "type": [
+            "string",
+            "boolean"
+          ]
+        }
+      }
+    },
+    "hand": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "length": {
+          "type": "number",
+          "minimum": 4,
+          "maximum": 400
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 12
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "tail": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "recipe",
+    "id",
+    "name",
+    "measure",
+    "layers",
+    "results"
+  ],
+  "properties": {
+    "recipe": {
+      "const": 1
+    },
+    "id": {
+      "$ref": "#/$defs/id"
+    },
+    "name": {
+      "$ref": "#/$defs/label"
+    },
+    "visibility": {
+      "enum": [
+        "public",
+        "test"
+      ]
+    },
+    "icon": {
+      "oneOf": [
+        {
+          "enum": [
+            "digits",
+            "ring",
+            "timeline",
+            "analog",
+            "ocean",
+            "height",
+            "tree",
+            "space"
+          ]
+        },
+        {
+          "type": "string",
+          "pattern": "^slot:[a-z][a-z0-9-]{0,31}(\\.[a-z0-9-]{1,32}){0,2}$"
+        }
+      ]
+    },
+    "measure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit",
+        "perMinute"
+      ],
+      "properties": {
+        "unit": {
+          "enum": [
+            "time",
+            "m",
+            "km",
+            "au",
+            "years",
+            "turns",
+            "percent",
+            "custom"
+          ]
+        },
+        "unitLabel": {
+          "$ref": "#/$defs/label"
+        },
+        "perMinute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "start": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "records": {
+          "enum": [
+            "comparable",
+            "mode-only"
+          ]
+        }
+      }
+    },
+    "cycles": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "minutes"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "minutes": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 100000
+          },
+          "phases": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3
+            }
+          }
+        }
+      }
+    },
+    "zones": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "array",
+        "minItems": 3,
+        "maxItems": 3
+      }
+    },
+    "environment": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "theme"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "stops"
+          ],
+          "properties": {
+            "type": {
+              "const": "stops"
+            },
+            "by": {
+              "$ref": "#/$defs/source"
+            },
+            "stops": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 16,
+              "items": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "base",
+            "k"
+          ],
+          "properties": {
+            "type": {
+              "const": "light-falloff"
+            },
+            "base": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/frac"
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "k": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 5
+              },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "per": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000000
+            },
+            "spread": {
+              "type": "number",
+              "minimum": 0
+            },
+            "resultsDim": {
+              "type": "number",
+              "minimum": 0.4,
+              "maximum": 1
+            },
+            "dim": {
+              "type": "number",
+              "minimum": 0.3,
+              "maximum": 1
+            }
+          }
+        }
+      ]
+    },
+    "contrast": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "light": {
+          "$ref": "#/$defs/color"
+        },
+        "dark": {
+          "$ref": "#/$defs/color"
+        },
+        "auto": {
+          "type": "boolean"
+        }
+      }
+    },
+    "camera": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "fixed"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "pxPerUnit",
+            "follow"
+          ],
+          "properties": {
+            "type": {
+              "const": "rig"
+            },
+            "pxPerUnit": {
+              "type": "number",
+              "minimum": 0.01,
+              "maximum": 1000
+            },
+            "follow": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "subject"
+              ],
+              "properties": {
+                "subject": {
+                  "$ref": "#/$defs/id"
+                },
+                "damping": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 10
+                }
+              }
+            },
+            "tilt": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "px": {
+                  "type": "number",
+                  "minimum": -600,
+                  "maximum": 600
+                },
+                "start": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 60
+                },
+                "over": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 30
+                },
+                "ease": {
+                  "enum": [
+                    "smooth",
+                    "linear"
+                  ]
+                },
+                "skyShift": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "anchor",
+            "angle"
+          ],
+          "properties": {
+            "type": {
+              "const": "follow-zoom"
+            },
+            "anchor": {
+              "$ref": "#/$defs/point"
+            },
+            "angle": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "resultsAngle": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "usable": {
+              "type": "number",
+              "minimum": 0.4,
+              "maximum": 0.95
+            },
+            "minValue": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "layers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 24,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id"
+            ],
+            "properties": {
+              "type": {
+                "const": "time"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "size": {
+                "type": "number",
+                "minimum": 24,
+                "maximum": 200
+              },
+              "position": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "center",
+                      "top",
+                      "bottom"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/point"
+                  }
+                ]
+              },
+              "seconds": {
+                "enum": [
+                  "setting",
+                  "never"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "template"
+            ],
+            "properties": {
+              "type": {
+                "const": "text"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "template": {
+                "$ref": "#/$defs/template"
+              },
+              "position": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "center",
+                      "top",
+                      "bottom"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/point"
+                  }
+                ]
+              },
+              "size": {
+                "type": "number",
+                "minimum": 9,
+                "maximum": 48
+              },
+              "color": {
+                "$ref": "#/$defs/color"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "cycle"
+            ],
+            "properties": {
+              "type": {
+                "const": "ring"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "radius": {
+                "type": "number",
+                "minimum": 20,
+                "maximum": 400
+              },
+              "thickness": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 40
+              },
+              "cycle": {
+                "$ref": "#/$defs/id"
+              },
+              "track": {
+                "$ref": "#/$defs/color"
+              },
+              "fill": {
+                "$ref": "#/$defs/color"
+              },
+              "tail": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "degrees": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 360
+                  },
+                  "growIn": {
+                    "type": "boolean"
+                  },
+                  "fade": {
+                    "enum": [
+                      "linear",
+                      "ease"
+                    ]
+                  }
+                }
+              },
+              "head": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "size": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 40
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "cycle"
+            ],
+            "properties": {
+              "type": {
+                "const": "dial"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "radius": {
+                "type": "number",
+                "minimum": 20,
+                "maximum": 400
+              },
+              "cycle": {
+                "$ref": "#/$defs/id"
+              },
+              "ticks": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "major": {
+                    "type": "integer",
+                    "minimum": 2,
+                    "maximum": 120
+                  },
+                  "minor": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 600
+                  }
+                }
+              },
+              "labels": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 60
+                  },
+                  "format": {
+                    "enum": [
+                      "minutes",
+                      "hours",
+                      "none"
+                    ]
+                  }
+                }
+              },
+              "hand": {
+                "$ref": "#/$defs/hand"
+              },
+              "batons": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "subdials": {
+                "type": "array",
+                "maxItems": 8,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "cycle"
+                  ],
+                  "properties": {
+                    "cycle": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "radius": {
+                      "type": "number",
+                      "minimum": 8,
+                      "maximum": 200
+                    },
+                    "offset": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 2,
+                      "maxItems": 2
+                    },
+                    "labels": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 24
+                    },
+                    "ticks": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 120
+                    },
+                    "topColor": {
+                      "$ref": "#/$defs/color"
+                    },
+                    "hand": {
+                      "$ref": "#/$defs/hand"
+                    },
+                    "face": {
+                      "enum": [
+                        "dial",
+                        "hand"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id"
+            ],
+            "properties": {
+              "type": {
+                "const": "track"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "width": {
+                "type": "number",
+                "minimum": 80,
+                "maximum": 1200
+              },
+              "pxPerMinute": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 60
+              },
+              "ticks": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "every": {
+                    "type": "number",
+                    "minimum": 1
+                  },
+                  "labelEvery": {
+                    "type": "number",
+                    "minimum": 1
+                  },
+                  "format": {
+                    "enum": [
+                      "hh:mm",
+                      "value"
+                    ]
+                  }
+                }
+              },
+              "fadeEnds": {
+                "type": "boolean"
+              },
+              "past": {
+                "$ref": "#/$defs/color"
+              },
+              "future": {
+                "$ref": "#/$defs/color"
+              },
+              "drawBeforeStart": {
+                "type": "boolean"
+              },
+              "marker": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "source": {
+                    "enum": [
+                      "personal-record"
+                    ]
+                  },
+                  "label": {
+                    "$ref": "#/$defs/template"
+                  },
+                  "color": {
+                    "$ref": "#/$defs/color"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "slot",
+              "frames"
+            ],
+            "properties": {
+              "type": {
+                "const": "sprite"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "slot": {
+                "$ref": "#/$defs/slotId"
+              },
+              "frames": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 48
+              },
+              "frameBy": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "cycle"
+                    ],
+                    "properties": {
+                      "cycle": {
+                        "$ref": "#/$defs/id"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "zone"
+                    ],
+                    "properties": {
+                      "zone": {
+                        "const": true
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "by"
+                    ],
+                    "properties": {
+                      "by": {
+                        "$ref": "#/$defs/source"
+                      },
+                      "from": {
+                        "type": "number"
+                      },
+                      "to": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                ]
+              },
+              "crossfade": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 600
+              },
+              "position": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "center",
+                      "top",
+                      "bottom"
+                    ]
+                  },
+                  {
+                    "$ref": "#/$defs/point"
+                  }
+                ]
+              },
+              "size": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": 8,
+                  "maximum": 1600
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "scale": {
+                "$ref": "#/$defs/binding"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "view",
+              "year"
+            ],
+            "properties": {
+              "type": {
+                "const": "tree"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "view": {
+                "enum": [
+                  "side",
+                  "isometric"
+                ]
+              },
+              "year": {
+                "$ref": "#/$defs/id"
+              },
+              "growth": {
+                "$ref": "#/$defs/binding"
+              },
+              "leaves": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "clusters": {
+                    "type": "integer",
+                    "minimum": 10,
+                    "maximum": 160
+                  },
+                  "offsetMax": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.5
+                  },
+                  "spring": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/color"
+                    },
+                    "maxItems": 3
+                  },
+                  "summer": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/color"
+                    },
+                    "maxItems": 3
+                  },
+                  "autumn": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/color"
+                    },
+                    "maxItems": 3
+                  },
+                  "fallBy": {
+                    "enum": [
+                      "autumn-end",
+                      "never"
+                    ]
+                  }
+                }
+              },
+              "snow": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "phase": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "branches": {
+                    "type": "boolean"
+                  },
+                  "ground": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "trunk": {
+                "$ref": "#/$defs/color"
+              },
+              "ground": {
+                "enum": [
+                  "line",
+                  "field",
+                  "none"
+                ]
+              },
+              "grass": {
+                "$ref": "#/$defs/color"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "direction",
+              "items"
+            ],
+            "properties": {
+              "type": {
+                "const": "passing"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "direction": {
+                "enum": [
+                  "up",
+                  "down",
+                  "left",
+                  "right"
+                ]
+              },
+              "items": {
+                "type": "array",
+                "maxItems": 24,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "slot",
+                    "from",
+                    "to"
+                  ],
+                  "properties": {
+                    "slot": {
+                      "$ref": "#/$defs/slotId"
+                    },
+                    "from": {
+                      "type": "number"
+                    },
+                    "to": {
+                      "type": "number"
+                    },
+                    "x": {
+                      "$ref": "#/$defs/frac"
+                    },
+                    "opacity": {
+                      "$ref": "#/$defs/frac"
+                    },
+                    "size": {
+                      "type": "number",
+                      "minimum": 8,
+                      "maximum": 400
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "shape",
+              "every",
+              "maxAtOnce"
+            ],
+            "properties": {
+              "type": {
+                "const": "particles"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "shape": {
+                "enum": [
+                  "streak",
+                  "comet",
+                  "dot",
+                  "flake",
+                  "image",
+                  "beam"
+                ]
+              },
+              "slot": {
+                "$ref": "#/$defs/slotId"
+              },
+              "catalogByZone": {
+                "type": "object",
+                "maxProperties": 12,
+                "additionalProperties": {
+                  "type": "array",
+                  "maxItems": 12,
+                  "items": {
+                    "$ref": "#/$defs/slotId"
+                  }
+                }
+              },
+              "visibleWhen": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "by": {
+                    "$ref": "#/$defs/source"
+                  },
+                  "min": {
+                    "type": "number"
+                  },
+                  "max": {
+                    "type": "number"
+                  },
+                  "phase": {
+                    "$ref": "#/$defs/id"
+                  }
+                }
+              },
+              "every": {
+                "$ref": "#/$defs/range"
+              },
+              "maxAtOnce": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12
+              },
+              "lifetime": {
+                "$ref": "#/$defs/range"
+              },
+              "size": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "length": {
+                    "$ref": "#/$defs/range"
+                  },
+                  "thickness": {
+                    "$ref": "#/$defs/range"
+                  },
+                  "head": {
+                    "$ref": "#/$defs/range"
+                  },
+                  "scale": {
+                    "$ref": "#/$defs/range"
+                  }
+                }
+              },
+              "colors": {
+                "type": "array",
+                "maxItems": 6,
+                "items": {
+                  "$ref": "#/$defs/color"
+                }
+              },
+              "angle": {
+                "$ref": "#/$defs/range"
+              },
+              "distance": {
+                "$ref": "#/$defs/range"
+              },
+              "orient": {
+                "enum": [
+                  "travel",
+                  "away-from-anchor",
+                  "none"
+                ]
+              },
+              "depths": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              },
+              "arrive": {
+                "enum": [
+                  "fade",
+                  "drift-in"
+                ]
+              },
+              "leaveOnResume": {
+                "type": "boolean"
+              },
+              "bursts": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "every": {
+                    "$ref": "#/$defs/range"
+                  },
+                  "count": {
+                    "$ref": "#/$defs/range"
+                  },
+                  "within": {
+                    "type": "number",
+                    "minimum": 0.5,
+                    "maximum": 10
+                  }
+                }
+              },
+              "origin": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -3,
+                  "maximum": 3
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "lanes": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 24
+              },
+              "spread": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -89,
+                  "maximum": 89
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "widths": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 10
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "noOverlap": {
+                "type": "boolean"
+              },
+              "fade": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "in": {
+                    "$ref": "#/$defs/range"
+                  },
+                  "hold": {
+                    "$ref": "#/$defs/range"
+                  },
+                  "out": {
+                    "$ref": "#/$defs/range"
+                  },
+                  "rest": {
+                    "$ref": "#/$defs/range"
+                  }
+                }
+              },
+              "peak": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.25
+              },
+              "shimmer": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.5
+              },
+              "field": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "count"
+                ],
+                "properties": {
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 120
+                  },
+                  "crossSeconds": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 5,
+                      "maximum": 600
+                    },
+                    "minItems": 1,
+                    "maxItems": 3
+                  },
+                  "swayPx": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 60
+                    },
+                    "minItems": 1,
+                    "maxItems": 3
+                  },
+                  "swaySeconds": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 2,
+                      "maximum": 600
+                    },
+                    "minItems": 1,
+                    "maxItems": 3
+                  }
+                }
+              },
+              "falloff": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 8,
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "slot"
+            ],
+            "properties": {
+              "type": {
+                "const": "starfield"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "slot": {
+                "$ref": "#/$defs/slotId"
+              },
+              "magnitudeMax": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 6.5
+              },
+              "projection": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "gnomonic",
+                      "equirectangular"
+                    ]
+                  },
+                  "ra": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 24
+                  },
+                  "dec": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "pxPerDegree": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 40
+                  }
+                }
+              },
+              "radius": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "min": {
+                    "type": "number"
+                  },
+                  "at0": {
+                    "type": "number"
+                  },
+                  "perMagnitude": {
+                    "type": "number"
+                  }
+                }
+              },
+              "pan": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "when": {
+                    "$ref": "#/$defs/states"
+                  },
+                  "turnMinutes": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 120
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "items"
+            ],
+            "properties": {
+              "type": {
+                "const": "circles"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "color": {
+                "$ref": "#/$defs/color"
+              },
+              "fadeBelowPx": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 40
+              },
+              "items": {
+                "type": "array",
+                "maxItems": 24,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "at"
+                  ],
+                  "properties": {
+                    "at": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "label": {
+                      "$ref": "#/$defs/label"
+                    },
+                    "dashed": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id"
+            ],
+            "properties": {
+              "type": {
+                "const": "path"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "from": {
+                "type": "number"
+              },
+              "color": {
+                "$ref": "#/$defs/color"
+              },
+              "width": {
+                "type": "number",
+                "minimum": 0.5,
+                "maximum": 8
+              },
+              "head": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "size": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 20
+                  },
+                  "color": {
+                    "$ref": "#/$defs/color"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "slot"
+            ],
+            "properties": {
+              "type": {
+                "const": "landmarks"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "slot": {
+                "$ref": "#/$defs/slotId"
+              },
+              "anchor": {
+                "enum": [
+                  "path",
+                  "chart"
+                ]
+              },
+              "perBand": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "size": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "max": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4
+                  }
+                }
+              },
+              "maxTotal": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12
+              },
+              "dot": {
+                "$ref": "#/$defs/color"
+              },
+              "fadeBelowPx": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 40
+              },
+              "labels": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "pop": {
+                    "type": "boolean"
+                  },
+                  "fadeAfterReplay": {
+                    "type": "boolean"
+                  },
+                  "hover": {
+                    "type": "boolean"
+                  },
+                  "template": {
+                    "$ref": "#/$defs/template"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "shape",
+              "size"
+            ],
+            "properties": {
+              "type": {
+                "const": "shape"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "shape": {
+                "enum": [
+                  "circle",
+                  "rect",
+                  "ellipse"
+                ]
+              },
+              "size": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 4000
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "x": {
+                "$ref": "#/$defs/binding"
+              },
+              "y": {
+                "$ref": "#/$defs/binding"
+              },
+              "scale": {
+                "$ref": "#/$defs/binding"
+              },
+              "fill": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/color"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "radial"
+                    ],
+                    "properties": {
+                      "radial": {
+                        "type": "array",
+                        "maxItems": 6,
+                        "items": {
+                          "type": "array",
+                          "minItems": 2,
+                          "maxItems": 2
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "linear"
+                    ],
+                    "properties": {
+                      "linear": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 6,
+                        "items": {
+                          "type": "array",
+                          "minItems": 2,
+                          "maxItems": 2
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "glow": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "blur": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 80
+                  },
+                  "color": {
+                    "$ref": "#/$defs/color"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "slot",
+              "direction",
+              "by"
+            ],
+            "properties": {
+              "type": {
+                "const": "reveal"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "slot": {
+                "$ref": "#/$defs/slotId"
+              },
+              "direction": {
+                "enum": [
+                  "up",
+                  "down",
+                  "left",
+                  "right",
+                  "radial"
+                ]
+              },
+              "by": {
+                "$ref": "#/$defs/binding"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "preset",
+              "distance"
+            ],
+            "properties": {
+              "type": {
+                "const": "scenery"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "preset": {
+                "enum": [
+                  "conifers",
+                  "hills",
+                  "image"
+                ]
+              },
+              "slot": {
+                "$ref": "#/$defs/slotId"
+              },
+              "baseY": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1.5
+              },
+              "height": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": 8,
+                  "maximum": 300
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "color": {
+                "$ref": "#/$defs/color"
+              },
+              "distance": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "tileX": {
+                "type": "boolean"
+              },
+              "seed": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9999
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "art",
+              "size"
+            ],
+            "properties": {
+              "type": {
+                "const": "subject"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "art": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "preset"
+                ],
+                "properties": {
+                  "preset": {
+                    "enum": [
+                      "falcon",
+                      "image"
+                    ]
+                  },
+                  "slot": {
+                    "$ref": "#/$defs/slotId"
+                  },
+                  "color": {
+                    "$ref": "#/$defs/color"
+                  }
+                }
+              },
+              "size": {
+                "type": "number",
+                "minimum": 4,
+                "maximum": 200
+              },
+              "position": {
+                "$ref": "#/$defs/point"
+              },
+              "entry": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "from": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -1,
+                      "maximum": 2
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "delay": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "speed": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 2000
+                  }
+                }
+              },
+              "motion": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "forwardSpeed": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 2000
+                  },
+                  "forwardDecay": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 60
+                  },
+                  "climbFrom": {
+                    "enum": [
+                      "measure",
+                      "none"
+                    ]
+                  },
+                  "climbRamp": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 30
+                  }
+                }
+              },
+              "flight": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "flapHz": {
+                    "type": "number",
+                    "minimum": 0.5,
+                    "maximum": 12
+                  },
+                  "downstrokeShare": {
+                    "type": "number",
+                    "minimum": 0.3,
+                    "maximum": 0.7
+                  },
+                  "upstrokeFold": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 0.6
+                  },
+                  "pattern": {
+                    "type": "array",
+                    "maxItems": 6,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "minProperties": 1,
+                      "maxProperties": 1,
+                      "properties": {
+                        "flap": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 600
+                        },
+                        "glide": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 600
+                        }
+                      }
+                    }
+                  },
+                  "glideAngle": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 0
+                  },
+                  "glideWobble": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 15
+                  },
+                  "steady": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "stages": {
+                "type": "array",
+                "maxItems": 6,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "from"
+                  ],
+                  "properties": {
+                    "from": {
+                      "type": "number"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/label"
+                    },
+                    "color": {
+                      "$ref": "#/$defs/color"
+                    },
+                    "crossfade": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 600
+                    },
+                    "halo": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "radius": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 200
+                        },
+                        "strength": {
+                          "$ref": "#/$defs/frac"
+                        }
+                      }
+                    },
+                    "flash": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "radius": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 400
+                        },
+                        "strength": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 0.9
+                        },
+                        "seconds": {
+                          "type": "number",
+                          "minimum": 0.5,
+                          "maximum": 10
+                        }
+                      }
+                    },
+                    "streamers": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 5
+                        },
+                        "length": {
+                          "type": "number",
+                          "minimum": 4,
+                          "maximum": 400
+                        },
+                        "wave": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 40
+                        },
+                        "color": {
+                          "$ref": "#/$defs/color"
+                        },
+                        "grow": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 600
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "source",
+              "trigger"
+            ],
+            "properties": {
+              "type": {
+                "const": "glare"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "source": {
+                "$ref": "#/$defs/id"
+              },
+              "trigger": {
+                "enum": [
+                  "tilt",
+                  "never"
+                ]
+              },
+              "peak": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 0.9
+              },
+              "bloom": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1200
+              },
+              "ghosts": {
+                "type": "array",
+                "maxItems": 8,
+                "items": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 200
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id",
+              "slot",
+              "points",
+              "by"
+            ],
+            "properties": {
+              "type": {
+                "const": "image-path"
+              },
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "$ref": "#/$defs/states"
+              },
+              "variantOf": {
+                "$ref": "#/$defs/variant"
+              },
+              "space": {
+                "enum": [
+                  "screen",
+                  "camera",
+                  "sky"
+                ]
+              },
+              "blurOnPause": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "$ref": "#/$defs/binding"
+              },
+              "slot": {
+                "$ref": "#/$defs/slotId"
+              },
+              "points": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 64,
+                "items": {
+                  "$ref": "#/$defs/point"
+                }
+              },
+              "by": {
+                "$ref": "#/$defs/binding"
+              },
+              "marker": {
+                "$ref": "#/$defs/color"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "states": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "paused": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "blur": {
+              "oneOf": [
+                {
+                  "const": "display"
+                },
+                {
+                  "type": "array",
+                  "maxItems": 24,
+                  "items": {
+                    "$ref": "#/$defs/id"
+                  }
+                }
+              ]
+            },
+            "caption": {
+              "$ref": "#/$defs/template"
+            },
+            "show": {
+              "type": "array",
+              "maxItems": 12,
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "freeze": {
+              "type": "boolean"
+            }
+          }
+        },
+        "checkin": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "blur": {
+              "oneOf": [
+                {
+                  "const": "display"
+                },
+                {
+                  "type": "array",
+                  "maxItems": 24,
+                  "items": {
+                    "$ref": "#/$defs/id"
+                  }
+                }
+              ]
+            },
+            "caption": {
+              "$ref": "#/$defs/template"
+            },
+            "show": {
+              "type": "array",
+              "maxItems": 12,
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "freeze": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "results": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "replay",
+        "view"
+      ],
+      "properties": {
+        "replay": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "seconds",
+            "easing"
+          ],
+          "properties": {
+            "seconds": {
+              "type": "number",
+              "minimum": 0.5,
+              "maximum": 4
+            },
+            "easing": {
+              "enum": [
+                "fast",
+                "gentle"
+              ]
+            },
+            "longSessionExtra": {
+              "type": "boolean"
+            }
+          }
+        },
+        "view": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type"
+              ],
+              "properties": {
+                "type": {
+                  "const": "strip"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type"
+              ],
+              "properties": {
+                "type": {
+                  "const": "rings-per-hour"
+                },
+                "hand": {
+                  "type": "boolean"
+                },
+                "fitAfterHours": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 16
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type"
+              ],
+              "properties": {
+                "type": {
+                  "const": "profile"
+                },
+                "direction": {
+                  "enum": [
+                    "down",
+                    "up"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "layers"
+              ],
+              "properties": {
+                "type": {
+                  "const": "scene"
+                },
+                "layers": {
+                  "type": "array",
+                  "maxItems": 24,
+                  "items": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "camera": {
+                  "type": "boolean"
+                }
+              }
+            }
+          ]
+        },
+        "card": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "environment": {
+              "enum": [
+                "theme",
+                "follow-replay"
+              ]
+            },
+            "startFrom": {
+              "enum": [
+                "start",
+                "session-end"
+              ]
+            },
+            "crossSeconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2
+            }
+          }
+        },
+        "show": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "finale": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "ping"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4
+                  },
+                  "color": {
+                    "$ref": "#/$defs/color"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "layer"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "show"
+                  },
+                  "layer": {
+                    "$ref": "#/$defs/id"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "options": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "default"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "label": {
+            "$ref": "#/$defs/label"
+          },
+          "kind": {
+            "enum": [
+              "switch",
+              "segmented"
+            ]
+          },
+          "choices": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/$defs/label"
+            }
+          },
+          "default": {
+            "type": [
+              "string",
+              "boolean"
+            ]
+          },
+          "toggles": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        }
+      }
+    },
+    "slots": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "default"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/slotId"
+          },
+          "kind": {
+            "enum": [
+              "image",
+              "image-strip",
+              "star-catalog",
+              "landmark-list"
+            ]
+          },
+          "frames": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 48
+          },
+          "size": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 8,
+              "maximum": 4096
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "default": {
+            "type": "string",
+            "pattern": "^builtin:[a-z0-9./-]{1,64}$"
+          }
+        }
+      }
+    }
+  }
+}

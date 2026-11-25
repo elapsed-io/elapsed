@@ -1,0 +1,8 @@
+/* The colour-stops environment (stops.ts): behind everything, on the shared art layer (styles/main.css). */
+@layer mode {
+  .stops {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+}

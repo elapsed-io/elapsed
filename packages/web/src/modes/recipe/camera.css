@@ -1,0 +1,45 @@
+/*
+ * The camera's map (camera.ts): one SVG over the whole screen for a recipe's camera-space layers. Held (paused, or
+ * a check-in due), a still copy of it shows blurred 10 px at 40 %, as the paused frames draw the display, and the
+ * map fades out under it over the interface's fade; the blur never animates.
+ */
+@layer mode {
+  .camera,
+  .camera__held {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .camera__map,
+  .camera__still {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .camera__map {
+    transition: opacity var(--motion-fade) var(--ease-standard);
+  }
+
+  .camera__held {
+    opacity: 0;
+    visibility: hidden;
+    filter: blur(var(--held-blur));
+    transition:
+      opacity var(--motion-fade) var(--ease-standard),
+      visibility 0s linear var(--motion-fade);
+  }
+
+  .camera--held .camera__map {
+    opacity: 0;
+  }
+
+  .camera--held .camera__held {
+    opacity: var(--held-opacity);
+    visibility: visible;
+    transition: opacity var(--motion-fade) var(--ease-standard);
+  }
+}

@@ -12,7 +12,7 @@ its own small Cloudflare project, deployed separately from the app; at launch th
 | `public/index.html` | The "soon" page. |
 | `public/soon.css` | Its styles. Only the word scales with the window, as the timer does. |
 | `public/soon.woff2` | The site's default font ("Timer Sans", a modified Archivo, OFL 1.1), cut down to the letters on the page (3,736 bytes). |
-| `public/privacy.html`, `public/terms.html` | The legal pages, written by `scripts/legal.ts` from `docs/legal/privacy.md` and `terms.md`. Edit those, not these. |
+| `public/privacy.html`, `public/terms.html` | The legal pages, written by `scripts/legal.ts` from `docs/legal/privacy.md` and `terms.md`, in the soon page's edition (the app writes its own edition at launch; `docs/legal/README.md`). Edit those, not these. |
 | `public/legal.css`, `public/legal.woff2` | Their styles, and the same font cut down to their characters (10,360 bytes). |
 | `public/OFL.txt` | The font's license, served beside it. |
 | `public/icon.svg` | The app's placeholder icon, for the browser tab. |

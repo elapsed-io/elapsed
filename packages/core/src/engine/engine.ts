@@ -108,7 +108,7 @@ export class TimerEngine {
     this.#events = options.events;
     this.#newId = options.newId;
     this.#timeZone = options.timeZone ?? systemTimeZone;
-    this.#seconds = options.seconds ?? 'blur-away';
+    this.#seconds = options.seconds ?? 'always';
     this.#rules = options.rules === null ? null : normaliseRules(options.rules ?? defaultRules());
     this.#heartbeatOn = options.heartbeat ?? true;
     this.#beforeWake = options.beforeWake ?? null;
@@ -280,12 +280,24 @@ export class TimerEngine {
   }
 
   /**
-   * Changes the check-in interval and pause limit. Both apply from the next
-   * sign of presence or pause: a running stretch keeps the interval it began
-   * with, and a pause keeps its limit.
+   * Changes the check-ins switch, the check-in interval and the pause limit.
+   * The interval and the limit apply from the next sign of presence or pause:
+   * a running stretch keeps the interval it began with, and a pause keeps its
+   * limit. Check-ins switched off apply at once (none falls due, one waiting
+   * goes); switched back on during a session, their count starts from that
+   * moment, as from an answered check-in, so turning them on can never make a
+   * check-in already due or missed (decision 167's rule).
    */
   setRules(rules: RuleSettings): void {
+    const before = this.#rules;
     this.#rules = normaliseRules(rules);
+    const state = this.#state;
+    if (state !== null && before !== null && !before.checkIns && this.#rules.checkIns && state.missedCheckInAt === null) {
+      const now = this.#observe();
+      this.#state = freezeState({ ...state, presenceAt: Math.max(state.presenceAt, now), checkInIntervalMs: this.#interval() });
+      this.#announcedCheckIn = null;
+      this.#dirty = true;
+    }
     this.sync();
   }
 
@@ -376,6 +388,19 @@ export class TimerEngine {
     if (this.#background === background) return;
     this.#background = background;
     if (!this.#disposed) this.sync();
+  }
+
+  /**
+   * A wake for the site's own use (the focus view's quiet spell), on the one shared timer (plan, Performance
+   * requirements > One scheduler). A wake with the same key replaces the last; the engine never looks at it.
+   */
+  wakeAfter(key: string, delayMs: number, run: () => void): void {
+    if (this.#disposed) return;
+    this.#scheduler.set(`site:${key}`, delayMs, run);
+  }
+
+  cancelWake(key: string): void {
+    this.#scheduler.clear(`site:${key}`);
   }
 
   /** Stops all timers. The engine emits nothing afterwards. */

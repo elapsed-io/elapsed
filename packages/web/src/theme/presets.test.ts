@@ -5,19 +5,8 @@ import { DEFAULT_PRESET_ID, getPreset, PRESETS } from './presets.ts';
 import { parseHex } from './color.ts';
 
 describe('presets', () => {
-  it('ships the ten presets from the plan, graphite first and default', () => {
-    expect(PRESETS.map((p) => p.id)).toEqual([
-      'graphite',
-      'paper',
-      'deep-sea',
-      'forest',
-      'oxblood',
-      'plum',
-      'lilac',
-      'sky',
-      'sand',
-      'mint',
-    ]);
+  it('ships the eight presets of plan version 14, lightest to darkest, graphite the default', () => {
+    expect(PRESETS.map((p) => p.id)).toEqual(['paper', 'mint', 'sand', 'sky', 'forest', 'deep-sea', 'plum', 'graphite']);
     expect(DEFAULT_PRESET_ID).toBe('graphite');
   });
 

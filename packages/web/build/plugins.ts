@@ -8,13 +8,17 @@
  *   applies the same headers in `vite preview`, so tests run under the CSP.
  * - countStub: answers the counting and crash report endpoints in `vite` and `vite preview`
  *   with 204 and keeps nothing; the real endpoint is packages/endpoint.
+ * - checkRecipes: refuses to build when a built-in recipe fails the recipe loader's checks, so the site can load
+ *   its own recipes without the checker (core, recipes/built-in.ts).
  *
  * web-app.ts and service-worker.ts hold the manifest and offline plugins.
  */
 
+import { readFileSync, readdirSync } from 'node:fs';
 import type { ServerResponse } from 'node:http';
+import { fileURLToPath } from 'node:url';
 import type { Connect, Plugin } from 'vite';
-import { COUNT_PATH, CRASH_PATH } from '@stopwatch/core';
+import { COUNT_PATH, CRASH_PATH, parseRecipe } from '@stopwatch/core';
 import { HEADER_RULES, headersForPath, renderHeadersFile } from './headers.ts';
 import { renderTemplate } from './html.ts';
 import { isModeTokenId, renderModeTokensCss, renderSettingsTokensCss, renderTokensCss } from '../src/styles/tokens.ts';
@@ -113,6 +117,21 @@ export function countStub(): Plugin {
     },
     configurePreviewServer(server) {
       server.middlewares.use(answerCounts);
+    },
+  };
+}
+
+const RECIPES = fileURLToPath(new URL('../../../packages/core/src/recipes/shipped/', import.meta.url));
+
+/** Every built-in recipe as the loader checks a recipe: one it would refuse stops the build, with its problems. */
+export function checkRecipes(folder = RECIPES): Plugin {
+  return {
+    name: 'stopwatch:check-recipes',
+    buildStart() {
+      for (const name of readdirSync(folder).filter((file) => file.endsWith('.json'))) {
+        const result = parseRecipe(readFileSync(`${folder}${name}`, 'utf8'), { builtIn: true });
+        if (!result.ok) this.error(`built-in recipe ${name} is refused: ${result.problems.join('; ')}`);
+      }
     },
   };
 }

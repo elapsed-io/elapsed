@@ -15,6 +15,7 @@
  * so only transforms move and nothing runs ahead of the replay.
  */
 
+import type { ResultsView } from '../recipe/piece.ts';
 import { BRAND, CONFIG, summarise } from '@stopwatch/core';
 import type { Session } from '@stopwatch/core';
 import { html } from '../../dom.ts';
@@ -101,3 +102,8 @@ export function drawStrip(root: HTMLElement, session: Session): void {
   arrange();
   if (typeof ResizeObserver === 'function') new ResizeObserver(arrange).observe(labelRow);
 }
+
+/** The `strip` results view (digits, timeline): the focus strip. */
+export const stripView: ResultsView = (surface, session) => {
+  drawStrip(surface.graphic, session);
+};

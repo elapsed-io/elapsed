@@ -6,6 +6,7 @@
  *
  *   node tooling/check-deployed.ts app https://<the test address>
  *   node tooling/check-deployed.ts soon https://elapsed.io
+ *   node tooling/check-deployed.ts app https://elapsed.io      (after the launch: the app on elapsed.io)
  *
  * `app` needs `npm run build` first (it reads packages/web/dist/_headers).
  * Behind Cloudflare Access, set CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET
@@ -67,6 +68,8 @@ if (target === 'app') {
   // Browsers fetch these without cookies (the manifest and its icons) or the site sends them without
   // (counts and crash reports), so behind Access they must answer without its sign-in.
   for (const path of ['/manifest.webmanifest', '/icons/icon.svg']) await check(path, expectedFor(rules, path), 200, true);
+  // The site's plain pages, served by the app since round 2.16 (Release 1's launch list): privacy, terms, credits.
+  for (const path of ['/privacy', '/terms', '/credits/', '/pages.css']) await check(path, expectedFor(rules, path), 200);
   // The Worker: an unknown /api/ path answers 404 with the endpoint's own headers, and counts nothing.
   await check('/api/not-a-route', lower(RESPONSE_HEADERS), 404, true);
 } else {

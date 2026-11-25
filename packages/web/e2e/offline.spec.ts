@@ -4,9 +4,9 @@
  * elsewhere, where it would answer requests out of the tests' reach).
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
-import { corePaths } from './helpers.ts';
+import { corePaths, openSettingsOn } from './helpers.ts';
 
 test.use({ serviceWorkers: 'allow' });
 
@@ -64,26 +64,118 @@ test('registers the service worker under the CSP and Trusted Types, and works of
   await context.setOffline(false);
 });
 
-test('keeps a display mode picked once for offline use, but never fetches one in advance', async ({ page, context }) => {
+/** Each downloaded mode's cache: its name, the paths it holds, and its recorded last use. */
+function modeCaches(page: Page): Promise<{ name: string; paths: string[]; lastUse: number | null }[]> {
+  return page.evaluate(async () => {
+    const names = (await caches.keys()).filter((name) => name.startsWith('timer-offline-mode-')).sort();
+    return Promise.all(
+      names.map(async (name) => {
+        const cache = await caches.open(name);
+        const requests = await cache.keys();
+        const record = await cache.match('/mode-last-use');
+        return { name, paths: requests.map((request) => new URL(request.url).pathname).sort(), lastUse: record === undefined ? null : Number(await record.text()) };
+      }),
+    );
+  });
+}
+
+/**
+ * Only the names of the downloaded modes' caches. A poll that runs while the page is removing a mode must not
+ * open its cache: opening a cache by name creates it, so the poll would put back, empty, the cache the page had
+ * just removed (decision 280).
+ */
+function modeCacheNames(page: Page): Promise<string[]> {
+  return page.evaluate(async () => (await caches.keys()).filter((name) => name.startsWith('timer-offline-mode-')).sort());
+}
+
+/** Shows `mode` (a stored setting, as the panel would store it) and waits until it is kept for offline use. */
+async function useMode(page: Page, mode: string): Promise<void> {
+  await page.evaluate((id) => {
+    localStorage.setItem('settings', JSON.stringify({ schema: 2, mode: id }));
+  }, mode);
+  // A test mode shows only on a flagged visit.
+  await page.goto(mode === 'analog' ? '/' : '/?test=modes');
+  await page.locator(`.screen[data-mode="${mode}"]`).waitFor();
+  await expect.poll(async () => (await modeCaches(page)).find((cache) => cache.name.endsWith(`-${mode}`))?.lastUse ?? null).not.toBeNull();
+}
+
+test('a display mode downloads only when picked, into a cache of its own, and works offline afterwards', async ({ page, context }) => {
+  const fetched: string[] = [];
+  page.on('request', (request) => fetched.push(new URL(request.url()).pathname));
   await page.goto('/');
   await untilOffline(page);
-  const cachedModes = () =>
-    page.evaluate(async () =>
-      (await Promise.all((await caches.keys()).map(async (name) => (await (await caches.open(name)).keys()).map((r) => r.url))))
-        .flat()
-        .filter((url) => /\/assets\/(ring|timeline)-/.test(url)).length,
-    );
-  expect(await cachedModes()).toBe(0);
-  await page.evaluate(() => {
-    localStorage.setItem('settings', JSON.stringify({ schema: 1, mode: 'ring' }));
-  });
-  await page.goto('/');
-  await page.locator('.ring').waitFor();
-  expect(await cachedModes()).toBeGreaterThan(0);
+  expect(await modeCaches(page)).toEqual([]);
+  // Digits, ring and timeline are in the core (round 2.10): analog is the one built-in mode outside the test modes that downloads.
+  expect(fetched.filter((path) => /\/assets\/(analog|dial)-/.test(path))).toEqual([]);
+  await useMode(page, 'analog');
+  const [analog] = await modeCaches(page);
+  expect(analog?.name).toBe('timer-offline-mode-analog');
+  // Its code and styles, and its last use; nothing of the other mode, and nothing the version's cache holds.
+  // (Its recipe and the pieces it draws with, and the piece library's small shared modules: nothing of another
+  // mode's, and nothing the core holds.)
+  const assets = analog?.paths.filter((path) => path !== '/mode-last-use') ?? [];
+  expect(assets.every((path) => /^\/assets\/[\w-]+\.(js|css)$/.test(path))).toBe(true);
+  expect(assets.some((path) => /^\/assets\/analog-[\w-]+\.js$/.test(path))).toBe(true);
+  expect(assets.some((path) => /^\/assets\/dial-[\w-]+\.js$/.test(path))).toBe(true);
+  expect(assets.filter((path) => /^\/assets\/(digits|timeline|ring|ocean|height|tree|interstellar|track|light|particles|starfield|profile)-/.test(path))).toEqual([]);
+  expect(analog?.paths).toContain('/mode-last-use');
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator('.ring')).toBeVisible();
+  await expect(page.locator('.analog__hand').first()).toBeVisible();
   await context.setOffline(false);
+});
+
+test('settings list downloaded modes with their size, and remove one by hand without touching anything else', async ({ page }) => {
+  await page.goto('/');
+  await untilOffline(page);
+  await useMode(page, 'analog');
+  await openSettingsOn(page, 'display');
+  const rows = page.locator('.downloads__row');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('analog');
+  await expect(rows.first().locator('.setting__value')).toHaveText(/^\d+ KB$/);
+  await expect(page.getByText('modes download when you pick them and work offline. ones unused for 30 days are removed.')).toBeVisible();
+  const before = await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)));
+  await page.getByRole('button', { name: 'remove analog' }).click();
+  await expect(rows).toHaveCount(0);
+  await expect(page.getByText('downloaded modes', { exact: true })).toBeHidden();
+  expect(await modeCaches(page)).toEqual([]);
+  // Only the mode's files go: its setting, and everything else stored, stay as they were.
+  expect(await page.evaluate(() => Object.fromEntries(Object.entries(localStorage)))).toEqual(before);
+  await expect(page.locator('.analog__hand').first()).toBeVisible();
+});
+
+test('a mode unused for 30 days is removed when the page loads, but never the one it shows', async ({ page }) => {
+  const day = 24 * 60 * 60 * 1000;
+  const start = Date.UTC(2026, 10, 2, 9);
+  await page.clock.install({ time: start });
+  await page.goto('/');
+  await untilOffline(page);
+  await useMode(page, 'analog');
+  await page.clock.setSystemTime(start + 10 * day);
+  await useMode(page, 'tree');
+  const used = await modeCaches(page);
+  expect(used.map(({ name }) => name)).toEqual(['timer-offline-mode-analog', 'timer-offline-mode-tree']);
+  expect(used[0]?.lastUse).toBeGreaterThanOrEqual(start);
+  expect(used[0]?.lastUse).toBeLessThan(start + day);
+
+  // 31 days after analog's last use, 21 after the tree's, showing digits: only analog goes.
+  await page.evaluate(() => {
+    localStorage.setItem('settings', JSON.stringify({ schema: 2, mode: 'digits' }));
+  });
+  await page.clock.setSystemTime(start + 31 * day);
+  await page.goto('/');
+  await expect.poll(() => modeCacheNames(page)).toEqual(['timer-offline-mode-tree']);
+
+  // Long unused, but the mode about to be shown is kept (and used again).
+  await page.evaluate(() => {
+    localStorage.setItem('settings', JSON.stringify({ schema: 2, mode: 'tree' }));
+  });
+  await page.clock.setSystemTime(start + 60 * day);
+  await page.goto('/?test=modes');
+  await page.locator('.tree').waitFor();
+  await expect.poll(() => modeCacheNames(page)).toEqual(['timer-offline-mode-tree']);
+  await expect.poll(async () => (await modeCaches(page)).map(({ name, lastUse }) => [name, (lastUse ?? 0) >= start + 60 * day])).toEqual([['timer-offline-mode-tree', true]]);
 });
 
 /** What the tests cannot see: Playwright's routes do not reach a service worker's own requests in WebKit. */

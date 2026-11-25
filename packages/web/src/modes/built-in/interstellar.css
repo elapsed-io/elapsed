@@ -1,0 +1,23 @@
+/*
+ * Interstellar's own colours (the interstellar frames): the time, the icons and the buttons over space, "paused
+ * for" in the paused frame's label colour, and the distance line in its own. The bodies' colours are their tones
+ * (the mode's tokens).
+ */
+@layer mode {
+  .screen[data-mode="interstellar"] > :is(.mode-root, .controls),
+  .screen[data-mode="interstellar"]:has(> .mode-root:not([hidden])) > .corner {
+    --color-foreground: var(--space-text);
+    --color-muted: var(--space-icon);
+    --color-end: var(--space-end);
+    --color-pause: var(--space-pause);
+    color: var(--color-foreground);
+  }
+
+  .screen[data-mode="interstellar"] > .mode-root > * {
+    --color-muted: var(--space-label);
+  }
+
+  .screen[data-mode="interstellar"] > .mode-root > .recipe__caption {
+    --color-muted: var(--space-caption);
+  }
+}

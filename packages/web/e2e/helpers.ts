@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { expect } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { CONFIG } from '@stopwatch/core';
+import { CONFIG, SETTINGS_SCHEMA } from '@stopwatch/core';
 import { coreFiles } from '../scripts/size-budget.ts';
 import { diffPngs } from './pixels.ts';
 import type { PixelDiff } from './pixels.ts';
@@ -24,32 +24,66 @@ export const T_READY = T0 + 30_000;
 export async function seedSettings(page: Page, settings: Readonly<Record<string, unknown>>): Promise<void> {
   await page.addInitScript((text) => {
     if (localStorage.getItem('settings') === null) localStorage.setItem('settings', text);
-  }, JSON.stringify({ schema: 1, ...settings }));
+  }, JSON.stringify({ schema: SETTINGS_SCHEMA, ...settings }));
 }
+
+/**
+ * Why the tests of ocean depth's water and height's sky are set aside (owner, round 2.10): while the two are in
+ * testing they keep the theme's background at all times, so neither environment is ever drawn. The tests return
+ * with the environments, when their graphics are agreed (plan, Principles).
+ */
+export const ENVIRONMENT_IN_TESTING = "ocean depth and height keep the theme's background while in testing (owner, round 2.10)";
+
+/** The test modes (core TEST_MODES). */
+export const TEST_MODE_IDS: readonly string[] = ['ocean', 'height', 'tree', 'interstellar'];
+
+/** The address of a visit flagged for the test modes (src/test-flag.ts): only it offers them. */
+export const FLAGGED = '/?test=modes';
 
 /**
  * Opens the site with a controllable clock (Date, performance.now and timers),
  * then holds the clock at T_READY so every later moment is exact. `mode`
- * chooses the display mode through stored settings.
+ * chooses the display mode through stored settings; a test mode's visit is
+ * flagged (or any visit, with `flagged`). The browser's picture-in-picture
+ * window is taken away unless `pip` asks for it.
  */
 export async function openApp(
   page: Page,
-  options: { mode?: string; width?: number; height?: number; settings?: Readonly<Record<string, unknown>> } = {},
+  options: { mode?: string; width?: number; height?: number; settings?: Readonly<Record<string, unknown>>; flagged?: boolean; pip?: boolean } = {},
 ): Promise<void> {
   await page.setViewportSize({ width: options.width ?? 720, height: options.height ?? 450 });
+  // Picture-in-picture is behind the test flag until its release, and the frames draw the launch's panel without it:
+  // unless a test asks for it, the browser's window for a page is taken away (Chromium offers one).
+  if (options.pip !== true) await withoutPip(page);
   if (options.mode !== undefined || options.settings !== undefined) await seedSettings(page, { ...options.settings, ...(options.mode === undefined ? {} : { mode: options.mode }) });
   await page.clock.install({ time: T0 });
-  await page.goto('/');
+  // A test mode shows only on a visit opened with the test flag (src/test-flag.ts).
+  await page.goto((options.flagged ?? (options.mode !== undefined && TEST_MODE_IDS.includes(options.mode))) ? FLAGGED : '/');
   await page.evaluate(() => document.fonts.ready);
   await page.locator('.button--primary').waitFor();
+  // The page's own markup shows before the script runs: the site answers input once it says it is ready.
+  await page.locator('html[data-ready]').waitFor({ state: 'attached' });
   await page.clock.pauseAt(T_READY);
 }
 
+/** Takes the Document Picture-in-Picture API away, as a browser without it (Firefox, Safari). */
+export async function withoutPip(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'documentPictureInPicture', { value: undefined, configurable: true });
+  });
+}
+
 /**
- * Lets every interface transition (200 ms crossfades and slides) finish in real time. The timeline's glide,
- * which runs a minute at a time and holds while paused, is ambient motion, not a transition: tests freeze it.
+ * Lets every interface transition (200 ms crossfades and slides) finish in real time. The timeline's and the
+ * ring's glides, which run a minute at a time and hold while paused, are motion with time, not transitions:
+ * tests freeze them.
  */
 export async function settle(page: Page): Promise<void> {
+  // A mode's art and images arrive after it mounts (its art catalogs, the build's sky images): until every
+  // placeholder is drawn over and every image decoded, within a few seconds.
+  await page
+    .waitForFunction(() => document.querySelector('.mode-root [data-tone="placeholder"]') === null && [...document.images].every((image) => image.complete), undefined, { timeout: 5000, polling: 50 })
+    .catch(() => undefined);
   await page.evaluate(async () => {
     // A short real-time wait: the tests' clock holds timers and animation frames, but not animations.
     const frames = (): Promise<unknown> => document.documentElement.animate([], { duration: 40 }).finished;
@@ -58,7 +92,9 @@ export async function settle(page: Page): Promise<void> {
       const running = document
         .getAnimations()
         .filter((animation) => !(animation instanceof CSSAnimation) && animation.playState === 'running')
-        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide') === true));
+        // Motion with time is no transition: the glides a minute at a time, and the tree's endless year.
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .light__strip, .starfield, .camera *') === true));
       if (running.length === 0 && round > 0) return;
       await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
       await frames();
@@ -71,21 +107,32 @@ export async function settle(page: Page): Promise<void> {
  * real time. Playwright's clock moves timers but not animations, so each animation's own time is set, once
  * it is ready (a pending animation would otherwise take its own start time afterwards):
  * - `css`: CSS animations (the seconds blur-away, pinned to focused time) at this many milliseconds;
- * - `at`: animations of elements matching a selector at that many milliseconds (the countdown's fill);
+ * - `at`: animations of elements matching a selector at that many milliseconds (the countdown's fill, the
+ *   glides); in Chromium then written into the element's style and cancelled, as its compositor can keep
+ *   drawing a paused animation where it was before it was moved (decision 294);
  * - every other animation (interface motion, transitions) at its end.
- * Each is then held paused, which is static: nothing moves between this and the screenshot.
+ * Each is then held, which is static: nothing moves between this and the screenshot.
  */
 export async function freezeAnimations(page: Page, moments: { readonly css?: number; readonly at?: Readonly<Record<string, number>> } = {}): Promise<void> {
+  // Only Chromium's compositor keeps drawing a paused, seeked animation where it was; WebKit draws a
+  // committed and cancelled one wrongly, so elsewhere a held animation stays paused where it was set.
+  const commit = page.context().browser()?.browserType().name() === 'chromium';
   await page.evaluate(
-    async ({ css, at }) => {
+    async ({ css, at, commit }) => {
       const animations = document.getAnimations();
       await Promise.all(animations.map((animation) => animation.ready.catch(() => undefined)));
       for (const animation of animations) {
         const target = animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
         const selector = target === null ? undefined : Object.keys(at).find((key) => target.matches(key));
         animation.pause();
-        if (selector !== undefined) animation.currentTime = at[selector] ?? 0;
-        else if (css !== null && animation instanceof CSSAnimation) animation.currentTime = css;
+        if (selector !== undefined) {
+          animation.currentTime = at[selector] ?? 0;
+          if (commit) {
+            // Held as static style: Chromium's compositor can keep drawing a paused, seeked animation where it was.
+            animation.commitStyles();
+            animation.cancel();
+          }
+        } else if (css !== null && animation instanceof CSSAnimation) animation.currentTime = css;
         else {
           try {
             animation.finish();
@@ -95,7 +142,7 @@ export async function freezeAnimations(page: Page, moments: { readonly css?: num
         }
       }
     },
-    { css: moments.css ?? null, at: moments.at ?? {} },
+    { css: moments.css ?? null, at: moments.at ?? {}, commit },
   );
   // Let the browser draw the held moment (the page's own clock is held, so this waits in real time).
   await page.waitForTimeout(100);
@@ -110,7 +157,7 @@ export async function holdAnimationsAt(page: Page, focusedMs: number): Promise<v
  * Draws a frame's markup as a reference image. Its "Archivo" is the site's default font, or `font`: a page
  * with its own cut of that font is compared with the frame drawn in that cut, so only layout and colour differ.
  */
-export async function screenshotReference(browser: Browser, markup: string, viewport = { width: 720, height: 450 }, font: Buffer = FONT): Promise<Buffer> {
+export async function screenshotReference(browser: Browser, markup: string, viewport = { width: 720, height: 450 }, font: Buffer = FONT, clip?: Clip): Promise<Buffer> {
   const reference = await browser.newPage({ viewport });
   await reference.route('http://frame.test/**', (route) => {
     const isFont = route.request().url().endsWith('/font.woff2');
@@ -118,17 +165,58 @@ export async function screenshotReference(browser: Browser, markup: string, view
   });
   await reference.goto('http://frame.test/');
   await reference.evaluate(() => document.fonts.ready);
-  const image = await reference.screenshot();
+  const image = await reference.screenshot(clip === undefined ? {} : { clip });
   await reference.close();
   return image;
 }
 
-export async function compareWithReference(page: Page, browser: Browser, markup: string): Promise<PixelDiff> {
-  const site = await page.screenshot();
-  const reference = await screenshotReference(browser, markup, page.viewportSize() ?? undefined);
+/** A part of the screen, in CSS pixels. */
+export interface Clip {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** Compares the page with a frame's markup, the whole screen or only `clip`. */
+export async function compareWithReference(page: Page, browser: Browser, markup: string, clip?: Clip): Promise<PixelDiff> {
+  const site = await page.screenshot(clip === undefined ? {} : { clip });
+  const reference = await screenshotReference(browser, markup, page.viewportSize() ?? undefined, FONT, clip);
   const scratch = await browser.newPage();
   const diff = await diffPngs(scratch, site, reference);
   await scratch.close();
+  return diff;
+}
+
+/**
+ * Opens settings (if they are not open) on a category, expanding it only if it is closed: since round 2.14 the panel
+ * opens on display, the first category, so a click on an open category's row would close it.
+ */
+export async function openSettingsOn(page: Page, name: string): Promise<void> {
+  if (!(await page.locator('.settings').isVisible())) await page.keyboard.press(',');
+  await page.locator('.settings').waitFor();
+  const row = page.locator('.settings__row', { hasText: new RegExp(`^${name}$`) });
+  if ((await row.getAttribute('aria-expanded')) !== 'true') await row.click();
+}
+
+/** Every glyph (and every icon drawn in the text colour) made transparent, on the site and in a frame. */
+const NO_TEXT = '* { color: transparent !important; -webkit-text-fill-color: transparent !important; } text { fill: transparent !important; }';
+
+/**
+ * The page and the frame compared with every glyph transparent on both sides: what is left is the drawing alone,
+ * for frames whose text a browser anti-aliases differently from the frame's page (decision 384).
+ */
+export async function compareWithoutText(page: Page, browser: Browser, markup: string): Promise<PixelDiff> {
+  // A constructed stylesheet: the site's CSP refuses inline style elements.
+  await page.evaluate((css) => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(css);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  }, NO_TEXT);
+  const diff = await compareWithReference(page, browser, markup.replace('</body>', `<style>${NO_TEXT}</style></body>`));
+  await page.evaluate(() => {
+    document.adoptedStyleSheets = document.adoptedStyleSheets.slice(0, -1);
+  });
   return diff;
 }
 
@@ -170,7 +258,8 @@ export async function finishResults(page: Page): Promise<void> {
       const running = document
         .getAnimations()
         .filter((animation) => !(animation instanceof CSSAnimation))
-        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide') === true));
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .filter((animation) => !(animation.effect instanceof KeyframeEffect && animation.effect.target?.matches('.timeline__glide, .ring__rotor, .analog__hand, .light__strip, .starfield, .camera *') === true));
       for (const animation of running) animation.finish();
       // Let finish handlers (which cancel spent animations and remove masks) run. The page's timers
       // may be held by the test clock, so only promises are awaited.

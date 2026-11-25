@@ -2,7 +2,7 @@
  * Applies the appearance settings as CSS custom properties (plan,
  * Architecture invariant 8): one constructed stylesheet in the `theme`
  * cascade layer, adopted by the document, holding the derived theme colours,
- * the chosen font and the time size. It is never an inline style, so custom
+ * the chosen font, the time size and the animation speed (--motion-scale). It is never an inline style, so custom
  * CSS in the `user` layer (round 7) still overrides all of it, and nothing in
  * it is HTML.
  */
@@ -41,6 +41,7 @@ export function appearanceCss({ settings, fontFamily, fontStretch }: AppearanceI
     '--font-family': fontFamily,
     '--font-stretch': fontStretch,
     '--time-scale': String(settings.timeSize / CONFIG.settings.timeSizePercent.default),
+    '--motion-scale': String(CONFIG.motion.speeds[settings.animationSpeed]),
   };
   const lines = Object.entries(properties).map(([name, value]) => `    ${name}: ${value};`);
   return `@layer theme {\n  :root {\n${lines.join('\n')}\n  }\n}\n`;

@@ -8,13 +8,26 @@
  */
 
 @layer base {
-  /* Beside the panel, the timer has the rest of the window (wide layouts only). */
-  :root[data-settings="open"]:not([data-settings-layout="phone"]) {
+  /*
+   * Beside the panel, the timer has the rest of the window (wide layouts only), from before the panel slides in until
+   * after it has slid out (closing), so the timer never moves while the panel does (panel.ts).
+   */
+  :root[data-settings]:not([data-settings-layout="phone"]) {
     --view-width: calc(100vw - var(--settings-width));
   }
 
   :root[data-settings="open"] .corner {
     visibility: hidden;
+  }
+
+  /*
+   * Closing, the corner icons stay out of sight (transparent, still focusable so focus can return to settings) until
+   * the panel has gone; then, the attribute removed, their own opacity transition fades them in where they are, at
+   * the window's corner, so they never show beside the closing panel or move (plan version 14).
+   */
+  :root[data-settings="closing"] .corner {
+    opacity: 0;
+    transition: none;
   }
 
   /*
@@ -264,6 +277,41 @@
     color: var(--color-muted);
   }
 
+  /* An item that only wraps another, so a hidden inner item takes no room (downloaded modes). */
+  .settings__item-contents {
+    display: contents;
+  }
+
+  /* Downloaded modes: the Release 2 display frame's rows. */
+  .downloads {
+    display: flex;
+    flex-direction: column;
+    gap: var(--settings-group-gap);
+  }
+
+  .downloads__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: var(--settings-reset-size);
+  }
+
+  .downloads__end {
+    display: flex;
+    align-items: center;
+    gap: var(--settings-control-gap);
+  }
+
+  .downloads__remove {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--settings-reset-size);
+    color: var(--color-muted);
+    text-decoration: underline;
+  }
+
   .setting__value {
     font-size: var(--settings-reset-size);
     color: var(--color-muted);
@@ -474,6 +522,56 @@
 
   .mode-tile__muted {
     stroke: var(--color-muted);
+  }
+
+  .mode-tile__fill {
+    fill: var(--color-muted);
+  }
+
+  .mode-tile__text {
+    stroke: currentColor;
+  }
+
+  .mode-tile__dot {
+    fill: currentColor;
+  }
+
+  /*
+   * A darkened box always holds settings that belong to the setting above it (plan version 14): the chosen mode's
+   * options under the tiles, check-in every under check-ins, the theme colours under the themes. A box on the page
+   * colour, as the display, timer and appearance frames draw it.
+   */
+  .mode-options,
+  .settings-box {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mode-options-gap);
+    padding: var(--mode-options-padding);
+    border-radius: var(--mode-options-radius);
+    background: var(--color-background);
+  }
+
+  .mode-options[hidden] {
+    display: none;
+  }
+
+  .mode-options__title,
+  .settings-box__title {
+    font-size: var(--mode-options-title);
+    color: var(--color-muted);
+  }
+
+  .settings-box__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mode-options-gap);
+  }
+
+  /* The focus mode group: a plain group (no box) of four settings under its label, as the launch display frame. */
+  .focus-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--focus-group-gap);
   }
 
   /* ---- Theme cards ----------------------------------------------------- */
@@ -919,5 +1017,57 @@
     .color-row__hex {
       min-width: var(--tap-target);
     }
+  }
+
+  /*
+   * A setting a notice's "change" opened settings on (panel.ts openOn): briefly outlined in the accent colour, as the
+   * "change opens settings on it" frame draws it, then fading (only its outline's opacity moves).
+   */
+  .mode-options .setting,
+  .setting[data-setting] {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .mode-options .setting::after,
+  .setting[data-setting]::after {
+    content: "";
+    position: absolute;
+    inset: calc(-1 * var(--highlight-inset-y)) calc(-1 * var(--highlight-inset-x));
+    z-index: -1;
+    border-radius: var(--highlight-radius);
+    background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+    box-shadow: inset 0 0 0 var(--highlight-line) var(--color-accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Briefly: in, held, and out again, by opacity alone and with no timer (panel.ts restarts it). */
+  .mode-options .setting.setting--highlight::after,
+  .setting[data-setting].setting--highlight::after {
+    animation: setting-highlight var(--highlight-duration) linear both;
+  }
+
+  @keyframes setting-highlight {
+    0% {
+      opacity: 0;
+    }
+
+    10% {
+      opacity: 1;
+    }
+
+    85% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* The tiles and their note re-render together (panel.ts, refreshModes); the box itself takes no place. */
+  .mode-tiles-box {
+    display: contents;
   }
 }

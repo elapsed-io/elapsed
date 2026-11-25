@@ -1,0 +1,20 @@
+/*
+ * Art from the asset registry (registry.ts): inline SVG whose colours come from its tones. A mode's
+ * stylesheet gives each of its tones a custom property; anything without one takes the text colour, and a
+ * placeholder takes the faint colour, so missing art reads as a plain shape.
+ */
+@layer mode {
+  .art {
+    display: block;
+    overflow: visible;
+  }
+
+  /* Weaker than any mode's tone rule, whichever stylesheet loads first (the registry loads with a mode's pieces). */
+  .art :where([data-tone]) {
+    fill: currentColor;
+  }
+
+  .art [data-tone="placeholder"] {
+    fill: var(--color-faint);
+  }
+}

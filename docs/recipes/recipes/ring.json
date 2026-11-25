@@ -1,0 +1,64 @@
+{
+  "recipe": 1,
+  "id": "ring",
+  "name": "ring",
+  "icon": "ring",
+  "measure": {
+    "unit": "time",
+    "perMinute": 1
+  },
+  "environment": {
+    "type": "theme"
+  },
+  "cycles": [
+    {
+      "id": "hour",
+      "minutes": 60
+    }
+  ],
+  "layers": [
+    {
+      "type": "ring",
+      "id": "ring",
+      "cycle": "hour",
+      "radius": 126,
+      "thickness": 8,
+      "track": "theme.faint",
+      "fill": "theme.accent",
+      "tail": {
+        "degrees": 55,
+        "growIn": true,
+        "fade": "ease"
+      },
+      "head": {
+        "size": 8
+      }
+    },
+    {
+      "type": "time",
+      "id": "time",
+      "position": "center",
+      "seconds": "setting"
+    }
+  ],
+  "states": {
+    "paused": {
+      "blur": "display"
+    },
+    "checkin": {
+      "blur": "display"
+    }
+  },
+  "results": {
+    "replay": {
+      "seconds": 2.0,
+      "easing": "fast",
+      "longSessionExtra": true
+    },
+    "view": {
+      "type": "rings-per-hour",
+      "hand": true,
+      "fitAfterHours": 6
+    }
+  }
+}

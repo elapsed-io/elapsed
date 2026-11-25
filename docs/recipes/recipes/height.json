@@ -1,0 +1,589 @@
+{
+  "recipe": 1,
+  "id": "height",
+  "name": "height",
+  "icon": "height",
+  "measure": {
+    "unit": "m",
+    "perMinute": 140,
+    "max": 100000,
+    "records": "comparable"
+  },
+  "zones": [
+    [
+      "troposphere",
+      "troposphere",
+      0
+    ],
+    [
+      "stratosphere",
+      "stratosphere",
+      12000
+    ],
+    [
+      "mesosphere",
+      "mesosphere",
+      50000
+    ],
+    [
+      "thermosphere",
+      "thermosphere",
+      85000
+    ]
+  ],
+  "environment": {
+    "type": "stops",
+    "by": "measure",
+    "stops": [
+      [
+        0,
+        "#86BCE4"
+      ],
+      [
+        1000,
+        "#78B0DF"
+      ],
+      [
+        5000,
+        "#5A93CF"
+      ],
+      [
+        9000,
+        "#3F75BA"
+      ],
+      [
+        15000,
+        "#285593"
+      ],
+      [
+        25000,
+        "#163266"
+      ],
+      [
+        40000,
+        "#0B1A3B"
+      ]
+    ]
+  },
+  "contrast": {
+    "light": "#F3F6FB",
+    "dark": "#1F2A3A",
+    "auto": true
+  },
+  "camera": {
+    "type": "rig",
+    "pxPerUnit": 50,
+    "follow": {
+      "subject": "falcon",
+      "damping": 0.9
+    },
+    "tilt": {
+      "px": 170,
+      "start": 1.1,
+      "over": 2.5,
+      "ease": "smooth",
+      "skyShift": 2600
+    }
+  },
+  "layers": [
+    {
+      "type": "shape",
+      "id": "sun",
+      "space": "sky",
+      "shape": "circle",
+      "size": [
+        140,
+        140
+      ],
+      "x": 604,
+      "y": 112,
+      "fill": {
+        "radial": [
+          [
+            0,
+            "#FFF6DD"
+          ],
+          [
+            0.35,
+            "#FFF1D0"
+          ],
+          [
+            1,
+            "#FFF1D000"
+          ]
+        ]
+      },
+      "opacity": {
+        "by": "measure",
+        "stops": [
+          [
+            6000,
+            1
+          ],
+          [
+            18000,
+            0
+          ]
+        ],
+        "ease": "smooth"
+      }
+    },
+    {
+      "type": "starfield",
+      "id": "stars",
+      "slot": "sky.stars",
+      "magnitudeMax": 5,
+      "opacity": {
+        "by": "measure",
+        "stops": [
+          [
+            18000,
+            0
+          ],
+          [
+            42000,
+            1
+          ]
+        ],
+        "ease": "smooth"
+      }
+    },
+    {
+      "type": "scenery",
+      "id": "hills",
+      "preset": "hills",
+      "baseY": 0.747,
+      "color": "#B7CAD6",
+      "distance": 40,
+      "tileX": true,
+      "seed": 7,
+      "opacity": {
+        "by": "measure",
+        "stops": [
+          [
+            90,
+            1
+          ],
+          [
+            310,
+            0
+          ]
+        ],
+        "ease": "smooth"
+      }
+    },
+    {
+      "type": "scenery",
+      "id": "far-forest",
+      "preset": "conifers",
+      "baseY": 0.836,
+      "height": [
+        22,
+        40
+      ],
+      "color": "#9CB3C2",
+      "distance": 19,
+      "tileX": true,
+      "seed": 11,
+      "opacity": {
+        "by": "measure",
+        "stops": [
+          [
+            90,
+            1
+          ],
+          [
+            310,
+            0
+          ]
+        ],
+        "ease": "smooth"
+      }
+    },
+    {
+      "type": "scenery",
+      "id": "mid-forest",
+      "preset": "conifers",
+      "baseY": 0.92,
+      "height": [
+        34,
+        58
+      ],
+      "color": "#76958E",
+      "distance": 13.5,
+      "tileX": true,
+      "seed": 12,
+      "opacity": {
+        "by": "measure",
+        "stops": [
+          [
+            90,
+            1
+          ],
+          [
+            310,
+            0
+          ]
+        ],
+        "ease": "smooth"
+      }
+    },
+    {
+      "type": "scenery",
+      "id": "near-forest",
+      "preset": "conifers",
+      "baseY": 1.018,
+      "height": [
+        50,
+        84
+      ],
+      "color": "#507459",
+      "distance": 10,
+      "tileX": true,
+      "seed": 13,
+      "opacity": {
+        "by": "measure",
+        "stops": [
+          [
+            90,
+            1
+          ],
+          [
+            310,
+            0
+          ]
+        ],
+        "ease": "smooth"
+      }
+    },
+    {
+      "type": "subject",
+      "id": "falcon",
+      "art": {
+        "preset": "falcon",
+        "color": "#2B303B"
+      },
+      "size": 20,
+      "position": [
+        0.5,
+        0.836
+      ],
+      "entry": {
+        "from": [
+          -0.08,
+          1.04
+        ],
+        "delay": 0.5,
+        "speed": 200
+      },
+      "motion": {
+        "forwardSpeed": 200,
+        "forwardDecay": 3,
+        "climbFrom": "measure",
+        "climbRamp": 2
+      },
+      "flight": {
+        "flapHz": 2.2,
+        "downstrokeShare": 0.55,
+        "upstrokeFold": 0.3,
+        "pattern": [
+          {
+            "flap": 1
+          },
+          {
+            "glide": 60
+          }
+        ],
+        "glideAngle": -36,
+        "glideWobble": 2.4,
+        "steady": true
+      },
+      "stages": [
+        {
+          "from": 11300,
+          "label": "angel",
+          "color": "#FFFFFF",
+          "crossfade": 2.5,
+          "halo": {
+            "radius": 34,
+            "strength": 0.75
+          },
+          "flash": {
+            "radius": 90,
+            "strength": 0.9,
+            "seconds": 1.1
+          },
+          "streamers": {
+            "count": 3,
+            "length": 95,
+            "wave": 5.5,
+            "color": "#FFFFFF",
+            "grow": 2.6
+          }
+        }
+      ]
+    },
+    {
+      "type": "glare",
+      "id": "glare",
+      "source": "sun",
+      "trigger": "tilt",
+      "peak": 0.85,
+      "bloom": 300,
+      "ghosts": [
+        [
+          0.18,
+          9,
+          0.12
+        ],
+        [
+          0.34,
+          18,
+          0.09
+        ],
+        [
+          0.5,
+          34,
+          0.06
+        ],
+        [
+          0.64,
+          12,
+          0.12
+        ],
+        [
+          0.78,
+          24,
+          0.07
+        ],
+        [
+          0.92,
+          15,
+          0.1
+        ]
+      ]
+    },
+    {
+      "type": "time",
+      "id": "time",
+      "size": 104,
+      "position": "center",
+      "seconds": "setting"
+    },
+    {
+      "type": "passing",
+      "id": "passing",
+      "when": [
+        "results"
+      ],
+      "direction": "down",
+      "items": [
+        {
+          "slot": "sky.birds",
+          "from": 0,
+          "to": 2600,
+          "x": 0.7,
+          "opacity": 0.8
+        },
+        {
+          "slot": "sky.cloud",
+          "from": 600,
+          "to": 6000,
+          "x": 0.11,
+          "opacity": 0.9
+        },
+        {
+          "slot": "sky.cloud",
+          "from": 2500,
+          "to": 11500,
+          "x": 0.6,
+          "opacity": 0.85
+        },
+        {
+          "slot": "sky.airliner",
+          "from": 8800,
+          "to": 12800,
+          "x": 0.35,
+          "opacity": 0.95
+        },
+        {
+          "slot": "sky.balloon",
+          "from": 15000,
+          "to": 34000,
+          "x": 0.78,
+          "opacity": 0.95
+        }
+      ]
+    },
+    {
+      "type": "shape",
+      "id": "horizon",
+      "when": [
+        "results"
+      ],
+      "shape": "circle",
+      "size": [
+        3200,
+        3200
+      ],
+      "x": 0.5,
+      "y": {
+        "by": "measure",
+        "stops": [
+          [
+            15000,
+            530
+          ],
+          [
+            23000,
+            460
+          ],
+          [
+            100000,
+            410
+          ]
+        ],
+        "ease": "smooth"
+      },
+      "opacity": {
+        "by": "measure",
+        "stops": [
+          [
+            15000,
+            0
+          ],
+          [
+            23000,
+            1
+          ]
+        ],
+        "ease": "smooth"
+      },
+      "fill": {
+        "radial": [
+          [
+            0,
+            "#0B2A4E"
+          ],
+          [
+            0.92,
+            "#0B2A4E"
+          ],
+          [
+            0.988,
+            "#2B6FB0"
+          ],
+          [
+            1,
+            "#78BEFF00"
+          ]
+        ]
+      },
+      "glow": {
+        "blur": 40,
+        "color": "#6EB4FF73"
+      }
+    },
+    {
+      "type": "landmarks",
+      "id": "landmarks",
+      "when": [
+        "results"
+      ],
+      "slot": "sky.landmarks",
+      "anchor": "chart",
+      "perBand": {
+        "size": 10000,
+        "max": 2
+      },
+      "maxTotal": 6,
+      "dot": "#F2C46B",
+      "labels": {
+        "pop": true,
+        "fadeAfterReplay": true,
+        "hover": true,
+        "template": "{landmark} \u00b7 {value} m"
+      }
+    }
+  ],
+  "states": {
+    "paused": {
+      "blur": [
+        "time"
+      ],
+      "caption": "{value} m \u00b7 {zone}",
+      "freeze": true
+    },
+    "checkin": {
+      "blur": [
+        "time"
+      ],
+      "freeze": true
+    }
+  },
+  "results": {
+    "replay": {
+      "seconds": 3.0,
+      "easing": "gentle",
+      "longSessionExtra": true
+    },
+    "view": {
+      "type": "profile",
+      "direction": "up"
+    },
+    "card": {
+      "environment": "follow-replay",
+      "startFrom": "session-end",
+      "crossSeconds": 0.35
+    },
+    "show": [
+      "stars",
+      "passing",
+      "horizon",
+      "landmarks"
+    ]
+  },
+  "options": [
+    {
+      "id": "landmarks",
+      "label": "results landmarks",
+      "kind": "switch",
+      "default": true,
+      "toggles": [
+        "landmarks"
+      ]
+    }
+  ],
+  "slots": [
+    {
+      "id": "sky.stars",
+      "kind": "star-catalog",
+      "default": "builtin:stars/hyg-mag5.json"
+    },
+    {
+      "id": "sky.birds",
+      "kind": "image",
+      "default": "builtin:sky/birds.svg"
+    },
+    {
+      "id": "sky.cloud",
+      "kind": "image",
+      "default": "builtin:sky/cloud.svg"
+    },
+    {
+      "id": "sky.airliner",
+      "kind": "image",
+      "default": "builtin:sky/airliner.svg"
+    },
+    {
+      "id": "sky.balloon",
+      "kind": "image",
+      "default": "builtin:sky/balloon.svg"
+    },
+    {
+      "id": "sky.landmarks",
+      "kind": "landmark-list",
+      "default": "builtin:sky/landmarks.json"
+    }
+  ]
+}
