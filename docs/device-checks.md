@@ -145,6 +145,38 @@ only, over USB (chrome://inspect on a computer); no third-party monitoring.
     and every settings category.
     - [ ] Everything looks as in Chrome, and nothing reports an error in the console.
 
+## Release 2 (round 2.16)
+
+What Release 2 adds that only a real device shows. Run on the iPhone, the Mac (Safari) and the Android phone above,
+and on one Chrome or Edge computer, against the build that will launch.
+
+32. Keep screen awake (on by default): start a session and leave the device untouched past its own screen
+    timeout.
+    - [ ] The screen stays on while the site is the active tab, on every device.
+    - [ ] Switch to another tab or app for a minute and back: the screen then sleeps on time while elapsed is
+      not shown, and stays on again once it is.
+    - [ ] With "keep screen awake" off, the screen sleeps on time.
+    - [ ] With the battery saver (Android) or Low Power Mode (iPhone) on, nothing breaks; the screen may sleep.
+33. The check-ins switch (timer settings): switch it off, start a session, lock the phone for 2.5 hours (or
+    close the laptop lid), then open it.
+    - [ ] No check-in waits; the session ran on and shows the time since it started.
+    - [ ] Switched back on during a session, the next check-in comes 2 hours after switching (the interval in
+      force), never at once.
+34. The tips: on a fresh device (or after clear device data), the fullscreen tip on the idle screen (not on an
+    iPhone, which has no page fullscreen); after one finished session, the seconds tip.
+    - [ ] Each tip's "change" opens settings on its row, outlined, and the tip never shows again.
+    - [ ] The pill never covers the time, at phone and desktop sizes.
+35. Settings: open and close the panel a few times on each device.
+    - [ ] It slides in from the right and fades, out a little faster, without the timer moving while it does.
+    - [ ] With the system's reduced motion on, it only fades.
+    - [ ] On a phone, the panel fills the screen and each category is its own page.
+36. The plain pages: from the settings footer, open privacy, terms and credits.
+    - [ ] Each opens in a new tab, in the chosen theme, readable on the phone without sideways scrolling.
+    - [ ] The source code link is absent until the repository is public.
+37. A slow phone (the Android phone above, battery saver on): the four standard modes, each for a session of a
+    few minutes, and the settings panel opened in each.
+    - [ ] Start, pause and end answer at once; the panel's slide stays smooth; nothing stutters while running.
+
 ## Runs
 
 | Date | Device | System | Browser | Checks failed | Notes |

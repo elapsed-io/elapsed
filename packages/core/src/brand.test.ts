@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BRAND } from './brand.ts';
+import { BRAND, REPOSITORY, REPOSITORY_PUBLIC } from './brand.ts';
 import { HEIGHT_COPY } from './copy/height.ts';
 import { OCEAN_COPY } from './copy/ocean.ts';
 import { SETTINGS_COPY } from './copy/settings.ts';
@@ -32,5 +32,14 @@ describe('brand', () => {
     for (const [path, text] of strings(ALL_COPY)) {
       expect(text.trim(), path).not.toBe('');
     }
+  });
+
+  it('links the settings footer to the app\'s own privacy page and terms, and holds the source code link until the repository is public', () => {
+    const link = (label: string) => SETTINGS_COPY.links.find((candidate) => candidate.label === label);
+    expect(link('privacy')).toEqual({ label: 'privacy', href: '/privacy', shown: true });
+    expect(link('terms')).toEqual({ label: 'terms', href: '/terms', shown: true });
+    // Release 1's launch list: the link shows only once the owner confirms the repository is public.
+    expect(link('source code')).toEqual({ label: 'source code', href: REPOSITORY, shown: REPOSITORY_PUBLIC });
+    expect(REPOSITORY_PUBLIC).toBe(false);
   });
 });

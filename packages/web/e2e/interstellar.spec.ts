@@ -329,8 +329,9 @@ test('while paused, comets drift across with their tails pointing away from the 
   for (const comet of comets) {
     const away = (Math.atan2(comet.y + comet.dy / 2 - 392, comet.x + comet.dx / 2 - 70) * 180) / Math.PI;
     expect(Math.abs(comet.angle - away)).toBeLessThan(0.1);
-    expect(Math.hypot(comet.dx, comet.dy)).toBeGreaterThanOrEqual(280);
-    expect(Math.hypot(comet.dx, comet.dy)).toBeLessThanOrEqual(400);
+    // Read back from the keyframe's serialized transform, which WebKit rounds (279.985 measured for a 280 px path).
+    expect(Math.hypot(comet.dx, comet.dy)).toBeGreaterThanOrEqual(280 - 0.05);
+    expect(Math.hypot(comet.dx, comet.dy)).toBeLessThanOrEqual(400 + 0.05);
   }
   // They leave when the session resumes.
   await primary(page).click();

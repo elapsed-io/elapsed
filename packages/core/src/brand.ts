@@ -13,6 +13,12 @@
 
 /** The public source repository (owner changes, 2026-11-16). */
 export const REPOSITORY = 'https://github.com/elapsed-io/elapsed';
+/**
+ * Whether the repository is public, so the settings footer may link to it (Release 1's launch list, round 2.16).
+ * Serving the app's GPL-3.0 JavaScript likely counts as distributing it, so the source should be public at launch;
+ * making it public is the owner's task. Stays false, and the link hidden, until the owner confirms it.
+ */
+export const REPOSITORY_PUBLIC = false;
 /** The site's public address, and its public support address (owner, 2026-11-16). */
 export const SITE = 'https://elapsed.io';
 export const SUPPORT = 'support@elapsed.io';

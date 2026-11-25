@@ -20,15 +20,17 @@ it is so and where it was decided; "launch" marks what must be settled before th
   follows in that wake, so it can trail the minute by up to 30 s. Check-ins and the pause limit are applied
   at the next heartbeat, dated when they fell due. Accepted by the owner (decision 246).
 
-## Not in Release 1
+## Not in Releases 1 and 2
 
 - **The account icon does nothing.** It is drawn, as in every frame, and hidden from screen readers and
   the keyboard; accounts arrive in Release 3 (decision 218).
-- **The personal-record colour is not checked for text contrast**, because nothing in Release 1 shows a
+- **The personal-record colour is not checked for text contrast**, because nothing in Releases 1 and 2 shows a
   record (decision 207). It must pass before records arrive.
-- **The privacy page and terms live on the soon page's project.** **Launch:** they must move into the app
-  (or the app must serve them at `/privacy` and `/terms`) before elapsed.io moves to it
-  (`packages/soon/README.md`).
+- **Picture-in-picture is not in Release 2** (owner, answer 38): its code is behind the test flag, its settings row
+  and corner button hidden (decision 424).
+- **Sessions run without check-ins are not marked** (decision 421): the plan adds that marking with competitions,
+  in Release 6.
+- Fixed in Release 2: the app serves the privacy page and terms at `/privacy` and `/terms` (decision 426).
 
 ## Seen only in automated browsers
 

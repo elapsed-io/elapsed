@@ -1,7 +1,78 @@
-# Overnight: Release 2, rounds 2.1 to 2.11, and release readiness
+# Overnight: Release 2, rounds 2.1 to 2.16, and the release review
 
 Working unattended on `claude/release-2` (owner, 2026-11-16 evening). The morning summary goes at the top
 when the run stops; questions for the owner are collected below as they come up.
+
+## Morning summary, 2026-11-25: rounds 2.12 to 2.16, ready for your review and sign-off
+
+Built on `claude/release-2` from your message with plan version 13 and answer 38, in the order of
+`docs/release-readiness.md`. Every round finished completely before the next: `npm run check`, the reference run
+in Chromium, Firefox and WebKit, its safety overview, its decisions, then a commit and a push. Release 1's branch
+had no new fixes to merge. Nothing was deployed, and no Cloudflare or GitHub setting was touched. I stopped after
+round 2.16 because the next steps are yours (the two owner items, the launch and the sign-off); rounds 2.17 to
+2.19 come after the release.
+
+### What each round built
+
+- **2.12, test modes behind the flag only** (`f2da925`; decisions 404 to 407): `?test=modes` (or
+  `?test=interstellar`) adds ocean depth, height, the tree and interstellar for that visit only; no switch, nothing
+  stored (the old record is removed on load); without the flag none of their code or words is fetched.
+- **2.13, the standard sizes and the recipe archive** (`077d336`; 408 to 412): the shared 260 px dial for ring and
+  analog, the 48 px time inside ring and timeline, the compact 360 px timeline, every main block in the shared
+  slot; the analog stopwatch on the shared dial and its tile; `recipe-check.py` corrected so the standard recipes
+  are the frames', the archive written again and its checks made permanent tests.
+- **2.14, seconds, settings and notices** (`d327ce5`; 413 to 420): seconds "always" by default (never-changed
+  settings move to it, choices kept); the seconds tip after the first completed session, the fullscreen tip before
+  it, one at a time, never returning; settings open on display, now first; the panel slides 24 px and fades (200 ms
+  in, 160 ms out) with the timer still beside it; the credits page in the chosen theme and the legal pages' layout;
+  every shared timer frame re-taken with seconds.
+- **2.15, the check-ins switch and keep screen awake; picture-in-picture behind the flag** (`d82674c`; 421 to
+  425): check-ins can be switched off (the session maximum and the pause limit still apply; back on, they count
+  from that moment), with the plan's warning; keep screen awake holds a wake lock while the tab is seen; the
+  Permissions-Policy leaves it to the site; picture-in-picture only on a flagged visit in a browser that offers the
+  window, its row and corner button hidden at launch; the Release 2 timer frame matched.
+- **2.16, hardening, the launch list and the release review** (this commit; 426 to 431): the app serves the
+  privacy page and terms at `/privacy` and `/terms`, from `docs/legal` in an app edition (the soon page's
+  unchanged), themed like the credits page, linked from the settings footer on the site's own origin; the source
+  code link held by one switch, `REPOSITORY_PUBLIC`, false; your launch steps in `docs/deploy.md`, Part 7, with
+  `npm run deploy:production` and the deployed-header check covering the new pages; the accessibility,
+  performance and data passes extended to Release 2; device checks 32 to 37; `docs/safety/release-2.md`.
+
+### Test results
+
+| Round | `npm run check` | Reference run (Chromium, Firefox, WebKit) |
+| --- | --- | --- |
+| 2.12 | passes, 776 unit tests | 1,031 passed, 100 skipped, 0 failed |
+| 2.13 | passes, 897 | 1,041 passed, 99 skipped, 3 failed on glyph edges; after the two-step comparison (decision 412), the affected specs 115 passed, 22 skipped |
+| 2.14 | passes, 899 | 1,124 passed, 98 skipped, 5 failed and 6 not run, all in the tests (decisions 419, 420); after the fixes, the four affected specs 263 passed, 4 skipped |
+| 2.15 | passes, 913 | 1,159 passed, 104 skipped, 0 failed |
+| 2.16 | passes, 916 | 1,210 passed, 103 skipped, 1 failed (a rounding in a test mode's test) and 3 not run (WebKit's timing tests, waiting on it); after the fix, the two affected specs 48 passed, and WebKit's timing tests 2 passed, 1 skipped (Chromium only) |
+
+The size check passes throughout: core JavaScript 41.4 of 50 KB, and every part under its own ceiling.
+
+### Skipped, and why
+
+- **Nothing in the rounds was skipped.** Two things are checked differently from the frames and say so: the
+  "settings panel: slides in and out" frame is checked for its motion and geometry, not its pixels, since its panel
+  is the Release 1 display page (decision 417); and the held frames compare exactly without text and within a
+  glyph edge with it (decision 419).
+- **Yours, not done:** every deploy and every Cloudflare or GitHub setting (`docs/deploy.md`, Part 7); GitHub's
+  secret scanning refused a scan because Advanced Security is off, so I scanned all 535 tracked files locally (none
+  found; `npm audit` clean); the device checks need real devices.
+
+### Waiting for you
+
+1. **The final legal review** of the privacy page and terms in the app's edition: decision 427 lists every change
+   from the published text, and the effective date to print is yours to set.
+2. **Making the repository public.** Then I switch on the source code link (`REPOSITORY_PUBLIC`) and check it.
+3. **The launch and the sign-off:** `docs/safety/release-2.md` (the release review) and `docs/deploy.md`, Part 7.
+4. **The device checks** in `docs/device-checks.md`, 1 to 37, against the build that will launch.
+5. **Question 40 (new):** should keep screen awake hold only while a session runs, rather than whenever the tab is
+   seen? Still open from before, each built one way: 13 to 22 (round 2.8), and, for the test modes only, 28 to 31
+   and 33.
+6. **Worth a look, decided by the frames** rather than asked: the timer moves beside the panel the moment it opens
+   and back once it has closed, never during the slide (decision 416); the check-ins warning shows under the switch
+   whether it is on or off, as the frame draws it (decision 422).
 
 ## 2026-11-24: plan version 12, the recipe archive, and release readiness (stopped for your review)
 
@@ -450,14 +521,28 @@ and the Oort cloud and Proxima Centauri (no action needed).
   Release 2 timer frame matched. `npm run check` passes (913 unit tests). The reference run in Chromium, Firefox and
   WebKit: 1,159 passed, 104 skipped, 0 failed. Question 40 is new.
 
+- Round 2.16, hardening, the launch list and the release review (decisions 426 to 431): the app serves the privacy
+  page and terms at `/privacy` and `/terms`, in an app edition of `docs/legal` (the soon page's edition unchanged),
+  themed like the credits page; the settings footer links them on the site's own origin; the source code link held
+  by `REPOSITORY_PUBLIC`, false; `docs/deploy.md`, Part 7, and `npm run deploy:production` for the owner's launch;
+  the deployed-header check covers the new pages; axe-core over analog, both tips and the plain pages; every
+  standard mode in the long-run and hidden-tab tests; the live-session data test extended to Release 2; device
+  checks 32 to 37; `npm audit` clean and no secret found; `docs/safety/round-2.16.md` and the release review
+  `docs/safety/release-2.md`. `npm run check` passes (916 unit tests). The reference run in Chromium, Firefox and
+  WebKit: 1,210 passed, 103 skipped, 1 failed (a rounding in interstellar's comet test, WebKit) and 3 not run
+  (WebKit's timing tests, which wait on the WebKit project); after the fix, interstellar's and the extended
+  live-session specs passed in all three (48 passed), and WebKit's timing tests on their own (2 passed, and the
+  slow-processor test skipped, as in every WebKit run: it needs Chromium's DevTools Protocol).
+
 ## Questions for the owner
 
 Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 and 9; their answers are built in
 round 2.7 (decisions 327 to 330) and 2.8. Answered in changes 4: 1 (the hours hand glides, as built), 3 (CC0 for
 the placeholder art and slot templates), 10 (crossfade by stacked copies) and 11 (random arrivals now); built in
 decisions 332 to 334. Answered in changes 5 (2026-11-17): 12 (version 1 stays open until Release 2's public
-release; decision 338). Open: 13 to 22, from round 2.8, and 23 to 26, from round 2.9, each built one way meanwhile
-and easy to change; and 27, on which round 2.10 waits.
+release; decision 338). Answered since, each where it is asked: 23 to 27, 32, and 34 to 39. Open on 2026-11-25:
+13 to 22, from round 2.8, each built one way meanwhile and easy to change; 28 to 31 and 33, about the test modes
+only; and 40, from round 2.15.
 
 1. **The analog hours hand (round 2.2).** The analog frame draws the hours subdial's hand at the whole hour
    (30° at 1 h 24 min). The plan's rule that anything moving with time glides puts it at 42°, which is what

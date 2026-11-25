@@ -153,8 +153,9 @@ async function openIn(page: Page, mode: string): Promise<void> {
   await expect(page.locator('.screen')).toHaveAttribute('data-mode', mode);
 }
 
-// Round 2.10: every mode, not digits alone, holds over a long session and draws nothing in a hidden tab.
-for (const mode of ['ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'interstellar']) {
+// Round 2.10: every mode, not digits alone, holds over a long session and draws nothing in a hidden tab (digits
+// too since round 2.16's pass, with the standard modes' default seconds, always).
+for (const mode of ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'interstellar']) {
   test(`${mode}: seven hours running keep the page and its animations flat`, async ({ page, browserName }) => {
     await openIn(page, mode);
     await page.locator('.button--primary').click();
@@ -189,7 +190,7 @@ for (const mode of ['ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'in
 test.describe('hidden', () => {
   test.use({ awake: false });
 
-  for (const mode of ['analog', 'ocean', 'height', 'tree', 'interstellar']) {
+  for (const mode of ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'interstellar']) {
     test(`${mode}: a hidden tab draws nothing and wakes only for the heartbeat, and catches up on return`, async ({ page }) => {
       await page.clock.install({ time: T0 });
       await instrument(page);

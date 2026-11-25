@@ -9,6 +9,13 @@
  * The sources use a small part of Markdown: `#`, `##` and `###` headings,
  * paragraphs, `- ` lists (continued by indented lines) and `**bold**`. A
  * paragraph starting "Effective" is the page's date.
+ *
+ * One source serves two editions (round 2.16): the soon page's, written here,
+ * and the app's, which the app's build writes at /privacy and /terms once the
+ * app takes over elapsed.io. Blocks between `<!-- soon only -->` and
+ * `<!-- end -->` belong to the soon page's edition alone; blocks between
+ * `<!-- app only -->` and `<!-- end -->` to the app's. Each marker is a block
+ * of its own (blank lines around it).
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -43,9 +50,37 @@ function inline(text: string): string {
     .replace(/\b([a-z]+@elapsed\.io)\b/g, '<a href="mailto:$1">$1</a>');
 }
 
-/** The body of a page from its Markdown source. */
-export function renderBody(markdown: string): string {
+export type LegalEdition = 'soon' | 'app';
+
+const MARKER = /^<!-- (soon only|app only|end) -->$/;
+
+/** The source's blocks for one edition: the other edition's blocks and every marker left out. */
+export function editionBlocks(markdown: string, edition: LegalEdition): string[] {
   const blocks = markdown.replace(/\r\n?/g, '\n').trim().split(/\n{2,}/);
+  const kept: string[] = [];
+  let only: LegalEdition | null = null;
+  for (const block of blocks) {
+    const marker = MARKER.exec(block.trim());
+    if (marker !== null) {
+      if (marker[1] === 'end') {
+        if (only === null) throw new Error('an end marker without its start');
+        only = null;
+      } else {
+        if (only !== null) throw new Error('an edition marker inside another');
+        only = marker[1] === 'soon only' ? 'soon' : 'app';
+      }
+      continue;
+    }
+    if (block.includes('<!--')) throw new Error(`a marker must be a block of its own: ${block.slice(0, 60)}`);
+    if (only === null || only === edition) kept.push(block);
+  }
+  if (only !== null) throw new Error('an edition marker is never ended');
+  return kept;
+}
+
+/** The body of a page from its Markdown source, in one edition (the soon page's by default). */
+export function renderBody(markdown: string, edition: LegalEdition = 'soon'): string {
+  const blocks = editionBlocks(markdown, edition);
   const out: string[] = [];
   for (const block of blocks) {
     const heading = /^(#{1,3}) (.+)$/.exec(block);

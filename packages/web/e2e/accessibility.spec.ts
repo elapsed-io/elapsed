@@ -64,7 +64,8 @@ test.describe('WCAG 2.2 AA rules (axe-core)', () => {
     expect((await violations(page)).map((finding) => finding.id)).toContain('button-name');
   });
 
-  for (const mode of ['digits', 'ring', 'timeline']) {
+  // The four standard modes, as Release 2 ships them (analog since round 2.16's pass).
+  for (const mode of ['digits', 'ring', 'timeline', 'analog']) {
     test(`the timer in ${mode}: idle, running, paused, a check-in waiting`, async ({ page }) => {
       await openApp(page, { mode });
       await settle(page);
@@ -97,6 +98,40 @@ test.describe('WCAG 2.2 AA rules (axe-core)', () => {
       await settle(page);
       expect(await violations(page), 'results').toEqual([]);
     });
+  }
+
+  // Round 2.16: the idle screen with each tip (the fullscreen tip before a first session, the seconds tip after).
+  for (const [tip, notices] of [
+    ['fullscreen', null],
+    ['seconds', '{"schema":2,"dismissed":[],"firstSession":true}'],
+  ] as const) {
+    test(`the idle screen with the ${tip} tip`, async ({ page }) => {
+      await page.addInitScript((record) => {
+        localStorage.removeItem('notices');
+        if (record !== null) localStorage.setItem('notices', record);
+        // A page that can go fullscreen, as on a computer, whatever the test browser says.
+        Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get: () => true, configurable: true });
+      }, notices);
+      await openApp(page, { settings: { theme: 'paper' } });
+      await expect(page.locator('.pill')).toContainText(tip === 'fullscreen' ? 'fullscreen hides your other tabs' : 'seconds can fade out');
+      await settle(page);
+      expect(await violations(page)).toEqual([]);
+    });
+  }
+
+  // Round 2.16: the site's plain pages, served by the app, in a dark and a light theme.
+  for (const path of ['/privacy', '/terms', '/credits/']) {
+    for (const theme of ['graphite', 'sand']) {
+      test(`${path} in ${theme}`, async ({ page }) => {
+        await page.addInitScript((chosen) => {
+          localStorage.setItem('settings', JSON.stringify({ schema: 4, theme: chosen }));
+        }, theme);
+        await page.clock.install();
+        await page.goto(path);
+        await page.locator('html[data-scheme]').waitFor({ state: 'attached' });
+        expect(await violations(page)).toEqual([]);
+      });
+    }
   }
 
   for (const width of [1280, 390]) {

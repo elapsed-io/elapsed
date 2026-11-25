@@ -24,7 +24,7 @@ export const PARTS: Readonly<Record<string, string>> = {
   'downloaded modes list': 'src/storage/mode-cache.ts',
   'image store': 'src/storage/media-store.ts',
   'service worker': 'src/sw/sw.ts',
-  'credits page theme': 'src/credits/theme.ts',
+  'site pages theme': 'src/pages/theme.ts',
   'picture-in-picture (flagged visits)': 'src/pip/pip.ts',
 };
 

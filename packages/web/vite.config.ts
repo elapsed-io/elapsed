@@ -1,12 +1,12 @@
 import { defineConfig } from 'vite';
 import { checkRecipes, countStub, preloadFont, securityHeaders, templateHtml, tokensCss } from './build/plugins.ts';
-import { creditsPage } from './build/credits.ts';
+import { sitePages } from './build/pages.ts';
 import { serviceWorker } from './build/service-worker.ts';
 import { skyArt } from './build/sky.ts';
 import { webApp } from './build/web-app.ts';
 
 export default defineConfig({
-  plugins: [checkRecipes(), templateHtml(), tokensCss(), skyArt(), preloadFont('timer-sans.woff2'), securityHeaders(), webApp(), creditsPage(), serviceWorker(), countStub()],
+  plugins: [checkRecipes(), templateHtml(), tokensCss(), skyArt(), preloadFont('timer-sans.woff2'), securityHeaders(), webApp(), sitePages(), serviceWorker(), countStub()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,

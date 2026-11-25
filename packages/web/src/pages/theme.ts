@@ -1,6 +1,6 @@
 /**
- * The credits page's one script (round 2.14; plan, Design system: "the credits page follows the person's chosen
- * theme and the site's typeface"): reads the settings this browser keeps for the site and gives the page the chosen
+ * The one script of the site's plain pages, credits, privacy and terms (rounds 2.14 and 2.16; plan, Design system:
+ * "the credits page follows the person's chosen theme and the site's typeface"): reads the settings this browser keeps for the site and gives the page the chosen
  * theme's colours, exactly as the timer derives them (settings/appearance.ts). One constructed stylesheet adopted by
  * the document, never an inline style or markup, so the site's Content Security Policy and Trusted Types hold
  * unchanged. Without stored settings, or where storage refuses, the page keeps its stylesheet's default theme.

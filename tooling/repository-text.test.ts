@@ -86,6 +86,12 @@ describe('repository text', () => {
     const pinned = /wrangler@(\d+\.\d+\.\d+)/.exec(scripts['deploy:test'] ?? '')?.[1];
     expect(pinned).toBeDefined();
     expect(scripts['deploy:soon']).toContain(`npx --yes wrangler@${String(pinned)} `);
+    expect(scripts['deploy:production']).toContain(`npx --yes wrangler@${String(pinned)} `);
+    // The test deploy always names the test environment; only the launch's production deploy omits it, and runs
+    // the same local check of the Workers first.
+    expect(scripts['deploy:test']).toContain('--env test');
+    expect(scripts['deploy:production']).not.toContain('--env');
+    expect(scripts['deploy:production']).toContain('node tooling/worker-runtime.ts endpoint');
     const named = files.flatMap((path) => [...readFileSync(join(root, path), 'utf8').matchAll(/wrangler@([\w.-]+)/g)].map((match) => `${path}: ${String(match[1])}`));
     expect(named.length).toBeGreaterThan(0);
     expect(named.filter((entry) => !entry.endsWith(`: ${String(pinned)}`))).toEqual([]);

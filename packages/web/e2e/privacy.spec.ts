@@ -3,8 +3,10 @@
  * requests, no unexpected storage keys or cookies" (plan, Release review).
  * One visit uses everything Release 1 has (every settings category, a built-in
  * font, ring and timeline, custom CSS, crash reports, a paused session, the
- * results, a reload) and checks every request, every request body and every
- * stored key against docs/data-inventory.md.
+ * results, a reload) and, since the Release 2 review (round 2.16), what Release
+ * 2 adds (analog, a downloaded mode; check-ins off; keep screen awake; the
+ * privacy page, terms and credits), and checks every request, every request
+ * body and every stored key against docs/data-inventory.md.
  */
 
 import { expect, test } from './test.ts';
@@ -21,6 +23,10 @@ const ALLOWED_PATHS: readonly RegExp[] = [
   /^\/sw\.js$/,
   /^\/api\/count$/,
   /^\/api\/crash$/,
+  // The site's plain pages and their stylesheet (round 2.16).
+  /^\/(?:privacy|terms)$/,
+  /^\/credits\/$/,
+  /^\/pages\.css$/,
 ];
 
 /** The only keys the inventory lists. */
@@ -64,7 +70,12 @@ test('a live session sends and stores only what the data inventory lists', async
   await page.keyboard.press(',');
   await page.locator('.settings').waitFor();
   await open('timer');
+  // Release 2's timer switches: check-ins off, keep screen awake left on (it holds a wake lock, nothing stored).
+  await page.getByRole('switch', { name: 'check-ins' }).click();
   await open('display');
+  // Analog first, a downloaded mode, then ring.
+  await page.getByRole('radio', { name: 'analog' }).click();
+  await expect(page.locator('.screen')).toHaveAttribute('data-mode', 'analog');
   await page.getByRole('radio', { name: 'ring' }).click();
   await open('appearance');
   await expect(page.locator('.font-tile--loading')).toHaveCount(0);
@@ -107,6 +118,13 @@ test('a live session sends and stores only what the data inventory lists', async
   await expect.poll(() => sent.filter((request) => request.url.endsWith('/api/crash')).length).toBe(1);
   await page.reload();
   await page.locator('.results').waitFor();
+
+  // The plain pages, in this tab: they read the settings for the theme and store nothing.
+  for (const path of ['/privacy', '/terms', '/credits/']) {
+    await page.goto(path);
+    await page.locator('html[data-scheme]').waitFor({ state: 'attached' });
+  }
+  await page.goBack();
 
   // Requests: the site's own origin, its own paths, and nothing in a body beyond the inventory.
   const origin = new URL(baseURL ?? '').origin;

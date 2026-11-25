@@ -85,7 +85,7 @@ what of that blocks the release. "Frame" names are the canvas titles.
 | **Shared layout and layer order** | One layer order in tokens for every mode and screen; no mode may set a z-index; the shared time, gap and buttons in the time modes (decisions 388 to 392); the figure modes in the shared slot at the shared sizes (round 2.13, decision 408). | Nothing. | No. |
 | **Test modes behind the flag only** | **Built in round 2.12** (decisions 404 to 407): the flag read from the address for the visit only, no switch and nothing stored (the old record removed on load); a visit without the flag shows the four standard tiles, fetches no file only a flagged visit can (the test modes, their pieces, tiles, options and words) and lists no downloaded test mode; a test-mode choice shows digits there and is kept; the flagged visit's line under the tiles; the Release 2 advanced frame without the switch. | Nothing. | No. |
 | **The recipe archive** | **Reconciled in round 2.13** (decisions 410, 411): `recipe-check.py` corrected so the standard recipes are the frames', run, and the archive written again (64 features); the site ships the same four recipes; the checker's validation, references, budgets, features and twenty safety cases are permanent tests, with the site's validator. The test modes' recipes stay the site's own until rounds 2.18 and 2.19. | Nothing. | No. |
-| **Hardening** | Release 1's passes (accessibility, performance, cross-browser, device checks) and every round's tests since. | The Release 2 pass over the standard modes and the new screens: WCAG 2.2 AA with axe-core, keyboard and screen readers, 44 px targets, reduced motion and low power; the budgets; the device checklist; the release review `docs/safety/release-2.md`; the owner's sign-off. | Yes. |
+| **Hardening** | Release 1's passes and every round's tests since. **Round 2.16** (decision 430): axe-core over the four standard modes, both tips and the three plain pages; every standard mode over seven hours and in a hidden tab; the live-session data test extended to Release 2; the device checklist's checks 32 to 37; the dependency audit and a secret scan; the release review `docs/safety/release-2.md`. | The device checks on real devices (the owner's run) and the owner's sign-off. | The sign-off. |
 
 ## 4. What else blocks a release
 
@@ -96,14 +96,14 @@ review; the owner runs every step that touches Cloudflare or GitHub's settings.
 
 | Item | Who | Status |
 | --- | --- | --- |
-| Serve the privacy and terms pages from the app (`/privacy`, `/terms`), from the same sources as today's | Built in round 2.16 | Today they live in the soon page's project |
-| A final legal review of the privacy and terms pages | **Owner** | To be confirmed by the owner before the release review |
-| Check the security headers against elapsed.io (`tooling/check-deployed.ts`) | Prepared in 2.16; run by the owner after the switch | Checked today against the test build only |
-| HSTS preload, only once every subdomain serves HTTPS | Owner, after the check | Not submitted |
-| GitHub secret scanning and push protection | Owner (repository settings) | Off |
-| Replace the soon page with the app on elapsed.io | Owner (`docs/deploy.md`, updated in 2.16) | The soon page is live |
-| Take production out from behind Cloudflare Access, keeping the test build behind it | Owner (`docs/deploy.md`, updated in 2.16) | Everything is behind Access |
-| The source code link in the settings footer | Built in 2.16, kept hidden | Hidden until the owner confirms the repository is public |
+| Serve the privacy and terms pages from the app (`/privacy`, `/terms`), from the same sources as today's | Built in round 2.16 | **Built** (decisions 426, 427): the app's edition of `docs/legal`, in the chosen theme; the settings footer links them on the site's own origin |
+| A final legal review of the privacy and terms pages | **Owner** | To be confirmed by the owner before the release review: the app's edition (decision 427 lists every change from the published text) and its effective date |
+| Check the security headers against elapsed.io (`tooling/check-deployed.ts`) | Prepared in 2.16; run by the owner after the switch | **Prepared**: the check now covers `/privacy`, `/terms`, `/credits/` and `pages.css`; run it as `docs/deploy.md`, Part 7, step 6 |
+| HSTS preload, only once every subdomain serves HTTPS | Owner, after the check | Not submitted; the steps are `docs/deploy.md`, Part 7, step 7 |
+| GitHub secret scanning and push protection | Owner (repository settings) | Off (GitHub's scanner refuses a scan until Advanced Security is on); a local scan of every tracked file found no secret (decision 430); steps in Part 7, step 8 |
+| Replace the soon page with the app on elapsed.io | Owner (`docs/deploy.md`, Part 7, steps 2 to 4) | The soon page is live; `npm run deploy:production` is ready (decision 429) |
+| Take production out from behind Cloudflare Access, keeping the test build behind it | Owner (`docs/deploy.md`, Part 7, step 5) | The test build is behind Access |
+| The source code link in the settings footer | Built in 2.16, kept hidden | **Built, hidden** (decision 428): one switch, `REPOSITORY_PUBLIC`, false until the owner confirms |
 | Make the repository public | **Owner** | To be confirmed by the owner before the release review; the source code link shows only then (serving the GPL-3.0 JavaScript likely counts as distributing it) |
 
 ### Answers that touch the standard modes
@@ -112,9 +112,10 @@ review; the owner runs every step that touches Cloudflare or GitHub's settings.
   in modes drawn round their time, a tap on hidden controls, fullscreen after a resume, the analog seconds hand
   at rest, how brief the outline is, the focus frames' 13 px, "change" and the tip): each is built one way and
   works; an answer that changes one becomes a small fix in the round it touches.
-- **Nothing else known:** no failing test (the reference run on 2026-11-24, after the recipes moved: 1,028
-  passed, 100 skipped, 0 failed in Chromium, Firefox and WebKit; `npm run check` passes), and every download
-  within its ceiling.
+- **Nothing else known:** no failing test (round 2.16's reference run in Chromium, Firefox and WebKit: 1,210
+  passed, 103 skipped, one test-only rounding failure in a test mode's test, fixed and passed again with the
+  live-session test in all three, and WebKit's timing tests run on their own; `npm run check` passes), and every
+  download within its ceiling.
 
 ## 5. The remaining work, in order
 
@@ -128,7 +129,7 @@ Ordered to release the standard modes soonest (every question that held a round 
 | **2.13** The standard sizes and the recipe archive (**done**) | The 260 px dial for ring and analog, the 48 px time inside ring and timeline, the compact 360 px timeline, every main block in the shared slot 26 px above the buttons, the analog rescale and its tile; the recipes reconciled (the frames win for the standard modes, and each corrected recipe is written back into the archive and checked again), the validator taking the archive's schema, and `recipe-check.py`'s checks made permanent tests. | The three ring frames, the three timeline frames, the analog frame, the Release 2 display frame's analog tile. | Nothing. |
 | **2.14** Seconds, settings and notices (**done**) | Seconds default "always" (stored settings never changed move to it), the seconds tip on the idle screen after the first completed session while seconds are still "always" (the fullscreen tip before the first session; one notice at a time; a dismissed or acted-on tip never returns), settings opening on display (first) with display mode at the top, the panel's slide, the seconds options' order, the credits page in the chosen theme and the legal pages' layout; every shared timer frame re-taken with seconds. | "the seconds tip, once only", "settings panel: slides in and out", "settings open on display, now first", "seconds: always (default), blur away, never", the running, focus, check-in and paused frames. | Nothing. |
 | **2.15** Check-ins switch and keep screen awake (**done**) | The two Release 2 timer controls; picture-in-picture's code behind the test flag, its row and button hidden at launch. | Release 2 settings: timer and display. | Nothing. |
-| **2.16** Hardening, the launch list and the release review | The Release 2 passes over the standard modes and screens; the privacy and terms pages served by the app; the launch list prepared for the owner (section 4); `docs/safety/release-2.md`. | Every frame of the release. | The owner's two tasks (legal review, the repository public) and sign-off. |
+| **2.16** Hardening, the launch list and the release review (**done**, awaiting the owner's sign-off) | The Release 2 passes over the standard modes and screens; the privacy and terms pages served by the app; the launch list prepared for the owner (section 4); `docs/safety/release-2.md`. | Every frame of the release. | The owner's two tasks (legal review, the repository public) and sign-off. |
 
 **After the release, behind the flag** (no earlier, unless the owner says so):
 

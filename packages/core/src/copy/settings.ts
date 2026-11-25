@@ -4,7 +4,7 @@
  * the brand module and these copy modules, lowercase.
  */
 
-import { REPOSITORY, SITE, SUPPORT } from '../brand.ts';
+import { REPOSITORY, REPOSITORY_PUBLIC, SUPPORT } from '../brand.ts';
 
 export const SETTINGS_COPY = {
   title: 'settings',
@@ -122,18 +122,18 @@ export const SETTINGS_COPY = {
   cancel: 'cancel',
   /**
    * Footer links appear only once their page exists and is ready (`shown`), as the settings frames
-   * draw them (owner, 2026-11-16). Privacy and terms are published at elapsed.io with the soon page
-   * (they move into the app at launch); feedback is an email to support. Source code stays hidden
-   * until the owner says the repository is public.
+   * draw them (owner, 2026-11-16). Privacy and terms are the app's own pages since round 2.16 (written by
+   * its build from docs/legal), so every copy of the site links its own; feedback is an email to
+   * support. Source code shows only once the owner confirms the repository is public (REPOSITORY_PUBLIC).
    */
   links: [
     { label: 'about', href: null, shown: false },
-    { label: 'privacy', href: `${SITE}/privacy`, shown: true },
-    { label: 'terms', href: `${SITE}/terms`, shown: true },
+    { label: 'privacy', href: '/privacy', shown: true },
+    { label: 'terms', href: '/terms', shown: true },
     { label: 'feedback', href: `mailto:${SUPPORT}`, shown: true },
     /** Every third-party work the site uses and its licence (round 2.11): the site's own page. */
     { label: 'credits', href: '/credits/', shown: true },
-    { label: 'source code', href: REPOSITORY, shown: false },
+    { label: 'source code', href: REPOSITORY, shown: REPOSITORY_PUBLIC },
     { label: 'donate', href: null, shown: false },
   ],
 } as const;
