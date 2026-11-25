@@ -87,3 +87,15 @@ None added or removed.
    draws, names or describes a test mode (decision 405).
 2. **The display frames' two later parts** (the redrawn analog tile, round 2.13; display as the first category,
    round 2.14) are applied to the reference as rules until built, and each rule goes in its round.
+
+## Revision, 2026-11-25 (plan version 14)
+
+Plan version 14 restates the round as built: the test modes only on a visit opened with `?test=modes` (or
+`?test=interstellar`), for that visit only; no switch and nothing stored; a chosen test mode shown as digits
+without the flag, the choice kept; and, newly explicit, the recipe pieces only those modes use loaded only on a
+flagged visit. Each piece was already its own download, fetched only when a chosen recipe uses it; the unflagged
+visit test now chooses each standard mode and checks that none of the twelve test-only piece, environment and
+results-view modules was fetched, and that the standard modes' own downloaded piece (the analog dial) was
+(decision 435). No code changed. `docs/plan.md` is version 14 (decision 432); `docs/recipes/` is unchanged, as
+no new archive came with the message and the one on hand gives the committed recipes once answer 35's corrections
+are applied (decision 434). Data, inputs, dependencies and the security surface are as above.

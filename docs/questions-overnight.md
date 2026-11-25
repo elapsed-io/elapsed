@@ -534,6 +534,14 @@ and the Oort cloud and Proxima Centauri (no action needed).
   live-session specs passed in all three (48 passed), and WebKit's timing tests on their own (2 passed, and the
   slow-processor test skipped, as in every WebKit run: it needs Chromium's DevTools Protocol).
 
+- 2026-11-25, after plan version 14: round 2.12 revised (decisions 432 to 435). `docs/plan.md` is version 14; the
+  canvas is version 1795591127-3d31; `docs/recipes/` is unchanged (no new archive came; the one on hand gives the
+  committed recipes once answer 35's corrections are applied, and `recipe-check.py` writes them back exactly); the
+  unflagged visit is now also tested to fetch none of the test modes' own pieces. `npm run check` passes (916 unit
+  tests). The reference run: 1,209 passed, 104 skipped, 1 failed and 3 not run, in Chromium only: a test-mode
+  performance test saw 52 to 74 ms tasks while I was running a local suite on the same machine, and the timing
+  tests waited on it; the whole Chromium suite run again alone passed (411 passed, 28 skipped).
+
 ## Questions for the owner
 
 Answered in changes 3 (2026-11-16): 2 (by the contrast switch), 4, 5, 6, 7, 8 and 9; their answers are built in

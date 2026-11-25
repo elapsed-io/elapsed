@@ -58,6 +58,39 @@ interface ManifestChunk {
 const FLAGGED_SOURCES = ['src/modes/test-modes.ts', 'src/settings/test-modes.ts', 'src/pip/pip.ts'];
 
 /**
+ * The piece library's modules only the test modes' recipes use (modes/recipe/library.ts): their environments, pieces
+ * and results views. Each is its own download, fetched when a chosen recipe uses it, so the core's loader names them;
+ * a visit without the flag must still never fetch one (plan version 14: "recipe pieces used only by test modes load
+ * only on a flagged visit").
+ */
+const TEST_ONLY_PIECES = [
+  'src/modes/pieces/tree/tree.ts',
+  'src/modes/pieces/tree/tree-replay.ts',
+  'src/modes/pieces/particles/particles.ts',
+  'src/modes/pieces/starfield/starfield.ts',
+  'src/modes/pieces/map/circles.ts',
+  'src/modes/pieces/map/shape.ts',
+  'src/modes/pieces/map/path.ts',
+  'src/modes/pieces/map/landmarks.ts',
+  'src/modes/pieces/light/light.ts',
+  'src/modes/pieces/stops/stops.ts',
+  'src/modes/views/profile.ts',
+  'src/modes/views/space.ts',
+];
+
+/** The files of each test-only piece's own chunk (its script and stylesheets). */
+function testOnlyPieceFiles(): Map<string, string[]> {
+  const manifest = JSON.parse(readFileSync(`${DIST}.vite/manifest.json`, 'utf8')) as Record<string, ManifestChunk>;
+  return new Map(
+    TEST_ONLY_PIECES.map((source) => {
+      const chunk = manifest[source];
+      if (chunk === undefined) throw new Error(`${source} is not its own chunk`);
+      return [source, [chunk.file, ...(chunk.css ?? [])].map((file) => `/${file}`)];
+    }),
+  );
+}
+
+/**
  * Every file of the build that only a flagged visit can fetch: what the flagged-only modules load, now or later (the
  * test modes, their pieces, art, styles, results views and settings tiles), less what the site loads without them.
  */
@@ -117,6 +150,12 @@ test('a visit without the flag shows only the four standard modes, downloads no 
   await expectStandardTilesOnly(page);
   await openCategory(page, 'advanced');
   await expect(page.getByRole('switch', { name: 'test modes' })).toHaveCount(0);
+  // Each standard mode chosen (the panel is open), so every piece the standard recipes use is fetched.
+  for (const mode of ['ring', 'timeline', 'analog', 'digits']) {
+    await openCategory(page, 'display');
+    await page.getByRole('radio', { name: mode }).click();
+    await expect(page.locator('.screen')).toHaveAttribute('data-mode', mode);
+  }
   await page.keyboard.press('Escape');
   await visitEverything(page);
 
@@ -124,6 +163,10 @@ test('a visit without the flag shows only the four standard modes, downloads no 
   // The flagged-only files exist (the test modes and their tiles), and none was fetched.
   expect(testOnly.size).toBeGreaterThan(10);
   expect([...fetched].filter((path) => testOnly.has(path))).toEqual([]);
+  // Nor any piece, environment or results view only the test modes' recipes use.
+  for (const [source, files] of testOnlyPieceFiles()) expect([...fetched].filter((path) => files.includes(path)), source).toEqual([]);
+  // While the standard modes' own pieces were (the analog dial is a download of its own).
+  expect([...fetched].some((path) => path.includes('/assets/dial-'))).toBe(true);
   // Nor any of the test modes' words: the scripts fetched carry none of their names, tiles' line or options.
   const scripts = [...fetched].filter((path) => path.endsWith('.js'));
   for (const path of scripts) {
