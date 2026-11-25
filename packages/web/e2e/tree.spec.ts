@@ -20,7 +20,7 @@ const TREE_PARTS = '.tree__cluster, .tree__stage, .tree__layer';
  * unless a test says otherwise.
  */
 async function sessionAt(page: Page, focus: number, own: Readonly<Record<string, unknown>> = {}): Promise<void> {
-  await openApp(page, { mode: 'tree', settings: { seconds: 'blur-away', ...own } });
+  await openApp(page, { mode: 'tree', settings: { hideSeconds: 'blur-away', ...own } });
   await primary(page).click();
   await page.clock.runFor(focus);
   await page.locator('.tree__svg').waitFor();
@@ -67,18 +67,13 @@ test('a session past an hour begins the tree’s year again', async ({ page }) =
   expect(await year(page)).toMatchObject({ states: ['paused'], times: [10 * MINUTE] });
 });
 
-for (const [how, settings, reduce] of [
-  ['low power', { lowPower: true }, false],
-  ['reduced motion', {}, true],
-] as const) {
-  test(`with ${how}, the tree stands at each minute’s start, stepping once a minute`, async ({ page }) => {
-    if (reduce) await page.emulateMedia({ reducedMotion: 'reduce' });
-    await sessionAt(page, 22 * MINUTE + 30 * SECOND, settings);
-    expect(await year(page)).toMatchObject({ states: ['paused'], times: [22 * MINUTE] });
-    await page.clock.runFor(30 * SECOND);
-    expect(await year(page)).toMatchObject({ states: ['paused'], times: [23 * MINUTE] });
-  });
-}
+test('with reduced motion, the tree stands at each minute’s start, stepping once a minute', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await sessionAt(page, 22 * MINUTE + 30 * SECOND);
+  expect(await year(page)).toMatchObject({ states: ['paused'], times: [22 * MINUTE] });
+  await page.clock.runFor(30 * SECOND);
+  expect(await year(page)).toMatchObject({ states: ['paused'], times: [23 * MINUTE] });
+});
 
 test('the isometric view is a mode option, and only the chosen view’s art loads', async ({ page }) => {
   const fetched: string[] = [];
@@ -157,7 +152,7 @@ test('control: the tree a season off fails its frame by far', async ({ page, bro
 test('results for the tree match the "results: tree" frame: full grown, in the season the session ended in', async ({ page, browser, browserName }) => {
   // Seconds blurring away, as the tree's frames are drawn (decision 419): a session of three hours otherwise
   // re-places the tree's animations every simulated second.
-  await openApp(page, { width: 720, height: 520, mode: 'tree', settings: { seconds: 'blur-away' } });
+  await openApp(page, { width: 720, height: 520, mode: 'tree', settings: { hideSeconds: 'blur-away' } });
   await page.clock.runFor(90 * SECOND);
   await primary(page).click();
   await page.clock.runFor(92 * MINUTE);

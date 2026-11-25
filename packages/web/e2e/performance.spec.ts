@@ -74,7 +74,7 @@ test.describe('wakes', () => {
   test('a two-hour session: one timer at a time, nothing drawn while hidden, the display caught up on return', async ({ page }) => {
     await page.setViewportSize({ width: 720, height: 450 });
     // The wakes counted here are blur away's (every second, then every ten, then every minute).
-    await seedSettings(page, { seconds: 'blur-away' });
+    await seedSettings(page, { hideSeconds: 'blur-away' });
     await page.clock.install({ time: T0 });
     await instrument(page);
     await page.goto('/');
@@ -145,7 +145,7 @@ async function openIn(page: Page, mode: string): Promise<void> {
   // Check-ins as far apart as the setting allows (3 hours); the long run answers each one. The standard modes run
   // with the default seconds (always); the test modes, drawn without seconds, with blur away (decision 419), which
   // also spares WebKit re-placing the tree's year of animations every simulated second for seven hours.
-  const seconds = TEST_MODE_IDS.includes(mode) ? { seconds: 'blur-away' } : {};
+  const seconds = TEST_MODE_IDS.includes(mode) ? { hideSeconds: 'blur-away' } : {};
   await seedSettings(page, { mode, checkInInterval: CONFIG.session.checkInInterval.max, ...seconds });
   await page.clock.install({ time: T0 });
   await page.goto(TEST_MODE_IDS.includes(mode) ? FLAGGED : '/');

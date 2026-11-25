@@ -342,6 +342,7 @@ export function settingsCustomProperties(): CustomProperties {
     '--tiles-columns': String(p.tiles.columns),
     '--mode-options-padding': px(p.modeOptions.paddingPx),
     '--mode-options-gap': px(p.modeOptions.gapPx),
+    '--focus-group-gap': px(p.focusGroup.gapPx),
     '--mode-options-radius': px(p.modeOptions.radiusPx),
     '--highlight-inset-y': px(CONFIG.design.settings.highlight.insetYPx),
     '--highlight-inset-x': px(CONFIG.design.settings.highlight.insetXPx),

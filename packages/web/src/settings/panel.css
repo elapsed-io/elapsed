@@ -536,8 +536,13 @@
     fill: currentColor;
   }
 
-  /* The chosen mode's options: a box on the page colour under the tiles (the Release 2 display frame). */
-  .mode-options {
+  /*
+   * A darkened box always holds settings that belong to the setting above it (plan version 14): the chosen mode's
+   * options under the tiles, check-in every under check-ins, the theme colours under the themes. A box on the page
+   * colour, as the display, timer and appearance frames draw it.
+   */
+  .mode-options,
+  .settings-box {
     display: flex;
     flex-direction: column;
     gap: var(--mode-options-gap);
@@ -550,9 +555,23 @@
     display: none;
   }
 
-  .mode-options__title {
+  .mode-options__title,
+  .settings-box__title {
     font-size: var(--mode-options-title);
     color: var(--color-muted);
+  }
+
+  .settings-box__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mode-options-gap);
+  }
+
+  /* The focus mode group: a plain group (no box) of four settings under its label, as the launch display frame. */
+  .focus-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--focus-group-gap);
   }
 
   /* ---- Theme cards ----------------------------------------------------- */

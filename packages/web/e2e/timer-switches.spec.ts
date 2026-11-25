@@ -28,14 +28,18 @@ test.describe('check-ins', () => {
     await openSettingsOn(page, 'timer');
     await expect(toggleNamed(page, 'check-ins')).toHaveAttribute('aria-checked', 'true');
     const row = page.locator('[data-setting="checkIns"]');
-    await expect(row.locator('.setting__help')).toHaveText('sessions without check-ins count towards your history, but won’t count towards competitions');
+    await expect(row.locator('.setting__help')).toHaveText('check-ins remind you that your session is still running. sessions without them still count toward your history, but not toward competitions.');
     // The warning is read with the switch.
-    await expect(toggleNamed(page, 'check-ins')).toHaveAccessibleDescription('sessions without check-ins count towards your history, but won’t count towards competitions');
-    // The Release 2 timer frame's order.
-    await expect(page.locator('.settings__body:visible .setting__label')).toHaveText(['seconds', 'check-ins', 'check-in every', 'pause limit', 'keep screen awake', 'shortcuts']);
+    await expect(toggleNamed(page, 'check-ins')).toHaveAccessibleDescription('check-ins remind you that your session is still running. sessions without them still count toward your history, but not toward competitions.');
+    // The Release 2 timer frame's order (plan version 14): check-in every in a darkened box under check-ins.
+    await expect(page.locator('.settings__body:visible .setting__label')).toHaveText(['check-ins', 'check-in every', 'pause before ending', 'keep screen awake', 'clock format', 'shortcuts']);
+    await expect(page.locator('.settings__body:visible .settings-box')).toHaveCount(1);
+    await expect(page.locator('.settings__body:visible .settings-box [data-setting="checkInInterval"]')).toHaveCount(1);
+    await expect(page.locator('[data-setting="pauseLimit"] .setting__help')).toHaveCount(0);
+    await expect(page.locator('[data-setting="keepAwake"] .setting__help')).toHaveText('while elapsed is the active tab');
   });
 
-  test('switched off, none falls due however long a session runs, and the pause limit still ends a long pause', async ({ page }) => {
+  test('switched off, none falls due however long a session runs, and pause before ending still ends a long pause', async ({ page }) => {
     await openApp(page, { settings: { checkIns: false } });
     await primary(page).click();
     await page.clock.runFor(5 * HOUR);
@@ -136,7 +140,7 @@ test.describe('keep screen awake', () => {
 
     await openSettingsOn(page, 'timer');
     await expect(toggleNamed(page, 'keep screen awake')).toHaveAttribute('aria-checked', 'true');
-    await expect(page.locator('[data-setting="keepAwake"] .setting__help')).toHaveText(`only while ${BRAND.name} is the active tab`);
+    await expect(page.locator('[data-setting="keepAwake"] .setting__help')).toHaveText(`while ${BRAND.name} is the active tab`);
     // Off: let go at once, and never asked for again, seen or not.
     await toggleNamed(page, 'keep screen awake').click();
     await expect.poll(() => wakeHeld(page)).toBe(false);

@@ -36,10 +36,12 @@ one that fails; the mode then shows digits (decision 319). What a recipe may hol
   mode mounts straight into the timer screen; every later one mounts out of sight in a root of its own beside the
   live one (round 2.10, `shell/mode-stage.ts`), with its own context, and takes the live root's place on one
   frame once it is ready. The context:
-  - `seconds`: how much of the seconds shows (`blur-away`, `always`, `never`);
+  - `seconds`: how much of the seconds shows (`blur-away`, `always`, `never`), from the person's "hide seconds after
+    starting" (never is `always`, right away is `never`);
   - `reducedMotion`: the system asks for reduced motion;
-  - `lowPower`: low power is on (by hand, or because of reduced motion): ambient animation stops and only
-    the time shows; anything that moves with time steps once a minute instead of gliding.
+  - `lowPower`: the still drawing is asked for, which since plan version 14 (low power in the backlog) is exactly
+    when the system asks for reduced motion: ambient animation stops and only the time shows; anything that moves
+    with time steps once a minute instead of gliding.
   - `options`: the mode's own options as they are now, by its recipe's option ids (ocean depth: `ocean-life`,
     `landmarks`; height: `landmarks`; tree: `tree-view`), each mode's from its own options box;
   - `chrome(share, dark)`: the contrast switch. Over a bright environment the mode says how far the time, the

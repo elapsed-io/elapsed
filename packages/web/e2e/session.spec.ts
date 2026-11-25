@@ -167,7 +167,7 @@ test('end only fades in: it never slides in from elsewhere', async ({ page }) =>
 
 test('with reduced motion the seconds cut out with a short crossfade instead of blurring', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await openApp(page, { settings: { seconds: 'blur-away' } });
+  await openApp(page, { settings: { hideSeconds: 'blur-away' } });
   await primary(page).click();
   await page.clock.runFor(5 * SECOND);
   const names = await page.locator('.time--main .time__ones').evaluate((element) => getComputedStyle(element).animationName);
@@ -185,7 +185,7 @@ test('a device clock set back mid-session loses no time', async ({ page }) => {
 });
 
 test('a seconds digit that has blurred away stays away: it never starts over at the next ten seconds', async ({ page }) => {
-  await openApp(page, { settings: { seconds: 'blur-away' } });
+  await openApp(page, { settings: { hideSeconds: 'blur-away' } });
   await primary(page).click();
   // Renders at 10 s and 20 s re-pin the blur animations to focused time while they play.
   await page.clock.runFor(25 * SECOND);

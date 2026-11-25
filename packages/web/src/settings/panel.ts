@@ -16,8 +16,8 @@
  * category first opens (On choice).
  */
 
-import { ANIMATION_SPEEDS, BRAND, CLOCK_FORMATS, CONFIG, declarationOf, FOCUS_HIDES, LEAVE_FULLSCREEN, normaliseHex, resetCategory, SECONDS_DISPLAYS, SETTINGS_CATEGORIES, SETTINGS_COPY, shownMode, STANDARD_MODES, THEME_IDS, withSetting } from '@stopwatch/core';
-import type { AnimationSpeed, ClockFormat, FontChoice, ModeChoice, SecondsDisplay, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId, FocusHide, LeaveFullscreen } from '@stopwatch/core';
+import { ANIMATION_SPEEDS, BRAND, CLOCK_FORMATS, CONFIG, declarationOf, FOCUS_HIDES, LEAVE_FULLSCREEN, HIDE_SECONDS, normaliseHex, resetCategory, SETTINGS_CATEGORIES, SETTINGS_COPY, shownMode, STANDARD_MODES, THEME_IDS, withSetting } from '@stopwatch/core';
+import type { AnimationSpeed, ClockFormat, FontChoice, HideSeconds, ModeChoice, SettingKey, Settings, SettingsCategory, ThemeColors, ThemeId, FocusHide, LeaveFullscreen } from '@stopwatch/core';
 import { parseSettingsFile, settingsFile, settingsFileName } from '@stopwatch/core/settings-file';
 import 'virtual:tokens/settings.css';
 import { html, svg } from '../dom.ts';
@@ -110,8 +110,6 @@ export class SettingsPanel {
   readonly #back: HTMLButtonElement;
   readonly #empty: HTMLDivElement;
   readonly #phone: MediaQueryList;
-  /** The system's reduced-motion preference, which also turns low power on. */
-  readonly #reducedMotion: MediaQueryList | null;
   readonly #fontTiles = new Map<FontChoice, HTMLButtonElement>();
   #ownTile: HTMLButtonElement | null = null;
   #fontNote: HTMLDivElement | null = null;
@@ -141,7 +139,6 @@ export class SettingsPanel {
   constructor(doc: Document, host: PanelHost) {
     this.#doc = doc;
     this.#host = host;
-    this.#reducedMotion = doc.defaultView?.matchMedia('(prefers-reduced-motion: reduce)') ?? null;
 
     this.#savedText = doc.createTextNode('');
     this.#saved = html(doc, 'div', { class: 'settings__saved', attrs: { role: 'status' } }, [iconElement(doc, 'check', 'settings__saved-icon'), this.#savedText]);
@@ -499,20 +496,22 @@ export class SettingsPanel {
   #items(id: CategoryId): Item[] {
     switch (id) {
       case 'timer':
-        // The Release 2 timer frame's order: the check-ins switch with its warning above the interval, which has no
-        // help line of its own any more; keep screen awake after the pause limit.
+        // The launch timer frame (plan version 14): check-ins with the interval in a darkened box under it (it
+        // belongs to the switch above), pause before ending, keep screen awake, clock format, the shortcuts.
         return [
-          this.#seconds(),
           this.#switchItem('checkIns', copy.checkIns),
-          this.#rangeItem('checkInInterval', { label: copy.checkIn.label, help: null }, formatHoursMinutes),
-          this.#rangeItem('pauseLimit', copy.pauseLimit, formatMinutes),
+          this.#boxed(this.#rangeItem('checkInInterval', { label: copy.checkIn.label, help: null }, formatHoursMinutes)),
+          this.#rangeItem('pauseLimit', { label: copy.pauseLimit.label, help: null }, formatMinutes),
           this.#switchItem('keepAwake', { label: copy.keepAwake.label, help: copy.keepAwake.help.replace('{name}', BRAND.name) }),
+          this.#clockFormat(),
           this.#shortcuts(),
         ];
       case 'display':
         return [this.#modes(), ...this.#modeOptions(), ...this.#pictureInPicture(), this.#focusView(), this.#downloads()];
       case 'appearance':
-        return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#clockFormat(), this.#animationSpeed(), this.#lowPower()];
+        // The launch appearance frame: the themes with their colours in a darkened box beneath (low power is in the
+        // backlog, and the clock format is in timer).
+        return [this.#themes(), this.#colors(), this.#fonts(), this.#timeSize(), this.#animationSpeed()];
       case 'notifications':
         return this.#notifications();
       case 'privacy':
@@ -524,21 +523,14 @@ export class SettingsPanel {
 
   // ---- Timer -------------------------------------------------------------
 
-  #seconds(): Item {
-    const options = SECONDS_DISPLAYS.map((value) => ({ value, label: copy.seconds.options[value] }));
-    const control = segmented<SecondsDisplay>(this.#doc, copy.seconds.label, options, (value) => {
-      this.#set('seconds', value);
-    });
-    this.#updates.push((settings) => {
-      control.update(settings.seconds);
-    });
-    const row = settingRow(this.#doc, label(this.#doc, copy.seconds.label), control.element, null);
-    // A notice's "change" can open settings on it (the seconds tip), outlined as the fullscreen switch is.
-    row.dataset['setting'] = 'seconds';
-    return {
-      element: row,
-      search: searchText(copy.seconds.label, ...options.map((option) => option.label)),
-    };
+  /**
+   * A darkened box: settings that belong to the setting above it (plan version 14), with an optional title, as the
+   * launch frames draw the check-in interval under check-ins, a mode's options and the theme colours.
+   */
+  #boxed(item: Item, title: string | null = null): Item {
+    const doc = this.#doc;
+    const box = html(doc, 'div', { class: 'settings-box' }, [...(title === null ? [] : [html(doc, 'div', { class: 'settings-box__title' }, [title])]), item.element]);
+    return { element: box, search: item.search };
   }
 
   #rangeItem(key: 'checkInInterval' | 'pauseLimit', text: { readonly label: string; readonly help: string | null }, format: (value: number) => string): Item {
@@ -552,6 +544,7 @@ export class SettingsPanel {
       control.update(settings[key]);
     });
     const element = settingRow(this.#doc, label(this.#doc, text.label, id), control.element, text.help);
+    element.dataset['setting'] = key;
     if (helpId !== undefined) element.querySelector('.setting__help')?.setAttribute('id', helpId);
     return { element, search: searchText(text.label, ...(text.help === null ? [] : [text.help])) };
   }
@@ -640,9 +633,9 @@ export class SettingsPanel {
   }
 
   /**
-   * The focus view group (the Release 2 display frame): hide controls while focusing, fullscreen when a session
-   * starts, and when to leave fullscreen, in a box like the modes' options. Where the page has no fullscreen
-   * (iPhones), both fullscreen choices are hidden.
+   * The focus mode group (plan version 14; the launch display frame): a plain group under the modes, not a darkened
+   * box, holding hide buttons after starting (with its line), hide seconds after starting, fullscreen after starting
+   * and leave fullscreen. Where the page has no fullscreen (iPhones), both fullscreen choices are hidden.
    */
   #focusView(): Item {
     const doc = this.#doc;
@@ -656,6 +649,10 @@ export class SettingsPanel {
     const hide = segmented<FocusHide>(doc, text.hide.label, hides, (value) => {
       this.#set('focusHide', value);
     });
+    const secondsOptions = HIDE_SECONDS.map((value) => ({ value, label: text.seconds.options[value] }));
+    const seconds = segmented<HideSeconds>(doc, text.seconds.label, secondsOptions, (value) => {
+      this.#set('hideSeconds', value);
+    });
     const fullscreen = toggle(doc, text.fullscreen.label, (on) => {
       this.#set('fullscreenOnStart', on);
     });
@@ -665,21 +662,24 @@ export class SettingsPanel {
     });
     this.#updates.push((settings) => {
       hide.update(settings.focusHide);
+      seconds.update(settings.hideSeconds);
       fullscreen.update(settings.fullscreenOnStart);
       leave.update(settings.leaveFullscreen);
     });
-    const fullscreenRows = [row(text.fullscreen.label, fullscreen.element, text.fullscreen.help, 'fullscreenOnStart'), row(text.leave.label, leave.element, null, 'leaveFullscreen')];
+    const fullscreenRows = [row(text.fullscreen.label, fullscreen.element, null, 'fullscreenOnStart'), row(text.leave.label, leave.element, null, 'leaveFullscreen')];
     // iPhones have no page fullscreen.
     const available = doc.fullscreenEnabled && typeof doc.documentElement.requestFullscreen === 'function';
     for (const element of fullscreenRows) element.hidden = !available;
-    const group = html(doc, 'div', { class: 'mode-options', attrs: { role: 'group', 'aria-label': text.title } }, [
-      html(doc, 'div', { class: 'mode-options__title' }, [text.title]),
+    const group = html(doc, 'div', { class: 'focus-group', attrs: { role: 'group', 'aria-label': text.title } }, [
+      html(doc, 'div', { class: 'setting__label' }, [text.title]),
       row(text.hide.label, hide.element, text.hide.help, 'focusHide'),
+      // A notice's "change" can open settings on it (the seconds tip), outlined as the fullscreen switch is.
+      row(text.seconds.label, seconds.element, null, 'hideSeconds'),
       ...fullscreenRows,
     ]);
     return {
       element: html(doc, 'div', { class: 'settings__item-contents' }, [group]),
-      search: searchText(text.title, text.hide.label, text.hide.help, ...hides.map((option) => option.label), ...(available ? [text.fullscreen.label, text.fullscreen.help, text.leave.label, ...leaves.map((option) => option.label)] : [])),
+      search: searchText(text.title, text.hide.label, text.hide.help, ...hides.map((option) => option.label), text.seconds.label, ...secondsOptions.map((option) => option.label), ...(available ? [text.fullscreen.label, text.leave.label, ...leaves.map((option) => option.label)] : [])),
     };
   }
 
@@ -789,7 +789,8 @@ export class SettingsPanel {
         html(doc, 'span', { class: 'color-row__value' }, [hexText, hex]),
       ]);
     });
-    return { element: settingGroup(doc, html(doc, 'div', { class: 'setting__label' }, [copy.colors.label]), rows), search: searchText(copy.colors.label, copy.colors.background, copy.colors.foreground, copy.colors.accent) };
+    // In a darkened box under the themes, titled as the launch appearance frame draws it: they belong to the theme.
+    return this.#boxed({ element: html(doc, 'div', { class: 'settings-box__rows', attrs: { role: 'group', 'aria-label': copy.colors.label } }, rows), search: searchText(copy.colors.label, copy.colors.background, copy.colors.foreground, copy.colors.accent) }, copy.colors.label);
   }
 
   #fonts(): Item {
@@ -907,30 +908,6 @@ export class SettingsPanel {
     });
     return { element: settingRow(this.#doc, label(this.#doc, text.label), control.element, text.help), search: searchText(text.label, text.help, ...options.map((option) => option.label)) };
   }
-
-  /**
-   * Low power: on by hand, and also whenever the system asks for reduced motion (plan, Loading and
-   * performance). While the system asks, the switch shows on and cannot be turned off here.
-   */
-  #lowPower(): Item {
-    const doc = this.#doc;
-    const text = copy.lowPower;
-    const control = toggle(doc, text.label, (on) => {
-      if (this.#reducedMotion?.matches === true) return;
-      this.#set('lowPower', on);
-    });
-    const show = (settings: Settings): void => {
-      const system = this.#reducedMotion?.matches === true;
-      control.update(settings.lowPower || system);
-      control.element.toggleAttribute('aria-disabled', system);
-    };
-    this.#updates.push(show);
-    this.#reducedMotion?.addEventListener('change', () => {
-      show(this.#host.controller.current);
-    });
-    return { element: settingRow(doc, html(doc, 'div', { class: 'setting__label', attrs: { 'aria-hidden': 'true' } }, [text.label]), control.element, text.help), search: searchText(text.label, text.help) };
-  }
-
 
   // ---- Notifications -----------------------------------------------------
 

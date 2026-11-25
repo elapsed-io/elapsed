@@ -1,7 +1,7 @@
 /**
- * Clock times such as "2:00 pm" (plan, Settings catalog > Appearance: clock
- * format, "follow region" by default). Follow region lets the browser's own
- * locale data decide 12- or 24-hour time; the other two force it. Elapsed
+ * Clock times such as "2:00 pm" (plan, Settings catalog > Timer: clock
+ * format, "system settings" by default). System settings lets the browser's
+ * own locale data decide 12- or 24-hour time; the other two force it. Elapsed
  * time is unaffected and always reads hh:mm.
  *
  * The result is lowercase like all interface text, with the narrow no-break
@@ -11,7 +11,7 @@
 
 import type { ClockFormat } from '@stopwatch/core';
 
-let clockFormat: ClockFormat = 'region';
+let clockFormat: ClockFormat = 'system';
 let formatter: Intl.DateTimeFormat | null = null;
 
 export function formatterFor(format: ClockFormat, locale?: string): Intl.DateTimeFormat {

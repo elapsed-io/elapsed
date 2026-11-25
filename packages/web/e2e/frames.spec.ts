@@ -29,7 +29,7 @@ const RUNNING_MOMENTS = [0.5, 3, 7.5, 9.9, 12, 35, 47.5, 59.5];
 for (const seconds of RUNNING_MOMENTS) {
   test(`running at ${String(seconds)} s matches the running frame as the seconds blur away`, async ({ page, browser, browserName }) => {
     // The running frame is "seconds: blur away", a choice since round 2.14 (always is the default).
-    await openApp(page, { settings: { seconds: 'blur-away' } });
+    await openApp(page, { settings: { hideSeconds: 'blur-away' } });
     await page.locator('.button--primary').click();
     await page.clock.runFor(seconds * SECOND);
     await settle(page);
@@ -43,7 +43,7 @@ for (const seconds of RUNNING_MOMENTS) {
 }
 
 test('the comparison tells the blur-away apart from a moment 4.5 s away (a control check)', async ({ page, browser }) => {
-  await openApp(page, { settings: { seconds: 'blur-away' } });
+  await openApp(page, { settings: { hideSeconds: 'blur-away' } });
   await page.locator('.button--primary').click();
   await page.clock.runFor(3 * SECOND);
   await settle(page);
@@ -54,7 +54,7 @@ test('the comparison tells the blur-away apart from a moment 4.5 s away (a contr
 });
 
 test('with seconds blurring away, running after a minute shows hh:mm exactly as the running frame', async ({ page, browser, browserName }) => {
-  await openApp(page, { settings: { seconds: 'blur-away' } });
+  await openApp(page, { settings: { hideSeconds: 'blur-away' } });
   await page.locator('.button--primary').click();
   await page.clock.runFor(75 * SECOND);
   await settle(page);

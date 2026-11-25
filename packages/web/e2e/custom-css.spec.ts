@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
 import { FONT, openApp, seedSettings } from './helpers.ts';
+import { SETTINGS_SCHEMA } from '@stopwatch/core';
 import { LOCKOUT_CSS, MALICIOUS_CSS } from './fixtures/malicious-css.ts';
 
 const panel = (page: Page) => page.locator('.settings');
@@ -311,7 +312,7 @@ test.describe('the malicious-CSS corpus', () => {
 
 test.describe('the settings file', () => {
   test('exports every choice and the custom CSS, not fonts', async ({ page }) => {
-    await seedSettings(page, { theme: 'sky', font: 'own' });
+    await seedSettings(page, { theme: 'sky', font: 'own', hideSeconds: 'right-away' });
     await seedCustomCss(page, '.time { color: rgb(7, 8, 9) }');
     await openApp(page, { width: 1280, height: 800 });
     await openAdvanced(page);
@@ -321,7 +322,7 @@ test.describe('the settings file', () => {
     expect(file.suggestedFilename()).toBe('elapsed-settings.json');
     const contents = JSON.parse(readFileSync(await file.path(), 'utf8')) as Record<string, unknown>;
     expect(contents).toMatchObject({ app: 'elapsed', kind: 'settings', version: 1, customCss: '.time { color: rgb(7, 8, 9) }' });
-    expect(contents['settings']).toMatchObject({ theme: 'sky', font: 'own', seconds: 'always' });
+    expect(contents['settings']).toMatchObject({ schema: SETTINGS_SCHEMA, theme: 'sky', font: 'own', hideSeconds: 'right-away' });
     expect(JSON.stringify(contents)).not.toContain('woff');
   });
 
@@ -346,7 +347,7 @@ test.describe('the settings file', () => {
       app: 'elapsed',
       kind: 'settings',
       version: 1,
-      settings: { theme: 'sky', font: 'own', seconds: 'always', timeSize: 999 },
+      settings: { schema: SETTINGS_SCHEMA, theme: 'sky', font: 'own', hideSeconds: 'right-away', timeSize: 999 },
       customCss: '@import url(/leak/import.css); .time { color: rgb(9, 8, 7) }',
     };
     await file.setInputFiles({ name: 'elapsed-settings.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(imported)) });
@@ -355,7 +356,7 @@ test.describe('the settings file', () => {
     await expect(note).toHaveText('your choices and custom css in one file. fonts and images stay on this device.');
     const settings = JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}') as Record<string, unknown>;
     // An invalid value takes its default; a font file never travels, so the font in use stays.
-    expect(settings).toMatchObject({ theme: 'sky', seconds: 'always', timeSize: 100, font: 'dm-mono' });
+    expect(settings).toMatchObject({ theme: 'sky', hideSeconds: 'right-away', timeSize: 100, font: 'dm-mono' });
     await expect.poll(() => timeColor(page)).toBe('rgb(9, 8, 7)');
     await page.waitForTimeout(100);
     expect(leaks).toEqual([]);
@@ -388,7 +389,7 @@ test.describe('destructive actions ask first', () => {
   });
 
   test('reset all settings: cancel keeps everything; confirming restores every choice and keeps custom CSS and fonts', async ({ page }) => {
-    await seedSettings(page, { theme: 'sky', seconds: 'always' });
+    await seedSettings(page, { theme: 'sky', hideSeconds: 'right-away' });
     await seedCustomCss(page, '.time { color: rgb(7, 8, 9) }');
     await openApp(page, { width: 1280, height: 800 });
     await page.keyboard.press(',');

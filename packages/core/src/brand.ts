@@ -124,17 +124,16 @@ export const BRAND = {
       timeline: 'timeline',
       analog: 'analog',
     },
+    /** Lightest to darkest background, as the appearance frame orders them (plan version 14: oxblood and lilac removed). */
     themes: {
-      graphite: 'graphite',
       paper: 'paper',
-      'deep-sea': 'deep sea',
-      forest: 'forest',
-      oxblood: 'oxblood',
-      plum: 'plum',
-      lilac: 'lilac',
-      sky: 'sky',
-      sand: 'sand',
       mint: 'mint',
+      sand: 'sand',
+      sky: 'sky',
+      forest: 'forest',
+      'deep-sea': 'deep sea',
+      plum: 'plum',
+      graphite: 'graphite',
     },
     icons: {
       settings: 'settings',
@@ -160,7 +159,7 @@ export const BRAND = {
     notify: {
       checkIn: { title: 'check in', body: 'a check-in is waiting. answer it within the hour to keep this time.' },
       /** {time} is the clock time the pause would end the session. */
-      pauseLimit: { title: 'pause limit', body: 'this session ends at {time} unless you resume.' },
+      pauseLimit: { title: 'pause before ending', body: 'this session ends at {time} unless you resume.' },
     },
   },
 

@@ -28,24 +28,28 @@ export const SETTINGS_COPY = {
     /** No reset of its own: "reset all settings" covers it (owner changes, item 13). */
     advanced: { name: 'advanced', reset: null },
   },
-  seconds: { label: 'seconds', options: { 'blur-away': 'blur away', always: 'always', never: 'never' } },
-  /** The check-ins switch (Release 2) and its warning, shown under it as the Release 2 timer frame draws it. */
-  checkIns: { label: 'check-ins', help: 'sessions without check-ins count towards your history, but won’t count towards competitions' },
-  /** Since the Release 2 timer frame the interval has no help line of its own: the switch's warning is above it. */
-  checkIn: { label: 'check-in every', help: 'a quiet prompt to confirm you’re still here' },
-  pauseLimit: { label: 'pause limit', help: 'a longer pause ends the session' },
-  /** Keep screen awake (Release 2): a screen wake lock while the site is the active tab. */
-  keepAwake: { label: 'keep screen awake', help: 'only while {name} is the active tab' },
+  /** The check-ins switch (Release 2) and its description, as the launch timer frame draws it. */
+  checkIns: { label: 'check-ins', help: 'check-ins remind you that your session is still running. sessions without them still count toward your history, but not toward competitions.' },
+  /** Under check-ins, in its darkened box (it belongs to the switch above it); no description of its own. */
+  checkIn: { label: 'check-in every' },
+  /** "Pause limit" before plan version 14; no description in the launch timer frame. */
+  pauseLimit: { label: 'pause before ending' },
+  /** Keep screen awake (Release 2): a screen wake lock while a session is open in the visible tab. */
+  keepAwake: { label: 'keep screen awake', help: 'while {name} is the active tab' },
+  /** Clock times (in timer since plan version 14): system settings, the default and leftmost. */
+  clockFormat: { label: 'clock format', options: { system: 'system settings', '12h': '12-hour', '24h': '24-hour' } },
   shortcuts: { label: 'shortcuts', items: ['space · start or pause', 'e · end', ', · settings'] },
-  mode: { label: 'display mode' },
+  mode: { label: 'mode' },
+  /** The focus mode group (plan version 14), a plain group under the modes, in the launch display frame's words. */
   focusView: {
-    title: 'focus view',
+    title: 'focus mode',
     hide: {
-      label: 'hide controls while focusing',
-      help: 'while a session runs, the buttons and icons step aside and the time grows. any key, click or mouse move brings them back.',
+      label: 'hide buttons after starting',
+      help: 'any mouse movement or keypress summons them back',
       options: { '3s': 'after 3 s', '10s': 'after 10 s', never: 'never' },
     },
-    fullscreen: { label: 'fullscreen when a session starts', help: 'hides your other tabs. press esc to leave at any time.' },
+    seconds: { label: 'hide seconds after starting', options: { never: 'never', 'blur-away': 'blur away', 'right-away': 'right away' } },
+    fullscreen: { label: 'fullscreen after starting' },
     leave: { label: 'leave fullscreen', options: { never: 'never', 'pause-or-end': 'on pause or end', end: 'on end' } },
   },
   theme: { label: 'theme' },
@@ -60,13 +64,11 @@ export const SETTINGS_COPY = {
     unusable: 'this browser couldn’t read that font. it was not loaded.',
   },
   timeSize: { label: 'time size' },
-  clockFormat: { label: 'clock format', options: { '12h': '12-hour', '24h': '24-hour', region: 'follow region' } },
   animationSpeed: {
     label: 'animation speed',
     options: { slower: 'slower', normal: 'normal', faster: 'faster' },
-    help: 'every animation, including the results replay',
+    help: 'affects all animations, including results replay',
   },
-  lowPower: { label: 'low power', help: 'stops ambient animation and shows only the time. on when your system asks for reduced motion.' },
   downloadedModes: {
     label: 'downloaded modes',
     help: 'modes download when you pick them and work offline. ones unused for 30 days are removed.',
@@ -75,8 +77,8 @@ export const SETTINGS_COPY = {
   },
   notifyCheckIns: { label: 'check-ins', name: 'check-in notifications', help: 'a system notification when a check-in appears' },
   notifyPauseLimit: {
-    label: 'pause limit',
-    name: 'pause limit notifications',
+    label: 'pause before ending',
+    name: 'pause before ending notifications',
     help: '{minutes} minutes before a pause would end the session',
   },
   notificationsNote: 'your device plays its own sound. on iPhone, notifications work only after adding {name} to the home screen.',

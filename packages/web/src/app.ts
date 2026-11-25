@@ -8,7 +8,7 @@
  * (after the tabulating screen); the session maximum notice.
  */
 
-import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, localDay, rulesFrom, shownMode, summarise, systemTimeZone, withSetting } from '@stopwatch/core';
+import { BRAND, CONFIG, EventBus, TimerEngine, computeView, currentMode, localDay, rulesFrom, secondsDisplayFor, shownMode, summarise, systemTimeZone, withSetting } from '@stopwatch/core';
 import type { ModeChoice, Session, TimerEvents, TimerView } from '@stopwatch/core';
 import { CountClient } from './counts/client.ts';
 import { CrashReporter } from './crash/reporter.ts';
@@ -85,7 +85,6 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     rules: () => undefined,
     mode: () => undefined,
     clockFormat: () => undefined,
-    lowPower: () => undefined,
     font: () => undefined,
     modeOptions: () => undefined,
   };
@@ -127,9 +126,6 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
         setClockFormat(format);
         effects.clockFormat(format);
       },
-      lowPower: (on) => {
-        effects.lowPower(on);
-      },
       font: () => {
         effects.font();
       },
@@ -145,8 +141,9 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
 
   const motionQuery = win.matchMedia('(prefers-reduced-motion: reduce)');
   const reducedMotion = (): boolean => motionQuery.matches;
-  // Low power: the setting, or the system's reduced-motion preference (plan, Loading and performance).
-  const lowPower = (): boolean => settings.current.lowPower || reducedMotion();
+  // Low power is in the backlog (plan version 14): wherever the plan says "reduced motion or low power", only the
+  // system's reduced-motion preference applies, so the modes' still drawing follows it alone.
+  const lowPower = (): boolean => reducedMotion();
   // The site owns this object; a changed setting updates it and redraws (modes/contract.ts).
   /** A mode's options (its recipe's), as the settings that hold them say (modes/manifests.ts). */
   const modeOptions = (id: string = registered.manifest.id): ModeOptions => {
@@ -169,7 +166,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   };
   // The live mode's context (each mode gets its own, with its options: shell/mode-stage.ts).
   let context: ModeContext = {
-    seconds: settings.current.seconds,
+    seconds: secondsDisplayFor(settings.current.hideSeconds),
     reducedMotion: reducedMotion(),
     lowPower: lowPower(),
     options: modeOptions(shownFor(settings.current.mode)),
@@ -299,7 +296,7 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     events: bus,
     newId: () => win.crypto.randomUUID(),
     onError: report,
-    seconds: settings.current.seconds,
+    seconds: secondsDisplayFor(settings.current.hideSeconds),
     rules: rulesFrom(settings.current),
     beforeWake: () => {
       sync.pull();
@@ -572,19 +569,19 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
   };
 
   // Notices (plan, Interface): one pill above the time on the idle screen, one at a time, each at its moment (plan
-  // version 13). Before the first completed session, the fullscreen tip, as it is about setting up: shown where the
-  // page can go fullscreen and while the setting is off. After it, once the person has watched the seconds tick, the
-  // seconds tip, while seconds are still "always". "change" makes the tip's change and opens settings on it; a tip
-  // dismissed or acted on has done its job and never returns.
+  // versions 13 and 14). Before the first completed session, the fullscreen tip, as it is about setting up: shown
+  // where the page can go fullscreen and while the setting is off. After it, once the person has watched the seconds
+  // tick, the seconds tip, while "hide seconds after starting" is still "never". "change" makes the tip's change and
+  // opens settings on it; a tip dismissed or acted on has done its job and never returns.
   const fullscreenTip: Notice = { id: 'fullscreen', text: BRAND.copy.notices.fullscreen, change: { key: 'fullscreenOnStart', value: true } };
-  const secondsTip: Notice = { id: 'seconds', text: BRAND.copy.notices.seconds, change: { key: 'seconds', value: 'blur-away' } };
+  const secondsTip: Notice = { id: 'seconds', text: BRAND.copy.notices.seconds, change: { key: 'hideSeconds', value: 'blur-away' } };
   const noticeNow = (): Notice | null => {
     if (current !== 'timer' || shown(engine.view).status !== 'idle') return null;
     if (!noticeStore.firstSession) {
       if (!fullscreenAvailable() || settings.current.fullscreenOnStart || noticeStore.dismissed(fullscreenTip.id)) return null;
       return fullscreenTip;
     }
-    if (settings.current.seconds !== 'always' || noticeStore.dismissed(secondsTip.id)) return null;
+    if (settings.current.hideSeconds !== 'never' || noticeStore.dismissed(secondsTip.id)) return null;
     return secondsTip;
   };
   const pill = new Pill(doc, {
@@ -682,7 +679,6 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     showLowPower();
     render(engine.view);
   };
-  effects.lowPower = motionChanged;
   motionQuery.addEventListener('change', motionChanged);
   effects.font = () => {
     mode.relayout?.();

@@ -85,7 +85,7 @@ test.describe('WCAG 2.2 AA rules (axe-core)', () => {
     });
   }
 
-  for (const theme of ['graphite', 'paper', 'sky', 'oxblood']) {
+  for (const theme of ['graphite', 'paper', 'sky', 'plum']) {
     test(`the ending countdown and the results in ${theme}`, async ({ page }) => {
       await openApp(page, { settings: { theme, mode: theme === 'sky' ? 'ring' : 'digits' } });
       await primary(page).click();
@@ -136,7 +136,7 @@ test.describe('WCAG 2.2 AA rules (axe-core)', () => {
 
   for (const width of [1280, 390]) {
     test(`every settings category, ${String(width)} px wide`, async ({ page }) => {
-      await openApp(page, { width, height: 900, settings: { theme: 'lilac' } });
+      await openApp(page, { width, height: 900, settings: { theme: 'mint' } });
       await page.keyboard.press(',');
       await page.locator('.settings').waitFor();
       for (const name of ['timer', 'display', 'appearance', 'notifications', 'privacy and data', 'advanced']) {
@@ -209,7 +209,7 @@ test.describe('keyboard', () => {
 test.describe('screen readers', () => {
   test('the time is read on request in words, never announced; paused, the pause length is read instead', async ({ page }) => {
     // What is read follows what is shown; with seconds blurring away (a choice), the ones digit goes after 10 s.
-    await openApp(page, { settings: { seconds: 'blur-away' } });
+    await openApp(page, { settings: { hideSeconds: 'blur-away' } });
     const time = page.locator('.time--main');
     await expect(time).toHaveAttribute('role', 'timer');
     await expect(time).toHaveAttribute('aria-label', '0 seconds focused');

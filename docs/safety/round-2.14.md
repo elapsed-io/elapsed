@@ -91,3 +91,32 @@ None added or removed.
 2. **The timer re-lays itself beside the panel** the moment the panel starts to open, and back once it has gone, as
    every settings frame places it (decision 416). It does not move while the panel moves. If the owner would rather
    the timer stayed centred under the panel, that is a change to the frames.
+
+## Revision, 2026-11-25 (plan version 14; canvas version 1795591127-3d31)
+
+- **Hide seconds after starting** (decision 438) replaces the seconds setting: never, blur away, right away
+  (default never, so seconds show by default), in display's focus mode group. The seconds tip's "change" sets it to
+  blur away and opens settings on that row, outlined; the tip shows only while it is still "never".
+- **The launch settings layout** (decisions 439 to 442): display ("mode", the chosen mode's options in a darkened
+  box, a plain "focus mode" group, downloaded modes); timer (check-ins with their new line, check-in every in a
+  darkened box, pause before ending, keep screen awake with its line, clock format, shortcuts); appearance (eight
+  larger theme tiles four to a row, lightest to darkest, the theme colours in a darkened box, font, time size,
+  animation speed with its line). "Pause limit" is "pause before ending" everywhere, its notification included.
+- **Removed:** the oxblood and lilac themes (their users read graphite) and low power (the backlog): only the
+  system's reduced-motion preference stills the modes.
+- **Data:** settings schema 5. No new field is sent or stored beyond the record's own: `hideSeconds` replaces
+  `seconds`; `lowPower` is no longer written and an old record's value is dropped on read, as any unknown field.
+  The migration only maps stored choices to their new names (decision 438) and never reads anything but the
+  record. `docs/data-inventory.md` is updated.
+- **Inputs:** a stored record or settings file of any schema is read through the same validation: each field is
+  checked against its declaration, a removed theme or old clock format value is mapped, anything else invalid takes
+  its default. A crafted record can at most choose one of the offered values.
+- **Dependencies, security surface:** unchanged. No new request, permission, header or module.
+- **Tests:** unit tests for schema 5 (each mapping, a never-changed old default, removed themes, "region",
+  `secondsDisplayFor`, the display, timer and appearance orders); `e2e/settings.spec.ts` (the launch display frame,
+  with the timer, flagged display, appearance and "opened by a notice" frames re-taken; a darkened box only under the
+  setting it belongs to; seconds by default and the three choices; six stored records migrated as the panel shows
+  them; pause before ending), `e2e/notices.spec.ts` (the seconds tip on the new row), `e2e/timer-switches.spec.ts`
+  (the timer frame's order and lines), `e2e/motion.spec.ts` (low power neither offered nor applied from an old
+  record; reduced motion stills the modes and lets go), `e2e/custom-css.spec.ts` (a settings file with the new
+  field), `e2e/credits.spec.ts` (the eight themes).

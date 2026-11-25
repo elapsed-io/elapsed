@@ -104,7 +104,6 @@ test('the ring holds where its glide had reached while paused, and glides on fro
 });
 
 for (const [how, prepare] of [
-  ['low power', async (page: Page) => openApp(page, { mode: 'ring', settings: { lowPower: true } })],
   [
     'reduced motion',
     async (page: Page) => {
@@ -180,7 +179,7 @@ test('the analog hands glide on their own layers, 6°, 0.5° and a whole turn a 
 });
 
 test('with the seconds set never to show, the analog seconds hand rests at its 60', async ({ page }) => {
-  await openApp(page, { mode: 'analog', settings: { seconds: 'never' } });
+  await openApp(page, { mode: 'analog', settings: { hideSeconds: 'right-away' } });
   await page.locator('.button--primary').click();
   await page.clock.runFor(30 * SECOND);
   expect(await analogHands(page)).toMatchObject({ minute: { glide: { state: 'running' } }, seconds: { rest: 'rotate(0deg)', glide: null } });
@@ -217,7 +216,6 @@ test('the analog hands hold where they reached while paused, and glide on from t
 });
 
 for (const [how, prepare] of [
-  ['low power', async (page: Page) => openApp(page, { mode: 'analog', settings: { lowPower: true } })],
   [
     'reduced motion',
     async (page: Page) => {
@@ -307,7 +305,6 @@ test('the timeline glides 10 px a minute on its own layers, anchored once a minu
 });
 
 for (const [how, prepare] of [
-  ['low power', async (page: Page) => openApp(page, { mode: 'timeline', settings: { lowPower: true } })],
   [
     'reduced motion',
     async (page: Page) => {
@@ -472,7 +469,6 @@ test.describe('ocean depth\'s water (drawn again when testing ends)', () => {
   });
 
   for (const [how, prepare] of [
-    ['low power', async (page: Page) => openApp(page, { mode: 'ocean', settings: { lowPower: true } })],
     [
       'reduced motion',
       async (page: Page) => {
@@ -603,7 +599,6 @@ test('deeper, ocean life comes from that zone only', async ({ page }) => {
 
 for (const [how, prepare] of [
   ['the option off', async (page: Page) => openApp(page, { mode: 'ocean', settings: { oceanLife: false } })],
-  ['low power', async (page: Page) => openApp(page, { mode: 'ocean', settings: { lowPower: true } })],
   [
     'reduced motion',
     async (page: Page) => {

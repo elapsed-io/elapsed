@@ -76,10 +76,11 @@ export const FRAME_CSS = '/* your custom css */\n.time {\n  letter-spacing: -0.0
 async function showLikeFrame(page: Page, name: SettingsFrameName): Promise<void> {
   await openPanel(page);
   await openCategory(page, 'timer');
-  // A change, so "saved" shows, ending on always (the default since round 2.14, as the timer frame draws it).
-  await page.getByRole('radio', { name: 'blur away' }).click();
-  await page.getByRole('radio', { name: 'always' }).click();
-  await openCategory(page, name === 'privacy' ? 'privacy and data' : name);
+  // A change, so "saved" shows, ending on system settings (the default, as the timer frame draws it).
+  const clock = page.getByRole('radiogroup', { name: 'clock format' });
+  await clock.getByRole('radio', { name: '12-hour' }).click();
+  await clock.getByRole('radio', { name: 'system settings' }).click();
+  await openCategory(page, name === 'privacy' ? 'privacy and data' : name === 'launch' ? 'display' : name);
   if (name === 'appearance') await expect(page.locator('.font-tile--loading')).toHaveCount(0);
   if (name === 'advanced') {
     await page.getByLabel('custom css').fill(FRAME_CSS);
@@ -115,10 +116,11 @@ test.describe('the panel matches its frames', () => {
   // stir the panel between its fresh paint and the screenshot.
   test.use({ awake: false });
 
-  for (const name of ['timer', 'display', 'notifications', 'appearance', 'advanced'] as const) {
-    test(`with ${name} open`, async ({ page, browser, browserName }) => {
-      // The Release 2 display frame draws a flagged visit (src/test-flag.ts) with ocean depth chosen: all eight
-      // tiles, the line under them and ocean depth's options.
+  for (const name of ['timer', 'launch', 'display', 'notifications', 'appearance', 'advanced'] as const) {
+    test(`with ${name === 'launch' ? 'display (the launch frame, an unflagged visit)' : name} open`, async ({ page, browser, browserName }) => {
+      // The launch display frame draws an unflagged visit with digits chosen: four tiles and no options box. The
+      // Release 2 display frame draws a flagged visit (src/test-flag.ts) with ocean depth chosen: all eight tiles, the
+      // line under them and ocean depth's options.
       await openApp(page, { width: 1280, height: SETTINGS_FRAME_HEIGHT[name], ...(name === 'display' ? { mode: 'ocean' } : {}) });
       await showLikeFrame(page, name);
       const site = await page.screenshot({ clip: { ...PANEL, y: 0, height: SETTINGS_FRAME_HEIGHT[name] } });
@@ -158,7 +160,7 @@ test.describe('the panel matches its frames', () => {
         for (const animation of saved?.getAnimations() ?? []) animation.cancel();
         saved?.style.setProperty('opacity', '1');
         const still = new CSSStyleSheet();
-        still.replaceSync('.mode-options .setting.setting--highlight::after { animation: none; opacity: 1 }');
+        still.replaceSync('.setting[data-setting].setting--highlight::after { animation: none; opacity: 1 }');
         document.adoptedStyleSheets = [...document.adoptedStyleSheets, still];
       });
       await settle(page);
@@ -247,11 +249,39 @@ test.describe('the panel matches its frames', () => {
     });
   }
 
+  test('a darkened box always holds settings that belong to the setting above it, and only those', async ({ page }) => {
+    await openApp(page, { width: 1280, height: 1160 });
+    await openPanel(page);
+    const boxes = page.locator('.settings__body:visible :is(.mode-options, .settings-box):visible');
+    const background = (locator: ReturnType<Page['locator']>) => locator.evaluate((element) => getComputedStyle(element).backgroundColor);
+    const pageColour = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    // Display, digits chosen: no options, so no box; the focus mode group is plain.
+    await openCategory(page, 'display');
+    await expect(boxes).toHaveCount(0);
+    const focus = page.getByRole('group', { name: 'focus mode' });
+    expect(await background(focus)).toBe('rgba(0, 0, 0, 0)');
+    await expect(focus.locator('.setting__label').first()).toHaveText('focus mode');
+    // Timer: check-in every, under check-ins.
+    await openCategory(page, 'timer');
+    await expect(boxes).toHaveCount(1);
+    await expect(boxes.locator('.setting__label')).toHaveText(['check-in every']);
+    expect(await background(boxes)).toBe(pageColour);
+    // The setting just above the box is the one it belongs to.
+    const above = (locator: ReturnType<Page['locator']>) => locator.evaluate((element) => element.previousElementSibling?.querySelector('.setting__label')?.textContent);
+    expect(await above(boxes)).toBe('check-ins');
+    // Appearance: the theme colours, under the themes.
+    await openCategory(page, 'appearance');
+    await expect(boxes).toHaveCount(1);
+    await expect(boxes.locator('.settings-box__title')).toHaveText('theme colors');
+    expect(await background(boxes)).toBe(pageColour);
+    expect(await above(boxes)).toBe('theme');
+  });
+
   test('each mode with options has its own box, shown only while it is chosen; height keeps its own landmarks switch', async ({ page }) => {
     await openApp(page, { width: 1280, height: 800, flagged: true });
     await openPanel(page);
     await openCategory(page, 'display');
-    // A mode's own boxes (the focus view group is drawn in the same kind of box, for every mode).
+    // A mode's own boxes (the focus mode group is a plain group since plan version 14, not a box).
     const visibleBoxes = page.locator('.mode-options[data-options]:visible');
     await expect(visibleBoxes).toHaveCount(0);
     await page.getByRole('radio', { name: 'ocean depth' }).click();
@@ -326,15 +356,15 @@ test.describe('opening and closing', () => {
     await expect(panel(page)).toBeHidden();
   });
 
-  test('opens on display, now the first category, with display mode at the top', async ({ page }) => {
+  test('opens on display, now the first category, with mode at the top', async ({ page }) => {
     await openApp(page, { width: 1280, height: 800 });
     await page.keyboard.press(',');
     await panel(page).waitFor();
     await expect(page.locator('.settings__row')).toHaveText(['display', 'timer', 'appearance', 'notifications', 'privacy and data', 'advanced']);
     await expect(row(page, 'display')).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator('.settings__row[aria-expanded="true"]')).toHaveCount(1);
-    // Display mode is the first setting on the page.
-    await expect(page.locator('.settings .setting:visible').first()).toContainText('display mode');
+    // Mode is the first setting on the page.
+    await expect(page.locator('.settings .setting:visible').first().locator('.setting__label').first()).toHaveText('mode');
   });
 
   /** The panel's running animations, as the test reads them: duration, easing and keyframes. */
@@ -484,7 +514,7 @@ test.describe('opening and closing', () => {
     expect(scripts.some((path) => path.includes('/assets/panel-'))).toBe(true);
     // Space on a button in the panel presses that button, not the timer.
     await openCategory(page, 'timer');
-    await page.getByRole('radio', { name: 'never' }).focus();
+    await page.getByRole('radio', { name: '12-hour' }).focus();
     await page.keyboard.press('Space');
     await expect(primary(page)).toHaveAccessibleName('pause');
   });
@@ -535,7 +565,7 @@ test.describe('changes', () => {
     await openApp(page, { width: 1280, height: 800 });
     await openPanel(page);
     await page.getByRole('searchbox', { name: 'search settings' }).fill('clock');
-    await expect(page.locator('.settings__row:visible')).toHaveText(['appearance']);
+    await expect(page.locator('.settings__row:visible')).toHaveText(['timer']);
     await expect(page.getByText('clock format')).toBeVisible();
     await expect(page.getByText('theme colors')).toBeHidden();
     await page.getByRole('searchbox', { name: 'search settings' }).fill('zzzz');
@@ -558,52 +588,63 @@ test.describe('changes', () => {
     expect(modes).toEqual(['digits', 'ring']);
   });
 
-  test('seconds can always show, or never show', async ({ page }) => {
-    await openApp(page, { settings: { seconds: 'always' } });
+  test('seconds can never hide, or hide right away', async ({ page }) => {
+    await openApp(page, { settings: { hideSeconds: 'never' } });
     await primary(page).click();
     await page.clock.runFor(2 * MINUTE + 5 * SECOND);
     await settle(page);
     await expect.poll(() => page.locator('.time--main').evaluate((element) => (element as HTMLElement).innerText)).toBe('00:02:05');
-    await page.evaluate(() => {
-      localStorage.setItem('settings', JSON.stringify({ schema: 1, seconds: 'never' }));
-    });
+    await page.evaluate((schema) => {
+      localStorage.setItem('settings', JSON.stringify({ schema, hideSeconds: 'right-away' }));
+    }, SETTINGS_SCHEMA);
     await page.reload();
     await page.locator('.button--primary').waitFor();
     // The seconds are in the text but not shown.
     await expect.poll(() => page.locator('.time--main').evaluate((element) => (element as HTMLElement).innerText)).toBe('00:02');
   });
 
-  test('seconds are always shown by default, offered as always, blur away, never', async ({ page }) => {
+  test('seconds show by default: hide seconds after starting is "never", offered as never, blur away, right away, in the focus mode group', async ({ page }) => {
     await openApp(page, { width: 1280, height: 800 });
     await primary(page).click();
     await page.clock.runFor(2 * MINUTE + 5 * SECOND);
     await settle(page);
     await expect.poll(() => page.locator('.time--main').evaluate((element) => (element as HTMLElement).innerText)).toBe('00:02:05');
     await openPanel(page);
-    await openCategory(page, 'timer');
-    const seconds = page.getByRole('radiogroup', { name: 'seconds' });
-    await expect(seconds.getByRole('radio')).toHaveText(['always', 'blur away', 'never']);
-    await expect(seconds.getByRole('radio', { name: 'always' })).toHaveAttribute('aria-checked', 'true');
+    await openCategory(page, 'display');
+    const group = page.getByRole('group', { name: 'focus mode' });
+    const seconds = group.getByRole('radiogroup', { name: 'hide seconds after starting' });
+    await expect(seconds.getByRole('radio')).toHaveText(['never', 'blur away', 'right away']);
+    await expect(seconds.getByRole('radio', { name: 'never' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radiogroup', { name: 'seconds', exact: true })).toHaveCount(0);
   });
 
-  // Plan version 13, answer 36: stored settings never changed move to the new defaults; a choice made is kept.
-  for (const { stored, shown } of [
-    { stored: { schema: 3, seconds: 'blur-away' }, shown: 'always' },
-    { stored: { schema: 2, seconds: 'blur-away', leaveFullscreen: 'end' }, shown: 'always' },
-    { stored: { schema: 3, seconds: 'never' }, shown: 'never' },
-    { stored: { schema: 4, seconds: 'blur-away' }, shown: 'blur away' },
+  // Plan version 14, answer 36 and section C: settings never changed move to the new defaults; a choice made is kept.
+  // Seconds: always to never, blur away to blur away, never to right away; "follow region" to "system settings";
+  // leave fullscreen to never; oxblood and lilac to graphite.
+  for (const { stored, shown, clock, theme } of [
+    { stored: { schema: 3, seconds: 'blur-away' }, shown: 'never' },
+    { stored: { schema: 2, seconds: 'blur-away', leaveFullscreen: 'end' }, shown: 'never' },
+    { stored: { schema: 3, seconds: 'never' }, shown: 'right away' },
+    { stored: { schema: 4, seconds: 'always' }, shown: 'never' },
+    { stored: { schema: 4, seconds: 'blur-away', clockFormat: 'region', theme: 'oxblood' }, shown: 'blur away', clock: 'system settings', theme: 'graphite' },
+    { stored: { schema: 4, seconds: 'never', clockFormat: '24h', theme: 'lilac' }, shown: 'right away', clock: '24-hour', theme: 'graphite' },
   ]) {
-    test(`stored ${JSON.stringify(stored)} shows seconds "${shown}"`, async ({ page }) => {
+    test(`stored ${JSON.stringify(stored)} reads as hide seconds "${shown}"${clock === undefined ? '' : `, clock format "${clock}", theme ${String(theme)}`}`, async ({ page }) => {
       await page.addInitScript((record) => {
         if (localStorage.getItem('settings') === null) localStorage.setItem('settings', record);
-          }, JSON.stringify(stored));
+      }, JSON.stringify(stored));
       await openApp(page, { width: 1280, height: 800 });
       await openPanel(page);
-      await openCategory(page, 'timer');
-      await expect(page.getByRole('radiogroup', { name: 'seconds' }).getByRole('radio', { name: shown })).toHaveAttribute('aria-checked', 'true');
-      if ('leaveFullscreen' in stored) {
-        await openCategory(page, 'display');
-        await expect(page.getByRole('radiogroup', { name: 'leave fullscreen' }).getByRole('radio', { name: 'never' })).toHaveAttribute('aria-checked', 'true');
+      await openCategory(page, 'display');
+      await expect(page.getByRole('radiogroup', { name: 'hide seconds after starting' }).getByRole('radio', { name: shown })).toHaveAttribute('aria-checked', 'true');
+      if ('leaveFullscreen' in stored) await expect(page.getByRole('radiogroup', { name: 'leave fullscreen' }).getByRole('radio', { name: 'never' })).toHaveAttribute('aria-checked', 'true');
+      if (clock !== undefined) {
+        await openCategory(page, 'timer');
+        await expect(page.getByRole('radiogroup', { name: 'clock format' }).getByRole('radio', { name: clock })).toHaveAttribute('aria-checked', 'true');
+      }
+      if (theme !== undefined) {
+        await openCategory(page, 'appearance');
+        await expect(page.locator('.theme-card[aria-checked="true"] .theme-card__name')).toHaveText(theme);
       }
     });
   }
@@ -648,7 +689,7 @@ test.describe('the session rules', () => {
     await expect(page.locator('.check-in')).toHaveClass(/overlay--shown/);
   });
 
-  test('a 5-minute pause limit ends a longer pause', async ({ page }) => {
+  test('a 5-minute pause before ending ends a longer pause', async ({ page }) => {
     await openApp(page, { width: 720, height: 520, settings: { pauseLimit: 5 * MINUTE } });
     await primary(page).click();
     await page.clock.runFor(2 * MINUTE);
@@ -822,7 +863,7 @@ test.describe('notifications', () => {
     await openApp(page, { width: 1280, height: 800 });
     await openPanel(page);
     await openCategory(page, 'notifications');
-    const pauseLimit = page.getByRole('switch', { name: 'pause limit notifications' });
+    const pauseLimit = page.getByRole('switch', { name: 'pause before ending notifications' });
     await pauseLimit.click();
     await expect(page.getByText('notifications are blocked for this site in the browser’s settings')).toBeVisible();
     await expect(pauseLimit).toHaveAttribute('aria-checked', 'false');
@@ -839,7 +880,7 @@ test.describe('phones', () => {
     await expect(page.locator('.settings__row:visible')).toHaveCount(6);
     await row(page, 'timer').tap();
     await expect(page.locator('.settings__row:visible')).toHaveText(['timer']);
-    await expect(page.getByRole('slider', { name: 'pause limit' })).toBeVisible();
+    await expect(page.getByRole('slider', { name: 'pause before ending' })).toBeVisible();
     await page.getByRole('button', { name: 'back to settings' }).tap();
     await expect(page.locator('.settings__row:visible')).toHaveCount(6);
     const box = await panel(page).boundingBox();

@@ -1,5 +1,5 @@
 /**
- * System notifications for check-ins and the pause limit (plan, Settings
+ * System notifications for check-ins and pause before ending (plan, Settings
  * catalog > Notifications), when the user has switched them on and the
  * browser allows them. The device plays its own sound; the site has none.
  *

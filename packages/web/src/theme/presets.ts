@@ -36,17 +36,16 @@ function preset(id: PresetId, background: string, foreground: string, accent: st
   };
 }
 
+/** Lightest to darkest background, as the appearance frame orders them (plan version 14: oxblood and lilac removed). */
 export const PRESETS: readonly Preset[] = [
-  preset('graphite', '#0E0F11', '#ECEAE4', '#35764E'),
   preset('paper', '#F6F5F2', '#1A1B1E', '#4A9E6C'),
-  preset('deep-sea', '#0F2B3B', '#DDEDF5', '#237389'),
-  preset('forest', '#14301F', '#E6F0DA', '#816819'),
-  preset('oxblood', '#3A1418', '#F5E4DF', '#B0472B'),
-  preset('plum', '#2A1838', '#EFE3F6', '#963ACB'),
-  preset('lilac', '#E2DAF5', '#231A38', '#8F75DC'),
-  preset('sky', '#D3E7F5', '#0F2638', '#4190D1'),
-  preset('sand', '#F3E3C3', '#2A1E0C', '#B9783C'),
   preset('mint', '#D5F0E3', '#0E2A1E', '#2F9D6C'),
+  preset('sand', '#F3E3C3', '#2A1E0C', '#B9783C'),
+  preset('sky', '#D3E7F5', '#0F2638', '#4190D1'),
+  preset('forest', '#14301F', '#E6F0DA', '#816819'),
+  preset('deep-sea', '#0F2B3B', '#DDEDF5', '#237389'),
+  preset('plum', '#2A1838', '#EFE3F6', '#963ACB'),
+  preset('graphite', '#0E0F11', '#ECEAE4', '#35764E'),
 ];
 
 export const DEFAULT_PRESET_ID: PresetId = 'graphite';

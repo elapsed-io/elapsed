@@ -97,10 +97,11 @@ test('without page fullscreen (iPhones) there is no tip, and neither fullscreen 
   await openApp(page, { width: 1280, height: 800 });
   await expect(pill(page)).toHaveCount(0);
   await openSettingsOn(page, 'display');
-  await expect(page.getByRole('group', { name: 'focus view' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'focus mode' })).toBeVisible();
   await expect(page.locator('[data-setting="fullscreenOnStart"]')).toBeHidden();
   await expect(page.locator('[data-setting="leaveFullscreen"]')).toBeHidden();
-  await expect(page.getByRole('group', { name: 'focus view' }).getByRole('radio', { name: 'after 3 s' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'focus mode' }).getByRole('radio', { name: 'after 3 s' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'focus mode' }).getByRole('radiogroup', { name: 'hide seconds after starting' })).toBeVisible();
 });
 
 test('the tip shows on the idle screen only', async ({ page }) => {
@@ -128,7 +129,8 @@ test('clear device data brings a dismissed tip back', async ({ page }) => {
 });
 
 // The seconds tip (round 2.14; plan version 13, answer 37; the "notice: seconds tip" frame): on the idle screen
-// after the person's first completed session, only while seconds are "always"; the fullscreen tip comes before it.
+// after the person’s first completed session, only while "hide seconds after starting" is "never" (plan version 14,
+// answer 37); the fullscreen tip comes before it.
 
 /** Starts a session, lets it run, ends it and goes back to the timer: a first completed session. */
 async function completeSession(page: Page): Promise<void> {
@@ -179,17 +181,17 @@ test('without page fullscreen (iPhones) the seconds tip still comes after the fi
   await expect(pill(page)).toHaveText(SECONDS_TIP);
 });
 
-test('"change" on the seconds tip sets seconds to blur away and opens settings on them, outlined in the accent colour', async ({ page }) => {
+test('"change" on the seconds tip sets hide seconds after starting to blur away and opens settings on it, outlined in the accent colour', async ({ page }) => {
   await pageFullscreen(page, true);
   await seedNotices(page, '{"schema":2,"dismissed":[],"firstSession":true}');
   await openApp(page, { width: 1280, height: 1220 });
   await expect(pill(page)).toHaveText(SECONDS_TIP);
   await page.getByRole('button', { name: 'change' }).click();
-  const row = page.locator('[data-setting="seconds"]');
+  const row = page.locator('[data-setting="hideSeconds"]');
   await expect(row).toHaveClass(/setting--highlight/);
   await expect(row).toBeInViewport();
-  await expect(page.getByRole('radiogroup', { name: 'seconds' }).getByRole('radio', { name: 'blur away' })).toHaveAttribute('aria-checked', 'true');
-  expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ seconds: 'blur-away' });
+  await expect(page.getByRole('radiogroup', { name: 'hide seconds after starting' }).getByRole('radio', { name: 'blur away' })).toHaveAttribute('aria-checked', 'true');
+  expect(JSON.parse((await page.evaluate(() => localStorage.getItem('settings'))) ?? '{}')).toMatchObject({ hideSeconds: 'blur-away' });
   await expect(pill(page)).toHaveCount(0);
   // Acted on, it never returns; nor does the fullscreen tip, whose moment has passed.
   await page.keyboard.press('Escape');
@@ -200,14 +202,14 @@ test('"change" on the seconds tip sets seconds to blur away and opens settings o
   await expect(pill(page)).toHaveCount(0);
 });
 
-test('the seconds tip shows only while seconds are "always", and a dismissed one never returns', async ({ page }) => {
+test('the seconds tip shows only while hide seconds after starting is "never", and a dismissed one never returns', async ({ page }) => {
   await pageFullscreen(page, true);
   await seedNotices(page, '{"schema":2,"dismissed":[],"firstSession":true}');
-  await openApp(page, { width: 1280, height: 800, settings: { seconds: 'never' } });
+  await openApp(page, { width: 1280, height: 800, settings: { hideSeconds: 'right-away' } });
   await expect(pill(page)).toHaveCount(0);
-  // Seconds back to always: the tip's moment has come.
-  await openSettingsOn(page, 'timer');
-  await page.getByRole('radiogroup', { name: 'seconds' }).getByRole('radio', { name: 'always' }).click();
+  // Back to never hiding them: the tip's moment has come.
+  await openSettingsOn(page, 'display');
+  await page.getByRole('radiogroup', { name: 'hide seconds after starting' }).getByRole('radio', { name: 'never' }).click();
   await page.keyboard.press('Escape');
   await expect(pill(page)).toHaveText(SECONDS_TIP);
   await page.getByRole('button', { name: 'dismiss' }).click();

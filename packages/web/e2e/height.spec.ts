@@ -136,7 +136,6 @@ test('paused, the sky holds where it reached, and glides on from there', async (
 });
 
 for (const [how, prepare] of [
-  ['low power', async (page: Page) => openApp(page, { mode: 'height', settings: { lowPower: true } })],
   [
     'reduced motion',
     async (page: Page) => {
@@ -297,20 +296,15 @@ test('paused below the stars: the altitude line, and no shooting stars', async (
   await expect(page.locator('.meteor')).toHaveCount(0);
 });
 
-for (const [how, settings, reduce] of [
-  ['low power', { lowPower: true }, false],
-  ['reduced motion', undefined, true],
-] as const) {
-  test(`with ${how}, nothing comes while paused: no shooting stars; the altitude line stays while in testing`, async ({ page }) => {
-    if (reduce) await page.emulateMedia({ reducedMotion: 'reduce' });
-    await restoreAt(page, 13_388_571, settings);
-    await primary(page).click();
-    await settle(page);
-    await expect(page.locator('.meteor')).toHaveCount(0);
-    // The line is the altitude's one sign on the theme's background (owner, round 2.11, bug 5; decision 396).
-    await expect(page.locator('.recipe__caption')).toHaveCSS('opacity', '1');
-  });
-}
+test('with reduced motion, nothing comes while paused: no shooting stars; the altitude line stays while in testing', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await restoreAt(page, 13_388_571);
+  await primary(page).click();
+  await settle(page);
+  await expect(page.locator('.meteor')).toHaveCount(0);
+  // The line is the altitude's one sign on the theme's background (owner, round 2.11, bug 5; decision 396).
+  await expect(page.locator('.recipe__caption')).toHaveCSS('opacity', '1');
+});
 
 // The height frames draw the sky as one gradient between the colours 1,500 m above and below; the site draws a
 // stop every 100 m, so it follows the light model's curve as it glides. Measured at most 2 levels apart.

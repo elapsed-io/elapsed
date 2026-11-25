@@ -460,8 +460,11 @@ export const CONFIG = {
       shortcuts: { textPx: 12, gapPx: 4 },
       /** A mode's options (the Release 2 display frame's "ocean depth options"): a box on the page colour. */
       modeOptions: { paddingPx: 12, gapPx: 12, radiusPx: 8, titlePx: 12 },
+      /** The focus mode group's label and rows (the launch display frame: a plain column, 14 px apart). */
+      focusGroup: { gapPx: 14 },
       tiles: { columns: 4, gapPx: 8, paddingTopPx: 10, paddingBottomPx: 8, radiusPx: 8, innerGapPx: 6, textPx: 12, previewWidthPx: 56, previewHeightPx: 32, previewDigitsPx: 15 },
-      themes: { columns: 5, gapPx: 8, swatchHeightPx: 42, radiusPx: 6, samplePx: 11, barWidthPx: 26, barHeightPx: 3, barRadiusPx: 2, namePx: 10, innerGapPx: 4, outlinePx: 2, outlineOffsetPx: 2 },
+      /** The launch appearance frame's larger tiles, four to a row (plan version 14). */
+      themes: { columns: 4, gapPx: 10, swatchHeightPx: 64, radiusPx: 8, samplePx: 15, barWidthPx: 34, barHeightPx: 3, barRadiusPx: 2, namePx: 11, innerGapPx: 4, outlinePx: 2, outlineOffsetPx: 2 },
       colors: { labelWidthPx: 74, swatchPx: 18, swatchRadiusPx: 4, textPx: 12, gapPx: 8 },
       fonts: { columns: 3, gapPx: 6, heightPx: 32, radiusPx: 6, paddingXPx: 6, textPx: 12 },
       selectedBorderPx: 2,

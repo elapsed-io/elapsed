@@ -77,6 +77,7 @@ export {
   FONT_CHOICES,
   MODE_CHOICES,
   FOCUS_HIDES,
+  HIDE_SECONDS,
   LEAVE_FULLSCREEN,
   STANDARD_MODES,
   TEST_MODES,
@@ -94,6 +95,7 @@ export {
   parseSettings,
   resetCategory,
   rulesFrom,
+  secondsDisplayFor,
   serializeSettings,
   withSetting,
 } from './settings/schema.ts';
@@ -106,6 +108,7 @@ export type {
   ModeChoice,
   TreeView,
   FocusHide,
+  HideSeconds,
   LeaveFullscreen,
   SettingDeclaration,
   SettingKey,

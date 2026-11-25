@@ -9,7 +9,7 @@
  * the setting that caused it, and has nothing left to do.
  */
 
-import { CONFIG, defaultSettings, rulesFrom, serializeSettings } from '@stopwatch/core';
+import { CONFIG, defaultSettings, rulesFrom, secondsDisplayFor, serializeSettings } from '@stopwatch/core';
 import type { ClockFormat, ModeChoice, RuleSettings, SecondsDisplay, Settings } from '@stopwatch/core';
 import { checkFontBytes, checkFontSize } from '../fonts/font-file.ts';
 import { FontLoader } from '../fonts/loader.ts';
@@ -26,8 +26,6 @@ export interface SettingsEffects {
   rules(rules: RuleSettings): void;
   mode(id: ModeChoice): void;
   clockFormat(format: ClockFormat): void;
-  /** The low power setting changed (the system's reduced-motion preference is the site's to add). */
-  lowPower(on: boolean): void;
   /** The font in use changed (after it loaded). */
   font(): void;
   /** A display mode's option changed (ocean life, results landmarks). */
@@ -243,11 +241,10 @@ export class SettingsController {
     const previous = this.#settings;
     if (serializeSettings(previous) === serializeSettings(next)) return;
     this.#settings = next;
-    if (next.seconds !== previous.seconds) this.#effects.seconds(next.seconds);
+    if (next.hideSeconds !== previous.hideSeconds) this.#effects.seconds(secondsDisplayFor(next.hideSeconds));
     if (next.checkIns !== previous.checkIns || next.checkInInterval !== previous.checkInInterval || next.pauseLimit !== previous.pauseLimit) this.#effects.rules(rulesFrom(next));
     if (next.mode !== previous.mode) this.#effects.mode(next.mode);
     if (next.clockFormat !== previous.clockFormat) this.#effects.clockFormat(next.clockFormat);
-    if (next.lowPower !== previous.lowPower) this.#effects.lowPower(next.lowPower);
     if (next.oceanLife !== previous.oceanLife || next.resultsLandmarks !== previous.resultsLandmarks || next.heightLandmarks !== previous.heightLandmarks || next.treeView !== previous.treeView) this.#effects.modeOptions();
     this.#applyAppearance();
     if (next.font !== previous.font) void this.#applyFont();

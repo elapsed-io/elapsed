@@ -23,9 +23,7 @@ describe('deriveTheme', () => {
     paper: '#646465',
     'deep-sea': '#91a5b0',
     forest: '#99aa96',
-    oxblood: '#ac9391',
     plum: '#a294ac',
-    lilac: '#5b5370',
     sky: '#485e6f',
     sand: '#665943',
     mint: '#496458',
@@ -67,16 +65,6 @@ describe('deriveTheme', () => {
     });
   });
 
-  it('derives lilac exactly as the design canvas', () => {
-    expect(deriveTheme(getPreset('lilac'))).toMatchObject({
-      scheme: 'light',
-      muted: '#5b5370',
-      faint: '#c3bbd7',
-      track: '#d1c9e4',
-      pause: '#bcb4cf',
-    });
-  });
-
   it('treats a background with luminance 0.4 or more as light', () => {
     expect(isLightBackground(parseHex('#aaaaaa'))).toBe(true); // luminance 0.402
     expect(isLightBackground(parseHex('#a9a9a9'))).toBe(false); // luminance 0.397
@@ -84,7 +72,7 @@ describe('deriveTheme', () => {
 
   it('classifies the presets as the plan describes', () => {
     const light = PRESETS.filter((p) => isLightBackground(p.background)).map((p) => p.id);
-    expect(light).toEqual(['paper', 'lilac', 'sky', 'sand', 'mint']);
+    expect(light).toEqual(['paper', 'mint', 'sand', 'sky']);
   });
 });
 

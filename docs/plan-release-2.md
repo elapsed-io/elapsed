@@ -29,11 +29,12 @@ From the plan, and nothing more:
 - **Device and session features:** a floating picture-in-picture timer (a display setting, off by
   default, only where the browser offers a window for a page; moved to a later release on 2026-11-24, its
   code kept behind the test flag and its row and button hidden at launch), a screen wake lock while the site is the
-  active tab (on by default), the switch to turn check-ins off (with its warning), the low power and
-  animation speed settings, downloaded-mode management, and automatic removal of modes unused for 30
-  days.
+  active tab (on by default; since plan version 14 only while a session is running or paused), the switch to
+  turn check-ins off (with its warning), the animation speed setting (low power moved to the backlog in plan
+  version 14), downloaded-mode management, and automatic removal of modes unused for 30 days.
 - **Motion:** anything that moves with time glides continuously through a linear CSS animation, and
-  steps once a minute only with reduced motion or low power: the timeline (Release 1), the ring's head
+  steps once a minute only with reduced motion (and low power, until plan version 14 moved it to the backlog): the
+  timeline (Release 1), the ring's head
   (moved here from Release 1's test run, decision 255) and the analog hand.
 - **Privacy:** no new data leaves the device; imported images and fonts stay on it, never uploaded or
   synced.
@@ -457,30 +458,40 @@ them), tests.
 
 ### 2.14 Seconds, settings and notices
 
-**Goal:** the shared screens as the current frames and plan version 13 draw them.
+**Goal:** the shared screens and the launch settings as the current frames and plan version 14 draw them.
 
 **Builds:**
 
-- Seconds default "always show" (options in the order always, blur away, never). Stored settings that were
-  never changed move to the new defaults (seconds "always", leave fullscreen "never"); a choice the person
-  made is kept (plan version 13). Every shared timer frame re-taken with seconds (running, the focus frames,
-  check-in, paused, paused after a missed check-in).
+- Seconds shown by default: "hide seconds after starting" (never, blur away, right away; default never), in
+  display's focus mode group (plan version 14; it was "seconds: always, blur away, never" in timer under plan version
+  13). Stored settings that were never changed move to the new defaults; a choice the person made is kept: seconds
+  always to never, blur away to blur away, never to right away; "follow region" to "system settings"; leave
+  fullscreen to never. Every shared timer frame re-taken with seconds (running, the focus frames, check-in, paused,
+  paused after a missed check-in).
 - The once-only seconds tip on the idle screen, "seconds can fade out after a minute, for a calmer screen",
-  with "change" (which sets seconds to blur away and opens settings on it, highlighted) and dismiss; only one
-  notice at a time. The fullscreen tip comes first, on the idle screen before the first session; the seconds
-  tip comes on the idle screen after the person's first completed session, and only if seconds are still
-  "always". A dismissed or acted-on tip never returns (plan version 13).
-- Settings open on display, now the first category, with display mode at the top; the panel slides 24 px in
-  from the right while fading in over 200 ms and out over 160 ms, so the timer behind it never moves.
+  with "change" (which sets hide seconds after starting to blur away and opens settings on it, highlighted) and
+  dismiss; only one notice at a time. The fullscreen tip comes first, on the idle screen before the first
+  session; the seconds tip comes on the idle screen after the person's first completed session, and only if hide
+  seconds after starting is still "never". A dismissed or acted-on tip never returns.
+- Settings open on display, now the first category, with mode at the top; the panel slides 24 px in from the
+  right while fading in over 200 ms and out over 160 ms, so the timer behind it never moves.
+- The launch settings layout (plan version 14; a darkened box always holds settings that belong to the setting
+  above it): display ("mode", the chosen mode's options in a darkened box, a plain "focus mode" group, downloaded
+  modes); timer (check-ins with their line, "check-in every" in a darkened box, "pause before ending" (renamed from
+  pause limit everywhere), keep screen awake, clock format with "system settings" first, shortcuts); appearance
+  (eight larger theme tiles four to a row, lightest to darkest; oxblood and lilac removed, their users on
+  graphite; the theme colours in a darkened box; font; time size; animation speed). Low power is removed (to the
+  backlog): only the system's reduced motion applies.
 - The credits page in the person's chosen theme and the site's typeface, laid out like the privacy and terms
   pages.
 
 **Tests:** the settings migration; the tip's once-only rule, "change" and dismiss, one notice at a time; the
 panel's motion (transform and opacity only, never moving the timer); the frames "the seconds tip, once
-only", "settings panel: slides in and out", "settings open on display, now first", "seconds: always
-(default), blur away, never", and every shared timer frame; the credits page in each theme.
+only", "settings panel: slides in and out", "settings, display (launch)", the launch timer and appearance
+frames, "settings, opened by a notice", and every shared timer frame; a darkened box only under its setting; the
+credits page in each theme.
 
-**Safety overview:** data (the notices store gains one id), tests.
+**Safety overview:** data (the notices store gains one id; settings schema 5), tests.
 
 ### 2.15 The check-ins switch and keep screen awake; picture-in-picture behind the flag
 

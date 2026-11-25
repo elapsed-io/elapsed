@@ -76,18 +76,16 @@ async function openCredits(page: Page, settings: string | null): Promise<string[
   return errors;
 }
 
-// The themes as the frames draw them (background, text), and which are light.
+// The themes as the frames draw them (background, text), lightest to darkest, and which are light.
 const THEMES = [
-  { id: 'graphite', background: '#0E0F11', text: '#ECEAE4', scheme: 'dark' },
   { id: 'paper', background: '#F6F5F2', text: '#1A1B1E', scheme: 'light' },
-  { id: 'deep-sea', background: '#0F2B3B', text: '#DDEDF5', scheme: 'dark' },
-  { id: 'forest', background: '#14301F', text: '#E6F0DA', scheme: 'dark' },
-  { id: 'oxblood', background: '#3A1418', text: '#F5E4DF', scheme: 'dark' },
-  { id: 'plum', background: '#2A1838', text: '#EFE3F6', scheme: 'dark' },
-  { id: 'lilac', background: '#E2DAF5', text: '#231A38', scheme: 'light' },
-  { id: 'sky', background: '#D3E7F5', text: '#0F2638', scheme: 'light' },
-  { id: 'sand', background: '#F3E3C3', text: '#2A1E0C', scheme: 'light' },
   { id: 'mint', background: '#D5F0E3', text: '#0E2A1E', scheme: 'light' },
+  { id: 'sand', background: '#F3E3C3', text: '#2A1E0C', scheme: 'light' },
+  { id: 'sky', background: '#D3E7F5', text: '#0F2638', scheme: 'light' },
+  { id: 'forest', background: '#14301F', text: '#E6F0DA', scheme: 'dark' },
+  { id: 'deep-sea', background: '#0F2B3B', text: '#DDEDF5', scheme: 'dark' },
+  { id: 'plum', background: '#2A1838', text: '#EFE3F6', scheme: 'dark' },
+  { id: 'graphite', background: '#0E0F11', text: '#ECEAE4', scheme: 'dark' },
 ] as const;
 
 for (const theme of THEMES) {

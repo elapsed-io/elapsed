@@ -4,6 +4,7 @@ import { CONFIG } from '../config.ts';
 import {
   ANIMATION_SPEEDS,
   FONT_CHOICES,
+  HIDE_SECONDS,
   MODE_CHOICES,
   SETTINGS,
   SETTINGS_CATEGORIES,
@@ -17,6 +18,7 @@ import {
   parseSettings,
   resetCategory,
   rulesFrom,
+  secondsDisplayFor,
   serializeSettings,
   withSetting,
 } from './schema.ts';
@@ -34,7 +36,7 @@ describe('settings schema', () => {
   it('has the plan defaults and ranges', () => {
     const defaults = defaultSettings();
     expect(defaults).toMatchObject({
-      seconds: 'always',
+      hideSeconds: 'never',
       checkInInterval: 120 * MINUTE,
       pauseLimit: 30 * MINUTE,
       mode: 'digits',
@@ -42,7 +44,7 @@ describe('settings schema', () => {
       colors: null,
       font: 'archivo',
       timeSize: 100,
-      clockFormat: 'region',
+      clockFormat: 'system',
       notifyCheckIns: false,
       notifyPauseLimit: false,
       usageCounts: true,
@@ -55,8 +57,9 @@ describe('settings schema', () => {
     expect(range('timeSize')).toMatchObject({ min: 50, max: 150 });
   });
 
-  it('offers the modes built so far, the ten presets, and 13 built-in fonts plus your own', () => {
+  it('offers the modes built so far, the eight presets lightest to darkest, and 13 built-in fonts plus your own', () => {
     expect(MODE_CHOICES).toEqual(['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', 'tree', 'interstellar']);
+    expect(THEME_IDS).toEqual(['paper', 'mint', 'sand', 'sky', 'forest', 'deep-sea', 'plum', 'graphite']);
     expect(THEME_IDS).toEqual(Object.keys(BRAND.copy.themes));
     expect(FONT_CHOICES).toHaveLength(14);
     expect(FONT_CHOICES).not.toContain('lexend');
@@ -65,8 +68,8 @@ describe('settings schema', () => {
 
   it('keeps valid fields and resets only the invalid ones', () => {
     const settings = migrateSettings({
-      schema: 1,
-      seconds: 'never',
+      schema: 5,
+      hideSeconds: 'right-away',
       checkInInterval: 31 * MINUTE,
       pauseLimit: 10 * MINUTE,
       mode: 'sundial',
@@ -80,7 +83,7 @@ describe('settings schema', () => {
       extra: '<script>',
     });
     expect(settings).toMatchObject({
-      seconds: 'never',
+      hideSeconds: 'right-away',
       checkInInterval: 120 * MINUTE,
       pauseLimit: 10 * MINUTE,
       mode: 'digits',
@@ -108,35 +111,58 @@ describe('settings schema', () => {
     expect(migrateSettings(JSON.parse(serializeSettings(migrateSettings({ schema: 3, leaveFullscreen: 'end' })))).leaveFullscreen).toBe('end');
   });
 
-  it('migrates schema 1 settings to schema 2: every choice kept, the new ones at their defaults', () => {
-    const stored = { schema: 1, seconds: 'always', mode: 'ring', theme: 'sky', timeSize: 120, clockFormat: '12h', usageCounts: false };
-    const settings = migrateSettings(stored);
-    expect(settings).toMatchObject({ ...stored, schema: SETTINGS_SCHEMA, animationSpeed: 'normal', lowPower: false });
-    expect(SETTINGS_SCHEMA).toBe(4);
-    expect(JSON.parse(serializeSettings(settings))).toMatchObject({ schema: 4, animationSpeed: 'normal', lowPower: false });
+  it('migrates schema 1 settings: every choice kept, the new ones at their defaults', () => {
+    const stored = { schema: 1, mode: 'ring', theme: 'sky', timeSize: 120, clockFormat: '12h', usageCounts: false };
+    const settings = migrateSettings({ ...stored, seconds: 'always' });
+    expect(settings).toMatchObject({ ...stored, schema: SETTINGS_SCHEMA, hideSeconds: 'never', animationSpeed: 'normal' });
+    expect(SETTINGS_SCHEMA).toBe(5);
+    expect(JSON.parse(serializeSettings(settings))).toMatchObject({ schema: 5, animationSpeed: 'normal' });
   });
 
-  it('migrates seconds to always where they were never changed (round 2.14): an older record at the old default, blur away', () => {
-    expect(defaultSettings().seconds).toBe('always');
-    expect(declarationOf('seconds')).toMatchObject({ options: ['always', 'blur-away', 'never'], default: 'always' });
+  it('maps the seconds to "hide seconds after starting" (schema 5): the same screen for the same choice, never-changed ones to the default', () => {
+    expect(defaultSettings().hideSeconds).toBe('never');
+    expect(declarationOf('hideSeconds')).toMatchObject({ category: 'display', options: ['never', 'blur-away', 'right-away'], default: 'never', target: { engine: 'secondsDisplay' } });
+    expect(SETTINGS.map((setting) => setting.key)).not.toContain('seconds');
+    // Schema 4: always → never, blur away (then a choice) → blur away, never → right away.
+    expect(migrateSettings({ schema: 4, seconds: 'always' }).hideSeconds).toBe('never');
+    expect(migrateSettings({ schema: 4, seconds: 'blur-away' }).hideSeconds).toBe('blur-away');
+    expect(migrateSettings({ schema: 4, seconds: 'never' }).hideSeconds).toBe('right-away');
+    // Older records: blur away was the default there, never changed, so it reads as the new default.
     for (const schema of [1, 2, 3]) {
-      expect(migrateSettings({ schema, seconds: 'blur-away', theme: 'sky' })).toMatchObject({ schema: 4, seconds: 'always', theme: 'sky' });
-      // A choice the person made is kept.
-      expect(migrateSettings({ schema, seconds: 'never' }).seconds).toBe('never');
-      expect(migrateSettings({ schema, seconds: 'always' }).seconds).toBe('always');
+      expect(migrateSettings({ schema, seconds: 'blur-away', theme: 'sky' })).toMatchObject({ schema: 5, hideSeconds: 'never', theme: 'sky' });
+      expect(migrateSettings({ schema, seconds: 'never' }).hideSeconds).toBe('right-away');
+      expect(migrateSettings({ schema, seconds: 'always' }).hideSeconds).toBe('never');
     }
-    // A record with no schema is older still.
-    expect(migrateSettings({ seconds: 'blur-away' }).seconds).toBe('always');
-    // From schema 4 on, blur away is a choice like any other, kept as stored.
-    expect(migrateSettings({ schema: 4, seconds: 'blur-away' }).seconds).toBe('blur-away');
-    expect(migrateSettings(JSON.parse(serializeSettings(migrateSettings({ schema: 4, seconds: 'blur-away' })))).seconds).toBe('blur-away');
+    expect(migrateSettings({ seconds: 'blur-away' }).hideSeconds).toBe('never');
+    // Anything else reads as the default; from schema 5 on the field is read as itself, and an old one is ignored.
+    expect(migrateSettings({ schema: 4, seconds: 'sometimes' }).hideSeconds).toBe('never');
+    expect(migrateSettings({ schema: 5, hideSeconds: 'blur-away', seconds: 'never' }).hideSeconds).toBe('blur-away');
+    expect(migrateSettings(JSON.parse(serializeSettings(migrateSettings({ schema: 5, hideSeconds: 'right-away' })))).hideSeconds).toBe('right-away');
+    expect(serializeSettings(defaultSettings())).not.toContain('"seconds"');
+    // The engine's display for each.
+    expect(HIDE_SECONDS.map((hide) => secondsDisplayFor(hide))).toEqual(['always', 'blur-away', 'never']);
     // Leave fullscreen's own rule still holds alongside.
-    expect(migrateSettings({ schema: 3, seconds: 'blur-away', leaveFullscreen: 'end' })).toMatchObject({ seconds: 'always', leaveFullscreen: 'end' });
+    expect(migrateSettings({ schema: 2, seconds: 'blur-away', leaveFullscreen: 'end' })).toMatchObject({ hideSeconds: 'never', leaveFullscreen: 'never' });
   });
 
-  it('adds animation speed (slower, normal, faster) and low power to appearance', () => {
+  it('reads the removed themes as graphite, "follow region" as system settings, and drops low power (schema 5)', () => {
+    expect(migrateSettings({ schema: 4, theme: 'oxblood' }).theme).toBe('graphite');
+    expect(migrateSettings({ schema: 4, theme: 'lilac' }).theme).toBe('graphite');
+    // Colours of the person's own are kept whatever the theme was.
+    expect(migrateSettings({ schema: 4, theme: 'lilac', colors: { background: '#112233', foreground: '#ffffff', accent: '#00ff00' } }).colors).toEqual({ background: '#112233', foreground: '#ffffff', accent: '#00ff00' });
+    expect(migrateSettings({ schema: 4, theme: 'mint' }).theme).toBe('mint');
+    expect(migrateSettings({ schema: 4, clockFormat: 'region' }).clockFormat).toBe('system');
+    expect(migrateSettings({ schema: 4, clockFormat: '12h' }).clockFormat).toBe('12h');
+    expect(declarationOf('clockFormat')).toMatchObject({ category: 'timer', options: ['system', '12h', '24h'], default: 'system' });
+    const migrated = migrateSettings({ schema: 4, lowPower: true });
+    expect(migrated).not.toHaveProperty('lowPower');
+    expect(SETTINGS.map((setting) => setting.key)).not.toContain('lowPower');
+    // From schema 5 the old ids are simply invalid, so they read as the defaults too.
+    expect(migrateSettings({ schema: 5, theme: 'oxblood', clockFormat: 'region' })).toMatchObject({ theme: 'graphite', clockFormat: 'system' });
+  });
+
+  it('has animation speed (slower, normal, faster) in appearance', () => {
     expect(declarationOf('animationSpeed')).toMatchObject({ category: 'appearance', options: ['slower', 'normal', 'faster'], default: 'normal', target: { css: '--motion-scale' } });
-    expect(declarationOf('lowPower')).toMatchObject({ category: 'appearance', kind: 'switch', default: false });
     expect(Object.keys(CONFIG.motion.speeds)).toEqual([...ANIMATION_SPEEDS]);
     expect(CONFIG.motion.speeds.normal).toBe(CONFIG.motion.durationScale);
     expect(CONFIG.motion.speeds.slower * CONFIG.motion.speeds.faster).toBeCloseTo(1);
@@ -172,10 +198,10 @@ describe('settings schema', () => {
 
   it('resets one category to its defaults and leaves the others', () => {
     let settings = withSetting(defaultSettings(), 'theme', 'mint');
-    settings = withSetting(settings, 'seconds', 'always');
+    settings = withSetting(settings, 'hideSeconds', 'right-away');
     const reset = resetCategory(settings, 'appearance');
     expect(reset.theme).toBe('graphite');
-    expect(reset.seconds).toBe('always');
+    expect(reset.hideSeconds).toBe('right-away');
   });
 
   it('gives the engine its rules', () => {
@@ -188,7 +214,10 @@ describe('settings schema', () => {
     expect(declarationOf('checkIns')).toMatchObject({ kind: 'switch', category: 'timer', default: true });
     expect(declarationOf('keepAwake')).toMatchObject({ kind: 'switch', category: 'timer', default: true });
     expect(declarationOf('pictureInPicture')).toMatchObject({ kind: 'switch', category: 'display', default: false });
-    expect(SETTINGS.filter((setting) => setting.category === 'timer').map((setting) => setting.key)).toEqual(['seconds', 'checkIns', 'checkInInterval', 'pauseLimit', 'keepAwake']);
+    expect(SETTINGS.filter((setting) => setting.category === 'timer').map((setting) => setting.key)).toEqual(['checkIns', 'checkInInterval', 'pauseLimit', 'keepAwake', 'clockFormat']);
+    // Display: the mode and its options, then the focus mode group in the launch frame's order.
+    expect(SETTINGS.filter((setting) => setting.category === 'display').map((setting) => setting.key)).toEqual(['mode', 'oceanLife', 'resultsLandmarks', 'heightLandmarks', 'focusHide', 'hideSeconds', 'fullscreenOnStart', 'leaveFullscreen', 'treeView', 'pictureInPicture']);
+    expect(SETTINGS.filter((setting) => setting.category === 'appearance').map((setting) => setting.key)).toEqual(['theme', 'colors', 'font', 'timeSize', 'animationSpeed']);
     // Older settings, without the switches, read them at their defaults; a stored choice is kept.
     expect(migrateSettings({ schema: 3, seconds: 'never' })).toMatchObject({ checkIns: true, keepAwake: true, pictureInPicture: false });
     expect(migrateSettings({ schema: 4, checkIns: false, keepAwake: false, pictureInPicture: true })).toMatchObject({ checkIns: false, keepAwake: false, pictureInPicture: true });

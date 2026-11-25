@@ -17,7 +17,7 @@ const primary = (page: Page) => page.locator('.button--primary');
  * sessions blur them away unless a test says otherwise.
  */
 async function restoreAt(page: Page, focusMs: number, own?: Readonly<Record<string, unknown>>): Promise<void> {
-  const settings = { seconds: 'blur-away', ...own };
+  const settings = { hideSeconds: 'blur-away', ...own };
   const session = createSession({ id: '7d1e3a5c-2b4f-4c6d-8e0a-1b3c5d7e9f20', mode: 'interstellar', at: T_READY - focusMs, timeZone: 'UTC' });
   await page.goto('/sw-control.json');
   await page.evaluate((text) => {
@@ -435,8 +435,9 @@ test('one sky everywhere: the HYG sky shows from the start, still while running;
   await expect(page.locator('.sky img')).toHaveCount(2);
 });
 
-test('with low power the paused sky stays still and no comets come', async ({ page }) => {
-  await restoreAt(page, 84 * MINUTE + 500, { lowPower: true });
+test('with reduced motion the paused sky stays still and no comets come', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await restoreAt(page, 84 * MINUTE + 500);
   await primary(page).click();
   await settle(page);
   expect((await skyStrip(page)).state).toBe('none');
@@ -450,7 +451,8 @@ test('the map glides a minute at a time while running', async ({ page }) => {
   for (const duration of glides) expect(duration).toBe(MINUTE);
 });
 
-test('with low power the map steps once a minute', async ({ page }) => {
-  await restoreAt(page, 84 * MINUTE + 30 * SECOND, { lowPower: true });
+test('with reduced motion the map steps once a minute', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await restoreAt(page, 84 * MINUTE + 30 * SECOND);
   expect(await page.locator('.camera').evaluate((camera) => camera.getAnimations({ subtree: true }).length)).toBe(0);
 });
