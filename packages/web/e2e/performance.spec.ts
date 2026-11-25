@@ -159,8 +159,16 @@ for (const mode of ['digits', 'ring', 'timeline', 'analog', 'ocean', 'height', '
   test(`${mode}: seven hours running keep the page and its animations flat`, async ({ page, browserName }) => {
     await openIn(page, mode);
     await page.locator('.button--primary').click();
-    const measure = async (): Promise<{ nodes: number; animations: number }> =>
-      page.evaluate(() => ({ nodes: document.getElementsByTagName('*').length, animations: document.getAnimations().filter((animation) => !(animation instanceof CSSTransition)).length }));
+    const measure = async (): Promise<{ nodes: number; animations: number }> => {
+      // The session's check-ins drift a few real milliseconds past the half-hour steps (the time between the clock's
+      // start and the click), so the key that ends a step can answer one: the held display's 180 ms fade out is then
+      // still running, or finished and not yet let go (time-display.ts cancels it once it has ended). That is the
+      // interface's fade, not something left behind each minute; it is gone before counting.
+      await expect
+        .poll(() => page.evaluate((limit) => document.getAnimations().filter((animation) => !(animation instanceof CSSTransition) && Number(animation.effect?.getTiming().duration) < limit).length, SECOND))
+        .toBe(0);
+      return page.evaluate(() => ({ nodes: document.getElementsByTagName('*').length, animations: document.getAnimations().filter((animation) => !(animation instanceof CSSTransition)).length }));
+    };
     // Half an hour at a time, then a key: any key answers a check-in that has come due, so the session runs on.
     const run = async (): Promise<void> => {
       await page.clock.runFor(30 * MINUTE);

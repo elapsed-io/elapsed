@@ -98,3 +98,26 @@ None added or removed.
    is for.
 3. **The floating window has no frame yet;** it is built plainly from the site's parts and stays behind the flag
    until the release that ships it draws one.
+
+## Revision, 2026-11-25 (plan version 14; the owner's answer 40)
+
+- **Keep screen awake only while a session is open** (decision 444): the wake lock is held while the setting is on,
+  a session is running or paused (a check-in waiting counts as running) and the tab is seen; it is let go on the
+  idle screen, on the results, when the tab is hidden and when the setting goes off, and a lock granted after any of
+  these changed is let go at once. This closes open risk 1 above. Its line now reads "while elapsed is the active
+  tab".
+- **The check-ins switch's line** is the plan's new wording ("check-ins remind you that your session is still
+  running. sessions without them still count toward your history, but not toward competitions."), and "pause
+  limit" is "pause before ending" (round 2.14's revision).
+- **Data, inputs, dependencies, security surface:** unchanged. The lock is asked for less often than before, never
+  more; nothing is stored or sent for it.
+- **Abuse cases:** a page left open on the idle screen or the results can no longer keep a screen on.
+- **Tests:** unit tests (`shell/wake-lock.test.ts`: never asked on the idle screen, held once a session starts and
+  through a pause without asking again, let go when it ends, asked again by the next session; a lock granted after
+  the session ended let go at once; the earlier cases with a session open); `e2e/timer-switches.spec.ts` (idle not
+  held; running held; hidden let go and seen asked again; paused still held; the results and the idle screen after
+  them let go and not asked again; off never asked even while a session runs; on again mid-session held at once;
+  off kept after a reload; a paused session restored on load held at once). The reference run's one failure, the
+  interstellar seven-hour test (a test mode), was the test counting the held display's 180 ms fade right after the
+  key that answered a check-in; the test now lets short fades end first (decision 445), and the performance spec
+  passed twice over in all three browsers, with the timing tests on their own.

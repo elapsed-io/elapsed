@@ -1,7 +1,8 @@
 /**
- * Keep screen awake (Release 2; plan, Settings catalog: "on, off; only while the site is the active tab", on by
- * default): a screen wake lock while the setting is on and the page is visible. The browser lets go of the lock
- * whenever the tab is hidden; it is asked for again as soon as the tab is seen. Where the browser has no wake lock,
+ * Keep screen awake (Release 2; plan, Settings catalog: "while elapsed is the active tab", on by default): a screen
+ * wake lock while the setting is on, a session is running or paused, and the page is visible (plan version 14, answer
+ * 40). It is let go on the idle screen and on the results, and whenever the tab is hidden (the browser lets go of it
+ * then too); it is asked for again as soon as all three hold again. Where the browser has no wake lock,
  * or refuses one (a battery saver, a policy), the screen sleeps as it always would: nothing is shown or stored, and
  * only an error of another kind is reported.
  *
@@ -26,6 +27,7 @@ export class ScreenWake {
   readonly #api: WakeLockApi | null;
   readonly #onError: (error: unknown) => void;
   #wanted = false;
+  #session = false;
   #sentinel: WakeSentinel | null = null;
   #requesting = false;
 
@@ -46,10 +48,21 @@ export class ScreenWake {
     this.update();
   }
 
-  /** The tab was hidden or seen again: let go, or ask again. */
+  /** Whether a session is running or paused (not on the idle screen, nor on the results). */
+  session(open: boolean): void {
+    if (open === this.#session) return;
+    this.#session = open;
+    this.update();
+  }
+
+  /** The tab was hidden or seen again, or something above changed: let go, or ask again. */
   update(): void {
-    if (this.#wanted && this.#doc.visibilityState === 'visible') this.#request();
+    if (this.#keep()) this.#request();
     else this.#release();
+  }
+
+  #keep(): boolean {
+    return this.#wanted && this.#session && this.#doc.visibilityState === 'visible';
   }
 
   #request(): void {
@@ -63,8 +76,8 @@ export class ScreenWake {
         sentinel.addEventListener('release', () => {
           if (this.#sentinel === sentinel) this.#sentinel = null;
         });
-        // The setting went off, or the tab was hidden, while the browser answered.
-        if (!this.#wanted || this.#doc.visibilityState !== 'visible') this.#release();
+        // The setting went off, the session ended or the tab was hidden while the browser answered.
+        if (!this.#keep()) this.#release();
       },
       (error: unknown) => {
         this.#requesting = false;

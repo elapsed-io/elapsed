@@ -99,9 +99,9 @@ it, and each frame is checked pixel for pixel once all of its controls exist:
 
 | Frame | Controls | Round |
 | --- | --- | --- |
-| timer | seconds (always, blur away, never; always by default, 2.14); check-ins switch with its warning; keep screen awake ("only while elapsed is the active tab") | 2.15 |
+| timer | check-ins switch with its line, check-in every in a darkened box, pause before ending, keep screen awake ("while elapsed is the active tab"), clock format (plan version 14; seconds moved to display's focus mode group as "hide seconds after starting", 2.14) | 2.15, revised 2.14 |
 | display | mode tiles in four columns with a preview icon for each new mode (analog, ocean depth, height, tree, interstellar); ocean depth options (ocean life, results landmarks); picture-in-picture; downloaded modes with size and remove | tiles in each mode's round; downloaded modes 2.1; results landmarks 2.3; ocean life 2.4; each mode's own options box 2.7; the analog tile redrawn 2.13; the flagged-visit line 2.12; picture-in-picture's row no longer drawn (a later release; hidden at launch, 2.15) |
-| appearance | animation speed (slower, normal, faster: "every animation, including the results replay"); low power ("stops ambient animation and shows only the time. on when your system asks for reduced motion.") | 2.1 |
+| appearance | eight theme tiles four to a row, the theme colours in a darkened box, font, time size, animation speed ("affects all animations, including results replay"); low power removed (plan version 14: the backlog) | 2.1, revised 2.14 |
 | advanced | no test-modes switch (the redrawn frame: test modes come only from ?test=modes); custom CSS, safe mode, the settings file, reset all | 2.12 removes the switch of 2.9 |
 
 The tile grid has three columns while there are three modes (the Release 1 frame) and four from round 2.2,
@@ -499,13 +499,14 @@ credits page in each theme.
 
 **Builds:**
 
-- Keep screen awake (timer, on by default: "only while elapsed is the active tab"): a screen wake lock
-  while the page is visible, released when hidden and requested again when seen. The Permissions-Policy is
+- Keep screen awake (timer, on by default: "while elapsed is the active tab"): a screen wake lock only while a
+  session is running or paused and the page is visible, released on the idle screen, on the results and when
+  hidden, and requested again when all hold again (plan version 14, answer 40). The Permissions-Policy is
   confirmed not to block it: the header lists only `camera`, `microphone` and `geolocation`, so
   `screen-wake-lock` keeps its default of the site's own pages; a test fails if the header ever disables it.
-- The check-ins switch (timer, on by default) with the plan's warning ("sessions without check-ins count
-  towards your history, but won't count towards competitions"); nothing is marked on the session yet (the
-  plan adds that marking in Release 6).
+- The check-ins switch (timer, on by default) with its line ("check-ins remind you that your session is still
+  running. sessions without them still count toward your history, but not toward competitions."); nothing is
+  marked on the session yet (the plan adds that marking in Release 6).
 - Picture-in-picture moves to a later release. Its code is kept behind the test flag: a display setting, off
   by default ("adds a button to the timer that opens a small floating timer. shown only in browsers that
   offer it."), whose button joins the timer's top-right icons, left of settings (Tabler's
@@ -516,8 +517,9 @@ credits page in each theme.
 - The Release 2 timer frame, and the display frame (which no longer draws the picture-in-picture row) now
   that every control in it exists.
 
-**Tests:** the wake lock is requested only while visible, released when hidden, and allowed by the deployed
-Permissions-Policy; with check-ins off no check-in falls due and the pause limit still applies; without the
+**Tests:** the wake lock is requested only while a session is running or paused in the visible tab, released
+on the idle screen, on the results and when hidden, and allowed by the deployed Permissions-Policy; with
+check-ins off no check-in falls due and pause before ending still applies; without the
 flag no picture-in-picture row, button or code; with the flag, the row and button only where the browser
 offers the window, and the window shows the same time and buttons and closes cleanly; the timer and display
 frames; settings migrations.

@@ -152,7 +152,8 @@ and on one Chrome or Edge computer, against the build that will launch.
 
 32. Keep screen awake (on by default): start a session and leave the device untouched past its own screen
     timeout.
-    - [ ] The screen stays on while the site is the active tab, on every device.
+    - [ ] The screen stays on while a session runs or is paused and the site is the active tab, on every device.
+    - [ ] On the idle screen and on the results, the screen sleeps on time (plan version 14, answer 40).
     - [ ] Switch to another tab or app for a minute and back: the screen then sleeps on time while elapsed is
       not shown, and stays on again once it is.
     - [ ] With "keep screen awake" off, the screen sleeps on time.

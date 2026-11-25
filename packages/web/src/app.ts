@@ -541,7 +541,8 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     pip?.set(next.pictureInPicture);
   });
 
-  // Keep screen awake (Release 2): a screen wake lock while the setting is on and the tab is seen.
+  // Keep screen awake (Release 2): a screen wake lock while the setting is on, a session is running or paused, and the
+  // tab is seen (plan version 14, answer 40); render() tells it whether a session is open.
   const screenWake = new ScreenWake(doc, browserWakeLock(win), report);
   screenWake.set(settings.current.keepAwake);
   settings.subscribe((next) => {
@@ -557,6 +558,8 @@ export async function startApp(doc: Document, win: Window): Promise<void> {
     const visible = shown(view);
     const title = titleFor(visible);
     if (doc.title !== title) doc.title = title;
+    // Running or paused, a check-in waiting included; let go on the idle screen and on the results.
+    screenWake.session(visible.status === 'running' || visible.status === 'paused');
     if (doc.visibilityState === 'hidden') {
       behind = true;
       return;

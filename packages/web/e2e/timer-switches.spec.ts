@@ -1,13 +1,13 @@
 /**
  * The two Release 2 timer switches that ship with the launch (round 2.15; owner, answer 38): check-ins, which can be
- * switched off (the plan's warning under it), and keep screen awake ("only while elapsed is the active tab"), a
- * screen wake lock while the page is seen.
+ * switched off (the plan's warning under it), and keep screen awake ("while elapsed is the active tab"), a screen
+ * wake lock while a session is running or paused and the page is seen (plan version 14, answer 40).
  */
 
 import { BRAND } from '@stopwatch/core';
 import { expect, test } from './test.ts';
 import type { Page } from '@playwright/test';
-import { MINUTE, SECOND, finishResults, openApp, openSettingsOn } from './helpers.ts';
+import { MINUTE, SECOND, endThroughCountdown, finishResults, openApp, openSettingsOn } from './helpers.ts';
 
 const HOUR = 60 * MINUTE;
 const primary = (page: Page) => page.locator('.button--primary');
@@ -126,9 +126,15 @@ const hideTab = (page: Page, hidden: boolean) =>
   }, hidden);
 
 test.describe('keep screen awake', () => {
-  test('is on by default with its line, and holds the screen awake only while the tab is seen', async ({ page }) => {
+  test('is on by default with its line, and holds the screen awake only while a session is running or paused in the seen tab', async ({ page }) => {
     await watchWakeLock(page);
     await openApp(page, { width: 1280, height: 900 });
+    // The idle screen: not held.
+    await page.clock.runFor(5 * SECOND);
+    expect(await wakeHeld(page)).toBe(false);
+    expect(await wakeLog(page)).toEqual([]);
+    // Running: held.
+    await primary(page).click();
     await expect.poll(() => wakeHeld(page)).toBe(true);
     expect(await wakeLog(page)).toEqual(['request screen visible']);
     // Hidden, it lets go; seen again, it asks again.
@@ -136,21 +142,57 @@ test.describe('keep screen awake', () => {
     await expect.poll(() => wakeHeld(page)).toBe(false);
     await hideTab(page, false);
     await expect.poll(() => wakeHeld(page)).toBe(true);
+    // Paused: still held, nothing more asked.
+    await page.clock.runFor(2 * MINUTE);
+    await primary(page).click();
+    await expect(primary(page)).toHaveAccessibleName('resume');
+    expect(await wakeHeld(page)).toBe(true);
     expect(await wakeLog(page)).toEqual(['request screen visible', 'release', 'request screen visible']);
+    // Ended: the results let it go, and the idle screen after them does not ask again.
+    await primary(page).click();
+    await endThroughCountdown(page);
+    await expect.poll(() => wakeHeld(page)).toBe(false);
+    await page.getByRole('button', { name: 'back to the timer' }).click();
+    await expect(page.locator('.results')).toBeHidden();
+    await page.clock.runFor(5 * SECOND);
+    expect(await wakeHeld(page)).toBe(false);
+    expect(await wakeLog(page)).toEqual(['request screen visible', 'release', 'request screen visible', 'release']);
 
     await openSettingsOn(page, 'timer');
     await expect(toggleNamed(page, 'keep screen awake')).toHaveAttribute('aria-checked', 'true');
     await expect(page.locator('[data-setting="keepAwake"] .setting__help')).toHaveText(`while ${BRAND.name} is the active tab`);
-    // Off: let go at once, and never asked for again, seen or not.
+    // Off: never asked for, even while a session runs, seen or not.
     await toggleNamed(page, 'keep screen awake').click();
-    await expect.poll(() => wakeHeld(page)).toBe(false);
+    await page.keyboard.press('Escape');
+    await page.locator('.settings').waitFor({ state: 'hidden' });
+    await primary(page).click();
+    await page.clock.runFor(MINUTE);
     await hideTab(page, true);
     await hideTab(page, false);
-    expect(await wakeLog(page)).toEqual(['request screen visible', 'release', 'request screen visible', 'release']);
-    // And it stays off after a reload.
+    expect(await wakeHeld(page)).toBe(false);
+    expect(await wakeLog(page)).toHaveLength(4);
+    // On again mid-session: held at once.
+    await flip(page, 'keep screen awake');
+    await expect.poll(() => wakeHeld(page)).toBe(true);
+    // Off again: let go at once, and it stays off after a reload, the session still running.
+    await flip(page, 'keep screen awake');
+    await expect.poll(() => wakeHeld(page)).toBe(false);
     await page.reload();
     await page.locator('html[data-ready]').waitFor({ state: 'attached' });
+    await expect(primary(page)).toHaveAccessibleName('pause');
     expect(await wakeLog(page)).toEqual([]);
+  });
+
+  test('a session restored on load is held at once, and one that is paused too', async ({ page }) => {
+    await watchWakeLock(page);
+    await openApp(page);
+    await primary(page).click();
+    await page.clock.runFor(MINUTE);
+    await primary(page).click();
+    await page.reload();
+    await page.locator('html[data-ready]').waitFor({ state: 'attached' });
+    await expect(primary(page)).toHaveAccessibleName('resume');
+    await expect.poll(() => wakeHeld(page)).toBe(true);
   });
 
   test('is allowed by the site’s Permissions-Policy, which names only camera, microphone and geolocation', async ({ page, browserName }) => {

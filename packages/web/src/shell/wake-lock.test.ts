@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { ScreenWake } from './wake-lock.ts';
 import type { WakeLockApi, WakeSentinel } from './wake-lock.ts';
 
-/** A page whose visibility the test sets, and a wake lock that counts its requests and releases. */
-function setup(options: { refuse?: Error } = {}) {
+/**
+ * A page whose visibility the test sets, and a wake lock that counts its requests and releases. A session is open
+ * (running or paused) unless the test says it is idle.
+ */
+function setup(options: { refuse?: Error; idle?: boolean } = {}) {
   let visibility: DocumentVisibilityState = 'visible';
   const doc = {
     get visibilityState() {
@@ -42,6 +45,7 @@ function setup(options: { refuse?: Error } = {}) {
   };
   const errors: unknown[] = [];
   const wake = new ScreenWake(doc, api, (error) => errors.push(error));
+  if (options.idle !== true) wake.session(true);
   return {
     wake,
     sentinels,
@@ -56,6 +60,42 @@ function setup(options: { refuse?: Error } = {}) {
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('keep screen awake', () => {
+  it('holds the screen only while a session is running or paused: never on the idle screen, let go on the results', async () => {
+    const t = setup({ idle: true });
+    t.wake.set(true);
+    await settle();
+    expect(t.requests()).toBe(0);
+    // A session starts.
+    t.wake.session(true);
+    await settle();
+    expect(t.wake.held).toBe(true);
+    // Paused, it is still open: nothing more is asked of the browser.
+    t.wake.session(true);
+    await settle();
+    expect(t.requests()).toBe(1);
+    // Ended (the results, then the idle screen): let go.
+    t.wake.session(false);
+    expect(t.wake.held).toBe(false);
+    expect(t.sentinels[0]?.released).toBe(true);
+    t.wake.update();
+    await settle();
+    expect(t.requests()).toBe(1);
+    // The next session asks again.
+    t.wake.session(true);
+    await settle();
+    expect(t.wake.held).toBe(true);
+    expect(t.requests()).toBe(2);
+  });
+
+  it('lets go at once of a lock granted after the session ended', async () => {
+    const t = setup();
+    t.wake.set(true);
+    t.wake.session(false);
+    await settle();
+    expect(t.wake.held).toBe(false);
+    expect(t.sentinels[0]?.released).toBe(true);
+  });
+
   it('holds a screen wake lock while on and the page is seen, and lets go when switched off', async () => {
     const t = setup();
     t.wake.set(true);

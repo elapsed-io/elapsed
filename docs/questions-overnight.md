@@ -779,3 +779,6 @@ only; and 40, from round 2.15.
     paused screen and the results too. Many timers keep the screen awake only while a session runs (or runs or is
     paused), which saves battery when the page is left open with nothing to watch. Keep it as built, or hold the
     lock only while a session runs (or while one is open, running or paused)?
+    **Answered (owner, 2026-11-25; plan version 14):** keep screen awake holds the screen on only while a session
+    is running or paused, in the visible tab, and releases it on the idle screen and on the results; with a test.
+    Round 2.15's revision builds it (decision 444).
